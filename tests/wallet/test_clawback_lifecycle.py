@@ -197,12 +197,23 @@ class TestClawbackLifecycle:
         claw_puz_hash = create_p2_puzzle_hash_puzzle(sender_ph).get_tree_hash()
         claim_puz_hash = create_augmented_cond_puzzle_hash([80, timelock], recipient_ph)
         # create and check the merkle root and proofs
-        root, proofs = create_clawback_merkle_tree(timelock, sender_ph, recipient_ph)
+        merkle_tree = create_clawback_merkle_tree(timelock, sender_ph, recipient_ph)
         bad_proof = (1, [claim_puz_hash])
+        clawback_proof = merkle_tree.generate_proof(claw_puz_hash)
+        assert clawback_proof[0] is not None
+        assert len(clawback_proof[1]) == 1
+        assert clawback_proof[1][0] is not None
 
-        assert check_merkle_proof(root, claw_puz_hash, proofs[claw_puz_hash])
-        assert check_merkle_proof(root, claim_puz_hash, proofs[claim_puz_hash])
-        assert not check_merkle_proof(root, claim_puz_hash, bad_proof)
+        claim_proof = merkle_tree.generate_proof(claim_puz_hash)
+        assert claim_proof[0] is not None
+        assert len(claim_proof[1]) == 1
+        assert claim_proof[1][0] is not None
+
+        assert check_merkle_proof(
+            merkle_tree.calculate_root(), claw_puz_hash, (clawback_proof[0], clawback_proof[1][0])
+        )
+        assert check_merkle_proof(merkle_tree.calculate_root(), claim_puz_hash, (claim_proof[0], claim_proof[1][0]))
+        assert not check_merkle_proof(merkle_tree.calculate_root(), claim_puz_hash, bad_proof)
 
         # check we can't use a timelock less than 1
         bad_timelock = uint64(0)

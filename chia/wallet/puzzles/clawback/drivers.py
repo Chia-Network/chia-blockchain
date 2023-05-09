@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +16,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
-from chia.wallet.util.merkle_utils import build_merkle_tree
+from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
 
 P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
@@ -49,41 +49,36 @@ def create_p2_puzzle_hash_solution(inner_puzzle: Program, inner_solution: Progra
     return solution
 
 
-def create_clawback_merkle_tree(
-    timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32
-) -> Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]]:
+def create_clawback_merkle_tree(timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32) -> MerkleTree:
     """
-    Returns (merkle_root, dict_of_proofs)
-    The full type for a merkle tree is taken from wallet.util.merkle_utils.build_merkle_tree
-    For clawbacks there are only 2 puzzles in the merkle tree, so the dict_of_proofs is just:
-    {claim_ph: (0, [sha256(prefix, claw_ph)]), claw_ph: (1, [sha256(prefix, claim_ph)])}
-    where prefix = bytes([2])
+    Returns a merkle tree object
+    For clawbacks there are only 2 puzzles in the merkle tree, claim puzzle and clawback puzzle
     """
     if timelock < 1:
         raise ValueError("Timelock must be at least 1 second")
     timelock_condition = [ConditionOpcode.ASSERT_SECONDS_RELATIVE, timelock]
     augmented_cond_puz_hash = create_augmented_cond_puzzle_hash(timelock_condition, recipient_ph)
     p2_puzzle_hash_puz = create_p2_puzzle_hash_puzzle(sender_ph)
-    merkle_tree = build_merkle_tree([augmented_cond_puz_hash, p2_puzzle_hash_puz.get_tree_hash()])
+
+    merkle_tree = MerkleTree([augmented_cond_puz_hash, p2_puzzle_hash_puz.get_tree_hash()])
     return merkle_tree
 
 
-def create_merkle_proof(
-    merkle_tree: Tuple[bytes32, Dict[bytes32, Tuple[int, List[bytes32]]]], puzzle_hash: bytes32
-) -> Program:
+def create_merkle_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Program:
     """
-    To spend a p2_1_of_n clawback we recreate the full merkle tree: (root, dict_of_proofs)
-    The required proof is then selected from dict_of_proofs based on the puzzle_hash of the puzzle we
+    To spend a p2_1_of_n clawback we recreate the full merkle tree
+    The required proof is then selected from the merkle tree based on the puzzle_hash of the puzzle we
     want to execute
     Returns a proof: (int, List[bytes32]) which can be provided to the p2_1_of_n solution
     """
-    proof: Program = Program.to(merkle_tree[1][puzzle_hash])
-    return proof
+    proof = merkle_tree.generate_proof(puzzle_hash)
+    program: Program = Program.to((proof[0], proof[1][0]))
+    return program
 
 
 def create_merkle_puzzle(timelock: uint64, sender_ph: bytes32, recipient_ph: bytes32) -> Program:
     merkle_tree = create_clawback_merkle_tree(timelock, sender_ph, recipient_ph)
-    puzzle: Program = P2_1_OF_N.curry(merkle_tree[0])
+    puzzle: Program = P2_1_OF_N.curry(merkle_tree.calculate_root())
     return puzzle
 
 
