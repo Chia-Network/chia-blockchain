@@ -710,7 +710,7 @@ class WalletRpcApi:
                 name = request["name"]
             if request["mode"] == "new":
                 if request["dao_rules"]:
-                    dao_rules = request["dao_rules"]
+                    dao_rules = DAORules.from_json_dict(request["dao_rules"])
                 else:
                     # TODO: Define sensible defaults
                     dao_rules = DAORules()
@@ -2302,11 +2302,10 @@ class WalletRpcApi:
             id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
         )
         amount = request["amount"]
-        txs, new_dao_cats = await dao_cat_wallet.create_new_dao_cats(amount, True)
+        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, True)
         return {
             "success": True,
             "tx_id": txs[0].name,
-            "amount_locked": new_dao_cats,
         }
 
     async def dao_get_proposals(self, request) -> EndpointResult:
@@ -2320,24 +2319,26 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        state = await dao_wallet.get_proposal_state(request["proposal_id"])
+        state = await dao_wallet.get_proposal_state(bytes32.from_hexstr(request["proposal_id"]))
         return {"success": True, "state": state}
 
     async def dao_exit_lockup(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOWallet)
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOWallet
+        )
         assert dao_cat_wallet is not None
         if "coins" in request:
-            coins = request["coins"]
+            coins = [Coin.from_json_dict(coin) for coin in request["coins"]]
         else:
             coins = []
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
                 if lci.active_votes == []:
                     coins.append(lci.coin)
         tx = await dao_cat_wallet.exit_vote_state(coins)
-        return {"success": True}
+        return {"success": True, "tx_id": tx.name}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2363,7 +2364,7 @@ class WalletRpcApi:
             else:
                 amounts.append(uint64(request["amount"]))
                 puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
-                if "asset_id" in request:
+                if request["asset_id"] is not None:
                     asset_types.append(bytes32.from_hexstr(request["asset_id"]))
                 else:
                     asset_types.append(None)
@@ -2406,7 +2407,7 @@ class WalletRpcApi:
         assert tx is not None
         return {
             "success": True,
-            "tx_id": tx.name,
+            "tx_id": tx.name().hex(),
         }
 
     async def dao_vote_on_proposal(self, request) -> EndpointResult:
@@ -2445,7 +2446,7 @@ class WalletRpcApi:
             push=True,
         )
         assert tx is not None
-        return {"success": True, "tx_id": tx.name}
+        return {"success": True, "tx_id": tx.name()}
 
     async def dao_free_coins_from_finished_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
