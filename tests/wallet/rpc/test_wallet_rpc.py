@@ -50,6 +50,8 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.query_filter import TransactionTypeFilter
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
@@ -637,6 +639,13 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
+
+    # Test type filter
+    all_transactions = await client.get_transactions(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+    )
+    assert len(all_transactions) == 5
+    assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
 
 
 @pytest.mark.asyncio

@@ -16,7 +16,8 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.util.query_filter import TransactionTypeFilter
+from chia.wallet.util.wallet_types import WalletType, CoinType
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -126,6 +127,7 @@ class WalletRpcClient(RpcClient):
         sort_key: SortKey = None,
         reverse: bool = False,
         to_address: Optional[str] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -139,6 +141,9 @@ class WalletRpcClient(RpcClient):
 
         if to_address is not None:
             request["to_address"] = to_address
+
+        if type_filter is not None:
+            request["type_filter"] = type_filter.to_json_dict()
 
         res = await self.fetch(
             "get_transactions",
@@ -225,11 +230,11 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
-    async def get_coins_by_type(
+    async def get_coins(
         self, wallet_id: int, coin_type: CoinType, start: int = 0, end: int = 50, reverse: bool = False
     ) -> Dict:
         response = await self.fetch(
-            "get_coins_by_type",
+            "get_coins",
             {"wallet_id": wallet_id, "start": start, "end": end, "coin_type": coin_type, "reverse": reverse},
         )
         return response

@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from enum import IntEnum
 from typing import Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -11,32 +10,12 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
-from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 
 log = logging.getLogger(__name__)
-
-
-class FilterMode(IntEnum):
-    include = 1
-    exclude = 2
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class TypeFilter(Streamable):
-    values: List[uint8]
-    mode: uint8  # FilterMode
-
-    @classmethod
-    def include(cls, values: List[TransactionType]):
-        return cls([uint8(t.value) for t in values], uint8(FilterMode.include))
-
-    @classmethod
-    def exclude(cls, values: List[TransactionType]):
-        return cls([uint8(t.value) for t in values], uint8(FilterMode.exclude))
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -285,7 +264,7 @@ class WalletTransactionStore:
         sort_key=None,
         reverse=False,
         to_puzzle_hash: Optional[bytes32] = None,
-        type_filter: Optional[TypeFilter] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
@@ -307,13 +286,18 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
-        if type_filter is None or len(type_filter.values) == 0:
+        if type_filter is None:
             type_filter_str = ""
         else:
-            type_filter_str = (
-                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
-                f"IN ({','.join([str(x) for x in type_filter.values])})"
-            )
+            if len(type_filter.values) == 0 and type_filter.mode == FilterMode.include:
+                return []
+            if len(type_filter.values) == 0 and type_filter.mode == FilterMode.exclude:
+                type_filter_str = ""
+            else:
+                type_filter_str = (
+                    f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                    f"IN ({','.join([str(x) for x in type_filter.values])})"
+                )
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(

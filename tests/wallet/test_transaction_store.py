@@ -12,8 +12,9 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.wallet_transaction_store import TypeFilter, WalletTransactionStore, filter_ok_mempool_status
+from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
 from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
@@ -486,12 +487,18 @@ async def test_get_transactions_between_confirmed() -> None:
         # test type filter (coinbase reward)
         await store.add_transaction_record(tr6)
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TypeFilter.include([TransactionType.COINBASE_REWARD])
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
         ) == [tr6]
         assert await store.get_transactions_between(
-            1, 0, 1, reverse=True, type_filter=TypeFilter.exclude([TransactionType.COINBASE_REWARD])
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.exclude([TransactionType.COINBASE_REWARD])
         ) == [tr5]
-        assert await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TypeFilter.include([])) == [
+        assert (
+            await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.include([]))
+            == []
+        )
+        assert await store.get_transactions_between(
+            1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.exclude([])
+        ) == [
             tr6,
             tr5,
             tr4,
@@ -504,7 +511,7 @@ async def test_get_transactions_between_confirmed() -> None:
             0,
             100,
             reverse=True,
-            type_filter=TypeFilter.include([TransactionType.COINBASE_REWARD, TransactionType.OUTGOING_TX]),
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD, TransactionType.OUTGOING_TX]),
         ) == [tr6, tr5, tr4, tr3, tr2, tr1]
 
 
