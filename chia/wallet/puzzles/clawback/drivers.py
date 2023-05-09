@@ -60,7 +60,10 @@ def create_clawback_merkle_tree(timelock: uint64, sender_ph: bytes32, recipient_
     timelock_condition = [ConditionOpcode.ASSERT_SECONDS_RELATIVE, timelock]
     augmented_cond_puz_hash = create_augmented_cond_puzzle_hash(timelock_condition, recipient_ph)
     merkle_tree = MerkleTree(
-        [augmented_cond_puz_hash, curry_and_treehash(P2_CURRIED_PUZZLE_MOD_HASH_QUOTED, sender_ph)]
+        [
+            augmented_cond_puz_hash,
+            curry_and_treehash(P2_CURRIED_PUZZLE_MOD_HASH_QUOTED, Program.to(sender_ph).get_tree_hash()),
+        ]
     )
     return merkle_tree
 
