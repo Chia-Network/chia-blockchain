@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
@@ -13,48 +12,9 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.query_filter import AmountFilter, CoinRecordOrder, FilterMode, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-
-
-class FilterMode(IntEnum):
-    include = 1
-    exclude = 2
-
-
-@streamable
-@dataclass(frozen=True)
-class AmountFilter(Streamable):
-    values: List[uint64]
-    mode: uint8  # FilterMode
-
-    @classmethod
-    def include(cls, values: List[uint64]):
-        return cls(values, mode=uint8(FilterMode.include))
-
-    @classmethod
-    def exclude(cls, values: List[uint64]):
-        return cls(values, mode=uint8(FilterMode.exclude))
-
-
-@streamable
-@dataclass(frozen=True)
-class HashFilter(Streamable):
-    values: List[bytes32]
-    mode: uint8  # FilterMode
-
-    @classmethod
-    def include(cls, values: List[bytes32]):
-        return cls(values, mode=uint8(FilterMode.include))
-
-    @classmethod
-    def exclude(cls, values: List[bytes32]):
-        return cls(values, mode=uint8(FilterMode.exclude))
-
-
-class CoinRecordOrder(IntEnum):
-    confirmed_height = 1
-    spent_height = 2
 
 
 @streamable

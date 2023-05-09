@@ -16,8 +16,8 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_transaction_store import TypeFilter
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -127,7 +127,7 @@ class WalletRpcClient(RpcClient):
         sort_key: SortKey = None,
         reverse: bool = False,
         to_address: Optional[str] = None,
-        type_filter: Optional[TypeFilter] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
