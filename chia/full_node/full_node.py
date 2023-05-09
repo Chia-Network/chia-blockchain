@@ -1078,12 +1078,10 @@ class FullNode:
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
-                            peers_with_peak.remove(peer)
                             continue
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         if response is None:
                             await peer.close()
-                            peers_with_peak.remove(peer)
                         elif isinstance(response, RespondBlocks):
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
@@ -1116,8 +1114,6 @@ class FullNode:
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
-                    if peer in peers_with_peak:
-                        peers_with_peak.remove(peer)
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
