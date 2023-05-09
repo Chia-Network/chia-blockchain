@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -46,6 +46,9 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
@@ -63,6 +66,35 @@ class DAOCATWallet:
     @classmethod
     def type(cls) -> WalletType:
         return WalletType.DAO_CAT
+
+    @staticmethod
+    async def create(
+        wallet_state_manager: WalletStateManager,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+    ) -> CATWallet:
+        self = CATWallet()
+
+        self.log = logging.getLogger(__name__)
+
+        self.cost_of_single_tx = None
+        self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = wallet_info
+        self.standard_wallet = wallet
+        try:
+            self.cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+            # self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+        except AssertionError as e:
+            self.log.error(f"Error creating DAO CAT wallet: {e}")
+            # Do a migration of the lineage proofs
+            # cat_info = LegacyCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+            # self.cat_info = DAOCATInfo(cat_info.limitations_program_hash, cat_info.my_tail)
+            # self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+            # for coin_id, lineage in cat_info.lineage_proofs:
+            #     await self.add_lineage(coin_id, lineage)
+            # await self.save_info(self.cat_info)
+
+        return self
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
@@ -647,6 +679,19 @@ class DAOCATWallet:
         for record in coins:
             amount += record.coin.amount
 
+        return uint128(amount)
+
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+
+        amount: uint128 = uint128(0)
+        for record in record_list:
+            lineage = await self.get_lineage_proof_for_coin(record.coin)
+            if lineage is not None:
+                amount = uint128(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint128(amount)
 
     async def get_votable_balance(
