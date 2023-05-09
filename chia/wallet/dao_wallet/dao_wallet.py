@@ -1476,7 +1476,8 @@ class DAOWallet(WalletProtocol):
         lockup_inner_puzhashes = []
         assert dao_cat_spend is not None
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(spend.coin.amount)
+            vote_amounts.append(Program.from_bytes(bytes(spend.solution)).at("frrrrrrf"))  # this is the vote_amount field of the solution
+            # breakpoint()
             vote_coins.append(spend.coin.name())
             previous_votes.append(
                 get_active_votes_from_lockup_puzzle(

@@ -2,7 +2,7 @@
   TREASURY_SINGLETON_STRUCT
   treasury_inner_puz_hash
   parent_parent
-  new_puzzle_hash
+  new_puzzle_hash  ; the full CAT puzzle
   amount
 )
   (include condition_codes.clvm)

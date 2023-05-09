@@ -20,7 +20,7 @@
   proposal_curry_vals
   vote_info
   vote_amount
-  my_puzhash
+  my_inner_puzhash
   new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
 )
   (include condition_codes.clvm)
@@ -37,8 +37,16 @@
     )
   )
 
+  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
+    (puzzle-hash-of-curried-function CAT_MOD_HASH
+                                     INNERPUZHASH
+                                     (sha256 ONE CAT_TAIL_HASH)
+                                     (sha256 ONE CAT_MOD_HASH)
+    )
+  )
+
   ; loop through conditions and check that they aren't trying to create anything they shouldn't
-  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change)
+  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (= (f (r (f conditions))) vote_added_puzhash)
@@ -47,29 +55,29 @@
             (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
               (if seen_change  ; assert that we haven't already recreated ourself in some fashion
                 (x)
-                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 1))
+                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 1))
               )
              (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
-               (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash 1 seen_change))
+               (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 seen_change))
                (x)
              )
             )
           )
          (if (all
-             (= (f (r (f conditions))) my_puzhash)
+             (= (f (r (f conditions))) my_inner_puzhash)
              (not seen_change)
              (= (f (r (r (f conditions)))) (- my_amount vote_amount))
            )  ; we recreate ourselves with unused voting power
-          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote 1))
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote 1))
           (x)
          )
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
-            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
+            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
             (x)
           )
-          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_puzhash seen_vote seen_change))
+          (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
         )
       )
       (if (all seen_vote seen_change)  ; check all value is accounted for
@@ -263,7 +271,7 @@
 
   ; main
   (if my_id
-    (c (list ASSERT_MY_PUZZLEHASH my_puzhash)
+    (c (list ASSERT_MY_PUZZLEHASH (wrap_in_cat_layer CAT_MOD_HASH CAT_TAIL_HASH my_inner_puzhash))
       (c
         (list ASSERT_MY_AMOUNT my_amount)
         (c
@@ -300,9 +308,9 @@
               )
               my_amount
               ; TODO: add namespace to this announcement to allow announcements from the innerpuz
-              (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
+              (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))  ; (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
               vote_amount
-              my_puzhash
+              my_inner_puzhash
               0
               0
             )

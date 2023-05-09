@@ -364,7 +364,7 @@ class DAOCATWallet:
             # proposal_curry_vals
             # vote_info
             # vote_amount
-            # my_puzhash
+            # my_inner_puzhash
             # new_innerpuzhash  ; only include this if we're changing owners
 
             # proposal_curry_vals is:
@@ -392,7 +392,7 @@ class DAOCATWallet:
                     ],
                     vote_info,
                     vote_amount,
-                    coin.puzzle_hash,
+                    lci.inner_puzzle.get_tree_hash(),
                     0,
                 ]
             )
@@ -414,7 +414,7 @@ class DAOCATWallet:
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
-        # TODO: connect with DAOWallet and aggregate the proposal spend
+
         # breakpoint()
         return spend_bundle
 
