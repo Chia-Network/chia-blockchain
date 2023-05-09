@@ -65,8 +65,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    # coveralls-ignore-next-line
-    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
+    if wallet_type in {
+        WalletType.STANDARD_WALLET,
+        WalletType.POOLING_WALLET,
+        WalletType.DATA_LAYER,
+        WalletType.VC,
+    }:  # pragma: no cover
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
@@ -93,8 +97,12 @@ async def get_unit_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    # coveralls-ignore-next-line
-    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER, WalletType.VC}:
+    if wallet_type in {
+        WalletType.STANDARD_WALLET,
+        WalletType.POOLING_WALLET,
+        WalletType.DATA_LAYER,
+        WalletType.VC,
+    }:  # pragma: no cover
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
@@ -1214,8 +1222,7 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     print(f"Signing Mode: {signing_mode}")
 
 
-# coveralls-ignore-start
-async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_record, txs = await wallet_client.vc_mint(
         decode_puzzle_hash(ensure_valid_address(args["did"], allowed_types={AddressType.DID}, config=config)),
@@ -1240,7 +1247,7 @@ async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
         )
 
 
-async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_records, proofs = await wallet_client.vc_get_list(args["start"], args["count"])
     print("Proofs:")
@@ -1261,7 +1268,7 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
             print(f"Proof Hash: {record.vc.proof_hash.hex()}")
 
 
-async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     txs = await wallet_client.vc_spend(
         bytes32.from_hexstr(args["vc_id"]),
@@ -1284,7 +1291,7 @@ async def spend_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
         )
 
 
-async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     if len(args["proofs"]) == 0:
         print("Must specify at least one proof")
         return
@@ -1299,14 +1306,14 @@ async def add_proof_reveal(args: Dict, wallet_client: WalletRpcClient, fingerpri
         return
 
 
-async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     proof_dict: Dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(args["proof_hash"]))
     print("Proofs:")
     for proof in proof_dict:
         print(f" - {proof}")
 
 
-async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     txs = await wallet_client.vc_revoke(
         bytes32.from_hexstr(args["parent_coin_id"]),
@@ -1325,6 +1332,3 @@ async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
             address_prefix=selected_network_address_prefix(config),
             mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
         )
-
-
-# coveralls-ignore-stop

@@ -52,8 +52,7 @@ class VCProofs:
         elif first.atom is not None and rest.atom is not None:
             return VCProofs({first.atom.decode("utf-8"): rest.atom.decode("utf-8")})
         else:
-            # coveralls-ignore-next-line
-            raise ValueError("Malformatted VCProofs program")
+            raise ValueError("Malformatted VCProofs program")  # pragma: no cover
 
 
 _T_VCStore = TypeVar("_T_VCStore", bound="VCStore")
@@ -128,8 +127,7 @@ class VCStore:
         return self
 
     async def _clear_database(self) -> None:
-        # coveralls-ignore-next-line
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:  # pragma: no cover
             await (await conn.execute("DELETE FROM vc_records")).close()
 
     async def add_or_replace_vc_record(self, record: VCRecord) -> None:
@@ -170,8 +168,7 @@ class VCStore:
         return None
 
     # Coverage coming with CR-CAT Wallet
-    # coveralls-ignore-start
-    async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:
+    async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:  # pragma: no cover
         """
         Checks DB for VCs with a proof_provider in a specified list and returns them.
         """
@@ -184,8 +181,6 @@ class VCStore:
             await cursor.close()
 
         return [_row_to_vc_record(row) for row in rows]
-
-    # coveralls-ignore-stop
 
     async def get_unconfirmed_vcs(self) -> List[VCRecord]:
         """
@@ -239,7 +234,6 @@ class VCStore:
             row = await cursor.fetchone()
             await cursor.close()
             if row is None:
-                # coveralls-ignore-next-line
-                return None
+                return None  # pragma: no cover
             else:
                 return VCProofs.from_program(Program.from_bytes(row[0]))
