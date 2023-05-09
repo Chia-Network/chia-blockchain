@@ -17,7 +17,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.wallet_types import WalletType, CoinType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -175,7 +175,7 @@ class WalletRpcClient(RpcClient):
         max_coin_amount: uint64 = uint64(0),
         exclude_amounts: Optional[List[uint64]] = None,
         exclude_coin_ids: Optional[List[str]] = None,
-        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         if memos is None:

@@ -20,7 +20,8 @@ from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.util.wallet_types import RemarkDataType
 
 P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
-P2_CURRIED_PUZZLE_HASH = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
+P2_CURRIED_PUZZLE_MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
+P2_CURRIED_PUZZLE_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_CURRIED_PUZZLE_MOD.get_tree_hash())
 AUGMENTED_CONDITION = load_clvm_maybe_recompile("augmented_condition.clsp")
 AUGMENTED_CONDITION_HASH = AUGMENTED_CONDITION.get_tree_hash()
 
@@ -41,7 +42,7 @@ def create_augmented_cond_solution(inner_solution: Program) -> Program:
 
 
 def create_p2_puzzle_hash_puzzle(puzzle_hash: bytes32) -> Program:
-    return P2_CURRIED_PUZZLE_HASH.curry(puzzle_hash)
+    return P2_CURRIED_PUZZLE_MOD.curry(puzzle_hash)
 
 
 def create_p2_puzzle_hash_solution(inner_puzzle: Program, inner_solution: Program) -> Program:
@@ -58,9 +59,9 @@ def create_clawback_merkle_tree(timelock: uint64, sender_ph: bytes32, recipient_
         raise ValueError("Timelock must be at least 1 second")
     timelock_condition = [ConditionOpcode.ASSERT_SECONDS_RELATIVE, timelock]
     augmented_cond_puz_hash = create_augmented_cond_puzzle_hash(timelock_condition, recipient_ph)
-    p2_puzzle_hash_puz = create_p2_puzzle_hash_puzzle(sender_ph)
-
-    merkle_tree = MerkleTree([augmented_cond_puz_hash, p2_puzzle_hash_puz.get_tree_hash()])
+    merkle_tree = MerkleTree(
+        [augmented_cond_puz_hash, curry_and_treehash(P2_CURRIED_PUZZLE_MOD_HASH_QUOTED, sender_ph)]
+    )
     return merkle_tree
 
 

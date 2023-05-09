@@ -59,10 +59,10 @@ class ClawbackPuzzleDecorator:
                     RemarkDataType.CLAWBACK,
                     bytes(VersionedBlob(ClawbackVersion.V1.value, bytes(metadata))),
                 ]
-            ).as_python()
-
-            conditions = inner_solution.rest().first().as_python()
-            conditions.insert(1, remark_condition)
+            )
+            # Insert the REMARK condition into the condition list
+            conditions = remark_condition.cons(inner_solution.rest().first().rest())
+            conditions = inner_solution.rest().first().first().cons(conditions)
             inner_solution = inner_solution.replace(rf=conditions)
         return self.decorate(inner_puzzle), inner_solution
 
