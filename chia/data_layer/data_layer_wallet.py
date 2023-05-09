@@ -633,6 +633,7 @@ class DataLayerWallet:
         sign: bool = True,  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
+        **kwargs: Any,
     ) -> List[TransactionRecord]:
         # Figure out the launcher ID
         if len(coins) == 0:

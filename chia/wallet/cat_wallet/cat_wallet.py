@@ -810,6 +810,7 @@ class CATWallet:
         exclude_cat_coins: Optional[Set[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Any,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]

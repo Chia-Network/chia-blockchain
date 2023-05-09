@@ -632,6 +632,7 @@ class NFTWallet:
         additional_bundles: List[SpendBundle] = [],
         metadata_update: Optional[Tuple[str, str]] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Any,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]

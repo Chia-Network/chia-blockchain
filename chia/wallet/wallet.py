@@ -490,6 +490,7 @@ class Wallet:
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Any,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
