@@ -3,18 +3,18 @@
   ; all items in the list are required to be non-nil
   ; except for the final item which is returned
   (defmacro assert items
-      (if (r items)
-          (list if (f items) (c assert (r items)) (q . (x)))
-          (f items)
-      )
+    (if (r items)
+        (list if (f items) (c assert (r items)) (q . (x)))
+        (f items)
+    )
   )
 
   (defmacro and ARGS
-   (if ARGS
-       (qq (if (unquote (f ARGS))
-           (unquote (c and (r ARGS)))
-           ()
-           ))
-       1)
-   )
+    (if ARGS
+        (qq (if (unquote (f ARGS))
+                (unquote (c and (r ARGS)))
+                ()
+        ))
+    1)
+  )
 )
