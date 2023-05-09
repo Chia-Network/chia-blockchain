@@ -137,7 +137,7 @@ class WalletInterestedStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR IGNORE INTO unacknowledged_asset_token_states VALUES(?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO unacknowledged_asset_token_states VALUES(?, ?, ?)",
                 (bytes(coin_state), asset_id, 0 if fork_height is None else fork_height),
             )
             await cursor.close()
