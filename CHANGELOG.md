@@ -17,6 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 - DataLayer plugin support and infrastructure
 
 ### Changed
+- Fix soft fork to 60 days
 - Don't subscribe to all coin ids in the DB
 - Handle trade coins in the `try` block of `new_coin_state`
 - Add benchmark that tests the mempool over a long time
