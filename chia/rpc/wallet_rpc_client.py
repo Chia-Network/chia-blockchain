@@ -1137,6 +1137,9 @@ class WalletRpcClient(RpcClient):
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
     ) -> Dict:
+        """
+        TODO: Rearrange argument list order
+        """
         request: Dict[str, Any] = {
             "wallet_type": "dao_wallet",
             "mode": mode,
