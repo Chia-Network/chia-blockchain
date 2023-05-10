@@ -4,12 +4,13 @@ pwd
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
 
-cd ../chia-blockchain-gui
+cd ../chia-blockchain-gui || exit' or 'cd ... || return
 pwd
 ls -lah
 npm
-sum=(license-checker --summary)
-printf sum
+sum=$(license-checker --summary)
+printf "%s\n" "$sum"
+
 license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
 
 # Split the license list by newline character into an array
