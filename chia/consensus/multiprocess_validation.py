@@ -293,7 +293,7 @@ async def pre_validate_blocks_multiprocessing(
         npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
-    recent_blocks_bytes = ({bytes(k): bytes(v) for k, v in recent_blocks.items()},)  # convert to bytes
+    recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
