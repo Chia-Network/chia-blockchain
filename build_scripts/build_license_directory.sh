@@ -5,6 +5,8 @@ pwd
 npm install -g license-checker
 
 cd ../chia-blockchain-gui || exit' or 'cd ... || return
+npm install .
+
 pwd
 ls -lah
 npm
@@ -32,7 +34,7 @@ done
 
 mv licenses/ ../dist
 
-cd ../build_scripts
+cd ../build_scripts cd ... || exit' or 'cd ... || return
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
