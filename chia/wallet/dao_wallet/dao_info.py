@@ -39,6 +39,7 @@ class DAOInfo(Streamable):
     singleton_block_height: uint32  # the block height that the current treasury singleton was created in
     filter_below_vote_amount: uint64  # we ignore proposals with fewer votes than this - defaults to 1
     assets: List[Optional[bytes32]]
+    current_height: uint64
 
 
 @streamable

@@ -2459,7 +2459,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        return {"success": True}
+        # TODO: implement
+        return {"success": False}
 
     ##########################################################################################
     # NFT Wallet

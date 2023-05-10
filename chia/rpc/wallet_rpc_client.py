@@ -1210,8 +1210,10 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("dao_close_proposal", request)
         return response
 
-    async def dao_free_coins_from_finished_proposal(self):
-        raise ValueError("Not implemented")
+    async def dao_free_coins_from_finished_proposal(self, wallet_id: int):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("dao_free_coins_from_finished_proposal", request)
+        return response
 
     async def dao_get_treasury_balance(self, wallet_id: int):
         request: Dict[str, Any] = {"wallet_id": wallet_id}

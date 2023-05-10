@@ -165,6 +165,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
+            0,
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -207,6 +208,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
 
@@ -246,6 +248,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
+            0,
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -276,6 +279,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
 
@@ -366,6 +370,7 @@ class DAOWallet(WalletProtocol):
             block_height,
             uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
             [],
+            0,
         )
 
         info_as_string = json.dumps(dao_info.to_json_dict())
@@ -422,6 +427,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
+            0,
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -463,6 +469,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
         # breakpoint()
@@ -608,6 +615,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             new_filter_level,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
 
@@ -711,6 +719,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
 
         future_parent = LineageProof(
@@ -1002,6 +1011,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
         new_cat_wallet = None
@@ -1041,6 +1051,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
 
         await self.save_info(dao_info)
@@ -1092,6 +1103,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
         eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
@@ -2044,6 +2056,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.singleton_block_height,
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
 
@@ -2328,6 +2341,7 @@ class DAOWallet(WalletProtocol):
             block_height,  # block_height: uint32
             self.dao_info.filter_below_vote_amount,
             self.dao_info.assets,
+            self.dao_info.current_height,
         )
         await self.save_info(dao_info)
         future_parent = LineageProof(
@@ -2412,6 +2426,18 @@ class DAOWallet(WalletProtocol):
         # This is where we can attempt to push spends, check on time locks, etc.
         """
 
-        # Check to see if a proposal timer has expired
-
+        dao_info = DAOInfo(
+            self.dao_info.treasury_id,  # treasury_id: bytes32
+            self.dao_info.cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
+            self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
+            self.dao_info.parent_info,  # treasury_id: bytes32
+            self.dao_info.current_treasury_coin,
+            self.dao_info.current_treasury_innerpuz,
+            self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
+            self.dao_info.current_height,
+        )
+        await self.save_info(dao_info)
         pass
