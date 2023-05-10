@@ -72,8 +72,8 @@ class DAOCATWallet:
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
-    ) -> CATWallet:
-        self = CATWallet()
+    ) -> DAOCATWallet:
+        self = DAOCATWallet()
 
         self.log = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class DAOCATWallet:
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
         try:
-            self.cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
+            self.dao_cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             # self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         except AssertionError as e:
             self.log.error(f"Error creating DAO CAT wallet: {e}")
@@ -125,6 +125,8 @@ class DAOCATWallet:
         assert free_cat_wallet_id is not None
         for id, w in wallet_state_manager.wallets.items():
             if w.type() == WalletType.DAO:
+                self.log.info(f"FOUND DAO WALLET: {w}")
+                self.log.info(f"ALL WALLETS: {wallet_state_manager.wallets}")
                 if w.get_cat_wallet_id() == free_cat_wallet_id:
                     dao_wallet_id = w.id()
         assert dao_wallet_id is not None
@@ -485,6 +487,7 @@ class DAOCATWallet:
                 for coin in tx.spend_bundle.additions():
                     if coin.puzzle_hash == cat_puzzle_hash:
                         new_cats.append(coin)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle_hash], [self.id()])
 
         return txs, new_cats
 
@@ -674,28 +677,25 @@ class DAOCATWallet:
         return result
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        coins = await self.get_cat_spendable_coins(records)
         amount = 0
-        for record in coins:
-            amount += record.coin.amount
-
+        for coin in self.dao_cat_info.locked_coins:
+            amount += coin.coin.amount
         return uint128(amount)
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        if record_list is None:
-            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
-
-        amount: uint128 = uint128(0)
-        for record in record_list:
-            lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None:
-                amount = uint128(amount + record.coin.amount)
-
-        self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
+        amount = 0
+        for coin in self.dao_cat_info.locked_coins:
+            amount += coin.coin.amount
         return uint128(amount)
 
     async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
+        return uint128(0)
+
+    async def get_pending_change_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
+
+    async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
 
     async def get_votable_balance(
         self,

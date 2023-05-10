@@ -153,7 +153,7 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
         print(f"Proposal ID: {prop.proposal_id.hex()}")
         print(f"Votes for: {prop.yes_votes}")
         print(f"Votes against: {prop.total_votes - prop.yes_votes}")
-        print(f"Closable at block height: {prop.singleton_block_height + lockup_time]}")
+        print(f"Closable at block height: {prop.singleton_block_height + lockup_time}")
         print("------------------------")
     print(f"Proposals have {soft_close_length} blocks of soft close time.")
     print("############################")
@@ -202,7 +202,24 @@ async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
 
 async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    amount = args["amount"]
+    final_amount: uint64 = uint64(int(Decimal(amount) * units["cat"]))
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    typ = await get_wallet_type(wallet_id=4, wallet_client=wallet_client)
+    res = await wallet_client.dao_send_to_lockup(wallet_id=wallet_id, amount=final_amount, fee=final_fee)
+    tx_id = res["tx_id"]
+    start = time.time()
+    while time.time() - start < 10:
+        await asyncio.sleep(0.1)
+        tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+        if len(tx.sent_to) > 0:
+            print(transaction_submitted_msg(tx))
+            print(transaction_status_msg(fingerprint, tx_id))
+            return None
+
+    print("Transaction not yet submitted to nodes")
 
 
 async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
