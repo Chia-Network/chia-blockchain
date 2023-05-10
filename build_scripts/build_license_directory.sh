@@ -11,23 +11,27 @@ license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
 # Split the license list by newline character into an array
 IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 
-print the contents of the array
-printf '%s\n' "${license_list[@]}"
+#print the contents of the array
+printf '%s\n' "${licenses_array[@]}"
 
-cd ../build_scripts
 for i in "${licenses_array[@]}"; do
-  dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
-  mkdir -p "$dirname"
-  echo "$dirname"
-  cp "$i" "$dirname"
+  if [ -e "$i" ]; then
+    dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
+    mkdir -p "$dirname"
+    echo "$dirname"
+    cp "$i" "$dirname"
+  else
+    echo "File does not exist: $i"
+  fi
 done
 
+mv licenses/ ../dist
+
+cd ../build_scripts
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
-
-
 
 # capture the output of the command in a variable
 output=$(pip-licenses -l -f json | jq -r '.[].LicenseFile' | grep -v UNKNOWN)
