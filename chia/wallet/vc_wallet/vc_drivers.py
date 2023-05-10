@@ -234,7 +234,7 @@ def create_eml_covenant_morpher(
     return first_curry.curry(first_curry.get_tree_hash())
 
 
-def construct_extigent_metadata_layer(
+def construct_exigent_metadata_layer(
     metadata: Optional[bytes32],
     transfer_program: Program,
     inner_puzzle: Program,
@@ -252,7 +252,7 @@ def construct_extigent_metadata_layer(
 @dataclass(frozen=True)
 class VCLineageProof(LineageProof, Streamable):
     """
-    The covenant layer for extigent metadata layers requires to be passed the previous parent's metadata too
+    The covenant layer for exigent metadata layers requires to be passed the previous parent's metadata too
     """
 
     parent_proof_hash: Optional[bytes32] = None
@@ -298,7 +298,7 @@ def solve_std_vc_backdoor(
 # (mod (_ _ (provider tp)) (list (c provider ()) tp ()))
 # (c (c 19 ()) (c 43 (q ())))
 GUARANTEED_NIL_TP: Program = Program.fromhex("ff04ffff04ff13ff8080ffff04ff2bffff01ff80808080")
-OWNERSHIP_LAYER_LAUNCHER: Program = construct_extigent_metadata_layer(
+OWNERSHIP_LAYER_LAUNCHER: Program = construct_exigent_metadata_layer(
     None,
     GUARANTEED_NIL_TP,
     P2_ANNOUNCED_DELEGATED_PUZZLE,
@@ -376,7 +376,7 @@ class VerifiedCredential(Streamable):
             STANDARD_BRICK_PUZZLE_HASH,
             new_inner_puzzle_hash,
         ).get_tree_hash()
-        metadata_layer_hash: bytes32 = construct_extigent_metadata_layer(
+        metadata_layer_hash: bytes32 = construct_exigent_metadata_layer(
             Program.to((provider_id, None)),
             transfer_program,
             wrapped_inner_puzzle_hash,  # type: ignore
@@ -454,11 +454,11 @@ class VerifiedCredential(Streamable):
     def construct_puzzle(self) -> Program:
         return puzzle_for_singleton(
             self.launcher_id,
-            self.construct_extigent_metadata_layer(),
+            self.construct_exigent_metadata_layer(),
         )
 
-    def construct_extigent_metadata_layer(self) -> Program:
-        return construct_extigent_metadata_layer(
+    def construct_exigent_metadata_layer(self) -> Program:
+        return construct_exigent_metadata_layer(
             Program.to((self.proof_provider, self.proof_hash)),
             self.construct_transfer_program(),
             self.wrap_inner_with_backdoor(),
@@ -502,7 +502,7 @@ class VerifiedCredential(Streamable):
             return False, "top most layer is not a singleton"
         layer_below_singleton: UncurriedPuzzle = uncurry_puzzle(puzzle_reveal.args.at("rf"))
         if layer_below_singleton.mod != EXTIGENT_METADATA_LAYER:
-            return False, "layer below singleton is not an extigent metadata layer"
+            return False, "layer below singleton is not an exigent metadata layer"
 
         # Need to validate both transfer program...
         full_transfer_program_as_prog: Program = layer_below_singleton.args.at("rrf")
@@ -530,12 +530,12 @@ class VerifiedCredential(Streamable):
         if uncurry_puzzle(morpher.mod).mod != EXTIGENT_METADATA_LAYER_COVENANT_MORPHER:
             return (
                 False,
-                "covenant for extigent metadata layer does not match the one expected for VCs",
+                "covenant for exigent metadata layer does not match the one expected for VCs",
             )  # pragma: no cover
         if uncurry_puzzle(adapted_transfer_program.args.at("rrf")).mod != EML_DID_TP:
             return (
                 False,
-                "transfer program for extigent metadata layer was not the standard VC transfer program",
+                "transfer program for exigent metadata layer was not the standard VC transfer program",
             )  # pragma: no cover
 
         # ...and layer below EML
@@ -795,7 +795,7 @@ class VerifiedCredential(Streamable):
             Coin(self.coin.name(), bytes32([0] * 32), next_amount),
             LineageProof(
                 self.coin.parent_coin_info,
-                self.construct_extigent_metadata_layer().get_tree_hash(),
+                self.construct_exigent_metadata_layer().get_tree_hash(),
                 uint64(self.coin.amount),
             ),
             VCLineageProof(

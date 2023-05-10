@@ -27,7 +27,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker
 from chia.wallet.vc_wallet.vc_drivers import (
     ACS_TRANSFER_PROGRAM,
     VerifiedCredential,
-    construct_extigent_metadata_layer,
+    construct_exigent_metadata_layer,
     create_covenant_layer,
     create_did_tp,
     create_std_parent_morpher,
@@ -185,7 +185,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
 @pytest.mark.asyncio
 async def test_did_tp(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        # Make a mock extigent metadata layer
+        # Make a mock exigent metadata layer
         # Prepends new metadata and new transfer program as REMARK condition to conditions of TP
         # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
         # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
@@ -762,7 +762,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         # Verify the end state
         new_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
-            construct_extigent_metadata_layer(
+            construct_exigent_metadata_layer(
                 None,
                 ACS_TRANSFER_PROGRAM,
                 ACS,
@@ -824,7 +824,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         # Verify the end state
         cleared_singletons_puzzle_reveal: Program = puzzle_for_singleton(
             vc.launcher_id,
-            construct_extigent_metadata_layer(
+            construct_exigent_metadata_layer(
                 None,
                 ACS_TRANSFER_PROGRAM,
                 vc.wrap_inner_with_backdoor(),
