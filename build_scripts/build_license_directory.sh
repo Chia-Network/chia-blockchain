@@ -3,18 +3,19 @@
 pwd
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
+
 cd ../chia-blockchain-gui
 
 license_list=$(license-checker --json | jq -r '.[].licenseFile' | grep -v null)
 
 # Split the license list by newline character into an array
-IFS=$'\n' read -rd '' -a licenses <<< "$license_list"
+IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 
-# print the contents of the array
-#printf '%s\n' "${licenses[@]}"
+print the contents of the array
+printf '%s\n' "${license_list[@]}"
 
 cd ../build_scripts
-for i in "${licenses[@]}"; do
+for i in "${licenses_array[@]}"; do
   dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
   mkdir -p "$dirname"
   echo "$dirname"
@@ -39,17 +40,13 @@ while IFS= read -r line; do
     license_path_array+=("$line")
 done <<< "$output"
 
-# print the contents of the array
-printf '%s\n' "${license_path_array[@]}"
-
 # create a dir for each license and copy the license file over
 for i in "${license_path_array[@]}"; do
   dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
   echo "$dirname"
-  if [ ! -d "$dirname" ]; then
-    mkdir -p "$dirname"
-  fi
+  mkdir -p "$dirname"
   cp "$i" "$dirname"
+  echo "$i"
 done
 
 pwd
