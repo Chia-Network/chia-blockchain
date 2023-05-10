@@ -234,9 +234,7 @@ async def pre_validate_blocks_multiprocessing(
         )
 
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(
-            constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False
-        )
+        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
@@ -295,6 +293,7 @@ async def pre_validate_blocks_multiprocessing(
         npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
+    recent_blocks_bytes = ({bytes(k): bytes(v) for k, v in recent_blocks.items()},)  # convert to bytes
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
@@ -339,7 +338,7 @@ async def pre_validate_blocks_multiprocessing(
                 pool,
                 batch_pre_validate_blocks,
                 constants,
-                {bytes(k): bytes(v) for k, v in recent_blocks.items()},  # convert to bytes
+                recent_blocks_bytes,
                 b_pickled,
                 hb_pickled,
                 previous_generators,
