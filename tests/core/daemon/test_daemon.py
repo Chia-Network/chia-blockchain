@@ -522,11 +522,12 @@ async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keycha
     # Expect: validation failure
     assert_response(await ws.receive(), empty_passphrase_response_data)
 
-    monkeypatch.setattr(Keychain, "master_passphrase_is_valid", raise_)
-    await ws.send_str(
-        create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
-    )
-    assert_response(await ws.receive(), exception_response_data)
+    with monkeypatch.context() as m:
+        m.setattr(Keychain, "master_passphrase_is_valid", raise_)
+        await ws.send_str(
+            create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
+        )
+        assert_response(await ws.receive(), exception_response_data)
 
 
 @pytest.mark.asyncio
@@ -1135,18 +1136,19 @@ async def test_unlock_keyring_exceptions(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
 
-    monkeypatch.setattr(Keychain, "master_passphrase_is_valid", raise_)
-    # remove with wrong passphrase
-    payload = create_payload(
-        "unlock_keyring",
-        {"key": "this is a passphrase"},
-        "service_name",
-        "daemon",
-    )
-    await ws.send_str(payload)
-    response = await ws.receive()
+    with monkeypatch.context() as m:
+        m.setattr(Keychain, "master_passphrase_is_valid", raise_)
+        # remove with wrong passphrase
+        payload = create_payload(
+            "unlock_keyring",
+            {"key": "this is a passphrase"},
+            "service_name",
+            "daemon",
+        )
+        await ws.send_str(payload)
+        response = await ws.receive()
 
-    assert_response(
-        response,
-        {"success": False, "error": "validation exception"},
-    )
+        assert_response(
+            response,
+            {"success": False, "error": "validation exception"},
+        )
