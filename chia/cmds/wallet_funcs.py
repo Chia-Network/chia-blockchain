@@ -481,7 +481,9 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch = "XCH"):
+async def print_offer_summary(
+    cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch="XCH"
+):
     for asset_id, amount in sum_dict.items():
         description: str = ""
         unit: int = units["chia"]
