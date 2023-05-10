@@ -39,6 +39,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
+from chia.wallet.dao_wallet.dao_utils import get_treasury_rules_from_puzzle
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
@@ -2313,7 +2314,13 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         proposal_list = dao_wallet.dao_info.proposals_list
-        return {"success": True, "proposals": proposal_list}
+        dao_rules = get_treasury_rules_from_puzzle(dao_wallet.dao_info.current_treasury_innerpuz)
+        return {
+            "success": True,
+            "proposals": proposal_list,
+            "lockup_time": dao_rules.proposal_timelock,
+            "soft_close_length": dao_rules.soft_close_length,
+        }
 
     async def dao_get_proposal_state(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2420,16 +2427,16 @@ class WalletRpcApi:
         fee = uint64(0)
         if "fee" in request:
             fee = uint64(request["fee"])
-        tx = await dao_wallet.generate_proposal_vote_spend(
+        sb = await dao_wallet.generate_proposal_vote_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
             request["is_yes_vote"],  # bool
             fee,
             push=True,
         )
-        assert tx is not None
+        assert sb is not None
         return {
-            "success": True,
+            "success": True, "spend_bundle": sb
         }
 
     async def dao_close_proposal(self, request) -> EndpointResult:

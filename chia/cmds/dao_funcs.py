@@ -19,9 +19,9 @@ from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 
 
 async def add_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    treasury_id=args["treasury_id"]
-    filter_amount=args["filter_amount"]
-    name=args["name"]
+    treasury_id = args["treasury_id"]
+    filter_amount = args["filter_amount"]
+    name = args["name"]
 
     print(f"Adding wallet for DAO: {treasury_id}")
     print("This may take awhile.")
@@ -54,7 +54,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
     amount_of_cats = args["amount_of_cats"]
     filter_amount = args["filter_amount"]
     name = args["name"]
-    
+
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
 
@@ -129,7 +129,34 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_client: WalletRpcCli
 
 
 async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+
+    res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
+    proposals = res["proposals"]
+    # proposal_id: bytes32  # this is launcher_id
+    # inner_puzzle: Program
+    # amount_voted: uint64
+    # yes_votes: uint64
+    # current_coin: Coin
+    # current_innerpuz: Optional[Program]
+    # timer_coin: Optional[Coin]  # if this is None then the proposal has finished
+    # singleton_block_height: uint32  # Block height that current proposal singleton coin was created in
+    # passed: Optional[bool]
+    # closed: Optional[bool]
+    if not res["success"]:
+        print("Error: unable to fetch proposals.")
+        return
+    lockup_time = res["lockup_times"]
+    soft_close_length = res["soft_close_length"]
+    print("############################")
+    for prop in proposals:
+        print(f"Proposal ID: {prop.proposal_id.hex()}")
+        print(f"Votes for: {prop.yes_votes}")
+        print(f"Votes against: {prop.total_votes - prop.yes_votes}")
+        print(f"Closable at block height: {prop.singleton_block_height + lockup_time]}")
+        print("------------------------")
+    print(f"Proposals have {soft_close_length} blocks of soft close time.")
+    print("############################")
 
 
 async def show_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -137,11 +164,41 @@ async def show_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
 
 
 async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    vote_amount = args["vote_amount"]
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+    proposal_id = request["proposal_id"]
+    is_yes_vote = request["is_yes_vote"]
+    # wallet_id: int, proposal_id: str, vote_amount: uint64, is_yes_vote: bool = True, fee: uint64 = uint64(0)
+    res = await wallet_client.dao_vote_on_proposals(
+        wallet_id=wallet_id, proposal_id=proposal_id, vote_amount=vote_amount, is_yes_vote=is_yes_vote, fee=fee
+    )
+    spend_bundle = res["spend_bundle"]
+    if res["success"]:
+        print(f"Submitted spend bundle with name: {spend_bundle.name()}")
+    else:
+        print("Unable to generate vote transaction.")
 
 
 async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+    proposal_id = request["proposal_id"]
+    res = await wallet_client.dao_close_proposal(
+        wallet_id=wallet_id, proposal_id=proposal_id, fee=fee
+    )
+    # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
+    if res["success"]:
+        name = res["tx_id"]
+        print(f"Submitted proposal close transaction with name: {name}")
+    else:
+        print("Unable to generate close transaction.")
 
 
 async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -153,10 +210,106 @@ async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    # dao_create_proposal(
+    #     wallet_id: int,
+    #     proposal_type: str,
+    #     additions: Optional[List[Dict]] = None,
+    #     amount: Optional[uint64] = None,
+    #     inner_address: Optional[str] = None,
+    #     asset_id: Optional[str] = None,
+    #     new_dao_rules: Optional[Dict[str, uint64]] = None,
+    #     fee: uint64 = uint64(0),
+    # )
+
+    # args = {
+    #     "wallet_id": wallet_id,
+    #     "fee": fee,
+    #     "to_address": to_address,
+    #     "amount": amount,
+    #     "asset_id": asset_id,
+    #     "from_json": from_json,
+    # }
+    wallet_id = args["wallet_id"]
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+
+    if "to_address" in args:
+        address = args["to_address"]
+    else:
+        address = None
+    if "amount" in args:
+        amount = args["amount"]
+    else:
+        amount = None
+    if "from_json" in args:
+        additions = args["from_json"]
+    else:
+        additions = None
+    if additions is None and (address is None or amount is None):
+        print("ERROR: Must include a json specification or an address / amount pair.")
+    res = await wallet_client.dao_create_proposal(
+        wallet_id=wallet_id,
+        proposal_type="spend",
+        additions=additions,
+        amount=amount,
+        inner_address=address,
+        fee=fee
+    )
+    if res["success"]:
+        print(f"Successfully created proposal.")
+    else:
+        print("Failed to create proposal.")
 
 
 async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+    if "proposal_timelock" in args:
+        proposal_timelock = args["proposal_timelock"]
+    else:
+        proposal_timelock = None
+    if "soft_close_length" in args:
+        soft_close_length = args["soft_close_length"]
+    else:
+        soft_close_length = None
+    if "attendance_required" in args:
+        attendance_required = args["attendance_required"]
+    else:
+        attendance_required = None
+    if "pass_percentage" in args:
+        pass_percentage = args["pass_percentage"]
+    else:
+        pass_percentage = None
+    if "self_destruct_length" in args:
+        self_destruct_length = args["self_destruct_length"]
+    else:
+        self_destruct_length = None
+    if "oracle_spend_delay" in args:
+        oracle_spend_delay = args["oracle_spend_delay"]
+    else:
+        oracle_spend_delay = None
+    new_dao_rules = {
+        "proposal_timelock": proposal_timelock,
+        "soft_close_length": soft_close_length,
+        "attendance_required": attendance_required,
+        "pass_percentage": pass_percentage,
+        "self_destruct_length": self_destruct_length,
+        "oracle_spend_delay": oracle_spend_delay,
+    }
+    res = await wallet_client.dao_create_proposal(
+        wallet_id=wallet_id,
+        proposal_type="update",
+        new_dao_rules=new_dao_rules,
+        fee=fee,
+    )
+    if res["success"]:
+        print(f"Successfully created proposal.")
+    else:
+        print("Failed to create proposal.")
     raise ValueError("Not Implemented")
 
 
