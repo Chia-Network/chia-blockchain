@@ -210,25 +210,6 @@ async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    # dao_create_proposal(
-    #     wallet_id: int,
-    #     proposal_type: str,
-    #     additions: Optional[List[Dict]] = None,
-    #     amount: Optional[uint64] = None,
-    #     inner_address: Optional[str] = None,
-    #     asset_id: Optional[str] = None,
-    #     new_dao_rules: Optional[Dict[str, uint64]] = None,
-    #     fee: uint64 = uint64(0),
-    # )
-
-    # args = {
-    #     "wallet_id": wallet_id,
-    #     "fee": fee,
-    #     "to_address": to_address,
-    #     "amount": amount,
-    #     "asset_id": asset_id,
-    #     "from_json": from_json,
-    # }
     wallet_id = args["wallet_id"]
     if "fee" in args:
         fee = args["fee"]
@@ -249,12 +230,17 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         additions = None
     if additions is None and (address is None or amount is None):
         print("ERROR: Must include a json specification or an address / amount pair.")
+    if "vote_amount" in args:
+        vote_amount = args["vote_amount"]
+    else:
+        vote_amount = None
     res = await wallet_client.dao_create_proposal(
         wallet_id=wallet_id,
         proposal_type="spend",
         additions=additions,
         amount=amount,
         inner_address=address,
+        vote_amount=vote_amount,
         fee=fee
     )
     if res["success"]:
@@ -264,6 +250,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
 
 
 async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
     if "fee" in args:
         fee = args["fee"]
     else:
@@ -292,6 +279,10 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
         oracle_spend_delay = args["oracle_spend_delay"]
     else:
         oracle_spend_delay = None
+    if "vote_amount" in args:
+        vote_amount = args["vote_amount"]
+    else:
+        vote_amount = None
     new_dao_rules = {
         "proposal_timelock": proposal_timelock,
         "soft_close_length": soft_close_length,
@@ -304,14 +295,34 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
         wallet_id=wallet_id,
         proposal_type="update",
         new_dao_rules=new_dao_rules,
+        vote_amount=vote_amount,
         fee=fee,
     )
     if res["success"]:
         print(f"Successfully created proposal.")
     else:
         print("Failed to create proposal.")
-    raise ValueError("Not Implemented")
 
 
 async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+    cat_target_address = args["cat_target_address"]
+    amount = args["amount"]
+    if "vote_amount" in args:
+        vote_amount = args["vote_amount"]
+    res = await wallet_client.dao_create_proposal(
+        wallet_id=wallet_id,
+        proposal_type="mint",
+        cat_target_address=cat_target_address,
+        amount=amount,
+        vote_amount=vote_amount,
+        fee=fee,
+    )
+    if res["success"]:
+        print(f"Successfully created proposal.")
+    else:
+        print("Failed to create proposal.")

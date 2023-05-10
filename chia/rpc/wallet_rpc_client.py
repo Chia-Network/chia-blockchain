@@ -1161,6 +1161,8 @@ class WalletRpcClient(RpcClient):
         amount: Optional[uint64] = None,
         inner_address: Optional[str] = None,
         asset_id: Optional[str] = None,
+        cat_target_address: Optional[str] = None,
+        vote_amount: Optional[int] = None,
         new_dao_rules: Optional[Dict[str, uint64]] = None,
         fee: uint64 = uint64(0),
     ) -> Dict:
@@ -1171,6 +1173,8 @@ class WalletRpcClient(RpcClient):
             "amount": amount,
             "inner_address": inner_address,
             "asset_id": asset_id,
+            "cat_target_address": cat_target_address,
+            "vote_amount": vote_amount,
             "new_dao_rules": new_dao_rules,
             "fee": fee,
         }
