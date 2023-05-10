@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
@@ -12,9 +13,14 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.util.query_filter import AmountFilter, CoinRecordOrder, FilterMode, HashFilter
+from chia.wallet.util.query_filter import AmountFilter, FilterMode, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+
+
+class CoinRecordOrder(IntEnum):
+    confirmed_height = 1
+    spent_height = 2
 
 
 @streamable

@@ -289,15 +289,10 @@ class WalletTransactionStore:
         if type_filter is None:
             type_filter_str = ""
         else:
-            if len(type_filter.values) == 0 and type_filter.mode == FilterMode.include:
-                return []
-            if len(type_filter.values) == 0 and type_filter.mode == FilterMode.exclude:
-                type_filter_str = ""
-            else:
-                type_filter_str = (
-                    f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
-                    f"IN ({','.join([str(x) for x in type_filter.values])})"
-                )
+            type_filter_str = (
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"IN ({','.join([str(x) for x in type_filter.values])})"
+            )
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
