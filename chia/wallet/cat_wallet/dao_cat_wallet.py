@@ -694,6 +694,9 @@ class DAOCATWallet:
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint128(amount)
 
+    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
+
     async def get_votable_balance(
         self,
         proposal_id: Optional[bytes32] = None,
