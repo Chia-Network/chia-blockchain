@@ -34,7 +34,7 @@ done
 
 mv licenses/ ../dist
 
-cd ../build_scripts cd ... || exit' or 'cd ... || return
+cd ../build_scripts || exit' or 'cd ... || return
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
