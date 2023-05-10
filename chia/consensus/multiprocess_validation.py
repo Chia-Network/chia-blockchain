@@ -21,7 +21,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, is_overf
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import get_plot_id, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
@@ -201,6 +201,7 @@ async def pre_validate_blocks_multiprocessing(
     recent_blocks_compressed: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
+    recent_plot_ids: List[bytes32] = []
     if blocks[0].height > 0:
         if not block_records.contains_block(blocks[0].prev_header_hash):
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
@@ -220,6 +221,9 @@ async def pre_validate_blocks_multiprocessing(
             recent_blocks[curr.header_hash] = curr
             if curr.is_transaction_block:
                 num_blocks_seen += 1
+            if len(recent_plot_ids) < 4:
+                header_block: HeaderBlock = block_records.get_header_block_by_height(curr.height, curr.header_hash)
+                recent_plot_ids.append(get_plot_id(header_block.reward_chain_block.proof_of_space))
             curr = block_records.block_record(curr.prev_hash)
         recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
@@ -227,6 +231,7 @@ async def pre_validate_blocks_multiprocessing(
     for block in blocks:
         block_record_was_present.append(block_records.contains_block(block.header_hash))
 
+    recent_plot_ids.reverse()
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
@@ -247,11 +252,15 @@ async def pre_validate_blocks_multiprocessing(
         q_str: Optional[bytes32] = verify_and_get_quality_string(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
         )
-        if q_str is None:
+        block_plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
+        if q_str is None or block_plot_id in recent_plot_ids:
             for i, block_i in enumerate(blocks):
                 if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
                     block_records.remove_block_record(block_i.header_hash)
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False)]
+        if len(recent_plot_ids) == 4:
+            recent_plot_ids.pop(0)
+        recent_plot_ids.append(block_plot_id)
 
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
