@@ -21,12 +21,12 @@
   )
 
   (fix_condition (a
-    COVENANT_LAYER
-    (list
-      lineage_proof
-      morpher_solution
-      ; Covenant layer doesn't know about truths so we need to pass those down to the inner tp solution
-      (list METADATA CONDITIONS inner_solution)
-    )
+      COVENANT_LAYER
+      (list
+        lineage_proof
+        morpher_solution
+        ; Covenant layer doesn't know about truths so we need to pass those down to the inner tp solution
+        (list METADATA CONDITIONS inner_solution)
+      )
   ))
 )

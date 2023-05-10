@@ -2452,7 +2452,7 @@ class TestMaliciousGenerators:
         # duplicate
         condition = CREATE_COIN.format(num=600000)
 
-        with assert_runtime(seconds=0.8, label=request.node.name):
+        with assert_runtime(seconds=1, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value

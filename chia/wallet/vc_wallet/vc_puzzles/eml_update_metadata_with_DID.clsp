@@ -31,10 +31,10 @@
 
   (defun-inline create_did_puzhash
     (
-        SINGLETON_MOD_HASH
-        SINGLETON_LAUNCHER_HASH
-        provider_id
-        provider_innerpuzhash
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_HASH
+      provider_id
+      provider_innerpuzhash
     )
 
     (curry_hashes_inline SINGLETON_MOD_HASH

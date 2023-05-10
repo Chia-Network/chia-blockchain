@@ -18,91 +18,91 @@
 
 
 (mod
-    (M public_key_list selectors delegated_puzzle solution)
+  (M public_key_list selectors delegated_puzzle solution)
 
-    (include condition_codes.clib)
+  (include condition_codes.clib)
 
-    ;; hash a tree
-    ;; This is used to calculate a puzzle hash given a puzzle program.
-    (defun sha256tree1
-           (TREE)
-           (if (l TREE)
-               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-               (sha256 1 TREE)
-           )
+  ;; hash a tree
+  ;; This is used to calculate a puzzle hash given a puzzle program.
+  (defun sha256tree1
+    (TREE)
+    (if (l TREE)
+        (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+        (sha256 1 TREE)
     )
+  )
 
-    ; "assert" is a macro that wraps repeated instances of "if"
-    ; usage: (assert A0 A1 ... An R)
-    ; all of A0, A1, ... An must evaluate to non-null, or an exception is raised
-    ; return the value of R (if we get that far)
+  ; "assert" is a macro that wraps repeated instances of "if"
+  ; usage: (assert A0 A1 ... An R)
+  ; all of A0, A1, ... An must evaluate to non-null, or an exception is raised
+  ; return the value of R (if we get that far)
 
-    (defmacro assert items
-        (if (r items)
-            (list if (f items) (c assert (r items)) (q . (x)))
-            (f items)
+  (defmacro assert items
+    (if (r items)
+        (list if (f items) (c assert (r items)) (q . (x)))
+        (f items)
+    )
+  )
+
+  ; add_aggsig returns a list of conditions. It includes M AGG_SIG conditions
+  ;   corresponding to the given list of public keys (with the given hash)
+  ;   plus the conditions that come out of the delegated puzzle.
+  ;
+  ; hash is the hash of delegated_puzzle.
+  ;  Yes it's redundant since we include the delegated_puzzle itself,
+  ;  but we don't want to recalculate the hash multiple times as its expensive to do so
+
+  (defun add_aggsig (public_key_list hash delegated_puzzle solution)
+    (if public_key_list
+        (c (list AGG_SIG_UNSAFE (f public_key_list) hash)
+          (add_aggsig (r public_key_list) hash delegated_puzzle solution)
         )
+        (a delegated_puzzle solution)
     )
+  )
 
-    ; add_aggsig returns a list of conditions. It includes M AGG_SIG conditions
-    ;   corresponding to the given list of public keys (with the given hash)
-    ;   plus the conditions that come out of the delegated puzzle.
-    ;
-    ; hash is the hash of delegated_puzzle.
-    ;  Yes it's redundant since we include the delegated_puzzle itself,
-    ;  but we don't want to recalculate the hash multiple times as its expensive to do so
+  ; choose_keys takes a list of selectors and the N public keys and
+  ; returns a list of the M public keys chosen by the selectors
 
-    (defun add_aggsig (public_key_list hash delegated_puzzle solution)
-        (if public_key_list
-            (c (list AGG_SIG_UNSAFE (f public_key_list) hash)
-               (add_aggsig (r public_key_list) hash delegated_puzzle solution)
-            )
-            (a delegated_puzzle solution)
+  (defun choose_keys (selectors public_key_list)
+    (if selectors
+        (if (f selectors)
+            (c (f public_key_list) (choose_keys (r selectors) (r public_key_list)))
+        (choose_keys (r selectors) (r public_key_list)))
+        ()
+    )
+  )
+
+
+  ; count the number of non-0 values in the list of selectors and return it as an integer
+
+  (defun count_selectors (selectors)
+    (if selectors
+        (+
+          (count_selectors (r selectors))
+          (if (f selectors) 1 0)
         )
+        0
     )
+  )
 
-    ; choose_keys takes a list of selectors and the N public keys and
-    ; returns a list of the M public keys chosen by the selectors
+  ; "solve_puzzle" is the main entry point
 
-    (defun choose_keys (selectors public_key_list)
-        (if selectors
-            (if (f selectors)
-                (c (f public_key_list) (choose_keys (r selectors) (r public_key_list)))
-                (choose_keys (r selectors) (r public_key_list)))
-            ()
-        )
+  (defun-inline solve_puzzle (M public_key_list selectors delegated_puzzle solution)
+    ; make sure we have exactly M selectors
+    (assert (= M (count_selectors selectors))
+      ; return the AGG_SIG conditions plus the conditions from the delegated_puzzle
+      (add_aggsig (choose_keys selectors public_key_list)
+        (sha256tree1 delegated_puzzle)
+        delegated_puzzle
+      solution)
     )
+  )
 
+  ; main entry point
 
-    ; count the number of non-0 values in the list of selectors and return it as an integer
-
-    (defun count_selectors (selectors)
-        (if selectors
-            (+
-                (count_selectors (r selectors))
-                (if (f selectors) 1 0)
-            )
-            0
-        )
-    )
-
-    ; "solve_puzzle" is the main entry point
-
-    (defun-inline solve_puzzle (M public_key_list selectors delegated_puzzle solution)
-        ; make sure we have exactly M selectors
-        (assert (= M (count_selectors selectors))
-            ; return the AGG_SIG conditions plus the conditions from the delegated_puzzle
-                (add_aggsig (choose_keys selectors public_key_list)
-                            (sha256tree1 delegated_puzzle)
-                            delegated_puzzle
-                            solution)
-        )
-    )
-
-    ; main entry point
-
-    (solve_puzzle
-        M public_key_list
-        selectors delegated_puzzle solution
-    )
+  (solve_puzzle
+    M public_key_list
+    selectors delegated_puzzle solution
+  )
 )
