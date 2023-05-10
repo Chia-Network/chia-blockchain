@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from decimal import Decimal
+import time
 from typing import Any, Dict
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -74,11 +76,56 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
 
 
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    funding_wallet_id = args["funding_wallet_id"]
+    amount = Decimal(args["amount"])
+    fee = Decimal(args["fee"])
+
+    try:
+        typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(typ)
+    except LookupError:
+        print(f"Wallet id: {wallet_id} not found.")
+        return
+
+    final_fee: uint64 = uint64(int(fee * units["chia"]))
+    final_amount: uint64 = uint64(int(amount * mojo_per_unit))
+
+    res = await wallet_client.dao_add_funds_to_treasury(
+        wallet_id=wallet_id,
+        funding_wallet_id=funding_wallet_id,
+        amount=final_amount
+    )
+
+    tx_id = res["tx_id"]
+    start = time.time()
+    while time.time() - start < 10:
+        await asyncio.sleep(0.1)
+        tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+        if len(tx.sent_to) > 0:
+            print(transaction_submitted_msg(tx))
+            print(transaction_status_msg(fingerprint, tx_id))
+            return None
+
+    print("Transaction not yet submitted to nodes")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+
+    res = await wallet_client.dao_get_treasury_balance(wallet_id=wallet_id)
+    balances = res["balances"]
+
+    if not balances:
+        print("The DAO treasury currently has no funds")
+        return None
+
+    for asset_id, balance in balances.items():
+        if asset_id == "null":
+            print(f"XCH: {balance}")
+        else:
+            print(f"{asset_id}: {balance}")
 
 
 async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
