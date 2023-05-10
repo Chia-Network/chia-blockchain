@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import time
 from pathlib import Path
@@ -204,46 +205,82 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
         wallet_node_2.config["auto_claim"]["tx_fee"] = 100
-        wallet_node_2.config["auto_claim"]["enabled"] = True
+        wallet_node_2.config["auto_claim"]["batch_size"] = 1
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        tx1 = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
-
-        await wallet.push_transaction(tx)
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        await wallet.push_transaction(tx1)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx1])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        # Check merkle coins
         await time_out_assert(
             20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
-        await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000000000)
-        # Claim merkle coin
-        await asyncio.sleep(20)
-        # Trigger auto claim
+        tx2 = await wallet.generate_signed_transaction(
+            uint64(500),
+            normal_puzhash,
+            uint64(0),
+            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
+        )
+        await wallet.push_transaction(tx2)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx2])
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
+        await time_out_assert(
+            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 2, 1000, CoinType.CLAWBACK
+        )
+        await time_out_assert(
+            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 2, 1000, CoinType.CLAWBACK
+        )
+        tx3 = await wallet.generate_signed_transaction(
+            uint64(500),
+            normal_puzhash,
+            uint64(0),
+            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
+        )
+        await wallet.push_transaction(tx3)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx3])
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(
-            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
+            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 3, 1000, CoinType.CLAWBACK
         )
+        await time_out_assert(
+            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 3, 1000, CoinType.CLAWBACK
+        )
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000000)
+        # Change 3rd coin to test missing metadata case
+        clawback_coin_id = tx3.additions[0].name()
+        coin_record = await wallet_node_2.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id)
+        assert coin_record is not None
+        await wallet_node_2.wallet_state_manager.coin_store.add_coin_record(
+            dataclasses.replace(coin_record, metadata=None)
+        )
+        # Claim merkle coin
+        wallet_node_2.config["auto_claim"]["enabled"] = True
+        await asyncio.sleep(10)
+        # Trigger auto claim
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(
-            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
+            20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
-        await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000000400)
+        await time_out_assert(
+            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
+        )
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000800)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -307,6 +344,11 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
+        try:
+            await api_0.spend_clawback_coins({})
+            assert False
+        except ValueError:
+            pass
         resp = await api_0.spend_clawback_coins(
             dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
         )

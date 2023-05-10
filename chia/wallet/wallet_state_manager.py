@@ -719,7 +719,7 @@ class WalletStateManager:
                 coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                 if current_timestamp - coin_timestamp >= metadata.time_lock:
                     clawback_coins[coin.coin] = metadata
-                    if len(clawback_coins) >= self.config.get("auto_claim", {}).get("btach_size", 50):
+                    if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
                         await self.spend_clawback_coins(clawback_coins, tx_fee)
                         clawback_coins = {}
         if len(clawback_coins) > 0:
@@ -729,7 +729,6 @@ class WalletStateManager:
         assert len(clawback_coins) > 0
         txs: List[TransactionRecord] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
-        to_puzhash: Optional[bytes32] = None
         now: uint64 = uint64(int(time.time()))
         for coin, metadata in clawback_coins.items():
             recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
@@ -741,9 +740,7 @@ class WalletStateManager:
                 ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
             else:
                 derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
-            if derivation_record is None:
-                self.log.warning(f"You are not able to spend coin {coin.name().hex()}")
-                continue
+            assert derivation_record is not None
             if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
                 await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(
                     recipient_puzhash if is_recipient else sender_puzhash
@@ -753,7 +750,7 @@ class WalletStateManager:
                 primaries=[Payment(derivation_record.puzzle_hash, uint64(coin.amount), [])],
                 coin_announcements=None if len(txs) > 0 or fee == 0 else {message},
             )
-            to_puzhash = derivation_record.puzzle_hash
+            to_puzhash: Optional[bytes32] = derivation_record.puzzle_hash
             assert to_puzhash is not None
             coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
             spend_bundle: SpendBundle = await self.main_wallet.sign_transaction([coin_spend])

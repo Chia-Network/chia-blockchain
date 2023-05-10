@@ -584,9 +584,15 @@ wallet:
   #################################
   #  Inner puzzle decorators      #
   #################################
-  # Default puzzle decorator settings
-  # Example: {fingerprint1:[{"decorator": "CLAWBACK", "clawback_timelock": 3600}, {"decorator": "decorator2", ...}, ...]}
-  puzzle_decorators: {}
+  # Default puzzle decorator settings, this will apply to all asset wallets under the same key
+  # Here is an example
+  # puzzle_decorators:
+  #   2999502625:
+  #     - decorator: "CLAWBACK"
+  #       clawback_timelock: 3600
+  #     - decorator: "DECORATOR_TYPE" #If you want to add more decorators
+  #       parameter1: 0
+
   auto_claim:
     enabled: False
     tx_fee: 0

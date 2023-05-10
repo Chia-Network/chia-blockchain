@@ -237,7 +237,14 @@ class TestClawbackLifecycle:
                 [51, sender_ph, amount],
             ]
         )
-
+        # Test invalid puzzle
+        try:
+            create_merkle_solution(timelock, sender_ph, recipient_ph, Program.to([]), sender_sol)
+            assert False
+        except ValueError:
+            pass
+        except Exception:
+            assert False
         cb_sender_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_sol)
 
         conds = conditions_dict_for_solution(clawback_puz, cb_sender_sol, INFINITE_COST)

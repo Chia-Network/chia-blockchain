@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Tuple
 
 from typing_extensions import Protocol
@@ -33,6 +34,7 @@ class PuzzleDecoratorProtocol(Protocol):
 
 class PuzzleDecoratorManager:
     decorator_list: List[PuzzleDecoratorProtocol]
+    log: logging.Logger
 
     @staticmethod
     def create(config: List[Dict[str, Any]]) -> PuzzleDecoratorManager:
@@ -42,15 +44,17 @@ class PuzzleDecoratorManager:
         :return:
         """
         self = PuzzleDecoratorManager()
+        self.log = logging.getLogger(__name__)
         self.decorator_list = []
         for decorator in config:
             if "decorator" not in decorator:
-                raise ValueError(f"Undefined decorator: {decorator}")
+                logging.error(f"Undefined decorator: {decorator}")
+                continue
             decorator_name = decorator["decorator"]
             if decorator_name == PuzzleDecoratorType.CLAWBACK.name:
                 self.decorator_list.append(ClawbackPuzzleDecorator.create(decorator))
             else:
-                raise ValueError(f"Unknown puzzle decorator type: {decorator}")
+                logging.error(f"Unknown puzzle decorator type: {decorator}")
         return self
 
     def decorate(self, inner_puzzle: Program) -> Program:
