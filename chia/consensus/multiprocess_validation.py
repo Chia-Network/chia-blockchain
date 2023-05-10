@@ -222,7 +222,7 @@ async def pre_validate_blocks_multiprocessing(
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             if len(recent_plot_ids) < 4:
-                header_block = block_records.get_header_block_by_height(curr.height, curr.header_hash)
+                header_block = await block_records.get_header_block_by_height(curr.height, curr.header_hash)
                 assert header_block is not None
                 recent_plot_ids.append(get_plot_id(header_block.reward_chain_block.proof_of_space))
             curr = block_records.block_record(curr.prev_hash)
