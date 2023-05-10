@@ -34,9 +34,10 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     generate_taproot_sk,
-    verify_and_get_quality_string,
     get_plot_id,
+    verify_and_get_quality_string,
 )
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint32, uint64
 
