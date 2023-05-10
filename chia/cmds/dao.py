@@ -75,7 +75,6 @@ def dao_add_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @click.option("-n", "--name", help="Set the DAO wallet name", type=str)
 @click.option(
     "-pt",
@@ -151,8 +150,8 @@ def dao_add_cmd(
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    wallet_id: int,
     proposal_timelock: int,
+    soft_close: int,
     attendance_required: int,
     pass_percentage: int,
     self_destruct: int,
@@ -166,11 +165,13 @@ def dao_create_cmd(
 
     from .dao_funcs import create_dao_wallet
 
+    print("Creating new DAO")
+
     extra_params = {
-        "wallet_id": wallet_id,
         "fee": fee,
         "name": name,
         "proposal_timelock": proposal_timelock,
+        "soft_close_length": soft_close,
         "attendance_required": attendance_required,
         "pass_percentage": pass_percentage,
         "self_destruct_length": self_destruct,
@@ -178,7 +179,7 @@ def dao_create_cmd(
         "filter_amount": filter_amount,
         "amount_of_cats": cat_amount,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_dao_wallet))  # ignore: type
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_dao_wallet))
 
 
 # ----------------------------------------------------------------------------------------
