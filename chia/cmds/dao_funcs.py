@@ -79,7 +79,6 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]
     amount = Decimal(args["amount"])
-    fee = Decimal(args["fee"])
 
     try:
         typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
@@ -88,6 +87,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
         print(f"Wallet id: {wallet_id} not found.")
         return
 
+    fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
     final_amount: uint64 = uint64(int(amount * mojo_per_unit))
 
@@ -261,10 +261,12 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
 
 async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    # if "fee" in args:
+    #     fee = args["fee"]
+    # else:
+    #     fee = uint64(0)
+    fee = Decimal(args["fee"])
+    final_fee: uint64 = uint64(int(fee * units["chia"]))
     if "proposal_timelock" in args:
         proposal_timelock = args["proposal_timelock"]
     else:
@@ -306,7 +308,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
         proposal_type="update",
         new_dao_rules=new_dao_rules,
         vote_amount=vote_amount,
-        fee=fee,
+        fee=final_fee,
     )
     if res["success"]:
         print(f"Successfully created proposal.")

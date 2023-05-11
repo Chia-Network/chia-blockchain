@@ -647,6 +647,13 @@ def dao_create_spend_proposal_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @click.option(
+    "-v",
+    "--vote-amount",
+    help="The number of votes to add",
+    type=int,
+    required=True,
+)
+@click.option(
     "-pt",
     "--proposal-timelock",
     help="The new minimum number of blocks before a proposal can close",
@@ -707,7 +714,9 @@ def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
+    vote_amount: int,
     proposal_timelock: Optional[int],
+    soft_close: Optional[int],
     attendance_required: Optional[int],
     pass_percentage: Optional[int],
     self_destruct: Optional[int],
@@ -721,7 +730,9 @@ def dao_create_update_proposal_cmd(
     extra_params = {
         "wallet_id": wallet_id,
         "fee": fee,
+        "vote_amount": vote_amount,
         "proposal_timelock": proposal_timelock,
+        "soft_close_length": soft_close,
         "attendance_required": attendance_required,
         "pass_percentage": pass_percentage,
         "self_destruct_length": self_destruct,
