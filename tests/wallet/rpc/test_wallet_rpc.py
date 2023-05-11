@@ -602,7 +602,9 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
         bytes32.fromhex(clawback_coin_id_1)
     )
     assert coin_record is not None
-    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, wallet_type=WalletType.CAT))
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
+        dataclasses.replace(coin_record, wallet_type=WalletType.CAT)
+    )
     resp = await wallet_1_rpc.spend_clawback_coins([clawback_coin_id_1], 100)
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 0
