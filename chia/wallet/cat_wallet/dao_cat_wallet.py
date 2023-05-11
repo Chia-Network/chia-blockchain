@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import time
 import traceback
+from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -24,6 +26,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import (
+    DAO_FINISHED_STATE_HASH,
     DAO_PROPOSAL_TIMER_MOD_HASH,
     DAO_TREASURY_MOD_HASH,
     add_proposal_to_active_list,
@@ -228,7 +231,9 @@ class DAOCATWallet:
 
         # add the new coin to the list of locked coins and remove the spent coin
         locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin != parent_spend.coin]
-        locked_coins.append(LockedCoinInfo(coin, lockup_puz, active_votes_list))
+        new_info = LockedCoinInfo(coin, lockup_puz, active_votes_list)
+        if new_info not in locked_coins:
+            locked_coins.append(LockedCoinInfo(coin, lockup_puz, active_votes_list))
         dao_cat_info: DAOCATInfo = DAOCATInfo(
             self.dao_cat_info.dao_wallet_id,
             self.dao_cat_info.free_cat_wallet_id,
@@ -547,7 +552,9 @@ class DAOCATWallet:
 
         return spend_bundle
 
-    async def remove_active_proposal(self, proposal_id: bytes32) -> SpendBundle:
+    async def remove_active_proposal(
+        self, proposal_id: bytes32, fee: uint64 = uint64(0), push: bool = True
+    ) -> SpendBundle:
         locked_coins = []
         for lci in self.dao_cat_info.locked_coins:
             for active_vote in lci.active_votes:
@@ -592,6 +599,7 @@ class DAOCATWallet:
                     0,
                     0,
                     0,
+                    0,
                 ]
             )
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -610,7 +618,32 @@ class DAOCATWallet:
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
-        # TODO: attach a DAOWallet spend creating the oracle announcement
+
+        proposal_sb = await dao_wallet.create_proposal_oracle_spend(proposal_id)
+        # oracle_sb = await dao_wallet.create_treasury_oracle_spend(fee=fee, push=False)
+
+        full_spend = SpendBundle.aggregate([spend_bundle, proposal_sb])
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=DAO_FINISHED_STATE_HASH,
+                amount=uint64(1),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
+
         return spend_bundle
 
     def get_asset_id(self) -> str:
@@ -672,10 +705,7 @@ class DAOCATWallet:
         return result
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        amount = 0
-        for coin in self.dao_cat_info.locked_coins:
-            amount += coin.coin.amount
-        return uint128(amount)
+        return uint128(0)
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         amount = 0

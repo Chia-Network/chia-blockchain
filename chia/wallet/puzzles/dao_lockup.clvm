@@ -232,7 +232,7 @@
               CAT_MOD_HASH
               CAT_TAIL_HASH
               (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
-              INNERPUZ
+              (sha256tree INNERPUZ)
             )
             my_amount
           )

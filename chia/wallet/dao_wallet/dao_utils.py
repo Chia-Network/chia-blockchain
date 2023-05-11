@@ -357,7 +357,7 @@ def get_proposal_timer_puzzle(
     return puzzle
 
 
-def get_treasury_rules_from_puzzle(puzzle_reveal: Program) -> DAORules:
+def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules:
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,

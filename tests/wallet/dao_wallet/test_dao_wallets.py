@@ -1407,7 +1407,7 @@ async def test_dao_rpc_client(
             wallet_id=dao_id_0,
             proposal_type="spend",
             additions=additions,
-            # amount=1000,
+            vote_amount=cat_amt,
             # inner_address=encode_puzzle_hash(ph_1, "xch"),
             fee=fee,
         )
@@ -1460,6 +1460,8 @@ async def test_dao_rpc_client(
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
 
         # TODO: free locked cats from finished proposal
+        res = await client_0.dao_free_coins_from_finished_proposal(wallet_id=dao_id_0)
+        assert res["success"]
 
     finally:
         client_0.close()

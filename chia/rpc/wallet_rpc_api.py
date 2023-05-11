@@ -39,8 +39,8 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
-from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.dao_wallet.dao_utils import get_treasury_rules_from_puzzle
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
@@ -2343,7 +2343,7 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
-            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOWallet
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
         )
         assert dao_cat_wallet is not None
         if "coins" in request:
@@ -2443,9 +2443,7 @@ class WalletRpcApi:
             push=True,
         )
         assert sb is not None
-        return {
-            "success": True, "spend_bundle": sb
-        }
+        return {"success": True, "spend_bundle": sb}
 
     async def dao_parse_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

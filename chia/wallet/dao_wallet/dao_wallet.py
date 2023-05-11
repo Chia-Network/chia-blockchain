@@ -43,6 +43,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_TREASURY_MOD,
     DAO_TREASURY_MOD_HASH,
     SINGLETON_LAUNCHER,
+    create_cat_launcher_for_singleton_id,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -167,7 +168,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
-            0,
+            uint64(0),
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -250,7 +251,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
-            0,
+            uint64(0),
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -373,7 +374,7 @@ class DAOWallet(WalletProtocol):
             block_height,
             uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
             [],
-            0,
+            uint64(0),
         )
 
         info_as_string = json.dumps(dao_info.to_json_dict())
@@ -430,7 +431,7 @@ class DAOWallet(WalletProtocol):
             uint32(0),
             filter_amount,
             [],
-            0,
+            uint64(0),
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -524,7 +525,8 @@ class DAOWallet(WalletProtocol):
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         # TODO: should get_unconfirmed_balance return zero?
-        return uint128(await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list))
+        # return uint128(await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list))
+        return uint128(0)
 
     async def select_coins(
         self,
