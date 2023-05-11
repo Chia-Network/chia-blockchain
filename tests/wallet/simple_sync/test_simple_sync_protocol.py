@@ -628,7 +628,6 @@ class TestSimpleSyncProtocol:
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
         con = list(fn_server.all_connections.values())[0]
         phs = []
         phs.append(32 * b"\0")
@@ -669,7 +668,6 @@ class TestSimpleSyncProtocol:
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
         con = list(fn_server.all_connections.values())[0]
         coins = []
         coins.append(32 * b"\0")
