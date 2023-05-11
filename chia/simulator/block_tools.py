@@ -75,6 +75,7 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
+    get_plot_id,
     calculate_pos_challenge,
     generate_plot_public_key,
     generate_taproot_sk,
@@ -626,6 +627,12 @@ class BlockTools:
         sub_slots_finished = 0
         pending_ses: bool = False
 
+        recent_plot_ids: List[bytes32] = []
+        for block in block_list[-4:]:
+            plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
+            assert plot_id not in recent_plot_ids
+            recent_plot_ids.append(plot_id)
+
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
@@ -692,6 +699,8 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
+                        if get_plot_id(proof_of_space) in recent_plot_ids:
+                            continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -775,6 +784,9 @@ class BlockTools:
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
+                        if len(recent_plot_ids) == 4:
+                            recent_plot_ids.pop(0)
+                        recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
@@ -982,6 +994,8 @@ class BlockTools:
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
+                        if get_plot_id(proof_of_space) in recent_plot_ids:
+                            continue
                         assert last_timestamp is not None
 
                         if proof_of_space.pool_contract_puzzle_hash is not None:
@@ -1058,6 +1072,9 @@ class BlockTools:
                             pending_ses = False
 
                         block_list.append(full_block)
+                        if len(recent_plot_ids) == 4:
+                            recent_plot_ids.pop(0)
+                        recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
