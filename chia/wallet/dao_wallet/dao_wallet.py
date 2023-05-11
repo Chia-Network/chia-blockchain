@@ -358,6 +358,7 @@ class DAOWallet(WalletProtocol):
         )
 
         current_coin = get_most_recent_singleton_coin_from_coin_spend(coin_spend)
+        self.dao_rules = get_treasury_rules_from_puzzle(inner_puzzle)
 
         dao_info = DAOInfo(
             launch_coin.name(),
@@ -501,7 +502,7 @@ class DAOWallet(WalletProtocol):
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
         self.dao_info = DAOInfo.from_json_dict(json.loads(wallet_info.data))
-
+        self.dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         return self
 
     @classmethod
