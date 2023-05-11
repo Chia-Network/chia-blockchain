@@ -1254,7 +1254,7 @@ class DAOWallet(WalletProtocol):
     ) -> Program:
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
         xch_conditions = [
-            [51, cat_launcher.get_tree_hash(), uint64(amount_of_cats_to_create)],  # create cat_launcher coin
+            [51, cat_launcher.get_tree_hash(), uint64(amount_of_cats_to_create), [cats_new_innerpuzhash]],  # create cat_launcher coin
             [
                 60,
                 Program.to(["m", cats_new_innerpuzhash]).get_tree_hash(),
@@ -1713,9 +1713,9 @@ class DAOWallet(WalletProtocol):
         # )
         cat_spend_bundle = None
         delegated_puzzle_sb = None
-
+        puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
         if proposal_state["passed"] and not self_destruct:
-            puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
+
             validator_solution = Program.to(
                 [
                     proposal_id,
@@ -1747,6 +1747,7 @@ class DAOWallet(WalletProtocol):
                     LIST_OF_TAILHASH_CONDITIONS,
                     P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
                 ) = curried_args.as_iter()
+
                 sum = 0
 
                 # p2_singleton solution is:
@@ -1762,6 +1763,22 @@ class DAOWallet(WalletProtocol):
                 tailhash_parent_amount_list = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 p2_singleton_puzzle = get_p2_singleton_puzzle(self.dao_info.treasury_id)
+                cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
+
+                # handle CAT minting
+                for cond in CONDITIONS.as_iter():
+                    if cond.first().as_int() == 51:
+                        if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
+                            mint_amount = cond.rest().rest().first().as_int()
+                            new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            cat_launcher_coin = Coin(self.dao_info.current_treasury_coin, cat_launcher.get_tree_hash(), mint_amount)
+                            # treasury_inner_puz_hash
+                            # parent_parent
+                            # new_puzzle_hash  ; the full CAT puzzle
+                            # amount
+                            solution = Program.to([treasury_inner_puzhash, self.dao_info.current_treasury_coin.parent_coin_info, new_cat_puzhash, mint_amount])
+                            coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
+
                 for condition_statement in CONDITIONS.as_iter():
                     if condition_statement.first().as_int() == 51:
                         sum += condition_statement.rest().rest().first().as_int()
