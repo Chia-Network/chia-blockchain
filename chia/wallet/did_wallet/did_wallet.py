@@ -7,13 +7,10 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-import chia.wallet.singleton
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -31,16 +28,23 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
 )
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    create_singleton_puzzle,
+    create_singleton_puzzle_hash,
+    get_inner_puzzle_from_singleton,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -48,6 +52,11 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DIDWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -378,14 +387,8 @@ class DIDWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            assert parent_state.spent_height is not None
-            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                coin.parent_coin_info, uint32(parent_state.spent_height)
-            )
-            response = await peer.call_api(FullNodeAPI.request_puzzle_solution, puzzle_solution_request)
-            req_puz_sol = response.response
-            assert req_puz_sol.puzzle is not None
-            parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
+            response = await fetch_coin_spend_for_coin_state(parent_state, peer)
+            parent_innerpuz = get_inner_puzzle_from_singleton(response.puzzle_reveal.to_program())
             if parent_innerpuz:
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
@@ -404,7 +407,7 @@ class DIDWallet:
 
         # TODO: if not the first singleton, and solution mode == recovery
         if not self._coin_is_first_singleton(coin):
-            full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
+            full_puzzle = create_singleton_puzzle(inner_puzzle, self.did_info.origin_coin.name())
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
@@ -503,11 +506,9 @@ class DIDWallet:
 
                 await self.save_info(did_info)
                 assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
+                parent_spend = await fetch_coin_spend(uint32(children_state.created_height), parent_coin, peer)
                 assert parent_spend is not None
-                parent_innerpuz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(
-                    parent_spend.puzzle_reveal.to_program()
-                )
+                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
                     parent_coin.parent_coin_info,
@@ -518,32 +519,6 @@ class DIDWallet:
             parent_coin = child_coin
         assert parent_info is not None
 
-    async def create_tandem_xch_tx(
-        self,
-        fee: uint64,
-        announcement_to_assert: Optional[Announcement] = None,
-        reuse_puzhash: Optional[bool] = None,
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee)
-        if reuse_puzhash is None:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
-                )
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-            reuse_puzhash=reuse_puzhash,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
-
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
@@ -553,10 +528,10 @@ class DIDWallet:
                 self.did_info.origin_coin.name(),
                 chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
             )
-            return chia.wallet.singleton.create_fullpuz(innerpuz, self.did_info.origin_coin.name())
+            return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return chia.wallet.singleton.create_fullpuz(innerpuz, bytes32([0] * 32))
+            return create_singleton_puzzle(innerpuz, bytes32([0] * 32))
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
@@ -570,7 +545,7 @@ class DIDWallet:
             origin_coin_name,
             chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        return chia.wallet.singleton.create_fullpuz_hash(innerpuz_hash, origin_coin_name)
+        return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
@@ -605,20 +580,14 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_inner_puzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             coin_announcements={coin.name()},
         )
         innersol: Program = Program.to([1, p2_solution])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -636,7 +605,7 @@ class DIDWallet:
             ]
         )
         # Create an additional spend to confirm the change on-chain
-        new_full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        new_full_puzzle: Program = create_singleton_puzzle(
             new_inner_puzzle,
             self.did_info.origin_coin.name(),
         )
@@ -657,7 +626,7 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
@@ -721,13 +690,7 @@ class DIDWallet:
             chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_did_puzhash,
-                    "amount": uint64(coin.amount),
-                    "memos": [new_puzhash],
-                }
-            ],
+            primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             coin_announcements={coin.name()},
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -738,7 +701,7 @@ class DIDWallet:
             innersol = Program.to([2, p2_solution, [], [], [], self.did_info.backup_ids])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
 
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             self.did_info.current_inner,
             self.did_info.origin_coin.name(),
         )
@@ -760,7 +723,7 @@ class DIDWallet:
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
             announcement_to_make = coin.name()
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee, Announcement(coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
         else:
@@ -810,13 +773,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_innerpuzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
         )
@@ -824,7 +781,7 @@ class DIDWallet:
         innersol: Program = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -859,7 +816,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz: Program = self.did_info.current_inner
 
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -927,18 +884,14 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                },
-                {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
+                Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
+                Payment(innermessage, uint64(0)),
             ],
         )
         innersol = Program.to([1, p2_solution])
 
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1055,7 +1008,7 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         assert self.did_info.current_inner is not None
         innerpuz: Program = self.did_info.current_inner
-        full_puzzle: Program = chia.wallet.singleton.create_fullpuz(
+        full_puzzle: Program = create_singleton_puzzle(
             innerpuz,
             self.did_info.origin_coin.name(),
         )
@@ -1236,22 +1189,20 @@ class DIDWallet:
                 puzzle_hash = p2_puzzle.get_tree_hash()
                 pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
+                conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
                     spend.solution.to_program(),
                     self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 )
-
-                if conditions is not None:
-                    synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                    ):
-                        try:
-                            assert bytes(synthetic_pk) == pk
-                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
-                            raise ValueError("This spend bundle cannot be signed by the DID wallet")
+                synthetic_pk = synthetic_secret_key.get_g1()
+                for pk, msg in pkm_pairs_for_conditions_dict(
+                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                ):
+                    try:
+                        assert bytes(synthetic_pk) == pk
+                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                    except AssertionError:
+                        raise ValueError("This spend bundle cannot be signed by the DID wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
@@ -1266,12 +1217,12 @@ class DIDWallet:
             return None
 
         origin = coins.copy().pop()
-        genesis_launcher_puz = chia.wallet.singleton.LAUNCHER_PUZZLE
+        genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
         did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
         did_inner_hash = did_inner.get_tree_hash()
-        did_full_puz = chia.wallet.singleton.create_fullpuz(did_inner, launcher_coin.name())
+        did_full_puz = create_singleton_puzzle(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
@@ -1352,13 +1303,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ]
+            primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])]
         )
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
@@ -1509,9 +1454,3 @@ class DIDWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = DIDWallet()

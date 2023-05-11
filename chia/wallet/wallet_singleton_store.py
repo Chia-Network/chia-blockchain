@@ -17,7 +17,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import get_innerpuzzle_from_puzzle, get_singleton_id_from_puzzle
+from chia.wallet.singleton import get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 
 log = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class WalletSingletonStore:
             raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
-        error, conditions, cost = conditions_dict_for_solution(
+        conditions = conditions_dict_for_solution(
             coin_state.puzzle_reveal.to_program(),
             coin_state.solution.to_program(),
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
@@ -111,7 +111,7 @@ class WalletSingletonStore:
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
 
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
-        inner_puz = get_innerpuzzle_from_puzzle(coin_state.puzzle_reveal)
+        inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
         if inner_puz is None:
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 

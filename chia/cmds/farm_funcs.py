@@ -15,24 +15,21 @@ SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
 async def get_harvesters_summary(farmer_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
+    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
         if farmer_client is not None:
             return await farmer_client.get_harvesters_summary()
     return None
 
 
 async def get_blockchain_state(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port) as node_config_fp:
-        client, _, _ = node_config_fp
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
         if client is not None:
             return await client.get_blockchain_state()
     return None
 
 
 async def get_average_block_time(rpc_port: Optional[int]) -> float:
-    async with get_any_service_client(FullNodeRpcClient, rpc_port) as node_config_fp:
-        client, _, _ = node_config_fp
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
         if client is not None:
             blocks_to_compare = 500
             blockchain_state = await client.get_blockchain_state()
@@ -55,16 +52,14 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
 
 
 async def get_wallets_stats(wallet_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, login_to_wallet=False) as node_config_fp:
-        wallet_client, _, _ = node_config_fp
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (wallet_client, _):
         if wallet_client is not None:
             return await wallet_client.get_farmed_amount()
     return None
 
 
 async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[List[Dict[str, Any]]]:
-    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
+    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
         if farmer_client is not None:
             return await farmer_client.get_signage_points()
     return None

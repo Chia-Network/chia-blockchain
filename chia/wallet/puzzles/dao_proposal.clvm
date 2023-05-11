@@ -23,9 +23,9 @@
   oracle_spend_delay  ; used to recreate the treasury
   self_destruct_flag ; if not 0, do the self-destruct spend
 )
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
   (include utility_macros.clib)
-  (include curry-and-treehash.clinc)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
   (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)

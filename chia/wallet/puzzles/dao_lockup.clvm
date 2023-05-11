@@ -23,8 +23,8 @@
   my_inner_puzhash
   new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
 )
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
   (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)

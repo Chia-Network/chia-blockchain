@@ -94,7 +94,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if peer.peer_server_port is None:
             return None
-        peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
+        peer_info = PeerInfo(peer.peer_info.host, peer.peer_server_port)
         if self.full_node.full_node_peers is not None:
             msg = await self.full_node.full_node_peers.request_peers(peer_info)
             return msg
@@ -132,6 +132,7 @@ class FullNodeAPI:
             async with self.full_node.new_peak_sem.acquire():
                 await self.full_node.new_peak(request, peer)
         except LimitedSemaphoreFullError:
+            self.log.debug("Ignoring NewPeak, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
         return None
@@ -754,9 +755,8 @@ class FullNodeAPI:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
                         mempool_bundle = None
                     if mempool_bundle is not None:
-                        spend_bundle = mempool_bundle[0]
-                        additions = mempool_bundle[1]
-                        removals = mempool_bundle[2]
+                        spend_bundle, additions = mempool_bundle
+                        removals = spend_bundle.removals()
                         self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
                         aggregate_signature = spend_bundle.aggregated_signature
                         if self.full_node.full_node_store.previous_generator is not None:
@@ -1417,7 +1417,7 @@ class FullNodeAPI:
 
         name = std_hash(request_bytes)
         if name in self.full_node.compact_vdf_requests:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
+            self.log.debug("Ignoring NewCompactVDF, already requested: %s %s", peer.get_peer_logging(), request)
             return None
         self.full_node.compact_vdf_requests.add(name)
 
@@ -1430,7 +1430,7 @@ class FullNodeAPI:
                 finally:
                     self.full_node.compact_vdf_requests.remove(name)
         except LimitedSemaphoreFullError:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+            self.log.debug("Ignoring NewCompactVDF, limited semaphore full: %s %s", peer.get_peer_logging(), request)
             return None
 
         return None

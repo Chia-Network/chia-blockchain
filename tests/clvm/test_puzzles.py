@@ -8,7 +8,6 @@ from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.wallet.puzzles import (
@@ -19,6 +18,7 @@ from chia.wallet.puzzles import (
     p2_m_of_n_delegate_direct,
     p2_puzzle_hash,
 )
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
 
 from ..core.make_block_generator import int_to_public_key
@@ -101,12 +101,8 @@ def default_payments_and_conditions(
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
-    conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
+    conditions = Program.to([make_create_coin_condition(ph, amount, []) for ph, amount in payments])
     return payments, conditions
-
-
-def make_create_coin_condition(puzzle_hash, amount):
-    return Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount])
 
 
 class TestPuzzles(TestCase):

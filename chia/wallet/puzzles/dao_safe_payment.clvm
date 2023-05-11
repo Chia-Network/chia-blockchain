@@ -1,7 +1,7 @@
 (mod (SINGLETON_STRUCT CONDITIONS SPEND_AMOUNT treasury_puzzle_hash treasury_amount)
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)

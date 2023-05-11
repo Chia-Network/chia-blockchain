@@ -9,7 +9,7 @@
   ; If you're writing a proposal you'll want to use this layer
   ; if you don't, your proposal might be invalidated if the p2_singleton coins get spent
 
-  (include condition_codes.clvm)
+  (include condition_codes.clib)
 
   (defun loop_through_list (SPEND_AMOUNT P2_SINGLETON_PUZHASH p2_calculated p2_singleton_list total output)
     (c

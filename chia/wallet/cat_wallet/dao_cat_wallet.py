@@ -38,10 +38,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.payment import Payment
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -167,7 +169,7 @@ class DAOCATWallet:
         # the one contained in the lockup.
         wallet_node: Any = self.wallet_state_manager.wallet_node
         parent_coin = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
-        parent_spend = await wallet_node.fetch_puzzle_solution(height, parent_coin.coin, peer)
+        parent_spend = await fetch_coin_spend(height, parent_coin.coin, peer)
         uncurried = parent_spend.puzzle_reveal.uncurry()
         cat_inner = uncurried[1].at("rrf")
         lockup_puz, lockup_args = cat_inner.uncurry()
@@ -215,7 +217,7 @@ class DAOCATWallet:
                     [coin.parent_coin_info], peer=peer
                 )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                coin_spend = await fetch_coin_spend(
                     coin_state[0].spent_height, coin_state[0].coin, peer
                 )
                 # TODO: process this coin
@@ -344,13 +346,12 @@ class DAOCATWallet:
                 running_sum = running_sum + coin.amount
                 # CREATE_COIN new_puzzle coin.amount
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+                # Payment(change_puzhash, uint64(change), [change_puzhash])
                 primaries = [
-                    AmountWithPuzzlehash(
-                        {
-                            "amount": uint64(vote_amount),
-                            "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                            "memos": [standard_inner_puz.get_tree_hash()],
-                        }
+                    Payment(
+                        new_innerpuzzle.get_tree_hash(),
+                        uint64(vote_amount),
+                        [standard_inner_puz.get_tree_hash()],
                     )
                 ]
                 puzzle_announcements = set([message])
@@ -363,22 +364,18 @@ class DAOCATWallet:
                 # CREATE_COIN old_puzzle change
                 # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
-                    AmountWithPuzzlehash(
-                        {
-                            "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                            "amount": uint64(vote_amount),
-                            "memos": [new_innerpuzzle.get_tree_hash()],
-                        }
+                    Payment(
+                        new_innerpuzzle.get_tree_hash(),
+                        uint64(vote_amount),
+                        [new_innerpuzzle.get_tree_hash()],
                     ),
                 ]
                 if change > 0:
                     primaries.append(
-                        AmountWithPuzzlehash(
-                            {
-                                "puzzlehash": lci.inner_puzzle.get_tree_hash(),
-                                "amount": uint64(change),
-                                "memos": [lci.inner_puzzle.get_tree_hash()],
-                            }
+                        Payment(
+                            lci.inner_puzzle.get_tree_hash(),
+                            uint64(change),
+                            [lci.inner_puzzle.get_tree_hash()],
                         )
                     )
                 puzzle_announcements = set([message])
@@ -502,12 +499,10 @@ class DAOCATWallet:
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [
-                AmountWithPuzzlehash(
-                    {
-                        "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                        "amount": uint64(coin.amount),
-                        "memos": [new_innerpuzzle.get_tree_hash()],
-                    }
+                Payment(
+                    new_innerpuzzle.get_tree_hash(),
+                    uint64(coin.amount),
+                    [new_innerpuzzle.get_tree_hash()],
                 ),
             ]
             inner_solution = await self.standard_wallet.make_solution(
@@ -734,7 +729,7 @@ class DAOCATWallet:
                     raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
+                conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
                     spend.solution.to_program(),
                     self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,

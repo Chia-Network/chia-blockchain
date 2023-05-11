@@ -17,8 +17,8 @@
   proposal_timelock
   parent_parent
 )
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)

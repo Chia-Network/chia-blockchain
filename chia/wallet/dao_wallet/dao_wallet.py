@@ -31,6 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import SpendableCAT
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
@@ -74,7 +75,7 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
-    get_innerpuzzle_from_puzzle,
+    get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
     get_singleton_id_from_puzzle,
 )
@@ -578,7 +579,7 @@ class DAOWallet(WalletProtocol):
             raise ValueError("Could not find any peers to request puzzle and solution from")
         # Get the parent coin spend
         cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
-        parent_spend = await wallet_node.fetch_puzzle_solution(cs.spent_height, cs.coin, peer)
+        parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
 
         # check if it's a singleton and add to singleton_store
         singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
@@ -653,9 +654,9 @@ class DAOWallet(WalletProtocol):
 
         # get lineage proof of parent spend, and also current innerpuz
         assert children_state.created_height
-        parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_parent_coin, peer)
+        parent_spend = await fetch_coin_spend(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
-        parent_inner_puz = chia.wallet.singleton.get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal.to_program())
+        parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
         if parent_inner_puz is None:
             raise ValueError("get_innerpuzzle_from_puzzle failed")
 
@@ -678,7 +679,7 @@ class DAOWallet(WalletProtocol):
         launcher_state = await wallet_node.get_coin_state([self.dao_info.treasury_id], peer)
         genesis_coin_id = launcher_state[0].coin.parent_coin_info
         genesis_state = await wallet_node.get_coin_state([genesis_coin_id], peer)
-        genesis_spend = await wallet_node.fetch_puzzle_solution(
+        genesis_spend = await fetch_coin_spend(
             genesis_state[0].spent_height, genesis_state[0].coin, peer
         )
         cat_tail_hash = None
@@ -1972,7 +1973,7 @@ class DAOWallet(WalletProtocol):
         children = await wallet_node.fetch_children(proposal_id, peer)
         eve_state = children[0]
 
-        eve_spend = await wallet_node.fetch_puzzle_solution(eve_state.created_height, eve_state.coin, peer)
+        eve_spend = await fetch_coin_spend(eve_state.created_height, eve_state.coin, peer)
         puzzle_reveal = get_proposed_puzzle_reveal_from_solution(eve_spend.solution)
         # breakpoint()
         return puzzle_reveal
@@ -1985,7 +1986,7 @@ class DAOWallet(WalletProtocol):
         state = await wallet_node.get_coin_state([cat_coin.parent_coin_info], peer)
         assert state is not None
         # CoinState contains Coin, spent_height, and created_height,
-        parent_spend = await wallet_node.fetch_puzzle_solution(state[0].spent_height, state[0].coin, peer)
+        parent_spend = await fetch_coin_spend(state[0].spent_height, state[0].coin, peer)
         parent_inner_puz = get_innerpuzzle_from_cat_puzzle(parent_spend.puzzle_reveal.to_program())
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
@@ -2240,7 +2241,7 @@ class DAOWallet(WalletProtocol):
         block_height: uint32,
     ) -> None:
         new_dao_info = copy.copy(self.dao_info)
-        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
         if puzzle is None:
             raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
@@ -2442,7 +2443,7 @@ class DAOWallet(WalletProtocol):
             # TODO: what do we do here?
             # return
             pass
-        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
         if puzzle is None:
             raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
@@ -2530,7 +2531,7 @@ class DAOWallet(WalletProtocol):
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
-        puzzle = get_innerpuzzle_from_puzzle(new_state.puzzle_reveal)
+        puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
         assert puzzle
         try:
             mod, curried_args = puzzle.uncurry()

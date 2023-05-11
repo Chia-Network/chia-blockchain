@@ -19,7 +19,7 @@ You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a
 Generally, things to the left are in progress or done. Some things go through "Coming up soon", but some will come directly out of other columns.
 Usually, the things closer to the top of each column are the ones that will be worked on soonest.
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on [Keybase](https://keybase.io/team/chia_network.public), which we use as the main communication method. You can also comment on any Trello card.
+Contact any of the team members on [Discord](https://discord.gg/chia), which we use as the main communication method. You can also comment on any Trello card.
 
 We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
 

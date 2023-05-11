@@ -5,7 +5,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -51,7 +51,8 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -67,7 +68,12 @@ CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
-class CATWallet(WalletProtocol):
+class CATWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("CATWallet", None)
+
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
@@ -349,9 +355,7 @@ class CATWallet(WalletProtocol):
                     [coin.parent_coin_info], peer=peer
                 )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state[0].spent_height, coin_state[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
@@ -508,21 +512,20 @@ class CATWallet(WalletProtocol):
                     raise RuntimeError(f"Failed to get keys for puzzle_hash {puzzle_hash}")
                 pubkey, private = ret
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
-                error, conditions, cost = conditions_dict_for_solution(
+                conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
                     spend.solution.to_program(),
                     self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
                 )
-                if conditions is not None:
-                    synthetic_pk = synthetic_secret_key.get_g1()
-                    for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-                    ):
-                        try:
-                            assert bytes(synthetic_pk) == pk
-                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
-                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+                synthetic_pk = synthetic_secret_key.get_g1()
+                for pk, msg in pkm_pairs_for_conditions_dict(
+                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                ):
+                    try:
+                        assert bytes(synthetic_pk) == pk
+                        sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                    except AssertionError:
+                        raise ValueError("This spend bundle cannot be signed by the CAT wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
@@ -689,9 +692,7 @@ class CATWallet(WalletProtocol):
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: List[AmountWithPuzzlehash] = []
-        for payment in payments:
-            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
+        primaries = payments.copy()
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -706,7 +707,7 @@ class CATWallet(WalletProtocol):
                         break
             else:
                 change_puzhash = await self.get_new_inner_hash()
-            primaries.append({"puzzlehash": change_puzhash, "amount": uint64(change), "memos": []})
+            primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
@@ -934,9 +935,3 @@ class CATWallet(WalletProtocol):
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = CATWallet()

@@ -15,8 +15,8 @@
     delegated_solution  ; this is not secure unless the delegated puzzle secures it
   )
   (include utility_macros.clib)
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
 
   (defun-inline recreate_self (
     TREASURY_MOD_HASH

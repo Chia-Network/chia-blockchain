@@ -19,14 +19,15 @@ from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_i
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, SINGLETON_MOD
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
-EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
+GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clsp")
+GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clsp")
+EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clsp")
+DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clsp")
 GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_singleton.clvm")
 
 
@@ -96,9 +97,7 @@ class GenesisById(LimitationsProgram):
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
-            ),
+            wallet.standard_wallet.make_solution(primaries=[Payment(cat_inner.get_tree_hash(), amount)]),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
@@ -256,11 +255,11 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
         )
         assert tx_record.spend_bundle is not None
-
+        payment = Payment(cat_inner.get_tree_hash(), amount)
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
             wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
+                primaries=[payment],
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(

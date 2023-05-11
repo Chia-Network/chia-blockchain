@@ -12,8 +12,8 @@
 ;; This is a proposal to update treasury conditions for a DAO
 
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
   (include utility_macros.clib)
 

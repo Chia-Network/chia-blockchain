@@ -5,7 +5,7 @@ from typing import Optional
 import click
 
 
-@click.command("netspace", short_help="Estimate total farmed space on the network")
+@click.command("netspace", help="Estimate total farmed space on the network")
 @click.option(
     "-p",
     "--rpc-port",

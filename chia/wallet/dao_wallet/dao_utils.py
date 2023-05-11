@@ -15,13 +15,13 @@ from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.singleton import create_fullpuz, get_innerpuzzle_from_puzzle
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
-SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
-SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
+SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
@@ -248,7 +248,7 @@ def get_lockup_puzzle(
 
 
 def get_latest_lockup_puzzle_for_coin_spend(parent_spend: CoinSpend, inner_puzzle: Optional[Program] = None) -> Program:
-    puzzle = get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal)
+    puzzle = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
     assert isinstance(puzzle, Program)
     solution = parent_spend.solution.to_program().rest().rest().first()
     if solution.first() == Program.to(0):
@@ -471,7 +471,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
 
 
 def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
-    return create_fullpuz(DAO_FINISHED_STATE, proposal_id)
+    return create_singleton_puzzle(DAO_FINISHED_STATE, proposal_id)
 
 
 def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from chia_rs import CoinState, RespondToPhUpdates
+import chia_rs
 
 from chia.full_node.fee_estimate import FeeEstimateGroup
 from chia.types.blockchain_format.coin import Coin
@@ -20,7 +20,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-__all__ = ["CoinState", "RespondToPhUpdates"]
+CoinState = chia_rs.CoinState
+RespondToPhUpdates = chia_rs.RespondToPhUpdates
 
 
 @streamable

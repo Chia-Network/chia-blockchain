@@ -9,8 +9,8 @@
   my_amount  ; only needed for merging
 )
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT singleton_inner_puzhash)
      (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)

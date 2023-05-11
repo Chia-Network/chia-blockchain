@@ -22,10 +22,10 @@ from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clvm")
-POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile("pool_waitingroom_innerpuz.clvm")
-POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clvm")
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clvm")
+SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clsp")
+POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile("pool_waitingroom_innerpuz.clsp")
+POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clsp")
+P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
 POOL_OUTER_MOD = SINGLETON_MOD
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
