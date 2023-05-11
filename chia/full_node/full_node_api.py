@@ -94,7 +94,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if peer.peer_server_port is None:
             return None
-        peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
+        peer_info = PeerInfo(peer.peer_info.host, peer.peer_server_port)
         if self.full_node.full_node_peers is not None:
             msg = await self.full_node.full_node_peers.request_peers(peer_info)
             return msg
@@ -755,9 +755,8 @@ class FullNodeAPI:
                         self.full_node.log.error(f"Error making spend bundle {e} peak: {peak}")
                         mempool_bundle = None
                     if mempool_bundle is not None:
-                        spend_bundle = mempool_bundle[0]
-                        additions = mempool_bundle[1]
-                        removals = mempool_bundle[2]
+                        spend_bundle, additions = mempool_bundle
+                        removals = spend_bundle.removals()
                         self.full_node.log.info(f"Add rem: {len(additions)} {len(removals)}")
                         aggregate_signature = spend_bundle.aggregated_signature
                         if self.full_node.full_node_store.previous_generator is not None:

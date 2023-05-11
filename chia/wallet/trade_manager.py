@@ -32,13 +32,14 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import HashFilter
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
 
 class TradeManager:
     """
-    This class is a driver for creating and accepting settlement_payments.clvm style offers.
+    This class is a driver for creating and accepting settlement_payments.clsp style offers.
 
     By default, standard XCH is supported but to support other types of assets you must implement certain functions on
     the asset's wallet as well as create a driver for its puzzle(s).  Here is a guide to integrating a new types of
@@ -138,8 +139,10 @@ class TradeManager:
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
         # TODO: Add `WalletCoinStore.get_coins`.
-        our_coin_records = await self.wallet_state_manager.coin_store.get_coin_records(primary_coin_ids)
-        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records.values()]
+        result = await self.wallet_state_manager.coin_store.get_coin_records(
+            coin_id_filter=HashFilter.include(primary_coin_ids)
+        )
+        our_primary_coins: List[Coin] = [cr.coin for cr in result.records]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
@@ -194,7 +197,11 @@ class TradeManager:
         #  - The cast here is required for now because TradeManager.wallet_state_manager is hinted as Any.
         return cast(
             Dict[bytes32, WalletCoinRecord],
-            await self.wallet_state_manager.coin_store.get_coin_records(coins_of_interest),
+            (
+                await self.wallet_state_manager.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(coins_of_interest)
+                )
+            ).coin_id_to_record,
         )
 
     async def get_all_trades(self) -> List[TradeRecord]:
@@ -507,8 +514,12 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+                    # For the XCH wallet also include the fee amount to the coins we use to pay this offer
+                    amount_to_select = abs(amount)
+                    if wallet.type() == WalletType.STANDARD_WALLET:
+                        amount_to_select += fee
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
+                        asset_id, uint64(amount_to_select), min_coin_amount, max_coin_amount
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -547,7 +558,10 @@ class TradeManager:
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
-            for id, selected_coins in coins_to_offer.items():
+            # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
+            # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
+            for id in sorted(coins_to_offer.keys()):
+                selected_coins = coins_to_offer[id]
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
                 else:

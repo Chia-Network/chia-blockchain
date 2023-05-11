@@ -44,8 +44,7 @@ class MempoolItem:
 
     @property
     def cost(self) -> uint64:
-        assert self.npc_result.conds is not None
-        return uint64(self.npc_result.conds.cost)
+        return self.npc_result.cost
 
     @property
     def additions(self) -> List[Coin]:

@@ -9,7 +9,7 @@ import signal
 import sys
 from pathlib import Path
 from types import FrameType
-from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
@@ -20,13 +20,13 @@ from chia.server.server import ChiaServer
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
-from .reconnect_task import start_reconnect_task
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -55,7 +55,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         *,
         config: Dict[str, Any],
         upnp_ports: List[int] = [],
-        connect_peers: List[PeerInfo] = [],
+        connect_peers: Set[UnresolvedPeerInfo] = set(),
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon: bool = True,
@@ -75,6 +75,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
+        self.reconnect_retry_seconds: int = 3
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
@@ -127,8 +128,43 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task[None]]] = {peer: None for peer in connect_peers}
+        self._connect_peers = connect_peers
+        self._connect_peers_task: Optional[asyncio.Task[None]] = None
         self.upnp: UPnP = UPnP()
+
+    async def _connect_peers_task_handler(self) -> None:
+        resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
+        prefer_ipv6 = self.config.get("prefer_ipv6", False)
+        while True:
+            for unresolved in self._connect_peers:
+                resolved = resolved_peers.get(unresolved)
+                if resolved is None:
+                    try:
+                        resolved = PeerInfo(await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
+                    except Exception as e:
+                        self._log.warning(f"Failed to resolve {unresolved.host}: {e}")
+                        continue
+                    self._log.info(f"Add resolved {resolved}")
+                    resolved_peers[unresolved] = resolved
+
+                if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    continue
+
+                if not await self._server.start_client(resolved, None):
+                    self._log.info(f"Failed to connect to {resolved}")
+                    # Re-resolve to make sure the IP didn't change, this helps for example to keep dyndns hostnames
+                    # up to date.
+                    try:
+                        resolved_new = PeerInfo(
+                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
+                        )
+                    except Exception as e:
+                        self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
+                        continue
+                    if resolved_new != resolved:
+                        self._log.info(f"Host {unresolved.host} changed from {resolved} to {resolved_new}")
+                        resolved_peers[unresolved] = resolved_new
+            await asyncio.sleep(self.reconnect_retry_seconds)
 
     async def start(self) -> None:
         # TODO: move those parameters to `__init__`
@@ -158,8 +194,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         except ValueError:
             pass
 
-        for peer in self._reconnect_tasks.keys():
-            self.add_peer(peer)
+        self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
 
         self._log.info(
             f"Started {self._service_name} service on network_id: {self._network_id} "
@@ -190,11 +225,8 @@ class Service(Generic[_T_RpcServiceProtocol]):
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
 
-    def add_peer(self, peer: PeerInfo) -> None:
-        if self._reconnect_tasks.get(peer) is not None:
-            raise ServiceException(f"Peer {peer} already added")
-
-        self._reconnect_tasks[peer] = start_reconnect_task(self._server, peer, self._log)
+    def add_peer(self, peer: UnresolvedPeerInfo) -> None:
+        self._connect_peers.add(peer)
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -242,10 +274,8 @@ class Service(Generic[_T_RpcServiceProtocol]):
                 self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
-            for task in self._reconnect_tasks.values():
-                if task is not None:
-                    task.cancel()
-            self._reconnect_tasks.clear()
+            if self._connect_peers_task is not None:
+                self._connect_peers_task.cancel()
             self._log.info("Closing connections")
             self._server.close_all()
             self._node._close()

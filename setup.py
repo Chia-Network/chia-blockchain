@@ -8,22 +8,23 @@ from setuptools import setup
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
     "anyio==3.6.2",
+    "boto3==1.26.111",  # AWS S3 for DL s3 plugin
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.5",
+    "chia_rs==0.2.7",
     "clvm-tools-rs==0.1.30",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
-    "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
-    "bitstring==4.0.1",  # Binary data management library
+    "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
+    "bitstring==4.0.2",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
-    "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
+    "concurrent-log-handler==0.9.23",  # Concurrently log and rotate logs
     "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.9.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
@@ -33,8 +34,8 @@ dependencies = [
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
     "typing-extensions==4.5.0",  # typing backports like Protocol and TypedDict
-    "zstd==1.5.4.0",
-    "packaging==23.0",
+    "zstd==1.5.5.1",
+    "packaging==23.1",
     "psutil==5.9.4",
 ]
 
@@ -44,7 +45,8 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage",
+    # >=7.2.4 for https://github.com/nedbat/coveragepy/issues/1604
+    "coverage>=7.2.4",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
@@ -61,7 +63,7 @@ dev_dependencies = [
     "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.8.0",
+    "pyinstaller==5.10.1",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",
@@ -140,11 +142,12 @@ kwargs = dict(
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
             "chia_data_layer = chia.server.start_data_layer:main",
             "chia_data_layer_http = chia.data_layer.data_layer_server:main",
+            "chia_data_layer_s3_plugin = chia.data_layer.s3_plugin_service:run_server",
         ]
     },
     package_data={
         "chia": ["pyinstaller.spec"],
-        "": ["*.clvm", "*.clvm.hex", "*.clib", "*.clinc", "*.clsp", "py.typed"],
+        "": ["*.clsp", "*.clsp.hex", "*.clvm", "*.clib", "py.typed"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],

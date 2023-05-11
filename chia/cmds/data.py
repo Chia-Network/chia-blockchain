@@ -28,7 +28,7 @@ def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
     # raise click.ClickException(message=f"query unsuccessful, response: {response}")
 
 
-@click.group("data", short_help="Manage your data")
+@click.group("data", help="Manage your data")
 def data_cmd() -> None:
     pass
 
@@ -103,7 +103,7 @@ def create_fee_option() -> Callable[[FC], FC]:
     )
 
 
-@data_cmd.command("create_data_store", short_help="Create a new data store")
+@data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
 def create_data_store(
@@ -115,7 +115,7 @@ def create_data_store(
     run(create_data_store_cmd(data_rpc_port, fee))
 
 
-@data_cmd.command("get_value", short_help="Get the value for a given key and store")
+@data_cmd.command("get_value", help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
@@ -131,7 +131,7 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string, root_hash))
 
 
-@data_cmd.command("update_data_store", short_help="Update a store by providing the changelist operations")
+@data_cmd.command("update_data_store", help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
 @create_rpc_port_option()
@@ -147,7 +147,7 @@ def update_data_store(
     run(update_data_store_cmd(rpc_port=data_rpc_port, store_id=id, changelist=json.loads(changelist_string), fee=fee))
 
 
-@data_cmd.command("get_keys", short_help="Get all keys for a given store")
+@data_cmd.command("get_keys", help="Get all keys for a given store")
 @create_data_store_id_option()
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
@@ -161,7 +161,7 @@ def get_keys(
     run(get_keys_cmd(data_rpc_port, id, root_hash))
 
 
-@data_cmd.command("get_keys_values", short_help="Get all keys and values for a given store")
+@data_cmd.command("get_keys_values", help="Get all keys and values for a given store")
 @create_data_store_id_option()
 @click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
@@ -175,7 +175,7 @@ def get_keys_values(
     run(get_keys_values_cmd(data_rpc_port, id, root_hash))
 
 
-@data_cmd.command("get_root", short_help="Get the published root hash value for a given store")
+@data_cmd.command("get_root", help="Get the published root hash value for a given store")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_root(
@@ -187,7 +187,7 @@ def get_root(
     run(get_root_cmd(rpc_port=data_rpc_port, store_id=id))
 
 
-@data_cmd.command("subscribe", short_help="Subscribe to a store")
+@data_cmd.command("subscribe", help="Subscribe to a store")
 @create_data_store_id_option()
 @click.option(
     "-u",
@@ -208,7 +208,7 @@ def subscribe(
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
-@data_cmd.command("remove_subscription", short_help="Remove server urls that are added via subscribing to urls")
+@data_cmd.command("remove_subscription", help="Remove server urls that are added via subscribing to urls")
 @create_data_store_id_option()
 @click.option("-u", "--url", "urls", help="Server urls to remove", type=str, multiple=True)
 @create_rpc_port_option()
@@ -222,7 +222,7 @@ def remove_subscription(
     run(remove_subscriptions_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
-@data_cmd.command("unsubscribe", short_help="Completely untrack a store")
+@data_cmd.command("unsubscribe", help="Completely untrack a store")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def unsubscribe(
@@ -235,7 +235,7 @@ def unsubscribe(
 
 
 @data_cmd.command(
-    "get_kv_diff", short_help="Get the inserted and deleted keys and values between an initial and a final hash"
+    "get_kv_diff", help="Get the inserted and deleted keys and values between an initial and a final hash"
 )
 @create_data_store_id_option()
 @click.option("-hash_1", "--hash_1", help="Initial hash", type=str)
@@ -252,7 +252,7 @@ def get_kv_diff(
     run(get_kv_diff_cmd(rpc_port=data_rpc_port, store_id=id, hash_1=hash_1, hash_2=hash_2))
 
 
-@data_cmd.command("get_root_history", short_help="Get all changes of a singleton")
+@data_cmd.command("get_root_history", help="Get all changes of a singleton")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_root_history(
@@ -264,7 +264,7 @@ def get_root_history(
     run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id))
 
 
-@data_cmd.command("add_missing_files", short_help="Manually reconstruct server files from the data layer database")
+@data_cmd.command("add_missing_files", help="Manually reconstruct server files from the data layer database")
 @click.option(
     "-i",
     "--ids",
@@ -294,7 +294,7 @@ def add_missing_files(ids: Optional[str], overwrite: bool, foldername: Optional[
     )
 
 
-@data_cmd.command("add_mirror", short_help="Publish mirror urls on chain")
+@data_cmd.command("add_mirror", help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @click.option(
     "-a", "--amount", help="Amount to spend for this mirror, in mojos", type=int, default=0, show_default=True
@@ -323,7 +323,7 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
     )
 
 
-@data_cmd.command("delete_mirror", short_help="Delete an owned mirror by its coin id")
+@data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
 @click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
 @create_fee_option()
 @create_rpc_port_option()
@@ -339,7 +339,7 @@ def delete_mirror(coin_id: str, fee: Optional[str], data_rpc_port: int) -> None:
     )
 
 
-@data_cmd.command("get_mirrors", short_help="Get a list of all mirrors for a given store")
+@data_cmd.command("get_mirrors", help="Get a list of all mirrors for a given store")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @create_rpc_port_option()
 def get_mirrors(id: str, data_rpc_port: int) -> None:
@@ -353,7 +353,7 @@ def get_mirrors(id: str, data_rpc_port: int) -> None:
     )
 
 
-@data_cmd.command("get_subscriptions", short_help="Get subscribed stores, including the owned stores")
+@data_cmd.command("get_subscriptions", help="Get subscribed stores, including the owned stores")
 @create_rpc_port_option()
 def get_subscriptions(data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import get_subscriptions_cmd
@@ -365,7 +365,7 @@ def get_subscriptions(data_rpc_port: int) -> None:
     )
 
 
-@data_cmd.command("get_owned_stores", short_help="Get owned stores")
+@data_cmd.command("get_owned_stores", help="Get owned stores")
 @create_rpc_port_option()
 def get_owned_stores(data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import get_owned_stores_cmd
@@ -377,7 +377,7 @@ def get_owned_stores(data_rpc_port: int) -> None:
     )
 
 
-@data_cmd.command("get_sync_status", short_help="Get locally stored root compared to the root of the singleton")
+@data_cmd.command("get_sync_status", help="Get locally stored root compared to the root of the singleton")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_sync_status(
@@ -387,3 +387,18 @@ def get_sync_status(
     from chia.cmds.data_funcs import get_sync_status_cmd
 
     run(get_sync_status_cmd(rpc_port=data_rpc_port, store_id=id))
+
+
+@data_cmd.group("plugins", help="Get information about configured uploader/downloader plugins")
+def plugins_cmd() -> None:
+    pass
+
+
+@plugins_cmd.command("check", help="Calls the plugin_info endpoint on all configured plugins")
+@create_rpc_port_option()
+def check_plugins(
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import check_plugins_cmd
+
+    run(check_plugins_cmd(rpc_port=data_rpc_port))

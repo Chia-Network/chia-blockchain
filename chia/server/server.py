@@ -260,7 +260,7 @@ class ChiaServer:
                         if time.time() - connection.last_message_time > 1800:
                             to_remove.append(connection)
             for connection in to_remove:
-                self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
+                self.log.debug(f"Garbage collecting connection {connection.peer_info.host} due to inactivity")
                 if connection.closed:
                     self.all_connections.pop(connection.peer_node_id)
                 else:
@@ -335,7 +335,6 @@ class ChiaServer:
                 log=self.log,
                 is_outbound=False,
                 received_message_callback=self.received_message_callback,
-                peer_host=request.remote,
                 close_callback=self.connection_closed,
                 peer_id=peer_id,
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
@@ -348,7 +347,7 @@ class ChiaServer:
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
-                connection.peer_host, self.exempt_peer_networks
+                connection.peer_info.host, self.exempt_peer_networks
             ):
                 self.log.info(
                     f"Not accepting inbound connection: {connection.get_peer_logging()}.Inbound limit reached."
@@ -389,7 +388,7 @@ class ChiaServer:
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
         if connection.closed:
-            self.log.debug(f"ignoring unexpected request to add closed connection {connection.peer_host} ")
+            self.log.debug(f"ignoring unexpected request to add closed connection {connection.peer_info.host} ")
             return
 
         if connection.peer_node_id in self.all_connections:
@@ -408,7 +407,7 @@ class ChiaServer:
             self.log.debug(f"Not connecting to {target_node}")
             return True
         for connection in self.all_connections.values():
-            if connection.peer_host == target_node.host and connection.peer_server_port == target_node.port:
+            if connection.peer_info.host == target_node.host and connection.peer_server_port == target_node.port:
                 self.log.debug(f"Not connecting to {target_node}, duplicate connection")
                 return True
         return False
@@ -493,7 +492,6 @@ class ChiaServer:
                 log=self.log,
                 is_outbound=True,
                 received_message_callback=self.received_message_callback,
-                peer_host=target_node.host,
                 close_callback=self.connection_closed,
                 peer_id=peer_id,
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
@@ -544,28 +542,29 @@ class ChiaServer:
         # in this case we still want to do the banning logic and remove the conection from the list
         # but the other cleanup should already have been done so we skip that
 
-        if is_localhost(connection.peer_host) and ban_time != 0:
+        if is_localhost(connection.peer_info.host) and ban_time != 0:
             self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
             ban_time = 0
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
-            self.log.warning(f"Banning {connection.peer_host} for {ban_time} seconds")
-            if connection.peer_host in self.banned_peers:
-                if ban_until > self.banned_peers[connection.peer_host]:
-                    self.banned_peers[connection.peer_host] = ban_until
+            self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
+            if connection.peer_info.host in self.banned_peers:
+                if ban_until > self.banned_peers[connection.peer_info.host]:
+                    self.banned_peers[connection.peer_info.host] = ban_until
             else:
-                self.banned_peers[connection.peer_host] = ban_until
+                self.banned_peers[connection.peer_info.host] = ban_until
 
-        if connection.peer_node_id in self.all_connections:
+        present_connection = self.all_connections.get(connection.peer_node_id)
+        if present_connection is connection:
             self.all_connections.pop(connection.peer_node_id)
 
         if not closed_connection:
-            self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
+            self.log.info(f"Connection closed: {connection.peer_info.host}, node id: {connection.peer_node_id}")
 
             if connection.connection_type is None:
                 # This means the handshake was never finished with this peer
                 self.log.debug(
-                    f"Invalid connection type for connection {connection.peer_host},"
+                    f"Invalid connection type for connection {connection.peer_info.host},"
                     f" while closing. Handshake never finished."
                 )
             connection.cancel_tasks()
@@ -711,7 +710,7 @@ class ChiaServer:
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
         return is_trusted_peer(
-            host=peer.peer_host,
+            host=peer.peer_info.host,
             node_id=peer.peer_node_id,
             trusted_peers=trusted_peers,
             testing=self.config.get("testing", False),

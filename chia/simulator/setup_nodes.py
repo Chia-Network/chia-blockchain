@@ -32,7 +32,7 @@ from chia.simulator.socket import find_available_listen_port
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.timelord.timelord import Timelord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
@@ -302,7 +302,7 @@ async def setup_farmer_multi_harvester(
     ]
     farmer_service = await farmer_node_iterators[0].__anext__()
     if start_services:
-        farmer_peer = PeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
+        farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
     else:
         farmer_peer = None
     harvester_node_iterators = []
@@ -432,7 +432,7 @@ async def setup_full_system_inner(
     harvester_iter = setup_harvester(
         shared_b_tools,
         shared_b_tools.root_path / "harvester",
-        PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+        UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
         consensus_constants,
     )
     vdf1_port = uint16(find_available_listen_port("vdf1"))
