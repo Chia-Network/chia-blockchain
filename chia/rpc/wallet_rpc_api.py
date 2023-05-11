@@ -1874,7 +1874,7 @@ class WalletRpcApi:
         # Hint is required, if it doesn't have any hint then it should be invalid
         try:
             hint: bytes32 = next(hint_dict[id] for id, c in coin_dict.items() if c.amount % 2 == 1)
-        except StopIteration:
+        except StopIteration:  # pragma: no cover
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(

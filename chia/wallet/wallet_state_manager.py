@@ -785,7 +785,7 @@ class WalletStateManager:
         if coin_name in hint_dict:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint_dict[coin_name])
         else:
-            derivation_record = None
+            derivation_record = None  # pragma: no cover
 
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
