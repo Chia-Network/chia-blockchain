@@ -2481,7 +2481,7 @@ class WalletRpcApi:
         tx = await dao_wallet.free_coins_from_finished_proposals(fee=fee)
         assert tx is not None
 
-        return {"success": True, "spend_name": tx.id()}
+        return {"success": True, "spend_name": tx.name()}
 
     ##########################################################################################
     # NFT Wallet

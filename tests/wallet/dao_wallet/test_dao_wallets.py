@@ -1459,8 +1459,8 @@ async def test_dao_rpc_client(
         # check proposal is closed
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
 
-        # TODO: free locked cats from finished proposal
-        res = await client_0.dao_free_coins_from_finished_proposal(wallet_id=dao_id_0)
+        # free locked cats from finished proposal
+        res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert res["success"]
 
     finally:

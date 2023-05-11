@@ -617,12 +617,12 @@ class DAOCATWallet:
             spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        spend_bundle = await self.sign(cat_spend_bundle)
+        full_spend = await self.sign(cat_spend_bundle)
 
-        proposal_sb = await dao_wallet.create_proposal_oracle_spend(proposal_id)
+        # proposal_sb = await dao_wallet.create_proposal_oracle_spend(proposal_id)
         # oracle_sb = await dao_wallet.create_treasury_oracle_spend(fee=fee, push=False)
 
-        full_spend = SpendBundle.aggregate([spend_bundle, proposal_sb])
+        # full_spend = SpendBundle.aggregate([spend_bundle, proposal_sb])
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -644,7 +644,7 @@ class DAOCATWallet:
             )
             await self.wallet_state_manager.add_pending_transaction(record)
 
-        return spend_bundle
+        return full_spend
 
     def get_asset_id(self) -> str:
         return bytes(self.dao_cat_info.limitations_program_hash).hex()
