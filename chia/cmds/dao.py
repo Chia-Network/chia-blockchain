@@ -754,7 +754,22 @@ def dao_create_update_proposal_cmd(
 @click.option(
     "-a",
     "--amount",
-    help="The amount of new cats the proposal will mint",
+    help="The amount of new cats the proposal will mint (in mojos)",
+    type=int,
+    required=True,
+)
+@click.option(
+    "-t",
+    "--to-address",
+    help="The address new cats will be minted to",
+    type=str,
+    required=True,
+    default=None,
+)
+@click.option(
+    "-v",
+    "--vote-amount",
+    help="The number of votes to add",
     type=int,
     required=True,
 )
@@ -772,6 +787,8 @@ def dao_create_mint_proposal_cmd(
     fingerprint: int,
     wallet_id: int,
     amount: int,
+    to_address: int,
+    vote_amount: int,
     fee: Optional[int],
 ) -> None:
     import asyncio
@@ -782,6 +799,8 @@ def dao_create_mint_proposal_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "amount": amount,
+        "cat_target_address": to_address,
+        "vote_amount": vote_amount,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_mint_proposal))
 
