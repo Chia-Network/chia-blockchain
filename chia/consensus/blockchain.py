@@ -643,6 +643,7 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            self.block_store,
             wp_summaries,
             validate_signatures=validate_signatures,
         )

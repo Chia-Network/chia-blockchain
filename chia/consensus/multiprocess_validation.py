@@ -18,6 +18,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.full_node.block_store import BlockStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -176,6 +177,7 @@ async def pre_validate_blocks_multiprocessing(
     npc_results: Dict[uint32, NPCResult],
     get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
+    block_store: BlockStore,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
@@ -222,9 +224,10 @@ async def pre_validate_blocks_multiprocessing(
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             if len(recent_plot_ids) < 4:
-                header_block = await block_records.get_header_block_by_height(curr.height, curr.header_hash)
-                assert header_block is not None
-                recent_plot_ids.append(get_plot_id(header_block.reward_chain_block.proof_of_space))
+                # TODO: Add `get_proof_of_space()` to BlockStore.
+                full_block = await block_store.get_full_block(curr.header_hash)
+                assert full_block is not None
+                recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
             curr = block_records.block_record(curr.prev_hash)
         recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
