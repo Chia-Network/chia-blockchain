@@ -67,6 +67,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal_validator,
     uncurry_treasury,
     create_cat_launcher_for_singleton_id,
+    get_dao_rules_from_update_proposal,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -2074,7 +2075,49 @@ class DAOWallet(WalletProtocol):
             await self.wallet_state_manager.add_pending_transaction(record)
         return full_spend
 
-    def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
+    async def parse_proposal(self, proposal_id: bytes32):
+        for prop_info in self.dao_info.proposals_list:
+            if prop_info.proposal_id == proposal_id:
+                state = await self.get_proposal_state(proposal_id)
+                proposed_puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
+                proposal_type, curried_args = get_proposal_args(proposed_puzzle_reveal)
+                if proposal_type == "spend":
+                    cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
+                    (
+                        _,
+                        _,
+                        CONDITIONS,
+                        LIST_OF_TAILHASH_CONDITIONS,
+                        P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+                    ) = curried_args.as_iter()
+                    mint_amount = None
+                    new_cat_puzhash = None
+                    for cond in CONDITIONS.as_iter():
+                        if cond.first().as_int() == 51:
+                            if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
+                                mint_amount = cond.rest().rest().first().as_int()
+                                new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                    dictionary = {
+                        "state": state,
+                        "proposal_type": proposal_type,
+                        "proposed_puzzle_reveal": proposed_puzzle_reveal,
+                        "xch_conditions": CONDITIONS,
+                        "asset_conditions": LIST_OF_TAILHASH_CONDITIONS,
+                    }
+                    if mint_amount is not None and new_cat_puzhash is not None:
+                        dictionary["mint_amount"] = mint_amount
+                        dictionary["new_cat_puzhash"] = new_cat_puzhash
+                elif proposal_type == "update":
+                    dao_rules = get_dao_rules_from_update_proposal(proposed_puzzle_reveal)
+                    dictionary = {
+                        "state": state,
+                        "proposal_type": proposal_type,
+                        "dao_rules": dao_rules,
+                    }
+                return dictionary
+        raise ValueError(f"Unable to find proposal with id: {proposal_id.hex()}")
+
+    async def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_block_height:
             return False

@@ -183,6 +183,7 @@ class WalletRpcApi:
             # DAO Wallets
             "/dao_get_proposals": self.dao_get_proposals,
             "/dao_create_proposal": self.dao_create_proposal,
+            "/dao_parse_proposal": self.dao_parse_proposal,
             "/dao_vote_on_proposal": self.dao_vote_on_proposal,
             "/dao_get_treasury_balance": self.dao_get_treasury_balance,
             "/dao_close_proposal": self.dao_close_proposal,
@@ -191,7 +192,7 @@ class WalletRpcApi:
             "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
             "/dao_send_to_lockup": self.dao_send_to_lockup,
             "/dao_get_proposal_state": self.dao_get_proposal_state,
-            "/dao_free_coins_from_finished_proposal": self.dao_free_coins_from_finished_proposal,
+            "/dao_free_coins_from_finished_proposals": self.dao_free_coins_from_finished_proposals,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_count_nfts": self.nft_count_nfts,
@@ -2437,6 +2438,15 @@ class WalletRpcApi:
         return {
             "success": True, "spend_bundle": sb
         }
+
+    async def dao_parse_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        proposal_id = bytes32.from_hexstr(request["proposal_id"])
+        proposal_dictionary = await dao_wallet.parse_proposal(proposal_id)
+        assert proposal_dictionary is not None
+        return {"success": True, "proposal_dictionary": proposal_dictionary}
 
     async def dao_close_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

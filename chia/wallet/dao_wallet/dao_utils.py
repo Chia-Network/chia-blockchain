@@ -158,6 +158,37 @@ def get_update_proposal_puzzle(dao_rules: DAORules, proposal_validator: Program)
     return update_proposal
 
 
+def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
+    mod, curried_args = puzzle.uncurry()
+    if mod != DAO_UPDATE_PROPOSAL_MOD:
+        raise ValueError("Not an update proposal.")
+    (
+        _,
+        proposal_validator,
+        proposal_timelock,
+        soft_close_length,
+        attendance_required,
+        pass_percentage,
+        self_destruct_length,
+        oracle_spend_delay,
+    ) = curried_args.as_iter()
+    # proposal_timelock: uint64
+    # soft_close_length: uint64
+    # attendance_required: uint64
+    # pass_percentage: uint64
+    # self_destruct_length: uint64
+    # oracle_spend_delay: uint64
+    dao_rules = DAORules(
+        proposal_timelock.as_int(),
+        soft_close_length.as_int(),
+        attendance_required.as_int(),
+        pass_percentage.as_int(),
+        self_destruct_length.as_int(),
+        oracle_spend_delay.as_int(),
+    )
+    return dao_rules
+
+
 def get_spend_p2_singleton_puzzle(
     treasury_id: bytes32, xch_conditions: Optional[List], asset_conditions: Optional[List[Tuple]]  # type: ignore
 ) -> Program:
@@ -541,6 +572,7 @@ def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
         log.debug("Cannot uncurry spend puzzle: error: %s", e)
         raise e
     if mod == SPEND_P2_SINGLETON_MOD:
+
         return "spend", curried_args
     elif mod == DAO_UPDATE_PROPOSAL_MOD:
         return "update", curried_args
