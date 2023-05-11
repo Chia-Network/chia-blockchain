@@ -2454,12 +2454,18 @@ class WalletRpcApi:
         assert tx is not None
         return {"success": True, "tx_id": tx.name()}
 
-    async def dao_free_coins_from_finished_proposal(self, request) -> EndpointResult:
+    async def dao_free_coins_from_finished_proposals(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
+        if "fee" in request:
+            fee = request["fee"]
+        else:
+            fee = uint64(0)
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        # TODO: implement
-        return {"success": False}
+        tx = await dao_wallet.free_coins_from_finished_proposals(fee=fee)
+        assert tx is not None
+
+        return {"success": True, "spend_name": tx.id()}
 
     ##########################################################################################
     # NFT Wallet

@@ -213,10 +213,17 @@ async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fin
 
 async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    res = await wallet_client.dao_free_coins_from_finished_proposal(
-        wallet_id=wallet_id
+    if "fee" in args:
+        fee = args["fee"]
+    else:
+        fee = uint64(0)
+    res = await wallet_client.dao_free_coins_from_finished_proposals(
+        wallet_id=wallet_id, fee=fee,
     )
-    raise ValueError("Not Implemented")
+    if res["success"]:
+        print("Transaction submitted.")
+    else:
+        print("Transaction failed.")
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:

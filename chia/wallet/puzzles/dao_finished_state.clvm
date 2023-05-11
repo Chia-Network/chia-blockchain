@@ -1,12 +1,12 @@
 ; This code is the end state of a proposal or a dividend.
 ; It is an oracle which simply recreates itself and emits an announcement that it has concluded operation
 
-(mod (my_puzhash my_amount)
+(mod (my_inner_puzhash my_amount)
   (include condition_codes.clvm)
   (list
     (list ASSERT_MY_PUZZLEHASH my_puzhash)
     (list ASSERT_MY_AMOUNT my_amount)
-    (list CREATE_COIN my_puzhash my_amount)
+    (list CREATE_COIN my_inner_puzhash my_amount)
     (list CREATE_PUZZLE_ANNOUNCEMENT 'f')
   )
 )

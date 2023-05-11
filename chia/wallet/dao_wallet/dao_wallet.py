@@ -2026,6 +2026,63 @@ class DAOWallet(WalletProtocol):
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
 
+    async def free_coins_from_finished_proposals(self, fee=uint64(0), push=True) -> SpendBundle:
+        dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+        coin_spends = []
+        full_spend = None
+        for proposal_info in self.dao_info.proposals_list:
+            if proposal_info.timer_coin is None:
+                solution = Program.to(
+                    [get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(), proposal_info.current_coin.amount]
+                )
+                cs = CoinSpend(
+                    proposal_info.current_coin,
+                    get_finished_state_puzzle(proposal_info.proposal_id),
+                    solution
+                )
+                coin_spends.append(cs)
+                sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id)
+                if full_spend is None:
+                    full_spend = sb
+                else:
+                    full_spend = full_spend.aggregate([sb, full_spend])
+
+            full_spend = full_spend.aggregate([full_spend, SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))])
+            if fee > 0:
+                chia_tx = await self.create_tandem_xch_tx(fee)
+                assert chia_tx.spend_bundle is not None
+                full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=full_spend.get_tree_hash(),
+                amount=uint64(1),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
+        return full_spend
+
+    def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
+        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
+        if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_block_height:
+            return False
+        tip_height = await self.get_tip_created_height(proposal_info.proposal_id)
+        if tip_height + dao_rules.soft_close_length < self.dao_info.current_block_height:
+            return False
+        return True
+
     async def get_frozen_amount(self) -> uint64:
         return uint64(0)
 
@@ -2125,6 +2182,14 @@ class DAOWallet(WalletProtocol):
         if len(ret) == 0:
             return None
         return ret[-1]
+
+    async def get_tip_created_height(self, singleton_id: bytes32) -> Optional[int]:
+        ret: List[
+            Tuple[uint32, SingletonRecord]
+        ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
+        if len(ret) < 1:
+            return None
+        return ret[-2].removed_height
 
     async def add_or_update_proposal_info(
         self,
