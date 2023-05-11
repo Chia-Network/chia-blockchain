@@ -726,12 +726,10 @@ class WalletStateManager:
         """
         mod_hash, tail_hash, inner_puzzle = curried_args
 
-        hint_list = compute_coin_hints(coin_spend)
-        derivation_record = None
-        for hint in hint_list:
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
-            if derivation_record is not None:
-                break
+        hint_dict, _ = compute_coin_hints(coin_spend)
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            hint_dict[coin_state.coin.name()]
+        )
 
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
@@ -780,13 +778,11 @@ class WalletStateManager:
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hint_list = compute_coin_hints(coin_spend)
+        hint_dict, _ = compute_coin_hints(coin_spend)
 
-        derivation_record = None
-        for hint in hint_list:
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
-            if derivation_record is not None:
-                break
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            hint_dict[coin_state.coin.name()]
+        )
 
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
