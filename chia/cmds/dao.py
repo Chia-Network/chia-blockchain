@@ -387,7 +387,7 @@ def dao_vote_cmd(
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
-    amount: int,
+    vote_amount: int,
     vote_no: Optional[bool],
     fee: Optional[int],
 ) -> None:
@@ -401,7 +401,7 @@ def dao_vote_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "proposal_id": proposal_id,
-        "vote_amount": amount,
+        "vote_amount": vote_amount,
         "is_yes_vote": is_yes_vote,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, vote_on_proposal))
@@ -578,6 +578,13 @@ def dao_proposal(ctx: click.Context) -> None:
     default=None,
 )
 @click.option(
+    "-v",
+    "--vote-amount",
+    help="The number of votes to add",
+    type=int,
+    required=True,
+)
+@click.option(
     "-id",
     "--asset-id",
     help="The asset id of the funds the proposal will send. Leave blank for xch",
@@ -606,6 +613,7 @@ def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
+    vote_amount: int,
     to_address: Optional[str],
     amount: Optional[float],
     asset_id: Optional[str],
@@ -619,6 +627,7 @@ def dao_create_spend_proposal_cmd(
     extra_params = {
         "wallet_id": wallet_id,
         "fee": fee,
+        "vote_amount": vote_amount,
         "to_address": to_address,
         "amount": amount,
         "asset_id": asset_id,

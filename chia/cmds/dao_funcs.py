@@ -133,27 +133,16 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
     res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
     proposals = res["proposals"]
-    # proposal_id: bytes32  # this is launcher_id
-    # inner_puzzle: Program
-    # amount_voted: uint64
-    # yes_votes: uint64
-    # current_coin: Coin
-    # current_innerpuz: Optional[Program]
-    # timer_coin: Optional[Coin]  # if this is None then the proposal has finished
-    # singleton_block_height: uint32  # Block height that current proposal singleton coin was created in
-    # passed: Optional[bool]
-    # closed: Optional[bool]
-    if not res["success"]:
-        print("Error: unable to fetch proposals.")
-        return
-    lockup_time = res["lockup_times"]
+    lockup_time = res["lockup_time"]
     soft_close_length = res["soft_close_length"]
     print("############################")
     for prop in proposals:
-        print(f"Proposal ID: {prop.proposal_id.hex()}")
-        print(f"Votes for: {prop.yes_votes}")
-        print(f"Votes against: {prop.total_votes - prop.yes_votes}")
-        print(f"Closable at block height: {prop.singleton_block_height + lockup_time}")
+        print("Proposal ID: {proposal_id}".format(**prop))
+        print("Votes for: {yes_votes}".format(**prop))
+        votes_against = prop["amount_voted"] - prop["yes_votes"]
+        print(f"Votes against: {votes_against}")
+        close_height = prop["singleton_block_height"] - lockup_time
+        print(f"Closable at block height: {close_height}")
         print("------------------------")
     print(f"Proposals have {soft_close_length} blocks of soft close time.")
     print("############################")
@@ -170,10 +159,10 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient,
         fee = args["fee"]
     else:
         fee = uint64(0)
-    proposal_id = request["proposal_id"]
-    is_yes_vote = request["is_yes_vote"]
+    proposal_id = args["proposal_id"]
+    is_yes_vote = args["is_yes_vote"]
     # wallet_id: int, proposal_id: str, vote_amount: uint64, is_yes_vote: bool = True, fee: uint64 = uint64(0)
-    res = await wallet_client.dao_vote_on_proposals(
+    res = await wallet_client.dao_vote_on_proposal(
         wallet_id=wallet_id, proposal_id=proposal_id, vote_amount=vote_amount, is_yes_vote=is_yes_vote, fee=fee
     )
     spend_bundle = res["spend_bundle"]
@@ -189,7 +178,7 @@ async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, f
         fee = args["fee"]
     else:
         fee = uint64(0)
-    proposal_id = request["proposal_id"]
+    proposal_id = args["proposal_id"]
     res = await wallet_client.dao_close_proposal(
         wallet_id=wallet_id, proposal_id=proposal_id, fee=fee
     )
@@ -207,7 +196,7 @@ async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fin
     final_amount: uint64 = uint64(int(Decimal(amount) * units["cat"]))
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
-    typ = await get_wallet_type(wallet_id=4, wallet_client=wallet_client)
+    # typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
     res = await wallet_client.dao_send_to_lockup(wallet_id=wallet_id, amount=final_amount, fee=final_fee)
     tx_id = res["tx_id"]
     start = time.time()

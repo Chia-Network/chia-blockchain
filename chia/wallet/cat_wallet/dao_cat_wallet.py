@@ -83,7 +83,7 @@ class DAOCATWallet:
         self.standard_wallet = wallet
         try:
             self.dao_cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
-            # self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+            self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
         except AssertionError as e:
             self.log.error(f"Error creating DAO CAT wallet: {e}")
             # Do a migration of the lineage proofs
