@@ -663,12 +663,12 @@ class WalletStateManager:
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
-        if uncurried_nft is not None:
+        if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
             return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state)
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
-        if did_curried_args is not None:
+        if did_curried_args is not None and coin_state.coin.amount % 2 == 1:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
