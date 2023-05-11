@@ -38,13 +38,12 @@ async def test_is_recipient(
     sender_data = ClawbackMetadata(uint64(500), puzhash_1, bytes32(token_bytes()))
     recipient_data = ClawbackMetadata(uint64(500), bytes32(token_bytes()), puzhash_2)
     # Test invalid metadata
+    has_exception = False
     try:
         await invalid_data.is_recipient(wallet_node.wallet_state_manager.puzzle_store)
-        assert False
     except ValueError:
-        pass
-    except Exception:
-        assert False
+        has_exception = True
+    assert has_exception
     # Test valid metadata
     assert not (await both_data.is_recipient(wallet_node.wallet_state_manager.puzzle_store))
     assert await recipient_data.is_recipient(wallet_node.wallet_state_manager.puzzle_store)

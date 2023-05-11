@@ -586,13 +586,12 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_2_rpc, 1)
     await asyncio.sleep(10)
     # Test missing coin_ids
+    has_exception = False
     try:
         await wallet_2_api.spend_clawback_coins({})
-        assert False
     except ValueError:
-        pass
-    except Exception:
-        assert False
+        has_exception = True
+    assert has_exception
     # Test coin ID is not a Clawback coin
     invalid_coin_id = tx.removals[0].name().hex()
     resp = await wallet_2_rpc.spend_clawback_coins([invalid_coin_id], 500)
@@ -616,13 +615,12 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
         dataclasses.replace(coin_record, coin=fake_coin)
     )
+    has_exception = False
     try:
         await wallet_1_rpc.spend_clawback_coins([fake_coin.name().hex()], 100)
-        assert False
     except ValueError:
-        pass
-    except Exception:
-        assert False
+        has_exception = True
+    assert has_exception
     # Test claim spend
     await wallet_2_api.set_auto_claim({"enabled": False, "tx_fee": 100, "min_amount": 0, "batch_size": 1})
     resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1, clawback_coin_id_2], 100)
@@ -1622,12 +1620,12 @@ async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert rpc_server is not None
     api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
     req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
+    has_exception = False
     try:
         res = await api.set_auto_claim(req)
     except ConversionError:
-        pass
-    else:
-        assert False
+        has_exception = True
+    assert has_exception
     req = {"enabled": False, "batch_size": 0, "min_amount": 100}
     res = await api.set_auto_claim(req)
     assert not res["enabled"]

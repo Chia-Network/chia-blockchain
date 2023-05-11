@@ -14,7 +14,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.errors import ConsensusError, Err
+from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,
@@ -64,11 +64,8 @@ class TestClawbackLifecycle:
             ),
             DEFAULT_HIDDEN_PUZZLE_HASH,
         )
-        try:
-            conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
-        except ConsensusError as err:
-            error_msg = f"Sign transaction failed, error: {err}"
-            raise ValueError(error_msg)
+
+        conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(
             conditions_dict,
@@ -238,13 +235,12 @@ class TestClawbackLifecycle:
             ]
         )
         # Test invalid puzzle
+        has_exception = False
         try:
             create_merkle_solution(timelock, sender_ph, recipient_ph, Program.to([]), sender_sol)
-            assert False
         except ValueError:
-            pass
-        except Exception:
-            assert False
+            has_exception = True
+        assert has_exception
         cb_sender_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_sol)
 
         conds = conditions_dict_for_solution(clawback_puz, cb_sender_sol, INFINITE_COST)

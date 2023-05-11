@@ -1075,7 +1075,8 @@ class WalletRpcApi:
         tx_fee: uint64 = uint64(request.get("fee", 0))
         # Get inner puzzle
         coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-            coin_id_filter=HashFilter.include(coin_ids)
+            coin_id_filter=HashFilter.include(coin_ids),
+            coin_type=CoinType.CLAWBACK,
         )
 
         coins: Dict[Coin, ClawbackMetadata] = {}
@@ -1086,9 +1087,6 @@ class WalletRpcApi:
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
             if coin_record.metadata is None:
                 log.warning(f"Skip merkle coin f{coin_id.hex()}, metadata cannot be None.")
-                continue
-            if coin_record.coin_type != CoinType.CLAWBACK:
-                log.warning(f"Coin {coin_id.hex()} is not a Clawback coin.")
                 continue
             if coin_record.spent:
                 log.warning(f"Coin {coin_id.hex()} is already spent.")

@@ -344,11 +344,12 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
+        has_exception = False
         try:
             await api_0.spend_clawback_coins({})
-            assert False
         except ValueError:
-            pass
+            has_exception = True
+        assert has_exception
         resp = await api_0.spend_clawback_coins(
             dict({"coin_ids": [normal_puzhash.hex(), merkle_coin.name().hex()], "fee": 1000})
         )
@@ -481,7 +482,6 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
-        api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
             wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -520,8 +520,7 @@ class TestWalletSimulator:
         # Reorg before claim
         # Test Reorg mint
         height = full_node_api.full_node.blockchain.get_peak_height()
-        if height is None:
-            assert False
+        assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(uint32(height - 2), uint32(height + 1), normal_puzhash, None)
         )
@@ -534,16 +533,10 @@ class TestWalletSimulator:
 
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Claim merkle coin
+        wallet_node_2.config["auto_claim"]["enabled"] = True
         await asyncio.sleep(20)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # clawback merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_1.spend_clawback_coins(
-            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
-        )
-        json.dumps(resp)
-        assert resp["success"]
-        assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -557,8 +550,7 @@ class TestWalletSimulator:
         await time_out_assert(10, wallet_1.get_confirmed_balance, 10000000000500)
         # Reorg after claim
         height = full_node_api.full_node.blockchain.get_peak_height()
-        if height is None:
-            assert False
+        assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
             ReorgProtocol(uint32(height - 2), uint32(height + 1), normal_puzhash, None)
         )
