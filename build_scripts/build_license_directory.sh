@@ -32,9 +32,10 @@ for i in "${licenses_array[@]}"; do
   fi
 done
 
-mv licenses/ ../dist
-
+mv licenses/ ../build_scripts/dist
 cd ../build_scripts || exit' or 'cd ... || return
+ls -lah dist/
+
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
