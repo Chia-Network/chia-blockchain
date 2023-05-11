@@ -138,7 +138,7 @@ def softfork_height(request) -> int:
     return request.param
 
 
-saved_blocks_version = "rc5"
+saved_blocks_version = "2.0"
 
 
 @pytest.fixture(scope="session")
