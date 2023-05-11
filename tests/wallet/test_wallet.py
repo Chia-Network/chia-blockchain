@@ -531,12 +531,11 @@ class TestWalletSimulator:
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
         )
 
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # Claim merkle coin
         wallet_node_2.config["auto_claim"]["enabled"] = True
         await asyncio.sleep(20)
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         # clawback merkle coin
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         # Wait mempool update
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -546,8 +545,8 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
         )
-        await time_out_assert(10, wallet.get_confirmed_balance, 5999999999500)
-        await time_out_assert(10, wallet_1.get_confirmed_balance, 10000000000500)
+        await time_out_assert(10, wallet.get_confirmed_balance, 1999999999500)
+        await time_out_assert(10, wallet_1.get_confirmed_balance, 12000000000500)
         # Reorg after claim
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
