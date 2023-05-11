@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
@@ -877,28 +876,22 @@ async def test_unexpected_json(
     assert message["data"]["error"].startswith("'command'")
 
 
+@pytest.mark.parametrize(
+    "command_to_test",
+    [("start_service"), ("stop_service"), ("start_plotting"), ("stop_plotting"), ("is_running"), ("register_service")],
+)
 @pytest.mark.asyncio
 async def test_commands_with_no_data(
-    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain]
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], command_to_test: str
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
-    commands_with_data = [
-        "start_service",
-        "stop_service",
-        "start_plotting",
-        "stop_plotting",
-        "is_running",
-        "register_service",
-    ]
+    payload = create_payload(command_to_test, {}, "service_name", "daemon")
 
-    for command in commands_with_data:
-        payload = create_payload(command, {}, "service_name", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
 
-        await ws.send_str(payload)
-        response = await ws.receive()
-
-        assert_response(response, {"success": False, "error": f'{command} requires "data"'})
+    assert_response(response, {"success": False, "error": f'{command_to_test} requires "data"'})
 
 
 @pytest.mark.parametrize(
@@ -1139,7 +1132,7 @@ async def test_keyring_file_deleted(
     keychain.set_master_passphrase(
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="this is a passphrase"
     )
-    os.remove(keychain.keyring_wrapper.keyring.keyring_path)
+    keychain.keyring_wrapper.keyring.keyring_path.unlink()
 
     payload = create_payload(
         method,
