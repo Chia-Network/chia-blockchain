@@ -75,10 +75,10 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
-    get_plot_id,
     calculate_pos_challenge,
     generate_plot_public_key,
     generate_taproot_sk,
+    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
