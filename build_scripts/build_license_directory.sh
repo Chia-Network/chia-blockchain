@@ -21,8 +21,6 @@ IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 #print the contents of the array
 printf '%s\n' "${licenses_array[@]}"
 
-cd ../build_scripts || exit' or 'cd ... || return
-
 for i in "${licenses_array[@]}"; do
   if [ -e "$i" ]; then
     dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
@@ -34,6 +32,9 @@ for i in "${licenses_array[@]}"; do
   fi
 done
 
+mv licenses/ ../dist
+
+cd ../build_scripts || exit' or 'cd ... || return
 python3 -m venv ../venv
 . ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
