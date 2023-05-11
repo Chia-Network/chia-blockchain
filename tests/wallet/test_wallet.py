@@ -552,7 +552,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 2), uint32(height + 1), normal_puzhash, None)
+            ReorgProtocol(uint32(height - 3), uint32(height + 1), normal_puzhash, None)
         )
         await time_out_assert(
             20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
