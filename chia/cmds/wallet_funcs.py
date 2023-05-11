@@ -481,13 +481,15 @@ def timestamp_to_time(timestamp):
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
-async def print_offer_summary(cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False):
+async def print_offer_summary(
+    cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch="XCH"
+):
     for asset_id, amount in sum_dict.items():
         description: str = ""
         unit: int = units["chia"]
         wid: str = "1" if asset_id == "xch" else ""
         mojo_amount: int = int(Decimal(amount))
-        name: str = "XCH"
+        name: str = network_xch
         if asset_id != "xch":
             name = asset_id
             if asset_id == "unknown":
@@ -630,11 +632,12 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
+    network_xch = AddressType.XCH.hrp(config).upper()
     print("Summary:")
     print("  OFFERED:")
-    await print_offer_summary(cat_name_resolver, offered)
+    await print_offer_summary(cat_name_resolver, offered, network_xch=network_xch)
     print("  REQUESTED:")
-    await print_offer_summary(cat_name_resolver, requested)
+    await print_offer_summary(cat_name_resolver, requested, network_xch=network_xch)
 
     print()
 
@@ -654,7 +657,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             if fungible_asset_id_str in requested:
                 nft_royalty_currency: str = "Unknown CAT"
                 if fungible_asset_id is None:
-                    nft_royalty_currency = "XCH"
+                    nft_royalty_currency = network_xch
                 else:
                     result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
                     if result is not None:
@@ -670,7 +673,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             for nft_id, summaries in royalty_summary.items():
                 print(f"  - For {nft_id}:")
                 for summary in summaries:
-                    divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
+                    divisor = units["chia"] if summary["asset"] == network_xch else units["cat"]
                     converted_amount = Decimal(summary["amount"]) / divisor
                     total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
                     total_amounts_requested[summary["asset"]] += summary["amount"]
@@ -681,11 +684,11 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             print()
             print("Total Amounts Requested:")
             for asset, amount in total_amounts_requested.items():
-                divisor = units["chia"] if asset == "XCH" else units["cat"]
+                divisor = units["chia"] if asset == network_xch else units["cat"]
                 converted_amount = Decimal(amount) / divisor
                 print(f"  - {converted_amount} {asset} ({amount} mojos)")
 
-    print(f"Included Fees: {Decimal(offer.fees()) / units['chia']} XCH, {offer.fees()} mojos")
+    print(f"Included Fees: {Decimal(offer.fees()) / units['chia']} {network_xch}, {offer.fees()} mojos")
 
     if not examine_only:
         print()
