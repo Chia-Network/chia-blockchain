@@ -15,7 +15,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import test_constants
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
 from tests.conftest import node_with_params
 
 constants = test_constants
@@ -309,7 +308,7 @@ class TestRateLimits:
         full_node_server_a: ChiaServer = node_a.full_node.server
         full_node_server_b: ChiaServer = node_b.full_node.server
 
-        await full_node_server_b.start_client(PeerInfo(self_hostname, uint16(full_node_server_a._port)), None)
+        await full_node_server_b.start_client(PeerInfo(self_hostname, full_node_server_a.get_port()), None)
 
         assert len(full_node_server_b.get_connections()) == 1
         assert len(full_node_server_a.get_connections()) == 1

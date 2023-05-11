@@ -403,14 +403,14 @@ class TestFullNodeProtocol:
         for i in range(1, 4):
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
-            await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+            await server_i.start_client(PeerInfo(self_hostname, server_1.get_port()))
         assert len(server_1.get_connections(NodeType.FULL_NODE)) == 2
 
     @pytest.mark.asyncio
     async def test_request_peers(self, wallet_nodes, self_hostname):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, _ = wallet_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()))
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(

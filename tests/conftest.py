@@ -678,8 +678,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -721,9 +721,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)

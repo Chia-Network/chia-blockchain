@@ -142,8 +142,8 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     client = await WalletRpcClient.create(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config

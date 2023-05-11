@@ -79,7 +79,7 @@ async def init_wallet_and_node(
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator
     wallet_node = wallet_service._node
     full_node_api = full_node_service._api
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -574,7 +574,7 @@ async def test_get_owned_stores(
     assert wallet_service.rpc_server is not None
     wallet_rpc_port = wallet_service.rpc_server.listen_port
     full_node_api = full_node_service._api
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -663,7 +663,7 @@ async def offer_setup_fixture(
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
-        await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+        await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
         assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallets.append(wallet)

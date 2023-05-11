@@ -4,7 +4,6 @@ import pytest
 
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import assert_runtime
 
@@ -18,7 +17,7 @@ class TestNodeLoad:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         await full_node_1.full_node.add_block(blocks[0], peer)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         async def num_connections():
             return len(server_2.get_connections())

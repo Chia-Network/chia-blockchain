@@ -11,7 +11,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
 
 
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
@@ -46,7 +45,7 @@ class TestSSL:
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
-        success = await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        success = await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         assert success is True
 
     @pytest.mark.asyncio
