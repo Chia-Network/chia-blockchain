@@ -1458,10 +1458,26 @@ async def test_dao_rpc_client(
 
         # check proposal is closed
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
+        await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][0]["closed"], True)
 
         # free locked cats from finished proposal
         res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert res["success"]
+        sb_name = bytes32.from_hexstr(res["spend_name"])
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        bal = await client_0.get_wallet_balance(dao_wallet_dict_0["dao_cat_wallet_id"])
+        assert bal["confirmed_wallet_balance"] == cat_amt
+
+        exit = await client_0.dao_exit_lockup(dao_id_0)
+        assert exit["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
 
     finally:
         client_0.close()

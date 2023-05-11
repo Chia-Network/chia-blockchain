@@ -4,7 +4,7 @@
 (mod (my_inner_puzhash my_amount)
   (include condition_codes.clib)
   (list
-    (list ASSERT_MY_PUZZLEHASH my_puzhash)
+    (list ASSERT_MY_PUZZLEHASH my_inner_puzhash)
     (list ASSERT_MY_AMOUNT my_amount)
     (list CREATE_COIN my_inner_puzhash my_amount)
     (list CREATE_PUZZLE_ANNOUNCEMENT 'f')

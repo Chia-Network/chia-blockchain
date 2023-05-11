@@ -36,17 +36,18 @@ from chia.wallet.dao_wallet.dao_utils import (
 )
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.payment import Payment
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -220,9 +221,7 @@ class DAOCATWallet:
                     [coin.parent_coin_info], peer=peer
                 )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await fetch_coin_spend(
-                    coin_state[0].spent_height, coin_state[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend(coin_state[0].spent_height, coin_state[0].coin, peer)
                 # TODO: process this coin
                 self.log.info("coin_added coin_spend: %s", coin_spend)
                 # await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
@@ -497,7 +496,8 @@ class DAOCATWallet:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
+        # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
+        cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
         for lci in coins:
             coin = lci.coin
             new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
@@ -510,7 +510,7 @@ class DAOCATWallet:
                     [new_innerpuzzle.get_tree_hash()],
                 ),
             ]
-            inner_solution = await self.standard_wallet.make_solution(
+            inner_solution = self.standard_wallet.make_solution(
                 primaries=primaries,
             )
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case

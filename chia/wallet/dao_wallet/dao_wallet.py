@@ -31,7 +31,6 @@ from chia.wallet.cat_wallet.cat_utils import SpendableCAT
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 
 # from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
@@ -82,6 +81,7 @@ from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
 from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -657,7 +657,9 @@ class DAOWallet(WalletProtocol):
         assert children_state.created_height
         parent_spend = await fetch_coin_spend(children_state.created_height, parent_parent_coin, peer)
         assert parent_spend is not None
-        parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+        parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(
+            parent_spend.puzzle_reveal.to_program()
+        )
         if parent_inner_puz is None:
             raise ValueError("get_innerpuzzle_from_puzzle failed")
 
@@ -680,9 +682,7 @@ class DAOWallet(WalletProtocol):
         launcher_state = await wallet_node.get_coin_state([self.dao_info.treasury_id], peer)
         genesis_coin_id = launcher_state[0].coin.parent_coin_info
         genesis_state = await wallet_node.get_coin_state([genesis_coin_id], peer)
-        genesis_spend = await fetch_coin_spend(
-            genesis_state[0].spent_height, genesis_state[0].coin, peer
-        )
+        genesis_spend = await fetch_coin_spend(genesis_state[0].spent_height, genesis_state[0].coin, peer)
         cat_tail_hash = None
         conds = genesis_spend.solution.to_program().at("rfr").as_iter()
         for cond in conds:
@@ -2050,8 +2050,8 @@ class DAOWallet(WalletProtocol):
         state = await wallet_node.get_coin_state([coin.parent_coin_info], peer)
         assert state is not None
         # CoinState contains Coin, spent_height, and created_height,
-        parent_spend = await wallet_node.fetch_puzzle_solution(state[0].spent_height, state[0].coin, peer)
-        parent_inner_puz = get_innerpuzzle_from_puzzle(parent_spend.puzzle_reveal.to_program())
+        parent_spend = await fetch_coin_spend(state[0].spent_height, state[0].coin, peer)
+        parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
     async def free_coins_from_finished_proposals(self, fee=uint64(0), push=True) -> SpendBundle:
@@ -2074,6 +2074,9 @@ class DAOWallet(WalletProtocol):
                 sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id)
                 spends.append(prop_sb)
                 spends.append(sb)
+
+        if not spends:
+            raise ValueError("No proposals are available for release")
 
         full_spend = SpendBundle.aggregate(spends)
         if fee > 0:
