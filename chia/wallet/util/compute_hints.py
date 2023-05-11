@@ -17,7 +17,7 @@ def compute_coin_hints(cs: CoinSpend) -> Tuple[Dict[bytes32, bytes32], Dict[byte
     coin_dict: Dict[bytes32, Coin] = {}  # {coin_id: Coin}
     for condition in result_program.as_iter():
         if (
-            condition.at("f").as_int() == ConditionOpcode.CREATE_COIN  # It's a create coin
+            condition.at("f").atom == ConditionOpcode.CREATE_COIN  # It's a create coin
             and condition.at("rrr") != Program.to(None)  # There's more than two arguments
             and condition.at("rrrf").atom is None  # The 3rd argument is a cons
         ):
