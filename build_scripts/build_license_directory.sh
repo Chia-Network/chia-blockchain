@@ -4,7 +4,7 @@ pwd
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
 
-cd ../chia-blockchain-gui || exit' or 'cd ... || return
+cd ../chia-blockchain-gui || 'exit" or "cd' ... || return
 npm install .
 
 pwd
@@ -22,18 +22,15 @@ IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 printf '%s\n' "${licenses_array[@]}"
 
 for i in "${licenses_array[@]}"; do
-  if [ -e "$i" ]; then
     dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
     mkdir -p "$dirname"
     echo "$dirname"
     cp "$i" "$dirname"
-  else
-    echo "File does not exist: $i"
-  fi
 done
 
+ls -lah licenses
 mv licenses/ ../build_scripts/dist
-cd ../build_scripts || exit' or 'cd ... || return
+cd ../build_scripts || 'exit" or "cd' || return
 ls -lah dist/
 
 python3 -m venv ../venv
