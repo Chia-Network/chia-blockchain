@@ -1038,11 +1038,16 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         print(f"Failed to transfer NFT: {e}")
 
 
-def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
+def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any], sequence_info: Optional[Tuple[int, int]] = None) -> None:
     indent: str = "   "
     owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp(config))
     minter_did = None if nft.minter_did is None else encode_puzzle_hash(nft.minter_did, AddressType.DID.hrp(config))
+
     print()
+    if sequence_info is not None:
+        print(f"Showing info for NFT {sequence_info[0]} of {sequence_info[1]}:")
+        print()
+    
     print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
     print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
@@ -1077,19 +1082,23 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
 
 async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
+    start: Optional[int] = args.get("start")
+    num: Optional[int] = args.get("num")
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        response = await wallet_client.list_nfts(wallet_id)
+        count_response: Dict[str, Any] = await wallet_client.count_nfts(wallet_id)
+        count: int = count_response["count"]
+        response = await wallet_client.list_nfts(wallet_id, pagination=(start, num))
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
-            for n in nft_list:
+            for i, n in enumerate(nft_list):
                 nft = NFTInfo.from_json_dict(n)
-                print_nft_info(nft, config=config)
+                sequence_num = i + 1 + (start if start is not None else 0)
+                print_nft_info(nft, config=config, sequence_info=(sequence_num, count))
         else:
             print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
         print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
-
 
 async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
