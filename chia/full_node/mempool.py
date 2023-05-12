@@ -389,6 +389,9 @@ class Mempool:
         processed_spend_bundles = 0
         additions: List[Coin] = []
         # This contains a map of coin ID to a coin spend solution and its isolated cost
+        # We reconstruct it for every bundle we create from mempool items because we
+        # deduplicate on the first coin spend solution that comes with the highest
+        # fee rate item, and that can change across calls
         eligible_coin_spends = EligibleCoinSpends()
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
