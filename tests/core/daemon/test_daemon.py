@@ -25,13 +25,16 @@ from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
+from tests.util.misc import Marks, datacases
 
 
 @dataclass
-class RouteTest:
+class RouteCase:
     route: str
     request: Dict[str, Any]
     response: Dict[str, Any]
+    id: str
+    marks: Marks = ()
 
 
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
@@ -816,75 +819,64 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
     assert message["data"]["error"].startswith("Expecting property name")
 
 
-@pytest.mark.parametrize(
-    "api_under_test",
+@datacases(
     [
-        pytest.param(
-            RouteTest(
-                route="register_service",
-                request={
-                    "fred": "barney",
-                },
-                response={"success": False},
-            ),
+        RouteCase(
             id="register_service: no service name",
+            route="register_service",
+            request={
+                "fred": "barney",
+            },
+            response={"success": False},
         ),
-        pytest.param(
-            RouteTest(
-                route="register_service",
-                request={
-                    "service": "chia_plotter",
-                },
-                response={"success": True, "service": "chia_plotter", "queue": []},
-            ),
+        RouteCase(
             id="register_service: chia_plotter",
+            route="register_service",
+            request={
+                "service": "chia_plotter",
+            },
+            response={"success": True, "service": "chia_plotter", "queue": []},
         ),
-        pytest.param(
-            RouteTest(
-                route="unknown_command",
-                request={},
-                response={"success": False, "error": "unknown_command unknown_command"},
-            ),
+        RouteCase(
             id="unknown_command",
+            route="unknown_command",
+            request={},
+            response={"success": False, "error": "unknown_command unknown_command"},
         ),
-        pytest.param(
-            RouteTest(
-                route="running_services",
-                request={},
-                response={"success": True, "running_services": []},
-            ),
+        RouteCase(
             id="running_services",
+            route="running_services",
+            request={},
+            response={"success": True, "running_services": []},
         ),
-        pytest.param(
-            RouteTest(
-                route="keyring_status",
-                request={},
-                response={
-                    "can_save_passphrase": supports_os_passphrase_storage(),
-                    "can_set_passphrase_hint": True,
-                    "is_keyring_locked": False,
-                    "passphrase_hint": "",
-                    "passphrase_requirements": {"is_optional": True, "min_length": 8},
-                    "success": True,
-                    "user_passphrase_is_set": False,
-                },
-            ),
+        RouteCase(
             id="keyring_status",
+            route="keyring_status",
+            request={},
+            response={
+                "can_save_passphrase": supports_os_passphrase_storage(),
+                "can_set_passphrase_hint": True,
+                "is_keyring_locked": False,
+                "passphrase_hint": "",
+                "passphrase_requirements": {"is_optional": True, "min_length": 8},
+                "success": True,
+                "user_passphrase_is_set": False,
+            },
         ),
     ],
 )
 @pytest.mark.asyncio
 async def test_misc_daemon_ws(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    api_under_test: RouteTest,
+    case: RouteCase,
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
-    payload = create_payload(api_under_test.route, api_under_test.request, "service_name", "daemon")
+    payload = create_payload(case.route, case.request, "service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
 
-    assert_response(response, api_under_test.response)
+    assert_response(response, case.response)
 
 
 @pytest.mark.asyncio
@@ -921,179 +913,147 @@ async def test_commands_with_no_data(
     assert_response(response, {"success": False, "error": f'{command_to_test} requires "data"'})
 
 
-@pytest.mark.parametrize(
-    "api_under_test",
+@datacases(
     [
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "passphrase_hint": "this is a hint",
-                    "save_passphrase": False,
-                },
-                response={"success": False, "error": "missing new_passphrase"},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: no passphrase",
+            route="set_keyring_passphrase",
+            request={
+                "passphrase_hint": "this is a hint",
+                "save_passphrase": False,
+            },
+            response={"success": False, "error": "missing new_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "passphrase_hint": "this is a hint",
-                    "save_passphrase": False,
-                    "new_passphrase": True,
-                },
-                response={"success": False, "error": "missing new_passphrase"},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: incorrect type",
+            route="set_keyring_passphrase",
+            request={
+                "passphrase_hint": "this is a hint",
+                "save_passphrase": False,
+                "new_passphrase": True,
+            },
+            response={"success": False, "error": "missing new_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "passphrase_hint": "this is a hint",
-                    "new_passphrase": "this is a passphrase",
-                },
-                response={"success": True, "error": None},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: correct",
+            route="set_keyring_passphrase",
+            request={
+                "passphrase_hint": "this is a hint",
+                "new_passphrase": "this is a passphrase",
+            },
+            response={"success": True, "error": None},
         ),
     ],
 )
 @pytest.mark.asyncio
 async def test_set_keyring_passphrase_ws(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    api_under_test: RouteTest,
+    case: RouteCase,
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 
-    payload = create_payload(api_under_test.route, api_under_test.request, "service_name", "daemon")
+    payload = create_payload(case.route, case.request, "service_name", "daemon")
     await ws.send_str(payload)
     response = await ws.receive()
 
-    assert_response(response, api_under_test.response)
+    assert_response(response, case.response)
 
 
-@pytest.mark.parametrize(
-    "api_under_test",
+@datacases(
     [
-        pytest.param(
-            RouteTest(
-                route="remove_keyring_passphrase",
-                request={"current_passphrase": "wrong passphrase"},
-                response={"success": False, "error": "current passphrase is invalid"},
-            ),
+        RouteCase(
             id="remove_keyring_passphrase: wrong current passphrase",
+            route="remove_keyring_passphrase",
+            request={"current_passphrase": "wrong passphrase"},
+            response={"success": False, "error": "current passphrase is invalid"},
         ),
-        pytest.param(
-            RouteTest(
-                route="remove_keyring_passphrase",
-                request={"current_passphrase": True},
-                response={"success": False, "error": "missing current_passphrase"},
-            ),
+        RouteCase(
             id="remove_keyring_passphrase: incorrect type",
+            route="remove_keyring_passphrase",
+            request={"current_passphrase": True},
+            response={"success": False, "error": "missing current_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="remove_keyring_passphrase",
-                request={},
-                response={"success": False, "error": "missing current_passphrase"},
-            ),
+        RouteCase(
             id="remove_keyring_passphrase: missing current passphrase",
+            route="remove_keyring_passphrase",
+            request={},
+            response={"success": False, "error": "missing current_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="remove_keyring_passphrase",
-                request={"current_passphrase": "this is a passphrase"},
-                response={"success": True, "error": None},
-            ),
+        RouteCase(
             id="remove_keyring_passphrase: correct",
+            route="remove_keyring_passphrase",
+            request={"current_passphrase": "this is a passphrase"},
+            response={"success": True, "error": None},
         ),
-        pytest.param(
-            RouteTest(
-                route="unlock_keyring",
-                request={"key": "wrong passphrase"},
-                response={"success": False, "error": "bad passphrase"},
-            ),
+        RouteCase(
             id="unlock_keyring: wrong current passphrase",
+            route="unlock_keyring",
+            request={"key": "wrong passphrase"},
+            response={"success": False, "error": "bad passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="unlock_keyring",
-                request={"key": True},
-                response={"success": False, "error": "missing key"},
-            ),
+        RouteCase(
             id="unlock_keyring: incorrect type",
+            route="unlock_keyring",
+            request={"key": True},
+            response={"success": False, "error": "missing key"},
         ),
-        pytest.param(
-            RouteTest(
-                route="unlock_keyring",
-                request={},
-                response={"success": False, "error": "missing key"},
-            ),
+        RouteCase(
             id="unlock_keyring: missing data",
+            route="unlock_keyring",
+            request={},
+            response={"success": False, "error": "missing key"},
         ),
-        pytest.param(
-            RouteTest(
-                route="unlock_keyring",
-                request={"key": "this is a passphrase"},
-                response={"success": True, "error": None},
-            ),
+        RouteCase(
             id="unlock_keyring: correct",
+            route="unlock_keyring",
+            request={"key": "this is a passphrase"},
+            response={"success": True, "error": None},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "save_passphrase": False,
-                    "new_passphrase": "another new passphrase",
-                },
-                response={"success": False, "error": "missing current_passphrase"},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: no current passphrase",
+            route="set_keyring_passphrase",
+            request={
+                "save_passphrase": False,
+                "new_passphrase": "another new passphrase",
+            },
+            response={"success": False, "error": "missing current_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "save_passphrase": False,
-                    "current_passphrase": "none",
-                    "new_passphrase": "another new passphrase",
-                },
-                response={"success": False, "error": "current passphrase is invalid"},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: incorrect current passphrase",
+            route="set_keyring_passphrase",
+            request={
+                "save_passphrase": False,
+                "current_passphrase": "none",
+                "new_passphrase": "another new passphrase",
+            },
+            response={"success": False, "error": "current passphrase is invalid"},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "save_passphrase": False,
-                    "current_passphrase": False,
-                    "new_passphrase": "another new passphrase",
-                },
-                response={"success": False, "error": "missing current_passphrase"},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: incorrect type",
+            route="set_keyring_passphrase",
+            request={
+                "save_passphrase": False,
+                "current_passphrase": False,
+                "new_passphrase": "another new passphrase",
+            },
+            response={"success": False, "error": "missing current_passphrase"},
         ),
-        pytest.param(
-            RouteTest(
-                route="set_keyring_passphrase",
-                request={
-                    "save_passphrase": False,
-                    "current_passphrase": "this is a passphrase",
-                    "new_passphrase": "another new passphrase",
-                },
-                response={"success": True, "error": None},
-            ),
+        RouteCase(
             id="set_keyring_passphrase: correct",
+            route="set_keyring_passphrase",
+            request={
+                "save_passphrase": False,
+                "current_passphrase": "this is a passphrase",
+                "new_passphrase": "another new passphrase",
+            },
+            response={"success": True, "error": None},
         ),
     ],
 )
 @pytest.mark.asyncio
 async def test_passphrase_apis(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    api_under_test: RouteTest,
+    case: RouteCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -1102,42 +1062,37 @@ async def test_passphrase_apis(
     )
 
     payload = create_payload(
-        api_under_test.route,
-        api_under_test.request,
+        case.route,
+        case.request,
         "service_name",
         "daemon",
     )
     await ws.send_str(payload)
     response = await ws.receive()
 
-    assert_response(response, api_under_test.response)
+    assert_response(response, case.response)
 
 
-@pytest.mark.parametrize(
-    "api_under_test",
+@datacases(
     [
-        pytest.param(
-            RouteTest(
-                route="unlock_keyring",
-                request={"key": "this is a passphrase"},
-                response={"success": False, "error": "validation exception"},
-            ),
+        RouteCase(
             id="unlock_keyring: exception",
+            route="unlock_keyring",
+            request={"key": "this is a passphrase"},
+            response={"success": False, "error": "validation exception"},
         ),
-        pytest.param(
-            RouteTest(
-                route="validate_keyring_passphrase",
-                request={"key": "this is a passphrase"},
-                response={"success": False, "error": "validation exception"},
-            ),
+        RouteCase(
             id="validate_keyring_passphrase: exception",
+            route="validate_keyring_passphrase",
+            request={"key": "this is a passphrase"},
+            response={"success": False, "error": "validation exception"},
         ),
     ],
 )
 @pytest.mark.asyncio
 async def test_keyring_file_deleted(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
-    api_under_test: RouteTest,
+    case: RouteCase,
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -1147,12 +1102,12 @@ async def test_keyring_file_deleted(
     keychain.keyring_wrapper.keyring.keyring_path.unlink()
 
     payload = create_payload(
-        api_under_test.route,
-        api_under_test.request,
+        case.route,
+        case.request,
         "service_name",
         "daemon",
     )
     await ws.send_str(payload)
     response = await ws.receive()
 
-    assert_response(response, api_under_test.response)
+    assert_response(response, case.response)
