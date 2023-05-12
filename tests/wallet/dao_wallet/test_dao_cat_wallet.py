@@ -23,13 +23,13 @@ from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.transaction_record import TransactionRecord
 
-SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
-SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
+SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
+SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
 DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clvm")
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
+P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:

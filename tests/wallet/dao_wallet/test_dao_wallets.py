@@ -3,7 +3,7 @@ from __future__ import annotations
 # mypy: ignore-errors
 import asyncio
 import time
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
 
@@ -22,6 +22,10 @@ from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
 from tests.util.rpc import validate_get_routes
+
+
+async def get_proposal_state(wallet: DAOWallet, index: int) -> Tuple[bool, bool]:
+    return wallet.dao_info.proposals_list[index].passed, wallet.dao_info.proposals_list[index].closed
 
 
 async def rpc_state(
@@ -675,9 +679,6 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     time_out_assert(20, wallet_2.get_confirmed_balance, wallet_2_start_bal + proposal_amount)
     time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, xch_funds - proposal_amount)
 
-    async def get_proposal_state(wallet, index):
-        return wallet.dao_info.proposals_list[index].passed, wallet.dao_info.proposals_list[index].closed
-
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_0, 0])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_1, 0])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_2, 0])
@@ -938,15 +939,19 @@ async def test_dao_proposal_partial_vote(
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # Create a proposal for xch spend
-    recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
-    proposal_amount = 10000
-    xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
-        [recipient_puzzle_hash],
-        [proposal_amount],
-        [None],
+    # Create a mint proposal
+    recipient_puzzle_hash = await cat_wallet_1.get_new_inner_hash()
+    new_mint_amount = 500
+    mint_proposal_inner = await dao_wallet_0.generate_mint_proposal_innerpuz(
+        new_mint_amount,
+        recipient_puzzle_hash,
     )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    # (
+    #     [recipient_puzzle_hash],
+    #     [proposal_amount],
+    #     [None],
+    # )
+    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, uint64(1000))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -982,7 +987,7 @@ async def test_dao_proposal_partial_vote(
 
     # Give the wallet nodes a second
     await asyncio.sleep(1)
-    for i in range(1, num_blocks):
+    for i in range(1, dao_rules.proposal_timelock + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     total_votes = dao_cat_0_bal + dao_cat_1_bal // 2
@@ -991,6 +996,28 @@ async def test_dao_proposal_partial_vote(
     assert dao_wallet_0.dao_info.proposals_list[0].yes_votes == total_votes
     assert dao_wallet_1.dao_info.proposals_list[0].amount_voted == total_votes
     assert dao_wallet_1.dao_info.proposals_list[0].yes_votes == total_votes
+
+    try:
+        close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id, fee=uint64(100), push=True)
+    except Exception as e:
+        print(e)
+    # await time_out_assert_not_none(10, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
+    # await full_node_api.process_spend_bundles(bundles=[close_sb])
+    balance = await cat_wallet_1.get_spendable_balance()
+    breakpoint()
+    assert close_sb is not None
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    # Give the wallet nodes a second and farm enough blocks so we can close the next proposal
+    await asyncio.sleep(2)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
+
+    await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
+    breakpoint()
 
 
 @pytest.mark.parametrize(

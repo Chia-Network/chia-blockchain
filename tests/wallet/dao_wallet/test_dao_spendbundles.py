@@ -18,8 +18,8 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
-SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
-SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
+SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
+SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")

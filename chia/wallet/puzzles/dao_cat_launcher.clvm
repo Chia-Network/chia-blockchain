@@ -23,12 +23,11 @@
   )
 
   (c
-    (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash))
+    (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash (sha256tree (list 'm' new_puzzle_hash)) (list 'm' new_puzzle_hash)))
     (c
       (list ASSERT_MY_AMOUNT amount)
       (create_parent_conditions
         (sha256 parent_parent (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puz_hash) ONE)
-        my_id
         new_puzzle_hash
         amount
       )

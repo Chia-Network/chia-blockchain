@@ -61,6 +61,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     match_funding_puzzle,
     match_proposal_puzzle,
     match_treasury_puzzle,
+    get_new_puzzle_from_treasury_solution,
 )
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -970,9 +971,7 @@ class WalletStateManager:
                 if wallet.dao_info.treasury_id == singleton_id:
                     return WalletIdentifier.create(wallet)
 
-        # TODO: fetch innerpuzzle from coin_spend
-        inner_puzzle = None
-        breakpoint()
+        inner_puzzle = get_new_puzzle_from_treasury_solution(coin_spend.puzzle_revel, coin_spend.solution)
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
             self,
@@ -982,6 +981,7 @@ class WalletStateManager:
             coin_spend,
             coin_state.spent_height,  # this is included in CoinState, pass it in from WSM
         )
+        assert dao_wallet is not None
         return None
 
     async def handle_dao_proposal(
