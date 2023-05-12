@@ -4,31 +4,31 @@
 ; simplify the consensus rules
 (mod (block_decompresser_program (historical_blocks_tree))
 
-    (defconstant null ()
-	)
+  (defconstant null ()
+  )
 
-    (defun sha256tree
-           (TREE)
-           (if (l TREE)
-               (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-               (sha256 1 TREE)
-           )
+  (defun sha256tree
+    (TREE)
+    (if (l TREE)
+        (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+        (sha256 1 TREE)
     )
+  )
 
-    (defun process_coin_spend ((parent puzzle amount solution . spend_level_extras))
-        (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))
+  (defun process_coin_spend ((parent puzzle amount solution . spend_level_extras))
+    (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))
+  )
+
+  (defun recurse (coin_spends)
+    (if coin_spends
+        (c (process_coin_spend (f coin_spends)) (recurse (r coin_spends)))
+        0
     )
+  )
 
-    (defun recurse (coin_spends)
-        (if coin_spends
-            (c (process_coin_spend (f coin_spends)) (recurse (r coin_spends)))
-            0
-        )
-    )
+  (defun process-decompressor ((coin_spends . block-level-extras))
+    (c (recurse coin_spends) block-level-extras)
+  )
 
-    (defun process-decompressor ((coin_spends . block-level-extras))
-        (c (recurse coin_spends) block-level-extras)
-    )
-
-    (process-decompressor (a block_decompresser_program (list null historical_blocks_tree))))
+(process-decompressor (a block_decompresser_program (list null historical_blocks_tree))))
 )

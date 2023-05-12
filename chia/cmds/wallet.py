@@ -1337,3 +1337,220 @@ def _delete_notifications(
         "all": all,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))
+
+
+@wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
+def vcs_cmd():  # pragma: no cover
+    pass
+
+
+@vcs_cmd.command("mint", short_help="Mint a VC")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
+@click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
+@click.option("-m", "--fee", help="Blockchain fee for mint transaction", type=str, required=False)
+def _mint_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    did: str,
+    target_address: Optional[str],
+    fee: Optional[str],
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import mint_vc
+
+    extra_params = {
+        "did": did,
+        "target_address": target_address,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_vc))
+
+
+@vcs_cmd.command("get", short_help="Get a list of existing VCs")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option(
+    "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
+)
+@click.option(
+    "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
+)
+def _get_vcs(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    start: int,
+    count: int,
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import get_vcs
+
+    extra_params = {
+        "start": start,
+        "count": count,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_vcs))
+
+
+@vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-l", "--vc-id", help="The launcher ID of the VC whose proofs should be updated", type=str, required=True)
+@click.option(
+    "-t",
+    "--new-puzhash",
+    help="The address to send the VC after the proofs have been updated",
+    type=str,
+    required=False,
+)
+@click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
+@click.option("-m", "--fee", help="Blockchain fee for update transaction", type=str, required=False)
+@click.option(
+    "--reuse-puzhash/--generate-new-puzhash",
+    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
+    default=False,
+    show_default=True,
+)
+def _spend_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    vc_id: str,
+    new_puzhash: Optional[str],
+    new_proof_hash: str,
+    fee: str,
+    reuse_puzhash: bool,
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import spend_vc
+
+    extra_params = {
+        "vc_id": vc_id,
+        "new_puzhash": new_puzhash,
+        "new_proof_hash": new_proof_hash,
+        "fee": fee,
+        "reuse_puzhash": reuse_puzhash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, spend_vc))
+
+
+@vcs_cmd.command("add_proof_reveal", short_help="Add a series of proofs that will combine to a single proof hash")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
+@click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
+def _add_proof_reveal(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    proof: List[str],
+    root_only: bool,
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import add_proof_reveal
+
+    extra_params = {
+        "proofs": proof,
+        "root_only": root_only,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_proof_reveal))
+
+
+@vcs_cmd.command("get_proofs_for_root", short_help="Get the stored proof flags for a given proof hash")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
+def _get_proofs_for_root(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    proof_hash: str,
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import get_proofs_for_root
+
+    extra_params = {
+        "proof_hash": proof_hash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_proofs_for_root))
+
+
+@vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-p", "--parent-coin-id", help="The ID of the parent coin of the VC", type=str, required=True)
+@click.option("-m", "--fee", help="Blockchain fee for revocation transaction", type=str, required=False)
+@click.option(
+    "--reuse-puzhash/--generate-new-puzhash",
+    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
+    default=False,
+    show_default=True,
+)
+def _revoke_vc(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    parent_coin_id: str,
+    fee: str,
+    reuse_puzhash: bool,
+) -> None:  # pragma: no cover
+    import asyncio
+
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    from .wallet_funcs import revoke_vc
+
+    extra_params = {
+        "parent_coin_id": parent_coin_id,
+        "fee": fee,
+        "reuse_puzhash": reuse_puzhash,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, revoke_vc))

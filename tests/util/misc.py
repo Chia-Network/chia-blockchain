@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import enum
+import functools
 import gc
 import math
 import os
@@ -317,8 +318,17 @@ class DataCase(Protocol):
         ...
 
 
-def datacases(*cases: DataCase, name: str = "case") -> pytest.MarkDecorator:
+def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
     return pytest.mark.parametrize(
-        argnames=name,
+        argnames=_name,
         argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
     )
+
+
+class DataCasesDecorator(Protocol):
+    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+        ...
+
+
+def named_datacases(name: str) -> DataCasesDecorator:
+    return functools.partial(datacases, _name=name)

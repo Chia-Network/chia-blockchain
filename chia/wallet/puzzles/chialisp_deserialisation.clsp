@@ -18,8 +18,8 @@
 
   (defun sexp_from_stream (input_stream)
     (if (= (substr input_stream 0 1) CONS_BOX_MARKER)
-      (cons_sexp_from_stream (sexp_from_stream (substr input_stream 1)))
-      (atom_from_stream (substr input_stream 1) (substr input_stream 0 1))
+        (cons_sexp_from_stream (sexp_from_stream (substr input_stream 1)))
+        (atom_from_stream (substr input_stream 1) (substr input_stream 0 1))
     )
   )
 
@@ -33,11 +33,11 @@
 
   (defun atom_from_stream (input_file input_bits)
     (if (= input_bits (quote 0x80))
-      (list () input_file)
-      (if (>s input_bits MAX_SINGLE_BYTE)
-        (atom_from_stream_part_two (get_bitcount input_bits input_file))
-        (list input_bits input_file)
-      )
+        (list () input_file)
+        (if (>s input_bits MAX_SINGLE_BYTE)
+            (atom_from_stream_part_two (get_bitcount input_bits input_file))
+            (list input_bits input_file)
+        )
     )
   )
 
@@ -49,13 +49,13 @@
   ; are implemented in the clvm interpreters theselves
   (defun-inline get_bitcount (input_bits input_file)
     (if (>s input_bits MAX_TWO_BYTE)
-      (if (>s input_bits MAX_THREE_BYTE)
-              (x)
-        ;three byte length prefix
-        (list (concat (logand (quote 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1))
-      )
-      ;two byte length prefix
-      (list (logand (quote 0x3f) input_bits) input_file)
+        (if (>s input_bits MAX_THREE_BYTE)
+            (x)
+            ;three byte length prefix
+            (list (concat (logand (quote 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1))
+        )
+        ;two byte length prefix
+        (list (logand (quote 0x3f) input_bits) input_file)
     )
   )
 

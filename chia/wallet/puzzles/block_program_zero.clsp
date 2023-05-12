@@ -5,10 +5,10 @@
 
   (defun decompress_cses (decompress_puzzle decompress_coin_spend_entry cses deserialize puzzle_prefix)
     (if cses
-      (c (a decompress_coin_spend_entry (list deserialize decompress_puzzle puzzle_prefix (f cses)))
-         (decompress_cses decompress_puzzle decompress_coin_spend_entry (r cses) deserialize puzzle_prefix ))
-      ()) )
+        (c (a decompress_coin_spend_entry (list deserialize decompress_puzzle puzzle_prefix (f cses)))
+        (decompress_cses decompress_puzzle decompress_coin_spend_entry (r cses) deserialize puzzle_prefix ))
+  ()) )
 
-      (list (decompress_cses decompress_puzzle decompress_coin_spend_entry compressed_cses deserialize (substr (f gen_list) start end)))
+  (list (decompress_cses decompress_puzzle decompress_coin_spend_entry compressed_cses deserialize (substr (f gen_list) start end)))
 
 )
