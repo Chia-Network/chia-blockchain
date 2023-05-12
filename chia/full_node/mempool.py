@@ -29,8 +29,6 @@ log = logging.getLogger(__name__)
 # integers, which we rely on for computing fee per cost as well as the fee sum
 MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
-SQLITE_NO_GENERATED_COLUMNS: bool = sqlite3.sqlite_version_info < (3, 31, 0)
-
 
 class MempoolRemoveReason(Enum):
     CONFLICT = 1
@@ -65,21 +63,20 @@ class Mempool:
         with self._db_conn:
             # name means SpendBundle hash
             # assert_height may be NIL
-            generated = ""
-            if not SQLITE_NO_GENERATED_COLUMNS:
-                generated = " GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
             # the seq field indicates the order of items being added to the
             # mempool. It's used as a tie-breaker for items with the same fee
             # rate
+            # TODO: In the future, for the "fee_per_cost" field, opt for
+            # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
             self._db_conn.execute(
-                f"""CREATE TABLE tx(
+                """CREATE TABLE tx(
                 name BLOB,
                 cost INT NOT NULL,
                 fee INT NOT NULL,
                 assert_height INT,
                 assert_before_height INT,
                 assert_before_seconds INT,
-                fee_per_cost REAL{generated},
+                fee_per_cost REAL,
                 seq INTEGER PRIMARY KEY AUTOINCREMENT)
                 """
             )
@@ -337,35 +334,22 @@ class Mempool:
                 to_remove = [bytes32(row[0]) for row in cursor]
                 self.remove_from_pool(to_remove, MempoolRemoveReason.POOL_FULL)
 
-            if SQLITE_NO_GENERATED_COLUMNS:
-                self._db_conn.execute(
-                    "INSERT INTO "
-                    "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        item.name,
-                        item.cost,
-                        item.fee,
-                        item.assert_height,
-                        item.assert_before_height,
-                        item.assert_before_seconds,
-                        item.fee / item.cost,
-                    ),
-                )
-            else:
-                self._db_conn.execute(
-                    "INSERT INTO "
-                    "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds) "
-                    "VALUES(?, ?, ?, ?, ?, ?)",
-                    (
-                        item.name,
-                        item.cost,
-                        item.fee,
-                        item.assert_height,
-                        item.assert_before_height,
-                        item.assert_before_seconds,
-                    ),
-                )
+            # TODO: In the future, for the "fee_per_cost" field, opt for
+            # "GENERATED ALWAYS AS (CAST(fee AS REAL) / cost) VIRTUAL"
+            self._db_conn.execute(
+                "INSERT INTO "
+                "tx(name,cost,fee,assert_height,assert_before_height,assert_before_seconds,fee_per_cost) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (
+                    item.name,
+                    item.cost,
+                    item.fee,
+                    item.assert_height,
+                    item.assert_before_height,
+                    item.assert_before_seconds,
+                    item.fee / item.cost,
+                ),
+            )
 
             all_coin_spends = [(s.coin_id, item.name) for s in item.npc_result.conds.spends]
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
