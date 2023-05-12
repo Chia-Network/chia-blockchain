@@ -2388,13 +2388,14 @@ class WalletRpcApi:
 
         elif request["proposal_type"] == "update":
             rules = dao_wallet.dao_rules
+            prop = request["new_dao_rules"]
             new_rules = DAORules(
-                proposal_timelock=request.get("proposal_timelock") or rules.proposal_timelock,
-                soft_close_length=request.get("soft_close_length") or rules.soft_close_length,
-                attendance_required=request.get("attendance_required") or rules.attendance_required,
-                pass_percentage=request.get("pass_percentage") or rules.pass_percentage,
-                self_destruct_length=request.get("self_destruct_length") or rules.self_destruct_length,
-                oracle_spend_delay=request.get("oracle_spend_delay") or rules.oracle_spend_delay,
+                proposal_timelock=prop.get("proposal_timelock") or rules.proposal_timelock,
+                soft_close_length=prop.get("soft_close_length") or rules.soft_close_length,
+                attendance_required=prop.get("attendance_required") or rules.attendance_required,
+                pass_percentage=prop.get("pass_percentage") or rules.pass_percentage,
+                self_destruct_length=prop.get("self_destruct_length") or rules.self_destruct_length,
+                oracle_spend_delay=prop.get("oracle_spend_delay") or rules.oracle_spend_delay,
             )
 
             proposed_puzzle = await dao_wallet.generate_update_proposal_innerpuz(new_rules)

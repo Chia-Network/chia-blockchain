@@ -298,10 +298,8 @@ async def exit_lockup(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
 
     if "to_address" in args:
         address = args["to_address"]
@@ -328,7 +326,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         amount=amount,
         inner_address=address,
         vote_amount=vote_amount,
-        fee=fee,
+        fee=final_fee,
     )
     if res["success"]:
         print(f"Successfully created proposal.")
@@ -338,10 +336,6 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
 
 async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    # if "fee" in args:
-    #     fee = args["fee"]
-    # else:
-    #     fee = uint64(0)
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
     if "proposal_timelock" in args:
@@ -395,10 +389,8 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
 
 async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     cat_target_address = args["cat_target_address"]
     amount = args["amount"]
     if "vote_amount" in args:
@@ -409,7 +401,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcCli
         cat_target_address=cat_target_address,
         amount=amount,
         vote_amount=vote_amount,
-        fee=fee,
+        fee=final_fee,
     )
     if res["success"]:
         print(f"Successfully created proposal.")

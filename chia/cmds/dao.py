@@ -159,7 +159,7 @@ def dao_create_cmd(
     filter_amount: int,
     cat_amount: int,
     name: Optional[str],
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -225,7 +225,7 @@ def dao_add_funds_cmd(
     wallet_id: int,
     funding_wallet_id: int,
     amount: str,
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -389,7 +389,7 @@ def dao_vote_cmd(
     proposal_id: str,
     vote_amount: int,
     vote_no: Optional[bool],
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -442,7 +442,7 @@ def dao_close_proposal_cmd(
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -474,7 +474,7 @@ def dao_close_proposal_cmd(
     "-a",
     "--amount",
     help="The amount of new cats the proposal will mint",
-    type=int,
+    type=str,
     required=True,
 )
 @click.option(
@@ -490,8 +490,8 @@ def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    amount: int,
-    fee: Optional[int],
+    amount: str,
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -528,7 +528,7 @@ def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -564,7 +564,7 @@ def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -654,7 +654,7 @@ def dao_create_spend_proposal_cmd(
     amount: Optional[float],
     asset_id: Optional[str],
     from_json: Optional[str],
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -757,7 +757,7 @@ def dao_create_update_proposal_cmd(
     pass_percentage: Optional[int],
     self_destruct: Optional[int],
     oracle_delay: Optional[int],
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
@@ -825,7 +825,7 @@ def dao_create_mint_proposal_cmd(
     amount: int,
     to_address: int,
     vote_amount: int,
-    fee: Optional[int],
+    fee: str,
 ) -> None:
     import asyncio
 
