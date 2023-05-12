@@ -1484,3 +1484,191 @@ async def test_dao_rpc_client(
         client_1.close()
         await client_0.await_closed()
         await client_1.await_closed()
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_dao_cat_exits(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+) -> None:
+    num_blocks = 3
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api = full_node_service._api
+    full_node_server = full_node_api.full_node.server
+    wallet_node_0 = wallet_services[0]._node
+    server_0 = wallet_node_0.server
+    wallet_node_1 = wallet_services[1]._node
+    server_1 = wallet_node_1.server
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+    ph_0 = await wallet_0.get_new_puzzlehash()
+    ph_1 = await wallet_1.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    initial_funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+
+    await time_out_assert(15, wallet_0.get_confirmed_balance, initial_funds)
+    await time_out_assert(15, wallet_0.get_unconfirmed_balance, initial_funds)
+
+    assert wallet_services[0].rpc_server is not None
+    assert wallet_services[1].rpc_server is not None
+
+    client_0 = await WalletRpcClient.create(
+        self_hostname,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
+    )
+    await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
+    client_1 = await WalletRpcClient.create(
+        self_hostname,
+        wallet_services[1].rpc_server.listen_port,
+        wallet_services[1].root_path,
+        wallet_services[1].config,
+    )
+    await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
+
+    try:
+        cat_amt = 150000
+        amount_of_cats = cat_amt
+        dao_rules = DAORules(
+            proposal_timelock=uint64(8),
+            soft_close_length=uint64(4),
+            attendance_required=uint64(1000),  # 10%
+            pass_percentage=uint64(5100),  # 51%
+            self_destruct_length=uint64(20),
+            oracle_spend_delay=uint64(10),
+        )
+        filter_amount = 1
+        fee = 10000
+
+        # create new dao
+        dao_wallet_dict_0 = await client_0.create_new_dao_wallet(
+            mode="new",
+            dao_rules=dao_rules.to_json_dict(),
+            amount_of_cats=amount_of_cats,
+            filter_amount=filter_amount,
+            name="DAO WALLET 0",
+        )
+        assert dao_wallet_dict_0["success"]
+        dao_id_0 = dao_wallet_dict_0["wallet_id"]
+        treasury_id_hex = dao_wallet_dict_0["treasury_id"]
+        cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["cat_wallet_id"]]
+        dao_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[dao_wallet_dict_0["dao_cat_wallet_id"]]
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)  # add sleep after block per client testing in other wallets
+
+        await time_out_assert(20, cat_wallet_0.get_confirmed_balance, amount_of_cats)
+
+        # fund treasury
+        xch_funds = 10000000000
+        funding_tx = await client_0.dao_add_funds_to_treasury(dao_id_0, 1, xch_funds)
+        assert funding_tx["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["null"], xch_funds)
+
+        # send cats to lockup
+        lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt)
+        # lockup_1 = await client_1.dao_send_to_lockup(dao_id_1, cat_amt)
+        assert lockup_0["success"]
+        # assert lockup_1["success"]
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        # create a spend proposal
+        # TODO: Fix handling of comples spends
+        additions = [
+            {"puzzle_hash": ph_1.hex(), "amount": 1000},
+        ]
+        proposal = await client_0.dao_create_proposal(
+            wallet_id=dao_id_0,
+            proposal_type="spend",
+            additions=additions,
+            vote_amount=cat_amt,
+            # inner_address=encode_puzzle_hash(ph_1, "xch"),
+            fee=fee,
+        )
+        assert proposal["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        props = await client_0.dao_get_proposals(dao_id_0)
+        proposal_id_hex = props["proposals"][0]["proposal_id"]
+
+        # check proposal state and farm enough blocks to pass
+        state = await client_0.dao_get_proposal_state(wallet_id=dao_id_0, proposal_id=proposal_id_hex)
+        assert state["success"]
+        assert state["state"]["passed"]
+
+        for _ in range(0, state["state"]["blocks_needed"]):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        state = await client_0.dao_get_proposal_state(wallet_id=dao_id_0, proposal_id=proposal_id_hex)
+        assert state["success"]
+        assert state["state"]["closable"]
+
+        # close the proposal
+        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, fee=fee)
+        assert close["success"]
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        # check proposal is closed
+        await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][0]["closed"], True)
+
+        # free locked cats from finished proposal
+        res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
+        assert res["success"]
+        sb_name = bytes32.from_hexstr(res["spend_name"])
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
+
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        assert dao_cat_wallet_0.dao_cat_info.locked_coins[0].active_votes == []
+
+        exit = await client_0.dao_exit_lockup(dao_id_0)
+        assert exit["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+
+        time_out_assert(20, dao_cat_wallet_0.get_confirmed_balance, 0)
+        time_out_assert(20, cat_wallet_0.get_confirmed_balance, cat_amt)
+
+    finally:
+        client_0.close()
+        client_1.close()
+        await client_0.await_closed()
+        await client_1.await_closed()

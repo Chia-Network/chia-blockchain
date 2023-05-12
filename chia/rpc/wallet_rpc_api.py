@@ -2353,7 +2353,7 @@ class WalletRpcApi:
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
                 if lci.active_votes == []:
                     coins.append(lci)
-        tx = await dao_cat_wallet.exit_vote_state(coins)
+        tx = await dao_cat_wallet.exit_vote_state(coins, fee=request["fee"])
         return {"success": True, "tx_id": tx.name()}
 
     async def dao_create_proposal(self, request) -> EndpointResult:

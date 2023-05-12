@@ -492,12 +492,17 @@ class DAOCATWallet:
 
         return txs, new_cats
 
-    async def exit_vote_state(self, coins: List[LockedCoinInfo]) -> SpendBundle:
+    async def exit_vote_state(
+        self, coins: List[LockedCoinInfo], fee: uint64 = uint64(0), push: bool = True
+    ) -> SpendBundle:
+        self.log.warning("CREATING EXIT SPEND")
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
+        total_amt = 0
+        spent_coins = []
         for lci in coins:
             coin = lci.coin
             new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
@@ -510,6 +515,7 @@ class DAOCATWallet:
                     [new_innerpuzzle.get_tree_hash()],
                 ),
             ]
+            total_amt += coin.amount
             inner_solution = self.standard_wallet.make_solution(
                 primaries=primaries,
             )
@@ -546,9 +552,52 @@ class DAOCATWallet:
                 limitations_program_reveal=limitations_program_reveal,
             )
             spendable_cat_list.append(new_spendable_cat)
+            spent_coins.append(coin)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
+
+        if fee > 0:
+            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
+            chia_tx = await dao_wallet.create_tandem_xch_tx(fee)
+            assert chia_tx.spend_bundle is not None
+            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+        else:
+            full_spend = spend_bundle
+
+        if push:
+            record = TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=new_innerpuzzle.get_tree_hash(),
+                amount=uint64(total_amt),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=full_spend,
+                additions=full_spend.additions(),
+                removals=full_spend.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(token_bytes()),
+                memos=[],
+            )
+            await self.wallet_state_manager.add_pending_transaction(record)
+
+            # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to
+            # check if we're adding CATs from our DAO CAT wallet and update the locked coin list
+            # accordingly
+            new_locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin not in spent_coins]
+            dao_cat_info: DAOCATInfo = DAOCATInfo(
+                self.dao_cat_info.dao_wallet_id,
+                self.dao_cat_info.free_cat_wallet_id,
+                self.dao_cat_info.limitations_program_hash,
+                self.dao_cat_info.my_tail,
+                new_locked_coins,
+            )
+            await self.save_info(dao_cat_info)
 
         return spend_bundle
 
@@ -617,12 +666,16 @@ class DAOCATWallet:
             spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        full_spend = await self.sign(cat_spend_bundle)
+        spend_bundle = await self.sign(cat_spend_bundle)
 
-        # proposal_sb = await dao_wallet.create_proposal_oracle_spend(proposal_id)
-        # oracle_sb = await dao_wallet.create_treasury_oracle_spend(fee=fee, push=False)
+        if fee > 0:
+            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
+            chia_tx = await dao_wallet.create_tandem_xch_tx(fee)
+            assert chia_tx.spend_bundle is not None
+            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+        else:
+            full_spend = spend_bundle
 
-        # full_spend = SpendBundle.aggregate([spend_bundle, proposal_sb])
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

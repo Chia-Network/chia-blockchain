@@ -2071,7 +2071,7 @@ class DAOWallet(WalletProtocol):
                 finished_puz = get_finished_state_puzzle(proposal_info.proposal_id)
                 cs = CoinSpend(proposal_info.current_coin, finished_puz, solution)
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
-                sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id)
+                sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id, push=False)
                 spends.append(prop_sb)
                 spends.append(sb)
 
@@ -2436,6 +2436,37 @@ class DAOWallet(WalletProtocol):
         await self.add_parent(new_state.coin.name(), future_parent)
         return
 
+    async def update_closed_proposal_coin(self, new_state: CoinSpend, block_height: uint32) -> None:
+        new_dao_info = copy.copy(self.dao_info)
+        puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
+        proposal_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
+        current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        index = 0
+        for pi in self.dao_info.proposals_list:
+            if pi.proposal_id == proposal_id:
+                new_info = ProposalInfo(
+                    proposal_id,
+                    pi.inner_puzzle,
+                    pi.amount_voted,
+                    pi.yes_votes,
+                    current_coin,
+                    pi.current_innerpuz,
+                    pi.timer_coin,
+                    pi.singleton_block_height,
+                    pi.passed,
+                    pi.closed,
+                )
+                new_dao_info.proposals_list[index] = new_info
+                await self.save_info(new_dao_info)
+                future_parent = LineageProof(
+                    new_state.coin.parent_coin_info,
+                    puzzle.get_tree_hash(),
+                    uint64(new_state.coin.amount),
+                )
+                await self.add_parent(new_state.coin.name(), future_parent)
+                return
+            index = index + 1
+
     async def get_proposal_state(self, proposal_id: bytes32) -> Dict[str, Union[int, bool]]:
         """
         Use this to figure out whether a proposal has passed or failed and whether it can be closed
@@ -2588,6 +2619,8 @@ class DAOWallet(WalletProtocol):
             await self.update_treasury_info(new_state, block_height)
         elif mod == DAO_PROPOSAL_MOD:
             await self.add_or_update_proposal_info(new_state, block_height)
+        elif puzzle == DAO_FINISHED_STATE:
+            await self.update_closed_proposal_coin(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
