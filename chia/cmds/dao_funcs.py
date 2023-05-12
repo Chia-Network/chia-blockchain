@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 import time
+from decimal import Decimal
 from typing import Any, Dict
 
-from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.util.ints import uint64
+from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
+from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
+from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.config import load_config, selected_network_address_prefix
+from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.wallet_types import WalletType
-from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
-from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 
 
 async def add_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -92,9 +94,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
     final_amount: uint64 = uint64(int(amount * mojo_per_unit))
 
     res = await wallet_client.dao_add_funds_to_treasury(
-        wallet_id=wallet_id,
-        funding_wallet_id=funding_wallet_id,
-        amount=final_amount
+        wallet_id=wallet_id, funding_wallet_id=funding_wallet_id, amount=final_amount
     )
 
     tx_id = res["tx_id"]
@@ -138,6 +138,8 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
     print("############################")
     for prop in proposals:
         print("Proposal ID: {proposal_id}".format(**prop))
+        prop_status = "CLOSED" if prop["closed"] else "OPEN"
+        print(f"Status: {prop_status}")
         print("Votes for: {yes_votes}".format(**prop))
         votes_against = prop["amount_voted"] - prop["yes_votes"]
         print(f"Votes against: {votes_against}")
@@ -149,21 +151,79 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
 
 async def show_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    raise ValueError("Not Implemented")
+    wallet_id = args["wallet_id"]
+    proposal_id = args["proposal_id"]
+    res = await wallet_client.dao_parse_proposal(wallet_id, proposal_id)
+    pd = res["proposal_dictionary"]
+
+    blocks_needed = pd["state"]["blocks_needed"]
+    passed = pd["state"]["passed"]
+    closable = pd["state"]["closable"]
+    status = "CLOSED" if pd["state"]["closed"] else "OPEN"
+    votes_needed = pd["state"]["total_votes_needed"]
+    yes_needed = pd["state"]["yes_votes_needed"]
+
+    ptype = pd["proposal_type"]
+    if (ptype == "spend") and ("mint_amount" in pd):
+        ptype = "mint"
+
+    print("")
+    print(f"Details of Proposal: {proposal_id}")
+    print("---------------------------")
+    print("")
+    print(f"Type: {ptype.upper()}")
+    print(f"Status: {status}")
+    print(f"Passed: {passed}")
+    if not passed:
+        print(f"Yes votes needed: {yes_needed}")
+
+    if not pd["state"]["closed"]:
+        print(f"Closable: {closable}")
+        if not closable:
+            print(f"Total votes needed: {votes_needed}")
+            print(f"Blocks remaining: {blocks_needed}")
+
+    if ptype == "spend":
+        xch_conds = pd["xch_conditions"]
+        asset_conds = pd["asset_conditions"]
+        print("")
+        if xch_conds:
+            print("Proposal XCH Conditions")
+            for pmt in xch_conds:
+                print("{puzzle_hash} {amount}".format(**pmt))
+        if asset_conds:
+            print("Proposal asset Conditions")
+            for asset_id, conds in asset_conds:
+                print(f"Asset ID: {asset_id}")
+                for pmt in conds:
+                    print("{puzzle_hash} {amount}".format(**pmt))
+
+    elif ptype == "update":
+        print("")
+        print("Proposed Rules:")
+        for key, val in pd["dao_rules"].items():
+            print(f"{key}: {val}")
+
+    elif ptype == "mint":
+        mint_amount = pd["mint_amount"]
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        prefix = selected_network_address_prefix(config)
+        address = encode_puzzle_hash(bytes32.from_hexstr(pd["new_cat_puzhash"]), prefix)
+        print("")
+        print(f"Amount of CAT to mint: {mint_amount}")
+        print(f"Address: {address}")
 
 
 async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
     vote_amount = args["vote_amount"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
     is_yes_vote = args["is_yes_vote"]
     # wallet_id: int, proposal_id: str, vote_amount: uint64, is_yes_vote: bool = True, fee: uint64 = uint64(0)
     res = await wallet_client.dao_vote_on_proposal(
-        wallet_id=wallet_id, proposal_id=proposal_id, vote_amount=vote_amount, is_yes_vote=is_yes_vote, fee=fee
+        wallet_id=wallet_id, proposal_id=proposal_id, vote_amount=vote_amount, is_yes_vote=is_yes_vote, fee=final_fee
     )
     spend_bundle = res["spend_bundle"]
     if res["success"]:
@@ -174,14 +234,10 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient,
 
 async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
-    res = await wallet_client.dao_close_proposal(
-        wallet_id=wallet_id, proposal_id=proposal_id, fee=fee
-    )
+    res = await wallet_client.dao_close_proposal(wallet_id=wallet_id, proposal_id=proposal_id, fee=final_fee)
     # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
     if res["success"]:
         name = res["tx_id"]
@@ -213,12 +269,26 @@ async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fin
 
 async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    if "fee" in args:
-        fee = args["fee"]
-    else:
-        fee = uint64(0)
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     res = await wallet_client.dao_free_coins_from_finished_proposals(
-        wallet_id=wallet_id, fee=fee,
+        wallet_id=wallet_id,
+        fee=final_fee,
+    )
+    if res["success"]:
+        print("Transaction submitted.")
+    else:
+        print("Transaction failed.")
+
+
+async def exit_lockup(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    fee = args["fee"]
+    final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    res = await wallet_client.dao_exit_lockup(
+        wallet_id=wallet_id,
+        coins=[],
+        fee=final_fee,
     )
     if res["success"]:
         print("Transaction submitted.")
@@ -258,7 +328,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         amount=amount,
         inner_address=address,
         vote_amount=vote_amount,
-        fee=fee
+        fee=fee,
     )
     if res["success"]:
         print(f"Successfully created proposal.")

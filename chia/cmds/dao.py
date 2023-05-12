@@ -207,7 +207,7 @@ def dao_create_cmd(
     "-a",
     "--amount",
     help="The amount of funds to send",
-    type=int,
+    type=str,
     required=True,
 )
 @click.option(
@@ -224,7 +224,7 @@ def dao_add_funds_cmd(
     fingerprint: int,
     wallet_id: int,
     funding_wallet_id: int,
-    amount: int,
+    amount: str,
     fee: Optional[int],
 ) -> None:
     import asyncio
@@ -505,7 +505,7 @@ def dao_lockup_coins_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, lockup_coins))
 
 
-@dao_cmd.command("release-coins", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
+@dao_cmd.command("release-coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -541,6 +541,42 @@ def dao_release_coins_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, release_coins))
 
 
+@dao_cmd.command("exit-lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option(
+    "-m",
+    "--fee",
+    help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+def dao_exit_lockup_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+    fee: Optional[int],
+) -> None:
+    import asyncio
+
+    from .dao_funcs import exit_lockup
+
+    extra_params = {
+        "wallet_id": wallet_id,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, exit_lockup))
+
+
 # ----------------------------------------------------------------------------------------
 # CREATE PROPOSALS
 
@@ -572,7 +608,7 @@ def dao_proposal(ctx: click.Context) -> None:
 @click.option(
     "-a",
     "--amount",
-    help="The amount of funds the proposal will send",
+    help="The amount of funds the proposal will send (in mojos)",
     type=float,
     required=False,
     default=None,
@@ -816,6 +852,7 @@ dao_cmd.add_command(dao_show_proposal_cmd)
 dao_cmd.add_command(dao_vote_cmd)
 dao_cmd.add_command(dao_close_proposal_cmd)
 dao_cmd.add_command(dao_lockup_coins_cmd)
+dao_cmd.add_command(dao_exit_lockup_cmd)
 dao_cmd.add_command(dao_release_coins_cmd)
 dao_cmd.add_command(dao_proposal)
 

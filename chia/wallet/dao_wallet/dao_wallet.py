@@ -1779,7 +1779,7 @@ class DAOWallet(WalletProtocol):
                             mint_amount = cond.rest().rest().first().as_int()
                             new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
                             cat_launcher_coin = Coin(
-                                self.dao_info.current_treasury_coin, cat_launcher.get_tree_hash(), mint_amount
+                                self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
                             )
                             # treasury_inner_puz_hash
                             # parent_parent
@@ -2122,17 +2122,34 @@ class DAOWallet(WalletProtocol):
                     ) = curried_args.as_iter()
                     mint_amount = None
                     new_cat_puzhash = None
+                    xch_created_coins = []
                     for cond in CONDITIONS.as_iter():
                         if cond.first().as_int() == 51:
                             if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
                                 mint_amount = cond.rest().rest().first().as_int()
                                 new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            else:
+                                cc = {"puzzle_hash": cond.at("rf").as_atom(), "amount": cond.at("rrf").as_int()}
+                                xch_created_coins.append(cc)
+
+                    asset_create_coins = {}
+                    for asset in LIST_OF_TAILHASH_CONDITIONS.as_iter():
+                        if asset == Program.to(0):
+                            asset_create_coins = None
+                        else:
+                            asset_id = asset.first().as_atom()
+                            cc_list = []
+                            for cond in asset.rest().first():
+                                if cond.first().as_int() == 51:
+                                    cc = {"puzzle_hash": cond.at("rf").as_atom(), "amount": cond.at("rrf").as_int()}
+                                    cc_list.append(cc)
+                            asset_create_coins[asset_id] = cc_list
                     dictionary = {
                         "state": state,
                         "proposal_type": proposal_type,
                         "proposed_puzzle_reveal": proposed_puzzle_reveal,
-                        "xch_conditions": CONDITIONS,
-                        "asset_conditions": LIST_OF_TAILHASH_CONDITIONS,
+                        "xch_conditions": xch_created_coins,
+                        "asset_conditions": asset_create_coins,
                     }
                     if mint_amount is not None and new_cat_puzhash is not None:
                         dictionary["mint_amount"] = mint_amount
@@ -2432,6 +2449,7 @@ class DAOWallet(WalletProtocol):
         """
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
+                is_closed = prop.closed
                 break
         else:
             raise ValueError(f"Proposal not found for id {proposal_id}")
@@ -2458,6 +2476,7 @@ class DAOWallet(WalletProtocol):
             "blocks_needed": blocks_needed,
             "passed": passed,
             "closable": closable,
+            "closed": is_closed,
         }
         return proposal_state
 
