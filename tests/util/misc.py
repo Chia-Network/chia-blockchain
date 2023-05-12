@@ -317,7 +317,7 @@ class DataCase(Protocol):
         ...
 
 
-def datacases(cases: List[DataCase], name: str = "case") -> pytest.MarkDecorator:
+def datacases(*cases: DataCase, name: str = "case") -> pytest.MarkDecorator:
     return pytest.mark.parametrize(
         argnames=name,
         argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
