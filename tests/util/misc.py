@@ -326,7 +326,7 @@ def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
 
 
 class DataCasesDecorator(Protocol):
-    def __call__(self, *cases: DataCase, name: str = "case") -> pytest.MarkDecorator:
+    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
         ...
 
 
