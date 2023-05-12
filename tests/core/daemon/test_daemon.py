@@ -31,9 +31,9 @@ from tests.util.misc import Marks, datacases
 @dataclass
 class RouteCase:
     route: str
+    description: str
     request: Dict[str, Any]
     response: Dict[str, Any]
-    description: str
     marks: Marks = ()
 
     @property
@@ -826,36 +826,36 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
 @datacases(
     [
         RouteCase(
-            description="no service name",
             route="register_service",
+            description="no service name",
             request={
                 "fred": "barney",
             },
             response={"success": False},
         ),
         RouteCase(
-            description="chia_plotter",
             route="register_service",
+            description="chia_plotter",
             request={
                 "service": "chia_plotter",
             },
             response={"success": True, "service": "chia_plotter", "queue": []},
         ),
         RouteCase(
-            description="non-existant route",
             route="unknown_command",
+            description="non-existant route",
             request={},
             response={"success": False, "error": "unknown_command unknown_command"},
         ),
         RouteCase(
-            description="successful",
             route="running_services",
+            description="successful",
             request={},
             response={"success": True, "running_services": []},
         ),
         RouteCase(
-            description="successful",
             route="keyring_status",
+            description="successful",
             request={},
             response={
                 "can_save_passphrase": supports_os_passphrase_storage(),
@@ -920,8 +920,8 @@ async def test_commands_with_no_data(
 @datacases(
     [
         RouteCase(
-            description="no passphrase",
             route="set_keyring_passphrase",
+            description="no passphrase",
             request={
                 "passphrase_hint": "this is a hint",
                 "save_passphrase": False,
@@ -929,8 +929,8 @@ async def test_commands_with_no_data(
             response={"success": False, "error": "missing new_passphrase"},
         ),
         RouteCase(
-            description="incorrect type",
             route="set_keyring_passphrase",
+            description="incorrect type",
             request={
                 "passphrase_hint": "this is a hint",
                 "save_passphrase": False,
@@ -939,8 +939,8 @@ async def test_commands_with_no_data(
             response={"success": False, "error": "missing new_passphrase"},
         ),
         RouteCase(
-            description="correct",
             route="set_keyring_passphrase",
+            description="correct",
             request={
                 "passphrase_hint": "this is a hint",
                 "new_passphrase": "this is a passphrase",
@@ -966,56 +966,56 @@ async def test_set_keyring_passphrase_ws(
 @datacases(
     [
         RouteCase(
-            description="wrong current passphrase",
             route="remove_keyring_passphrase",
+            description="wrong current passphrase",
             request={"current_passphrase": "wrong passphrase"},
             response={"success": False, "error": "current passphrase is invalid"},
         ),
         RouteCase(
-            description="incorrect type",
             route="remove_keyring_passphrase",
+            description="incorrect type",
             request={"current_passphrase": True},
             response={"success": False, "error": "missing current_passphrase"},
         ),
         RouteCase(
-            description="missing current passphrase",
             route="remove_keyring_passphrase",
+            description="missing current passphrase",
             request={},
             response={"success": False, "error": "missing current_passphrase"},
         ),
         RouteCase(
-            description="correct",
             route="remove_keyring_passphrase",
+            description="correct",
             request={"current_passphrase": "this is a passphrase"},
             response={"success": True, "error": None},
         ),
         RouteCase(
-            description="wrong current passphrase",
             route="unlock_keyring",
+            description="wrong current passphrase",
             request={"key": "wrong passphrase"},
             response={"success": False, "error": "bad passphrase"},
         ),
         RouteCase(
-            description="incorrect type",
             route="unlock_keyring",
+            description="incorrect type",
             request={"key": True},
             response={"success": False, "error": "missing key"},
         ),
         RouteCase(
-            description="missing data",
             route="unlock_keyring",
+            description="missing data",
             request={},
             response={"success": False, "error": "missing key"},
         ),
         RouteCase(
-            description="correct",
             route="unlock_keyring",
+            description="correct",
             request={"key": "this is a passphrase"},
             response={"success": True, "error": None},
         ),
         RouteCase(
-            description="no current passphrase",
             route="set_keyring_passphrase",
+            description="no current passphrase",
             request={
                 "save_passphrase": False,
                 "new_passphrase": "another new passphrase",
@@ -1023,8 +1023,8 @@ async def test_set_keyring_passphrase_ws(
             response={"success": False, "error": "missing current_passphrase"},
         ),
         RouteCase(
-            description="incorrect current passphrase",
             route="set_keyring_passphrase",
+            description="incorrect current passphrase",
             request={
                 "save_passphrase": False,
                 "current_passphrase": "none",
@@ -1033,8 +1033,8 @@ async def test_set_keyring_passphrase_ws(
             response={"success": False, "error": "current passphrase is invalid"},
         ),
         RouteCase(
-            description="incorrect type",
             route="set_keyring_passphrase",
+            description="incorrect type",
             request={
                 "save_passphrase": False,
                 "current_passphrase": False,
@@ -1043,8 +1043,8 @@ async def test_set_keyring_passphrase_ws(
             response={"success": False, "error": "missing current_passphrase"},
         ),
         RouteCase(
-            description="correct",
             route="set_keyring_passphrase",
+            description="correct",
             request={
                 "save_passphrase": False,
                 "current_passphrase": "this is a passphrase",
@@ -1080,14 +1080,14 @@ async def test_passphrase_apis(
 @datacases(
     [
         RouteCase(
-            description="exception",
             route="unlock_keyring",
+            description="exception",
             request={"key": "this is a passphrase"},
             response={"success": False, "error": "validation exception"},
         ),
         RouteCase(
-            description="exception",
             route="validate_keyring_passphrase",
+            description="exception",
             request={"key": "this is a passphrase"},
             response={"success": False, "error": "validation exception"},
         ),
