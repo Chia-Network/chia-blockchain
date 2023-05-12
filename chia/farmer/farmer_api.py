@@ -34,8 +34,10 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
     generate_plot_public_key,
     generate_taproot_sk,
+    get_plot_id,
     verify_and_get_quality_string,
 )
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint32, uint64
 
@@ -92,7 +94,8 @@ class FarmerAPI:
                 new_proof_of_space.sp_hash,
             )
             if computed_quality_string is None:
-                self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
+                plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
+                self.farmer.log.error(f"Invalid proof of space: {plotid.hex()} proof: {new_proof_of_space.proof}")
                 return None
 
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1

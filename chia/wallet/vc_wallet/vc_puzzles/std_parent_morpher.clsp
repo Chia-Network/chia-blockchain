@@ -1,0 +1,23 @@
+; This is a PARENT_MORPHER for use with covenant_layer.clsp
+
+; You would use this morpher when the covenant layer is the outermost layer of the coin
+(mod
+  (
+    THIS_MOD_HASH
+    COVENANT_MOD_HASH
+    COVENANT_INITIAL_PUZZLE_HASH
+    inner_puzhash
+  )
+
+  (include curry.clib)
+
+  (curry_hashes_inline COVENANT_MOD_HASH
+    (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
+    (curry_hashes_inline THIS_MOD_HASH
+      (sha256 1 THIS_MOD_HASH)
+      (sha256 1 COVENANT_MOD_HASH)
+      (sha256 1 COVENANT_INITIAL_PUZZLE_HASH)
+    )
+    inner_puzhash
+  )
+)
