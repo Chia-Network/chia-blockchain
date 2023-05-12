@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import enum
+import functools
 import gc
 import math
 import os
@@ -13,10 +14,10 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
 
 import pytest
-from typing_extensions import final
+from typing_extensions import Protocol, final
 
 from tests.core.data_layer.util import ChiaRoot
 
@@ -303,3 +304,31 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[su
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+
+
+# https://github.com/pytest-dev/pytest/blob/7.3.1/src/_pytest/mark/__init__.py#L45
+Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytest.Mark]]]
+
+
+class DataCase(Protocol):
+    marks: Marks
+
+    @property
+    def id(self) -> str:
+        ...
+
+
+def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+    return pytest.mark.parametrize(
+        argnames=_name,
+        argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
+    )
+
+
+class DataCasesDecorator(Protocol):
+    def __call__(self, *cases: DataCase, name: str = "case") -> pytest.MarkDecorator:
+        ...
+
+
+def named_datacases(name: str) -> DataCasesDecorator:
+    return functools.partial(datacases, _name=name)
