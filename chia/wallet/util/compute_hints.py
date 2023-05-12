@@ -10,7 +10,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 
 
-def compute_coin_hints(cs: CoinSpend) -> Tuple[Dict[bytes32, bytes32], Dict[bytes32, Coin]]:
+def compute_spend_hints_and_additions(cs: CoinSpend) -> Tuple[Dict[bytes32, bytes32], Dict[bytes32, Coin]]:
     _, result_program = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
 
     hint_dict: Dict[bytes32, bytes32] = {}  # {coin_id: hint}

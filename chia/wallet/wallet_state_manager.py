@@ -80,7 +80,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
@@ -726,7 +726,7 @@ class WalletStateManager:
         """
         mod_hash, tail_hash, inner_puzzle = curried_args
 
-        hint_dict, _ = compute_coin_hints(coin_spend)
+        hint_dict, _ = compute_spend_hints_and_additions(coin_spend)
         coin_name: bytes32 = bytes32(coin_state.coin.name())
         if coin_name in hint_dict:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint_dict[coin_name])
@@ -780,7 +780,7 @@ class WalletStateManager:
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hint_dict, _ = compute_coin_hints(coin_spend)
+        hint_dict, _ = compute_spend_hints_and_additions(coin_spend)
         coin_name: bytes32 = bytes32(coin_state.coin.name())
         if coin_name in hint_dict:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint_dict[coin_name])
