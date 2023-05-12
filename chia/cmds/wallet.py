@@ -1167,7 +1167,31 @@ def nft_list_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_nfts))
 
 
+@nft_cmd.command("count", short_help="Count the number of NFTs in a wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
+def nft_count_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+) -> None:
+    import asyncio
+
+    from .wallet_funcs import count_nfts
+
+    extra_params = {"wallet_id": id}
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, count_nfts))
+
+
 @nft_cmd.command("set_did", help="Set a DID on an NFT")
+@nft_cmd.command("set_did", short_help="Set a DID on an NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
