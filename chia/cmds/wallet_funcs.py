@@ -1045,7 +1045,7 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any], sequence_info: Optio
 
     print()
     if sequence_info is not None:
-        print(f"Showing info for NFT {sequence_info[0]} of {sequence_info[1]}:")
+        print(f"NFT {sequence_info[0]} of {sequence_info[1]}:")
         print()
     
     print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
@@ -1096,7 +1096,10 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
                 sequence_num = i + 1 + (start if start is not None else 0)
                 print_nft_info(nft, config=config, sequence_info=(sequence_num, count))
         else:
-            print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
+            if count:
+                print(f"No NFTs found at offset {start} with length {num}")
+            else:
+                print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
         print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
 

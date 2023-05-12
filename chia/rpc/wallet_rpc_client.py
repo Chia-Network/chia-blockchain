@@ -957,7 +957,7 @@ class WalletRpcClient(RpcClient):
     async def list_nfts(self, wallet_id, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None):
         start: Optional[int] = pagination[0] if pagination is not None else None
         num: Optional[int] = pagination[1] if pagination is not None else None
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "start": start, "num": num}
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "start_index": start, "num": num}
         response = await self.fetch("nft_get_nfts", request)
         return response
 
