@@ -280,6 +280,8 @@ class WalletNode:
             "coin_of_interest_to_trade_record",
             "notifications",
             "retry_store",
+            "vc_records",
+            "vc_proofs",
         ]
 
         async with manage_connection(db_path) as conn:
