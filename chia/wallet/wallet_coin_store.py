@@ -376,3 +376,9 @@ class WalletCoinStore:
                 )
             ).close()
         self.total_count_cache.cache.clear()
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM coin_record WHERE wallet_id=?", (wallet_id,))
+            await cursor.close()
+        self.total_count_cache.cache.clear()
