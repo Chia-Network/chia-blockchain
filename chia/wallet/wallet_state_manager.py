@@ -80,7 +80,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import hinted_coin_with_coin_id
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
@@ -742,12 +742,8 @@ class WalletStateManager:
         """
         mod_hash, tail_hash, inner_puzzle = curried_args
 
-        hint_list = compute_coin_hints(coin_spend)
-        derivation_record = None
-        for hint in hint_list:
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
-            if derivation_record is not None:
-                break
+        hinted_coin = hinted_coin_with_coin_id(coin_spend, coin_state.coin.name())
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
@@ -796,14 +792,8 @@ class WalletStateManager:
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hint_list = compute_coin_hints(coin_spend)
-
-        derivation_record = None
-        for hint in hint_list:
-            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
-            if derivation_record is not None:
-                break
-
+        hinted_coin = hinted_coin_with_coin_id(coin_spend, coin_state.coin.name())
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
