@@ -61,11 +61,18 @@ def check_plots(
         thread_count = multiprocessing.cpu_count() // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
     max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
+    use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
+    gpu_index = config["harvester"].get("gpu_index", 0)
+    enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
+
     plot_manager.configure_decompresser(
         context_count,
         thread_count,
         disable_cpu_affinity,
         max_compression_level_allowed,
+        use_gpu_harvesting,
+        gpu_index,
+        enforce_gpu_index,
     )
 
     if num is not None:
