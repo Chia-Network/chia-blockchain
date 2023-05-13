@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import pytest
 
-from chia.cmds.wallet_funcs import print_offer_summary
+from chia.cmds.wallet_funcs import count_nfts, print_offer_summary
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 
@@ -124,3 +124,34 @@ async def test_print_offer_summary_xch_with_one_mojo(capsys: Any) -> None:
     captured = capsys.readouterr()
 
     assert "XCH (Wallet ID: 1): 1e-12 (1 mojo)" in captured.out
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wallet_id, nft_count, should_raise_exception", [
+    (3, 42, False),
+    (1, 0, False),
+    (5, 10, True),
+])
+async def test_count_nfts(capsys: Any, wallet_id: int, nft_count: int, should_raise_exception: bool) -> None:
+    args = {"wallet_id": wallet_id}
+
+    class WalletRpcClient:
+        def __init__(self):
+            pass
+
+        async def count_nfts(self, _wallet_id: int) -> Dict[str, Any]:
+            # implementation of count_nfts function
+            if should_raise_exception:
+                raise Exception(f"Generic error message")
+            return {"count": nft_count}
+
+    wallet_client = WalletRpcClient()
+    fingerprint = 123456789
+    await count_nfts(args, wallet_client, fingerprint)
+    captured = capsys.readouterr()
+    if should_raise_exception:
+        assert f"Failed to count NFTs for wallet with id {wallet_id} on key {fingerprint}" in captured.out
+    else:
+        assert f"Number of NFTs for wallet id {wallet_id}: {nft_count}" in captured.out
+
+    
