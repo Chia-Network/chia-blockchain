@@ -1882,6 +1882,8 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         derivation_record = None
         for hinted_coin in hinted_coins_in_coin_spend(coin_spend):
+            if hinted_coin.coin.amount % 2 == 1:
+                continue
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     hinted_coin.hint
