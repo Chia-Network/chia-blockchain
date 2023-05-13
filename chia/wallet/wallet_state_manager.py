@@ -21,7 +21,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Union
+    Union,
 )
 
 import aiosqlite
@@ -49,7 +49,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -57,11 +57,11 @@ from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puz
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_utils import (
+    get_new_puzzle_from_treasury_solution,
     match_dao_cat_puzzle,
     match_funding_puzzle,
     match_proposal_puzzle,
     match_treasury_puzzle,
-    get_new_puzzle_from_treasury_solution,
 )
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -269,19 +269,19 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.DATA_LAYER:
+            elif wallet_type == WalletType.DATA_LAYER:
                 wallet = await DataLayerWallet.create(
                     self,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.DAO:
+            elif wallet_type == WalletType.DAO:
                 wallet = await DAOWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.DAO_CAT:
-                wallet = await DAOCATWallet.create(  # type: ignore[attr-defined] # TODO: implement create
+            elif wallet_type == WalletType.DAO_CAT:
+                wallet = await DAOCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -962,7 +962,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
-    ):
+    ) -> Optional[WalletIdentifier]:
         self.log.info("Entering dao_treasury handling in WalletStateManager")
         singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
         for wallet in self.wallets.values():
@@ -971,12 +971,15 @@ class WalletStateManager:
                 if wallet.dao_info.treasury_id == singleton_id:
                     return WalletIdentifier.create(wallet)
 
-        inner_puzzle = get_new_puzzle_from_treasury_solution(coin_spend.puzzle_revel, coin_spend.solution)
+        inner_puzzle = get_new_puzzle_from_treasury_solution(
+            coin_spend.puzzle_reveal.to_program(), coin_spend.solution.to_program()
+        )
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
+        assert isinstance(inner_puzzle, Program)
         dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
             self,
             self.main_wallet,
-            coin_spend.coin.name(),
+            coin_spend.coin,
             inner_puzzle,
             coin_spend,
             coin_state.spent_height,  # this is included in CoinState, pass it in from WSM
@@ -990,7 +993,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
-    ):
+    ) -> Optional[WalletIdentifier]:
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             PROPOSAL_MOD_HASH,
@@ -1369,9 +1372,7 @@ class WalletStateManager:
                                 curr_coin_state: CoinState = coin_state
 
                                 while curr_coin_state.spent_height is not None:
-                                    cs: CoinSpend = await fetch_coin_spend_for_coin_state(
-                                        curr_coin_state, peer
-                                    )
+                                    cs: CoinSpend = await fetch_coin_spend_for_coin_state(curr_coin_state, peer)
                                     success = await singleton_wallet.apply_state_transition(
                                         cs, uint32(curr_coin_state.spent_height)
                                     )
@@ -1856,7 +1857,7 @@ class WalletStateManager:
         return filtered
 
     async def new_peak(self, peak: NewPeakWallet) -> None:
-        valid_list = [uint8(WalletType.POOLING_WALLET), uint8(WalletType.DAO)]
+        valid_list = [WalletType.POOLING_WALLET, WalletType.DAO]
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() in valid_list:
                 valid = isinstance(wallet, PoolWallet) or isinstance(wallet, DAOWallet)

@@ -29,6 +29,7 @@
     "p2_puzzle_hash": "13e29a62b42cd2ef72a79e4bacdc59733ca6310d65af83d349360d36ec622363",
     "p2_singleton": "40f828d8dd55603f4ff9fbf6b73271e904e69406982f4fbefae2c8dcceaf9834",
     "p2_singleton_or_delayed_puzhash": "adb656e0211e2ab4f42069a4c5efc80dc907e7062be08bf1628c8e5b6d94d25b",
+    "p2_singleton_via_delegated_puzzle": "231334e31ed4e60867abb640eb904931a4ce248e68091442e3b0b47a2af77d06",
     "pool_member_innerpuz": "a8490702e333ddd831a3ac9c22d0fa26d2bfeaf2d33608deb22f0e0123eb0494",
     "pool_waitingroom_innerpuz": "a317541a765bf8375e1c6e7c13503d0d2cbf56cacad5182befe947e78e2c0307",
     "rom_bootstrap_generator": "161bade1f822dcd62ab712ebaf30f3922a301e48a639e4295c5685f8bece7bd9",

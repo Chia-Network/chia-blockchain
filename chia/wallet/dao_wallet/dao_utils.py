@@ -358,6 +358,7 @@ def get_proposal_timer_puzzle(
 
 
 def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules:
+    assert isinstance(puzzle_reveal, Program)
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,
@@ -572,7 +573,6 @@ def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
         log.debug("Cannot uncurry spend puzzle: error: %s", e)
         raise e
     if mod == SPEND_P2_SINGLETON_MOD:
-
         return "spend", curried_args
     elif mod == DAO_UPDATE_PROPOSAL_MOD:
         return "update", curried_args

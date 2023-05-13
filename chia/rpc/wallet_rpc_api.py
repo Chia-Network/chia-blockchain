@@ -37,6 +37,7 @@ from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import get_treasury_rules_from_puzzle
@@ -716,8 +717,7 @@ class WalletRpcApi:
                 if request["dao_rules"]:
                     dao_rules = DAORules.from_json_dict(request["dao_rules"])
                 else:
-                    # TODO: Define sensible defaults
-                    dao_rules = DAORules()
+                    raise ValueError("DAO rules must be specified for wallet creation")
                 async with self.service.wallet_state_manager.lock:
                     dao_wallet = await DAOWallet.create_new_dao_and_wallet(
                         wallet_state_manager,
@@ -1892,7 +1892,7 @@ class WalletRpcApi:
             "public_key": public_key.atom.hex(),
             "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
-            "metadata": program_to_metadata(metadata),
+            "metadata": did_program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().atom.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
@@ -2347,7 +2347,11 @@ class WalletRpcApi:
         )
         assert dao_cat_wallet is not None
         if request["coins"]:
-            coins = [Coin.from_json_dict(coin) for coin in request["coins"]]
+            coin_list = [Coin.from_json_dict(coin) for coin in request["coins"]]
+            coins: List[LockedCoinInfo] = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.coin in coin_list:
+                    coins.append(lci)
         else:
             coins = []
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
