@@ -14,10 +14,11 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
+from chia.wallet.singleton import get_singleton_from_coin_spend
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
@@ -188,8 +189,7 @@ def create_travel_spend(
     else:
         raise ValueError
 
-    current_singleton: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
-    assert current_singleton is not None
+    current_singleton = get_singleton_from_coin_spend(last_coin_spend)
 
     if current_singleton.parent_coin_info == launcher_coin.name():
         parent_info_list = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
@@ -239,8 +239,7 @@ def create_absorb_spend(
     else:
         raise ValueError
     # full sol = (parent_info, my_amount, inner_solution)
-    coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(last_coin_spend)
-    assert coin is not None
+    coin = get_singleton_from_coin_spend(last_coin_spend)
 
     if coin.parent_coin_info == launcher_coin.name():
         parent_info: Program = Program.to([launcher_coin.parent_coin_info, launcher_coin.amount])
@@ -280,14 +279,6 @@ def create_absorb_spend(
         CoinSpend(reward_coin, p2_singleton_puzzle, p2_singleton_solution),
     ]
     return coin_spends
-
-
-def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
-    additions: List[Coin] = compute_additions(coin_sol)
-    for coin in additions:
-        if coin.amount % 2 == 1:
-            return coin
-    return None
 
 
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:

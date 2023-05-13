@@ -17,7 +17,6 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     create_waiting_room_inner_puzzle,
     get_delayed_puz_info_from_launcher_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
     is_pool_member_inner_puzzle,
     is_pool_waitingroom_inner_puzzle,
     launcher_id_to_p2_puzzle_hash,
@@ -48,6 +47,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.singleton import get_singleton_from_coin_spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -199,10 +199,9 @@ class PoolWallet:
 
         launcher_coin: Coin = all_spends[0].coin
         delayed_seconds, delayed_puzhash = get_delayed_puz_info_from_launcher_spend(all_spends[0])
-        tip_singleton_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(all_spends[-1])
+        tip_singleton_coin = get_singleton_from_coin_spend(all_spends[-1])
         launcher_id: bytes32 = launcher_coin.name()
         p2_singleton_puzzle_hash = launcher_id_to_p2_puzzle_hash(launcher_id, delayed_seconds, delayed_puzhash)
-        assert tip_singleton_coin is not None
 
         curr_spend_i = len(all_spends) - 1
         pool_state: Optional[PoolState] = None
@@ -269,8 +268,7 @@ class PoolWallet:
         tip: Tuple[uint32, CoinSpend] = await self.get_tip()
         tip_spend = tip[1]
 
-        tip_coin: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
-        assert tip_coin is not None
+        tip_coin = get_singleton_from_coin_spend(tip_spend)
         spent_coin_name: bytes32 = tip_coin.name()
 
         if spent_coin_name != new_state.coin.name():
@@ -916,8 +914,7 @@ class PoolWallet:
                 unconfirmed: List[
                     TransactionRecord
                 ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
-                next_tip: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
-                assert next_tip is not None
+                next_tip = get_singleton_from_coin_spend(tip_spend)
 
                 if any([rem.name() == next_tip.name() for tx_rec in unconfirmed for rem in tx_rec.removals]):
                     self.log.info("Already submitted second transaction, will not resubmit.")

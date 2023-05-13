@@ -31,11 +31,7 @@ from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
-from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER_HASH,
-    get_most_recent_singleton_coin_from_coin_spend,
-    solution_to_pool_state,
-)
+from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -78,7 +74,7 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.singleton import create_singleton_puzzle, get_singleton_from_coin_spend
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -1278,8 +1274,9 @@ class WalletStateManager:
                                     )
                                     if not success:
                                         break
-                                    new_singleton_coin = get_most_recent_singleton_coin_from_coin_spend(cs)
-                                    if new_singleton_coin is None:
+                                    try:
+                                        new_singleton_coin = get_singleton_from_coin_spend(cs)
+                                    except Exception:
                                         # No more singleton (maybe destroyed?)
                                         break
 

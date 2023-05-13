@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
+from chia_rs import Coin
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
@@ -62,3 +65,10 @@ def create_singleton_puzzle(innerpuz: Program, launcher_id: bytes32) -> Program:
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
+
+
+def get_singleton_from_coin_spend(coin_spend: CoinSpend) -> Coin:
+    for coin in compute_additions(coin_spend):
+        if coin.amount % 2 == 1:
+            return coin
+    raise ValueError(f"No singleton found in coin_spend {coin_spend}")
