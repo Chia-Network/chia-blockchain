@@ -1,0 +1,344 @@
+; This code is the "voting mode" for a DAO CAT.
+; The coin can be spent from this state to vote on a proposal or claim a dividend.
+; It locks the CAT in while it has active votes/dividends going on.
+; Once a vote or dividend closes, then the coin can spend itself to remove that coin from the "active list"
+; If the "active list" is empty the coin can leave the voting mode
+
+(mod (
+    PROPOSAL_MOD_HASH
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_PUZHASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL_HASH
+    ACTIVE_VOTES  ; "active votes" list
+    INNERPUZ
+    my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    inner_solution
+    my_amount
+    new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
+    proposal_curry_vals
+    vote_info
+    vote_amount
+    my_inner_puzhash
+    new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
+
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
+    (puzzle-hash-of-curried-function CAT_MOD_HASH
+      INNERPUZHASH
+      (sha256 ONE CAT_TAIL_HASH)
+      (sha256 ONE CAT_MOD_HASH)
+    )
+  )
+
+  ; loop through conditions and check that they aren't trying to create anything they shouldn't
+  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change)
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
+            (if (= (f (r (f conditions))) vote_added_puzhash)
+                (if seen_vote  ; assert we haven't already made a coin with the new vote included
+                    (x)
+                    (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
+                        (if seen_change  ; assert that we haven't already recreated ourself in some fashion
+                            (x)
+                            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 1))
+                        )
+                        (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
+                            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 seen_change))
+                            (x)
+                        )
+                    )
+                )
+                (if (all
+                      (= (f (r (f conditions))) my_inner_puzhash)
+                      (not seen_change)
+                      (= (f (r (r (f conditions)))) (- my_amount vote_amount))
+                    )  ; we recreate ourselves with unused voting power
+                    (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote 1))
+                    (x)
+                )
+            )
+            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
+                (if (= (f (r (f conditions))) message)
+                    (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
+                    (x)
+                )
+                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
+            )
+        )
+        (if (all seen_vote seen_change)  ; check all value is accounted for
+            ()
+            (x)
+        )
+    )
+  )
+
+  ; go through our list of active votes and check that we aren't revoting
+  (defun check_not_previously_voted (
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      LOCKUP_MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      PROPOSAL_MOD_HASH
+      INNERPUZ
+      my_id
+      new_vote_id
+      active_votes
+      proposal_curry_vals
+    )
+    (if active_votes
+        (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
+            (x)
+            (check_not_previously_voted
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
+              LOCKUP_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL_HASH
+              PROPOSAL_MOD_HASH
+              INNERPUZ
+              my_id
+              new_vote_id
+              (r active_votes)
+              proposal_curry_vals
+            )
+        )
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; the problem might be here
+            (calculate_proposal_puzzlehash
+              PROPOSAL_MOD_HASH
+              CAT_MOD_HASH
+              LOCKUP_MOD_HASH
+              CAT_TAIL_HASH
+              (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
+              proposal_curry_vals
+            )
+            my_id
+          )
+        )
+    )
+  )
+
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun calculate_proposal_puzzlehash (
+      PROPOSAL_MOD_HASH
+      CAT_MOD_HASH
+      LOCKUP_MOD_HASH
+      CAT_TAIL_HASH
+      proposal_singleton_struct
+      (
+        TREASURY_MOD_HASH
+        PROPOSAL_TIMER_MOD_HASH
+        TREASURY_ID
+        YES_VOTES
+        TOTAL_VOTES
+        INNERPUZHASH
+      )
+    )
+    (calculate_singleton_puzzle_hash
+      proposal_singleton_struct
+      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+        (sha256 ONE INNERPUZHASH)
+        (sha256 ONE TOTAL_VOTES)
+        (sha256 ONE YES_VOTES)
+        (sha256 ONE TREASURY_ID)
+        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE LOCKUP_MOD_HASH)
+        (sha256 ONE TREASURY_MOD_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+        (sha256 ONE PROPOSAL_MOD_HASH)
+        (sha256tree proposal_singleton_struct)
+      )
+    )
+  )
+
+  ; PROPOSAL_MOD_HASH
+  ; SINGLETON_MOD_HASH
+  ; SINGLETON_LAUNCHER_PUZHASH
+  ; LOCKUP_MOD_HASH
+  ; CAT_MOD_HASH
+  ; CAT_TAIL_HASH
+  ; ACTIVE_VOTES  ; "active votes" list
+  ; INNERPUZ
+  (defun calculate_lockup_puzzlehash (
+      PROPOSAL_MOD_HASH
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      LOCKUP_MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      active_votes
+      innerpuzhash
+    )
+    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
+      innerpuzhash
+      (sha256tree active_votes)
+      (sha256 ONE CAT_TAIL_HASH)
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE LOCKUP_MOD_HASH)
+      (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
+      (sha256 ONE SINGLETON_MOD_HASH)
+      (sha256 ONE PROPOSAL_MOD_HASH)
+    )
+  )
+
+  ; search for an announcement that a proposal is finished and then remove that proposal ID from ACTIVE_VOTES
+  (defun check_for_removal_announcement (
+      PROPOSAL_MOD_HASH
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      LOCKUP_MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      ACTIVE_VOTES
+      INNERPUZ
+      removal_id
+      my_amount
+      proposal_curry_vals
+      unused_votes
+    )
+    (if ACTIVE_VOTES
+        (if (= (f ACTIVE_VOTES) removal_id)
+            (list
+              (list
+                CREATE_COIN  ; recreate self with the finished proposal ID removed
+                (calculate_lockup_puzzlehash
+                  PROPOSAL_MOD_HASH
+                  SINGLETON_MOD_HASH
+                  SINGLETON_LAUNCHER_PUZHASH
+                  LOCKUP_MOD_HASH
+                  CAT_MOD_HASH
+                  CAT_TAIL_HASH
+                  (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
+                  (sha256tree INNERPUZ)
+                )
+                my_amount
+              )
+              (list
+                ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
+                (sha256
+                  (calculate_singleton_puzzle_hash
+                    (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
+                    dao_finished_state
+                  )
+                  'f'
+                )
+              )
+              (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
+            )
+
+            (check_for_removal_announcement  ; keep looping through ACTIVE_VOTES to search for removal_id
+              PROPOSAL_MOD_HASH
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
+              LOCKUP_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL_HASH
+              (r ACTIVE_VOTES)
+              INNERPUZ
+              removal_id
+              my_amount
+              proposal_curry_vals
+              (c (f ACTIVE_VOTES) unused_votes)
+            )
+        )
+        (x)  ; proposal ID not found, invalid spend
+    )
+  )
+
+
+  ; main
+  (if my_id
+      (c (list ASSERT_MY_PUZZLEHASH (wrap_in_cat_layer CAT_MOD_HASH CAT_TAIL_HASH my_inner_puzhash))
+        (c
+          (list ASSERT_MY_AMOUNT my_amount)
+          (c
+            (list ASSERT_MY_COIN_ID my_id)
+            (c
+              (if new_proposal_vote_id_or_removal_id
+                  (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
+                    SINGLETON_MOD_HASH
+                    SINGLETON_LAUNCHER_PUZHASH
+                    LOCKUP_MOD_HASH
+                    CAT_MOD_HASH
+                    CAT_TAIL_HASH
+                    PROPOSAL_MOD_HASH
+                    INNERPUZ
+                    my_id
+                    new_proposal_vote_id_or_removal_id
+                    ACTIVE_VOTES
+                    proposal_curry_vals
+                  )
+                  (list REMARK)
+              )
+
+              (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
+                (a INNERPUZ inner_solution)
+                (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
+                  PROPOSAL_MOD_HASH
+                  SINGLETON_MOD_HASH
+                  SINGLETON_LAUNCHER_PUZHASH
+                  LOCKUP_MOD_HASH
+                  CAT_MOD_HASH
+                  CAT_TAIL_HASH
+                  (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
+                  (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
+                )
+                my_amount
+                ; TODO: add namespace to this announcement to allow announcements from the innerpuz
+                (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))  ; (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
+                vote_amount
+                my_inner_puzhash
+                0
+                0
+              )
+            )
+          )
+        )
+      )
+
+      ; return to return_address or remove something from active list - check if our locked list is empty
+      (if ACTIVE_VOTES
+          (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
+            PROPOSAL_MOD_HASH
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
+            LOCKUP_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            ACTIVE_VOTES
+            INNERPUZ
+            new_proposal_vote_id_or_removal_id
+            my_amount
+            proposal_curry_vals
+            ()
+          )
+          (if new_proposal_vote_id_or_removal_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
+              (x)  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
+              (a INNERPUZ inner_solution)
+          )
+      )
+  )
+)

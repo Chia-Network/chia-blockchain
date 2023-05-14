@@ -5,10 +5,10 @@
   (include *standard-cl-21*)
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
-                                      inner_puzzle_hash
-                                      (sha256tree SINGLETON_STRUCT)
-     )
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree SINGLETON_STRUCT)
+    )
   )
 
   (c

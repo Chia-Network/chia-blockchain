@@ -28,7 +28,7 @@ GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clsp")
 GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clsp")
 EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clsp")
 DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clsp")
-GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_singleton.clvm")
+GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile("genesis_by_coin_id_or_singleton.clsp")
 
 
 class LimitationsProgram:
