@@ -1,22 +1,22 @@
 ; This is an innerpuz inside a DAO CAT, or any CAT, or even any coin, which locks it up until a payment gets made
 
 (mod (
-  INPUT_RATIO_INT  ; the default here is 1 - meaning for one chia input you get exactly the OUTPUT_RATIO_INT output
-  OUTPUT_RATIO_INT  ; the default here is 1 - meaning for one output you must pay exactly the INPUT_RATIO_INT as input
-                    ; IMPORTANT NOTE: this does not implicitly take into account the 1:1000 Chia/CAT conversation that the UI uses
-  SETTLEMENT_PAYMENTS_PUZHASH ; a notarized coin payment is `(nonce . ((puzzle_hash amount ...) (puzzle_hash amount ...) ...))`
-                              ; here we will use this coin's ID as the nonce to prevent someone from claiming multiple buy ins at once
-  BUY_IN_PAYMENT_ADDRESS ; this is the address we check that a payment has been made to before paying out
-                         ; for the DAO we curry the p2_singleton with the DAO Treasury ID in the wallet and then curry that here
-  new_puzhash  ; this is secured by creating an announcement here which must be asserted elsewhere
-                    ; ^ probably by the puzzle that creates the settlement. Where that, the settlement, and this are spent together.
-  payment_amount  ; secured in the same announcement as above
-  my_coin_id
-  my_puzhash
-  my_amount
-)
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+    INPUT_RATIO_INT  ; the default here is 1 - meaning for one chia input you get exactly the OUTPUT_RATIO_INT output
+    OUTPUT_RATIO_INT  ; the default here is 1 - meaning for one output you must pay exactly the INPUT_RATIO_INT as input
+    ; IMPORTANT NOTE: this does not implicitly take into account the 1:1000 Chia/CAT conversation that the UI uses
+    SETTLEMENT_PAYMENTS_PUZHASH  ; a notarized coin payment is `(nonce . ((puzzle_hash amount ...) (puzzle_hash amount ...) ...))`
+    ; here we will use this coin's ID as the nonce to prevent someone from claiming multiple buy ins at once
+    BUY_IN_PAYMENT_ADDRESS  ; this is the address we check that a payment has been made to before paying out
+    ; for the DAO we curry the p2_singleton with the DAO Treasury ID in the wallet and then curry that here
+    new_puzhash  ; this is secured by creating an announcement here which must be asserted elsewhere
+    ; ^ probably by the puzzle that creates the settlement. Where that, the settlement, and this are spent together.
+    payment_amount  ; secured in the same announcement as above
+    my_coin_id
+    my_puzhash
+    my_amount
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
   (defconstant TEN_THOUSAND 10000)
@@ -30,7 +30,7 @@
   )
 
   (defun-inline calculate_percentage (amount percentage)
-      (f (divmod (* amount percentage) TEN_THOUSAND))
+    (f (divmod (* amount percentage) TEN_THOUSAND))
   )
 
   (defun create_outputs (my_puzhash new_puzhash my_amount calculated_output)

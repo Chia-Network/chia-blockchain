@@ -296,7 +296,7 @@ class DAOWallet(WalletProtocol):
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        block_height: uint32,  # this is included in CoinState, pass it in from WSM
+        block_height: Optional[int],  # this is included in CoinState, pass it in from WSM
         name: Optional[str] = None,
     ) -> DAOWallet:
         """
@@ -317,7 +317,7 @@ class DAOWallet(WalletProtocol):
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
 
-        self.log.info(f"Creating DAO wallet from a coin spend {launch_coin}  ...")
+        self.log.info(f"Creating DAO wallet from a coin spend {launch_coin.name()}  ...")
         # Create did info from the coin spend
         curried_args = uncurry_treasury(inner_puzzle)
         if curried_args is None:
@@ -361,7 +361,7 @@ class DAOWallet(WalletProtocol):
 
         current_coin = get_most_recent_singleton_coin_from_coin_spend(coin_spend)
         self.dao_rules = get_treasury_rules_from_puzzle(inner_puzzle)
-
+        assert isinstance(block_height, int)
         dao_info = DAOInfo(
             launch_coin.name(),
             cat_wallet.id(),
@@ -370,7 +370,7 @@ class DAOWallet(WalletProtocol):
             [],
             current_coin,
             inner_puzzle,
-            block_height,
+            uint32(block_height),
             uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
             [],
             uint64(0),
@@ -588,7 +588,7 @@ class DAOWallet(WalletProtocol):
             await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
         else:
             # funding coin
-            asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal)
+            asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
             if asset_id not in self.dao_info.assets:
                 new_asset_list = self.dao_info.assets.copy()
                 new_asset_list.append(asset_id)
@@ -1782,6 +1782,7 @@ class DAOWallet(WalletProtocol):
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
                             mint_amount = cond.rest().rest().first().as_int()
                             new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
                                 self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
                             )
@@ -1996,7 +1997,7 @@ class DAOWallet(WalletProtocol):
         eve_state = children[0]
 
         eve_spend = await fetch_coin_spend(eve_state.created_height, eve_state.coin, peer)
-        puzzle_reveal = get_proposed_puzzle_reveal_from_solution(eve_spend.solution)
+        puzzle_reveal = get_proposed_puzzle_reveal_from_solution(eve_spend.solution.to_program())
         # breakpoint()
         return puzzle_reveal
 
@@ -2060,9 +2061,10 @@ class DAOWallet(WalletProtocol):
         # CoinState contains Coin, spent_height, and created_height,
         parent_spend = await fetch_coin_spend(state[0].spent_height, state[0].coin, peer)
         parent_inner_puz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+        assert isinstance(parent_inner_puz, Program)
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
-    async def free_coins_from_finished_proposals(self, fee=uint64(0), push=True) -> SpendBundle:
+    async def free_coins_from_finished_proposals(self, fee: uint64 = uint64(0), push: bool = True) -> SpendBundle:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         full_spend = None
         spends = []
@@ -2113,7 +2115,7 @@ class DAOWallet(WalletProtocol):
             await self.wallet_state_manager.add_pending_transaction(record)
         return full_spend
 
-    async def parse_proposal(self, proposal_id: bytes32):
+    async def parse_proposal(self, proposal_id: bytes32) -> Dict[str, Any]:
         for prop_info in self.dao_info.proposals_list:
             if prop_info.proposal_id == proposal_id:
                 state = await self.get_proposal_state(proposal_id)
@@ -2140,19 +2142,22 @@ class DAOWallet(WalletProtocol):
                                 cc = {"puzzle_hash": cond.at("rf").as_atom(), "amount": cond.at("rrf").as_int()}
                                 xch_created_coins.append(cc)
 
-                    asset_create_coins = {}
+                    asset_create_coins: List[Dict[Any, Any]] = []
                     for asset in LIST_OF_TAILHASH_CONDITIONS.as_iter():
                         if asset == Program.to(0):
-                            asset_create_coins = None
+                            asset_dict: Optional[Dict[str, Any]] = None
                         else:
                             asset_id = asset.first().as_atom()
                             cc_list = []
                             for cond in asset.rest().first():
                                 if cond.first().as_int() == 51:
-                                    cc = {"puzzle_hash": cond.at("rf").as_atom(), "amount": cond.at("rrf").as_int()}
-                                    cc_list.append(cc)
-                            asset_create_coins[asset_id] = cc_list
-                    dictionary = {
+                                    asset_dict = {
+                                        "puzzle_hash": cond.at("rf").as_atom(),
+                                        "amount": cond.at("rrf").as_int(),
+                                    }
+                                    cc_list.append(asset_dict)
+                            asset_create_coins.append({asset_id: cc_list})
+                    dictionary: Dict[str, Any] = {
                         "state": state,
                         "proposal_type": proposal_type,
                         "proposed_puzzle_reveal": proposed_puzzle_reveal,
@@ -2174,10 +2179,11 @@ class DAOWallet(WalletProtocol):
 
     async def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
-        if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_block_height:
+        if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_height:
             return False
         tip_height = await self.get_tip_created_height(proposal_info.proposal_id)
-        if tip_height + dao_rules.soft_close_length < self.dao_info.current_block_height:
+        assert isinstance(tip_height, int)
+        if tip_height + dao_rules.soft_close_length < self.dao_info.current_height:
             return False
         return True
 
@@ -2287,6 +2293,7 @@ class DAOWallet(WalletProtocol):
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
         if len(ret) < 1:
             return None
+        assert isinstance(ret[-2], SingletonRecord)
         return ret[-2].removed_height
 
     async def add_or_update_proposal_info(
@@ -2452,6 +2459,7 @@ class DAOWallet(WalletProtocol):
         index = 0
         for pi in self.dao_info.proposals_list:
             if pi.proposal_id == proposal_id:
+                assert isinstance(current_coin, Coin)
                 new_info = ProposalInfo(
                     proposal_id,
                     pi.inner_puzzle,
@@ -2466,6 +2474,7 @@ class DAOWallet(WalletProtocol):
                 )
                 new_dao_info.proposals_list[index] = new_info
                 await self.save_info(new_dao_info)
+                assert isinstance(puzzle, Program)
                 future_parent = LineageProof(
                     new_state.coin.parent_coin_info,
                     puzzle.get_tree_hash(),

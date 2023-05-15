@@ -23,32 +23,32 @@ SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
-DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
+DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clsp")
 DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
+DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clsp")
 DAO_PROPOSAL_TIMER_MOD_HASH: bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
+DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
 DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
-DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clvm")
+DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
 DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury_with_hack.clvm")
+DAO_TREASURY_MOD: Program = load_clvm("dao_treasury_with_hack.clsp")
 DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
-SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clvm")
+SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
-DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
+DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
+DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clsp")
 DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clvm")
+DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clsp")
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
-DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clvm")
-P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
+DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
+P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")
 P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
-DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
+DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clsp")
 DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
-DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clvm")
+DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
 
 log = logging.Logger(__name__)
@@ -358,6 +358,7 @@ def get_proposal_timer_puzzle(
 
 
 def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules:
+    assert isinstance(puzzle_reveal, Program)
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,
@@ -572,7 +573,6 @@ def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
         log.debug("Cannot uncurry spend puzzle: error: %s", e)
         raise e
     if mod == SPEND_P2_SINGLETON_MOD:
-
         return "spend", curried_args
     elif mod == DAO_UPDATE_PROPOSAL_MOD:
         return "update", curried_args

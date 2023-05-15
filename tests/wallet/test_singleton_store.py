@@ -13,7 +13,7 @@ from chia.util.ints import uint32, uint64
 
 # from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import create_fullpuz  # , get_singleton_id_from_puzzle
+from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from tests.util.db_connection import DBConnection
@@ -23,7 +23,7 @@ def get_record() -> SingletonRecord:
     launcher_id = bytes32(token_bytes(32))
     inner_puz = Program.to(1)
     inner_puz_hash = inner_puz.get_tree_hash()
-    parent_puz = create_fullpuz(inner_puz, launcher_id)
+    parent_puz = create_singleton_puzzle(inner_puz, launcher_id)
     parent_puz_hash = parent_puz.get_tree_hash()
     parent_coin = Coin(launcher_id, parent_puz_hash, 1)
     inner_sol = Program.to([[51, parent_puz_hash, 1]])

@@ -9,7 +9,7 @@
     PROPOSAL_SELF_DESTRUCT_TIME
     ORACLE_SPEND_DELAY
   )
-;; This is a proposal to update treasury conditions for a DAO
+  ;; This is a proposal to update treasury conditions for a DAO
 
 
   (include condition_codes.clib)
@@ -21,14 +21,14 @@
   (list
     (list CREATE_COIN
       (puzzle-hash-of-curried-function TREASURY_MOD_HASH
-          (sha256 ONE ORACLE_SPEND_DELAY)
-          (sha256 ONE PROPOSAL_SELF_DESTRUCT_TIME)
-          (sha256 ONE PASS_MARGIN)
-          (sha256 ONE ATTENDANCE_REQUIRED)
-          (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
-          (sha256 ONE PROPOSAL_LENGTH)
-          (sha256tree PROPOSAL_VALIDATOR)
-          (sha256 ONE TREASURY_MOD_HASH)
+        (sha256 ONE ORACLE_SPEND_DELAY)
+        (sha256 ONE PROPOSAL_SELF_DESTRUCT_TIME)
+        (sha256 ONE PASS_MARGIN)
+        (sha256 ONE ATTENDANCE_REQUIRED)
+        (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
+        (sha256 ONE PROPOSAL_LENGTH)
+        (sha256tree PROPOSAL_VALIDATOR)
+        (sha256 ONE TREASURY_MOD_HASH)
       )
       ONE
     )
