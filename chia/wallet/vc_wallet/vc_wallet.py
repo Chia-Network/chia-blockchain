@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
 
@@ -207,6 +207,7 @@ class VCWallet:
         new_proof_hash: Optional[bytes32] = None,  # Requires that this key posesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Any,
     ) -> List[TransactionRecord]:
         """
         Entry point for two standard actions:
