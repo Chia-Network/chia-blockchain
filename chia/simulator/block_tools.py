@@ -787,7 +787,9 @@ class BlockTools:
                         block_list.append(full_block)
                         if len(recent_plot_ids) == 4:
                             recent_plot_ids.pop(0)
-                        recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
+                        block_plot_id = get_plot_id(full_block.reward_chain_block.proof_of_space)
+                        assert block_plot_id is not None
+                        recent_plot_ids.append(block_plot_id)
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
