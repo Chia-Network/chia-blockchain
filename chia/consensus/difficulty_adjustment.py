@@ -135,11 +135,9 @@ def height_can_be_first_in_epoch(constants: ConsensusConstants, height: uint32) 
 
 def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    prev_ses_height: uint32,
     height: uint32,
-    prev_header_hash: Optional[bytes32],
     deficit: uint8,
-    block_at_height_included_ses: bool,
 ) -> Tuple[bool, bool]:
     """
     Returns a bool tuple
@@ -160,12 +158,12 @@ def can_finish_sub_and_full_epoch(
     if height < constants.SUB_EPOCH_BLOCKS - 1:
         return False, False
 
-    assert prev_header_hash is not None
+    assert height > 0
 
     if deficit > 0:
         return False, False
 
-    if block_at_height_included_ses:
+    if prev_ses_height == height:
         # If we just included a sub_epoch_summary, we cannot include one again
         return False, False
 
@@ -173,13 +171,7 @@ def can_finish_sub_and_full_epoch(
     # If it's 0, height+1 is the first place that a sub-epoch can be included
     # If it's 1, we just checked whether 0 included it in the previous check
     if (height + 1) % constants.SUB_EPOCH_BLOCKS > 1:
-        curr: BlockRecord = blocks.block_record(prev_header_hash)
-        while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
-            if curr.sub_epoch_summary_included is not None:
-                return False, False
-            curr = blocks.block_record(curr.prev_hash)
-
-        if curr.sub_epoch_summary_included is not None:
+        if prev_ses_height >= height - height % constants.SUB_EPOCH_BLOCKS:
             return False, False
 
     # For checking new epoch, make sure the epoch blocks are aligned
@@ -226,9 +218,13 @@ def _get_next_sub_slot_iters(
 
     # If we are in the same epoch, return same ssi
     if not skip_epoch_check:
-        _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, blocks, height, prev_header_hash, deficit, block_at_height_included_ses
-        )
+        ses_heights = blocks.get_ses_heights()
+        prev_ses_height = uint32(0)
+        for i in reversed(ses_heights):
+            if prev_ses_height < height:
+                prev_ses_height = i
+                break
+        _, can_finish_epoch = can_finish_sub_and_full_epoch(constants, prev_ses_height, height, deficit)
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
@@ -306,9 +302,14 @@ def _get_next_difficulty(
 
     # If we are in the same slot as previous block, return same difficulty
     if not skip_epoch_check:
-        _, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, blocks, height, prev_header_hash, deficit, block_at_height_included_ses
-        )
+        ses_heights = blocks.get_ses_heights()
+        prev_ses_height = uint32(0)
+        for i in reversed(ses_heights):
+            if prev_ses_height < height:
+                prev_ses_height = i
+                break
+
+        _, can_finish_epoch = can_finish_sub_and_full_epoch(constants, prev_ses_height, height, deficit)
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 

@@ -172,6 +172,7 @@ class BlockTools:
     _block_cache_height_to_hash: Dict[uint32, bytes32]
     _block_cache_difficulty: uint64
     _block_cache: Dict[bytes32, BlockRecord]
+    _block_cache_ses: Dict[uint32, SubEpochSummary]
 
     def __init__(
         self,
@@ -601,8 +602,9 @@ class BlockTools:
             height_to_hash = self._block_cache_height_to_hash
             difficulty = self._block_cache_difficulty
             blocks = self._block_cache
+            sub_epoch_summaries = self._block_cache_ses
         else:
-            height_to_hash, difficulty, blocks = load_block_list(block_list, constants)
+            height_to_hash, difficulty, blocks, sub_epoch_summaries = load_block_list(block_list, constants)
 
         latest_block: BlockRecord = blocks[block_list[-1].header_hash]
         curr = latest_block
@@ -789,6 +791,8 @@ class BlockTools:
                             f"Created block {block_record.height} ove=False, iters {block_record.total_iters}"
                         )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        if block_record.sub_epoch_summary_included is not None:
+                            sub_epoch_summaries[block_record.height] = block_record.sub_epoch_summary_included
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
@@ -797,6 +801,7 @@ class BlockTools:
                             self._block_cache_height_to_hash = height_to_hash
                             self._block_cache_difficulty = difficulty
                             self._block_cache = blocks
+                            self._block_cache_ses = sub_epoch_summaries
                             return block_list
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -852,7 +857,7 @@ class BlockTools:
             else:
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks, height_to_hash=height_to_hash),
+                    BlockCache(blocks, height_to_hash=height_to_hash, sub_epoch_summaries=sub_epoch_summaries),
                     latest_block.required_iters,
                     block_list[-1],
                     False,
@@ -1530,10 +1535,12 @@ def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool 
 
 def load_block_list(
     block_list: List[FullBlock], constants: ConsensusConstants
-) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord]]:
+) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord], Dict[uint32, SubEpochSummary]]:
     difficulty = 0
     height_to_hash: Dict[uint32, bytes32] = {}
     blocks: Dict[bytes32, BlockRecord] = {}
+    ses_summaries: Dict[uint32, SubEpochSummary] = {}
+
     for full_block in block_list:
         if full_block.height == 0:
             difficulty = uint64(constants.DIFFICULTY_STARTING)
@@ -1558,15 +1565,18 @@ def load_block_list(
             sp_hash,
         )
 
-        blocks[full_block.header_hash] = block_to_block_record(
+        block_rec = block_to_block_record(
             constants,
-            BlockCache(blocks),
+            BlockCache(blocks=blocks, sub_epoch_summaries=ses_summaries, height_to_hash=height_to_hash),
             required_iters,
             full_block,
             None,
         )
+        blocks[full_block.header_hash] = block_rec
+        if block_rec.sub_epoch_summary_included is not None:
+            ses_summaries[block_rec.height] = block_rec.sub_epoch_summary_included
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
-    return height_to_hash, uint64(difficulty), blocks
+    return height_to_hash, uint64(difficulty), blocks, ses_summaries
 
 
 def get_icc(

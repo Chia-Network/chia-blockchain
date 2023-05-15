@@ -533,7 +533,12 @@ class Blockchain(BlockchainInterface):
         return list(reversed(recent_rc))
 
     async def validate_unfinished_block_header(
-        self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
+        self,
+        block: UnfinishedBlock,
+        prev_ses_height: uint32,
+        prev_ses_hash: bytes32,
+        prev_reward_chain_hash: bytes32,
+        skip_overflow_ss_validation: bool = True,
     ) -> Tuple[Optional[uint64], Optional[Err]]:
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
@@ -584,6 +589,9 @@ class Blockchain(BlockchainInterface):
             False,
             difficulty,
             sub_slot_iters,
+            prev_ses_height,
+            prev_ses_hash,
+            prev_reward_chain_hash,
             skip_overflow_ss_validation,
         )
         if error is not None:
@@ -593,7 +601,28 @@ class Blockchain(BlockchainInterface):
     async def validate_unfinished_block(
         self, block: UnfinishedBlock, npc_result: Optional[NPCResult], skip_overflow_ss_validation: bool = True
     ) -> PreValidationResult:
-        required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
+        prev_ses_hash = self.constants.GENESIS_CHALLENGE
+        prev_reward_chain_hash = self.constants.GENESIS_CHALLENGE
+        prev_ses_height = uint32(0)
+        ses_heights = self.get_ses_heights()
+        if (
+            not self.contains_block(block.prev_header_hash)
+            and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
+        ):
+            return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
+        prev_block = self.block_record(block.prev_header_hash)
+        for height in reversed(ses_heights):
+            if height < prev_block.height + 1:
+                ses_block = self.height_to_block_record(height)
+                assert ses_block.sub_epoch_summary_included is not None
+                assert ses_block.finished_reward_slot_hashes is not None
+                prev_ses_hash = ses_block.sub_epoch_summary_included.get_hash()
+                prev_reward_chain_hash = ses_block.finished_reward_slot_hashes[-1]
+                prev_ses_height = height
+
+        required_iters, error = await self.validate_unfinished_block_header(
+            block, prev_ses_height, prev_ses_hash, prev_reward_chain_hash, skip_overflow_ss_validation
+        )
 
         if error is not None:
             return PreValidationResult(uint16(error.value), None, None, False)

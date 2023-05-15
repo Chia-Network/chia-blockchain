@@ -105,9 +105,37 @@ class WalletBlockchain(BlockchainInterface):
             sub_slot_iters = self._sub_slot_iters
             difficulty = self._difficulty
 
+        prev_ses_hash = self.constants.GENESIS_CHALLENGE
+        prev_reward_chain_hash = self.constants.GENESIS_CHALLENGE
+        prev_ses_height = uint32(0)
+        ses_heights = self.get_ses_heights()
+        # if (
+        #         not self.contains_block(block.prev_header_hash)
+        #         and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
+        # ):
+        #     return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
+        prev_block = self.block_record(block.prev_header_hash)
+        for height in reversed(ses_heights):
+            if height < prev_block.height + 1:
+                ses_block = self.height_to_block_record(height)
+                assert ses_block.sub_epoch_summary_included is not None
+                assert ses_block.finished_reward_slot_hashes is not None
+                prev_ses_hash = ses_block.sub_epoch_summary_included.get_hash()
+                prev_reward_chain_hash = ses_block.finished_reward_slot_hashes[-1]
+                prev_ses_height = height
+
         # Validation requires a block cache (self) that goes back to a subepoch barrier
         required_iters, error = validate_finished_header_block(
-            self.constants, self, block, False, difficulty, sub_slot_iters, False
+            self.constants,
+            self,
+            block,
+            False,
+            difficulty,
+            sub_slot_iters,
+            prev_ses_height,
+            prev_ses_hash,
+            prev_reward_chain_hash,
+            False,
         )
         if error is not None:
             return AddBlockResult.INVALID_BLOCK, error.code

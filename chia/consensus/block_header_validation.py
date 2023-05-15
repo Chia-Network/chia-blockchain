@@ -45,6 +45,9 @@ def validate_unfinished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
+    prev_ses_height: uint32,
+    prev_ses_hash: bytes32,
+    prev_reward_chain_hash: bytes32,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
@@ -91,11 +94,9 @@ def validate_unfinished_header_block(
         if new_sub_slot:
             can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
                 constants,
-                blocks,
+                prev_ses_height,
                 prev_b.height,
-                prev_b.prev_hash,
                 prev_b.deficit,
-                prev_b.sub_epoch_summary_included is not None,
             )
         else:
             can_finish_se = False
@@ -417,11 +418,13 @@ def validate_unfinished_header_block(
                 if check_sub_epoch_summary:
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
-                        blocks,
                         height,
                         blocks.block_record(prev_b.prev_hash),
                         expected_difficulty if can_finish_epoch else None,
                         expected_sub_slot_iters if can_finish_epoch else None,
+                        prev_ses_height,
+                        prev_ses_hash,
+                        prev_reward_chain_hash,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
@@ -834,6 +837,9 @@ def validate_finished_header_block(
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
+    prev_ses_height: uint32,
+    prev_ses_hash: bytes32,
+    prev_reward_chain_hash: bytes32,
     check_sub_epoch_summary: bool = True,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
@@ -857,6 +863,9 @@ def validate_finished_header_block(
         check_filter,
         expected_difficulty,
         expected_sub_slot_iters,
+        prev_ses_height,
+        prev_ses_hash,
+        prev_reward_chain_hash,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
     )

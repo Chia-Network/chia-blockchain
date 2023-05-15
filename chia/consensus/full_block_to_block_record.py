@@ -57,13 +57,30 @@ def block_to_block_record(
     if found_ses_hash:
         assert prev_b is not None
         assert len(block.finished_sub_slots) > 0
+        ses_heights = blocks.get_ses_heights()
+
+        prev_ses_hash = constants.GENESIS_CHALLENGE
+        prev_reward_chain_hash = constants.GENESIS_CHALLENGE
+        prev_ses_height = uint32(0)
+        for height in reversed(ses_heights):
+            if height < block.height:
+                ses_block = blocks.height_to_block_record(height)
+                assert ses_block.sub_epoch_summary_included is not None
+                assert ses_block.finished_reward_slot_hashes is not None
+                prev_ses_hash = ses_block.sub_epoch_summary_included.get_hash()
+                prev_reward_chain_hash = ses_block.finished_reward_slot_hashes[-1]
+                prev_ses_height = ses_block.height
+                break
+
         ses = make_sub_epoch_summary(
             constants,
-            blocks,
             block.height,
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            prev_ses_height,
+            prev_ses_hash,
+            prev_reward_chain_hash,
         )
         if ses.get_hash() != found_ses_hash:
             raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)

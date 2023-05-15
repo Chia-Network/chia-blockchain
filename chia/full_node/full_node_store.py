@@ -335,13 +335,18 @@ class FullNodeStore:
                     icc_iters = sub_slot_iters
                 assert icc_challenge is not None
 
+            ses_heights = blocks.get_ses_heights()
+            prev_ses_height = uint32(0)
+            for height in reversed(ses_heights):
+                if height < peak.height:
+                    prev_ses_height = height
+                    break
+
             if can_finish_sub_and_full_epoch(
                 self.constants,
-                blocks,
+                prev_ses_height,
                 peak.height,
-                peak.prev_hash,
                 peak.deficit,
-                peak.sub_epoch_summary_included is not None,
             )[0]:
                 assert peak_full_block is not None
                 ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
