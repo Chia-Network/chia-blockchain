@@ -351,8 +351,8 @@ class BlockTools:
 
     async def setup_plots(
         self,
-        num_og_plots: int = 15,
-        num_pool_plots: int = 5,
+        num_og_plots: int = 25,
+        num_pool_plots: int = 10,
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
