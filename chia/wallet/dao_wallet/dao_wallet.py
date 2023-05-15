@@ -27,7 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import SpendableCAT
+from chia.wallet.cat_wallet.cat_utils import SpendableCAT, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -290,7 +290,7 @@ class DAOWallet(WalletProtocol):
         return self
 
     @staticmethod
-    async def create_new_did_wallet_from_coin_spend(
+    async def create_new_dao_wallet_from_coin_spend(
         wallet_state_manager: Any,
         wallet: Wallet,
         launch_coin: Coin,
@@ -1256,6 +1256,10 @@ class DAOWallet(WalletProtocol):
         cats_new_innerpuzhash: bytes32,
     ) -> Program:
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
+
+        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, cats_new_innerpuzhash)
         xch_conditions = [
             [
                 51,
@@ -1265,7 +1269,7 @@ class DAOWallet(WalletProtocol):
             ],  # create cat_launcher coin
             [
                 60,
-                Program.to(["m", cats_new_innerpuzhash]).get_tree_hash(),
+                Program.to(["m", full_puz.get_tree_hash()]).get_tree_hash(),
             ],  # make an announcement for the launcher to assert
         ]
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])
@@ -1785,11 +1789,15 @@ class DAOWallet(WalletProtocol):
                             # parent_parent
                             # new_puzzle_hash  ; the full CAT puzzle
                             # amount
+                            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+                            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+                            full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, new_cat_puzhash)
+
                             solution = Program.to(
                                 [
                                     treasury_inner_puzhash,
                                     self.dao_info.current_treasury_coin.parent_coin_info,
-                                    new_cat_puzhash,
+                                    full_puz.get_tree_hash(),
                                     mint_amount,
                                 ]
                             )
@@ -1955,7 +1963,7 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
