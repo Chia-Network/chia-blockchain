@@ -59,7 +59,6 @@ def create_full_node_service(
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
@@ -72,7 +71,14 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config[SERVICE_NAME] = service_config
-    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
+    network_id = service_config["selected_network"]
+    overrides = service_config["network_overrides"]["constants"][network_id]
+    if network_id == "testnet10":
+        # activate softforks immediately on testnet
+        if "SOFT_FORK2_HEIGHT" not in overrides:
+            overrides["SOFT_FORK2_HEIGHT"] = 0
+        if "SOFT_FORK_HEIGHT" not in overrides:
+            overrides["SOFT_FORK_HEIGHT"] = 0
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)

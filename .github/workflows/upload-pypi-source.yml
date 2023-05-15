@@ -66,6 +66,7 @@ jobs:
 
     - name: Lint source with mypy
       run: |
+        echo "MYPY VERSION IS: $(mypy --version)"
         mypy
 
     - name: Lint source with pylint
