@@ -51,4 +51,4 @@ def hinted_coin_with_coin_id(coin_spend: CoinSpend, coin_id: bytes32) -> HintedC
     for hinted_coin in hinted_coins_in_coin_spend(coin_spend):
         if hinted_coin.coin.name() == coin_id:
             return hinted_coin
-    raise ValueError(f"coin_id {coin_id} not found in coin_spend: {coin_spend}")
+    raise ValueError(f"coin_id {coin_id.hex()} not found in coin_spend: {coin_spend}")
