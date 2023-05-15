@@ -53,7 +53,7 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         .read_text(encoding="utf-8")
         .replace("[mypy-chia-exclusions]", exclusion_section)
     )
-    here.joinpath("mypy.ini").write_text(mypy_config_data.strip() + "\n", encoding="utf-8", newline="\n")
+    here.joinpath("mypy.ini").write_text(mypy_config_data.strip() + "\n", encoding="utf-8")
 
 
 @main.command()
@@ -62,7 +62,7 @@ def build_exclusions() -> None:
         f"# File created by: python {file_path.name} build-exclusions",
         *build_exclusion_list(),
     ]
-    exclusion_file.write_text("\n".join(updated_file_content) + "\n", encoding="utf-8", newline="\n")
+    exclusion_file.write_text("\n".join(updated_file_content) + "\n", encoding="utf-8")
 
 
 sys.exit(main())
