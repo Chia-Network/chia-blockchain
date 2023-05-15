@@ -267,10 +267,10 @@ class Farmer:
             del self.plot_sync_receivers[connection.peer_node_id]
             self.state_changed("harvester_removed", {"node_id": connection.peer_node_id})
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta], other_update: Optional[bool]) -> None:
         log.debug(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
         receiver: Receiver = self.plot_sync_receivers[peer_id]
-        harvester_updated: bool = delta is not None and not delta.empty()
+        harvester_updated: bool = (delta is not None and not delta.empty()) or other_update
         if receiver.initial_sync() or harvester_updated:
             self.state_changed("harvester_update", receiver.to_dict(True))
 

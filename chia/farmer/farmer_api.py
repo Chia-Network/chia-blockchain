@@ -13,9 +13,11 @@ from chia.farmer.farmer import Farmer
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
+    HarvestingModeUpdate,
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncStart,
     PoolDifficulty,
 )
@@ -516,8 +518,8 @@ class FarmerAPI:
         msg = make_msg(ProtocolMessageTypes.request_signatures, request)
         await self.farmer.server.send_to_specific([msg], node_id)
 
-    @api_request()
-    async def farming_info(self, request: farmer_protocol.FarmingInfo):
+    @api_request(peer_required=True)
+    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection):
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -528,6 +530,25 @@ class FarmerAPI:
                     "proofs": request.proofs,
                     "total_plots": request.total_plots,
                     "timestamp": request.timestamp,
+                    "node_id": peer.peer_node_id,
+                }
+            },
+        )
+
+    @api_request(peer_required=True)
+    async def farming_info_v2(self, request: farmer_protocol.FarmingInfoV2, peer: WSChiaConnection):
+        self.farmer.state_changed(
+            "new_farming_info",
+            {
+                "farming_info": {
+                    "challenge_hash": request.challenge_hash,
+                    "signage_point": request.sp_hash,
+                    "passed_filter": request.passed,
+                    "proofs": request.proofs,
+                    "total_plots": request.total_plots,
+                    "timestamp": request.timestamp,
+                    "node_id": peer.peer_node_id,
+                    "lookup_time": request.lookup_time,
                 }
             },
         )
@@ -537,12 +558,20 @@ class FarmerAPI:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
     @api_request(peer_required=True)
+    async def respond_plots_v2(self, _: harvester_protocol.RespondPlotsV2, peer: WSChiaConnection):
+        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @api_request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection):
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
     @api_request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection):
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_loaded_v2(self, message: PlotSyncPlotListV2, peer: WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded_v2(message)
 
     @api_request(peer_required=True)
     async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection):
@@ -563,3 +592,7 @@ class FarmerAPI:
     @api_request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection):
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
+
+    @api_request(peer_required=True)
+    async def harvesting_mode_update(self, message: HarvestingModeUpdate, peer: WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].harvesting_mode_update(message)
