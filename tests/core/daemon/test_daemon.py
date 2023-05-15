@@ -16,8 +16,9 @@ from chia.daemon.keychain_server import (
     GetKeysResponse,
     SetLabelRequest,
 )
-from chia.daemon.server import WebSocketServer, service_plotter
+from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
 from chia.server.outbound_message import NodeType
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
@@ -156,6 +157,14 @@ def assert_response(response: aiohttp.http_websocket.WSMessage, expected_respons
     assert message["ack"] is True
     # Expect: data matches the expected data
     assert message["data"] == expected_response_data
+
+
+def assert_response_success_only(response: aiohttp.http_websocket.WSMessage) -> None:
+    # Expect: JSON response
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    # Expect: {"success": True}
+    assert message["data"]["success"] is True
 
 
 def assert_running_services_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
@@ -1107,3 +1116,231 @@ async def test_keyring_file_deleted(
     response = await ws.receive()
 
     assert_response(response, case.response)
+
+
+@datacases(
+    RouteCase(
+        route="start_plotting",
+        description="chiapos - missing k",
+        request={
+            "service": "chia_plotter",
+            "plotter": "chiapos",
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "/Volumes/CHIA",
+            "t": "/private/tmp",
+            "t2": "",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+        },
+        response={"success": False, "error": "'k'"},
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="chiapos - missing d",
+        request={
+            "service": "chia_plotter",
+            "plotter": "chiapos",
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "t": "/private/tmp",
+            "t2": "",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+        },
+        response={"success": False, "error": "'d'"},
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="chiapos - missing t",
+        request={
+            "service": "chia_plotter",
+            "plotter": "chiapos",
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "/Volumes/CHIA",
+            "t2": "",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+        },
+        response={"success": False, "error": "'t'"},
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="chiapos - both c and p",
+        request={
+            "service": "chia_plotter",
+            "plotter": "chiapos",
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "/Volumes/CHIA",
+            "t": "/private/tmp",
+            "t2": "",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+            "c": "hello",
+            "p": "goodbye",
+        },
+        response={
+            "success": False,
+            "service_name": "chia_plotter",
+            "error": "Choose one of pool_contract_address and pool_public_key",
+        },
+    ),
+)
+@pytest.mark.asyncio
+async def test_plotter_errors(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    foo = keychain.keyring_wrapper.keyring.keyring_path
+    print(foo)
+
+    payload = create_payload(
+        case.route,
+        case.request,
+        "CI_test",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, case.response)
+
+
+def assert_plot_queue_response(
+    response: aiohttp.http_websocket.WSMessage,
+    expected_command: str,
+    expected_message_state: str,
+    expected_plot_id: str,
+    expected_plot_state: str,
+    expected_log_entry: Optional[str] = None,
+) -> None:
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["command"] == expected_command
+    assert message["data"]["state"] == expected_message_state
+    plot_info = message["data"]["queue"][0]
+    assert plot_info["id"] == expected_plot_id
+    assert plot_info["state"] == expected_plot_state
+
+    if expected_log_entry is not None:
+        assert plot_info["log_new"] == expected_log_entry
+
+
+@pytest.mark.asyncio
+async def test_plotter_roundtrip(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # register for chia_plotter events
+    service_name = "chia_plotter"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, "chia_plotter", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response_success_only(response)
+
+    root_path = get_b_tools.root_path
+    print(root_path)
+
+    plotting_request = {
+        "service": "chia_plotter",
+        "plotter": "chiapos",
+        "k": 25,
+        "r": 2,
+        "u": 128,
+        "e": False,
+        "parallel": False,
+        "n": 1,
+        "queue": "default",
+        "d": "/Volumes/CHIA",
+        "t": "/private/tmp",
+        "t2": "",
+        "f": "",
+        "plotNFTContractAddr": "",
+        "x": False,
+        "b": 512,
+        "overrideK": True,
+        "delay": 0,
+        "a": 3598820529,
+    }
+
+    #
+    # Using CI_test as the origin, this causes the daemon to not really start the plotter
+    #
+    payload = create_payload(
+        "start_plotting",
+        plotting_request,
+        "CI_test",
+        "daemon",
+    )
+    await ws.send_str(payload)
+
+    # should first get response to start_plotting
+    response = await ws.receive()
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["data"]["success"] is True
+    plot_id = message["data"]["ids"][0]
+
+    # 1) Submitted
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "SUBMITTED")
+
+    # 2) Running
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "RUNNING")
+
+    # Write chiapos magic words to the log file to signal finished
+    plot_log_path = plotter_log_path(root_path, plot_id)
+    plot_log_path.write_text("Renamed final file")
+
+    # 3) log_changed
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "log_changed", plot_id, "RUNNING", "Renamed final file")
+
+    # 4) Finished
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")

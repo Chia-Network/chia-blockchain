@@ -322,6 +322,9 @@ class WebSocketServer:
 
         command = message["command"]
         destination = message["destination"]
+        test_mode = False
+        if message["origin"] == "CI_test":
+            test_mode = True
         if destination != "daemon":
             if destination in self.connections:
                 sockets = self.connections[destination]
@@ -348,9 +351,9 @@ class WebSocketServer:
         elif command == "start_service":
             response = await self.start_service(data)
         elif command == "start_plotting":
-            response = await self.start_plotting(data)
+            response = await self.start_plotting(data, test_mode=test_mode)
         elif command == "stop_plotting":
-            response = await self.stop_plotting(data)
+            response = await self.stop_plotting(data, test_mode=test_mode)
         elif command == "stop_service":
             response = await self.stop_service(data)
         elif command == "running_services":
@@ -883,7 +886,7 @@ class WebSocketServer:
             except ValueError as e:
                 log.warning(f"_post_process_plotting_job: {e}")
 
-    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
+    async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default", test_mode=False):
         current_process = None
         try:
             log.info(f"Starting plotting with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
@@ -912,7 +915,15 @@ class WebSocketServer:
 
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            if test_mode:
+                process = subprocess.Popen(
+                    ["python", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                plotter_log = plotter_log_path(self.root_path, id).absolute()
+                plotter_log.parent.mkdir(parents=True, exist_ok=True)
+                plotter_log.touch(exist_ok=True)
+            else:
+                process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
 
@@ -935,7 +946,8 @@ class WebSocketServer:
 
             self._post_process_plotting_job(config)
 
-        except (subprocess.SubprocessError, IOError):
+        except (subprocess.SubprocessError, IOError) as e:
+            print(e)
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
@@ -949,7 +961,7 @@ class WebSocketServer:
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
-    async def start_plotting(self, request: Dict[str, Any]):
+    async def start_plotting(self, request: Dict[str, Any], test_mode=False) -> Dict[str, Any]:
         service_name = request["service"]
 
         plotter = request.get("plotter", "chiapos")
@@ -1005,7 +1017,7 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))
+                loop.create_task(self._start_plotting(id, loop, queue, test_mode=test_mode))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1017,7 +1029,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_plotting(self, request: Dict[str, Any], test_mode=False) -> Dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
