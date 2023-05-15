@@ -13,13 +13,16 @@ from typing_extensions import Protocol
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import PlotInfo
+from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
+    HarvestingModeUpdate,
     Plot,
+    PlotV2,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
 )
@@ -27,7 +30,8 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.generator_tools import list_to_batches
-from chia.util.ints import int16, uint32, uint64
+from chia.util.ints import int8, int16, uint32, uint64
+from chia.util.version import compare_version
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +49,25 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(int(plot_info.time_modified)),
+            )
+        )
+    return converted
+
+
+def _convert_plot_info_list_v2(plot_infos: List[PlotInfo]) -> List[PlotV2]:
+    converted: List[PlotV2] = []
+    for plot_info in plot_infos:
+        converted.append(
+            PlotV2(
+                filename=plot_info.prover.get_filename(),
+                size=plot_info.prover.get_size(),
+                plot_id=plot_info.prover.get_id(),
+                pool_public_key=plot_info.pool_public_key,
+                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                plot_public_key=plot_info.plot_public_key,
+                file_size=uint64(plot_info.file_size),
+                time_modified=uint64(int(plot_info.time_modified)),
+                compression_level=plot_info.compression_level,
             )
         )
     return converted
@@ -274,8 +297,12 @@ class Sender:
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            converted = _convert_plot_info_list(loaded)
-            self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
+            if self._connection is not None and compare_version(self._connection.protocol_version, '0.3.5') >= 0:
+                converted = _convert_plot_info_list_v2(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded_v2, PlotSyncPlotListV2, converted, remaining == 0)
+            else:
+                converted = _convert_plot_info_list(loaded)
+                self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
 
     def sync_done(self, removed: List[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
@@ -301,6 +328,17 @@ class Sender:
         self._messages.clear()
         # Do this at the end since `_sync_id` is used as sync active indicator.
         self._sync_id = uint64(0)
+
+    def harvesting_mode_update(self, mode: HarvestingMode):
+        log.debug(f"harvesting_mode_update: {mode}")
+        if self._connection is not None and compare_version(self._connection.protocol_version, '0.3.5') >= 0:
+            self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
+        else:
+            log.debug(
+                "harvesting_mode_update message has not been sent "
+                "because protocol version of peer farmer is "
+                + (self._connection.protocol_version if self._connection is not None else "unknown")
+            )
 
     def sync_active(self) -> bool:
         return self._sync_id != 0
