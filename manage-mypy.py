@@ -17,7 +17,7 @@ exclusion_file = here / "mypy-exclusions.txt"
 def build_exclusion_list() -> List[str]:
     # Create content for `mypy-exclusions.txt` based on a `mypy` run with `mypy.ini.template`
     command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
-    lines = run(command, capture_output=True).stdout.decode("utf8").splitlines()
+    lines = run(command, capture_output=True, check=True, encoding="utf-8").stdout.splitlines()
     return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in lines[0 : len(lines) - 1]})
 
 
@@ -33,23 +33,27 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         raise click.ClickException(f"{exclusion_file.name} missing, run with `{file_path.name}`")
     if check_exclusions:
         updated_exclusions = build_exclusion_list()
-        # Compare the new old content with the new content and fail if some file without issues is excluded.
-        old_exclusions = exclusion_file.read_text().splitlines()[1:]
+        # Compare the old content with the new content and fail if some file without issues is excluded.
+        old_exclusions = exclusion_file.read_text(encoding="utf-8").splitlines()[1:]
         if updated_exclusions != old_exclusions:
-            fixed = "\n".join([f"  -> {entry}" for entry in set(old_exclusions) - set(updated_exclusions)])
+            fixed = "\n".join(f"  -> {entry}" for entry in sorted(set(old_exclusions) - set(updated_exclusions)))
             if len(fixed) > 0:
                 raise click.ClickException(
                     f"The following fixed files need to be dropped from {exclusion_file.name}:\n{fixed}"
                 )
 
     # Create the `mypy.ini` with all entries from `mypy-exclusions.txt`
-    exclusion_file_content = exclusion_file.read_text().splitlines()
-    exclusion_lines = [line for line in exclusion_file_content if not line.startswith("#") and len(line.split()) > 0]
+    exclusion_file_content = exclusion_file.read_text(encoding="utf-8").splitlines()
+    exclusion_lines = [line for line in exclusion_file_content if not line.startswith("#") and len(line.strip()) > 0]
     exclusion_section = f"[mypy-{','.join(exclusion_lines)}]"
-    mypy_config_data = (here / "mypy.ini.template").read_text().replace("[mypy-chia-exclusions]", exclusion_section)
+    mypy_config_data = (
+        here.joinpath("mypy.ini.template")
+        .read_text(encoding="utf-8")
+        .replace("[mypy-chia-exclusions]", exclusion_section)
+    )
     mypy_config_path = here / "mypy.ini"
     mypy_config_path.touch()
-    mypy_config_path.write_text(mypy_config_data)
+    mypy_config_path.write_text(mypy_config_data.strip() + "\n", encoding="utf-8", newline="\n")
 
 
 @main.command()
@@ -59,7 +63,7 @@ def build_exclusions() -> None:
         f"# File created by: python {file_path.name} build-exclusions",
         *build_exclusion_list(),
     ]
-    exclusion_file.write_text("\n".join(updated_file_content) + "\n")
+    exclusion_file.write_text("\n".join(updated_file_content) + "\n", encoding="utf-8", newline="\n")
 
 
 sys.exit(main())
