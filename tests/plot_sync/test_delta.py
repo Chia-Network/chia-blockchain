@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 def dummy_plot(path: str) -> Plot:
-    return Plot(path, uint8(32), bytes32(b"\00" * 32), G1Element(), None, G1Element(), uint64(0), uint64(0))
+    return Plot(path, uint8(32), bytes32(b"\00" * 32), G1Element(), None, G1Element(), uint64(0), uint64(0), uint8(0))
 
 
 @pytest.mark.parametrize(

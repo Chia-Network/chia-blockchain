@@ -64,6 +64,18 @@ class FarmingInfo(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class FarmingInfoV2(Streamable):
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    timestamp: uint64
+    passed: uint32
+    proofs: uint32
+    total_plots: uint32
+    lookup_time: uint64
+
+
+@streamable
+@dataclass(frozen=True)
 class SignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_signature: G2Element

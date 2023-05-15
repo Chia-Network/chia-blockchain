@@ -7,7 +7,7 @@ from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint8, uint32, uint64
+from chia.util.ints import int8, int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -87,6 +87,20 @@ class Plot(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PlotV2(Streamable):
+    filename: str
+    size: uint8
+    plot_id: bytes32
+    pool_public_key: Optional[G1Element]
+    pool_contract_puzzle_hash: Optional[bytes32]
+    plot_public_key: G1Element
+    file_size: uint64
+    time_modified: uint64
+    compression_level: Optional[uint8]
+
+
+@streamable
+@dataclass(frozen=True)
 class RequestPlots(Streamable):
     pass
 
@@ -95,6 +109,14 @@ class RequestPlots(Streamable):
 @dataclass(frozen=True)
 class RespondPlots(Streamable):
     plots: List[Plot]
+    failed_to_open_filenames: List[str]
+    no_key_filenames: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondPlotsV2(Streamable):
+    plots: List[PlotV2]
     failed_to_open_filenames: List[str]
     no_key_filenames: List[str]
 
@@ -146,6 +168,17 @@ class PlotSyncPlotList(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PlotSyncPlotListV2(Streamable):
+    identifier: PlotSyncIdentifier
+    data: List[PlotV2]
+    final: bool
+
+    def __str__(self) -> str:
+        return f"PlotSyncPlotList: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
+
+
+@streamable
+@dataclass(frozen=True)
 class PlotSyncDone(Streamable):
     identifier: PlotSyncIdentifier
     duration: uint64
@@ -174,3 +207,9 @@ class PlotSyncResponse(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"
+
+
+@streamable
+@dataclass(frozen=True)
+class HarvestingModeUpdate(Streamable):
+    harvesting_mode: int8
