@@ -30,7 +30,7 @@ def main() -> None:
 @click.option("--check-exclusions/--no-check-exclusions", show_default=True, envvar="CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS")
 def build_mypy_ini(check_exclusions: bool = False) -> None:
     if not exclusion_file.exists():
-        raise click.ClickException(f"{exclusion_file.name} missing, run with `{file_path.name}`")
+        raise click.ClickException(f"{exclusion_file.name} missing, run `{file_path.name} build-exclusions`")
     exclusion_file_content = None
     if check_exclusions:
         updated_exclusions = build_exclusion_list()
