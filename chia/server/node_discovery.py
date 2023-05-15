@@ -25,7 +25,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
-from chia.util.network import IPAddress, get_host_addr
+from chia.util.network import IPAddress, resolve
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -207,7 +207,7 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
         await self.server.start_client(
-            PeerInfo(get_host_addr(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
+            PeerInfo(await resolve(self.introducer_info.host, prefer_ipv6=False), self.introducer_info.port), on_connect
         )
 
     async def _query_dns(self, dns_address: str) -> None:

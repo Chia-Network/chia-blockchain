@@ -315,7 +315,6 @@ async def pre_validate_blocks_multiprocessing(
     futures = []
     # Pool of workers to validate blocks concurrently
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
-
     ses_heights = block_records.get_ses_heights()
     prev_ses_hash = constants.GENESIS_CHALLENGE
     prev_reward_chain_hash = constants.GENESIS_CHALLENGE

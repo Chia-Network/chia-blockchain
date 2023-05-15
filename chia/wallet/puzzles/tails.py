@@ -92,7 +92,7 @@ class GenesisById(LimitationsProgram):
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(primaries=[Payment(cat_inner.get_tree_hash(), amount, [])]),
+            wallet.standard_wallet.make_solution(primaries=[Payment(cat_inner.get_tree_hash(), amount)]),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
