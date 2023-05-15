@@ -174,6 +174,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
             plot_public_key=G1Element(),
             file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
+            compression_level=uint8(0),
         )
         for x in path_list
     ]

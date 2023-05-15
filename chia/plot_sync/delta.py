@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
-from chia.protocols.harvester_protocol import Plot
+from chia.protocols.harvester_protocol import PlotV2
 
 
 @dataclass
 class DeltaType:
-    additions: Union[Dict[str, Plot], List[str]]
+    additions: Union[Dict[str, PlotV2], List[str]]
     removals: List[str]
 
     def __str__(self) -> str:
@@ -24,7 +24,7 @@ class DeltaType:
 
 @dataclass
 class PlotListDelta(DeltaType):
-    additions: Dict[str, Plot] = field(default_factory=dict)
+    additions: Dict[str, PlotV2] = field(default_factory=dict)
     removals: List[str] = field(default_factory=list)
 
 

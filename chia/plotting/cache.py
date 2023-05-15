@@ -14,14 +14,14 @@ from chiapos import DiskProver
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint8, uint16, uint64
 from chia.util.misc import VersionedBlob
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 log = logging.getLogger(__name__)
 
-CURRENT_VERSION: int = 1
+CURRENT_VERSION: int = 2
 
 
 @streamable
@@ -33,6 +33,7 @@ class DiskCacheEntry(Streamable):
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     last_use: uint64
+    compression_level: uint8
 
 
 @streamable
@@ -49,6 +50,7 @@ class CacheEntry:
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     last_use: float
+    compression_level: uint8
 
     @classmethod
     def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
@@ -72,7 +74,12 @@ class CacheEntry:
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
         )
 
-        return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
+        # @TODO Activate the line below when chiapos is ready
+        # compression_level = prover.get_compression_level()
+        compression_level = uint8(0)
+
+        return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time(),
+                   compression_level)
 
     def bump_last_use(self) -> None:
         self.last_use = time.time()
@@ -114,6 +121,7 @@ class Cache:
                     cache_entry.pool_contract_puzzle_hash,
                     cache_entry.plot_public_key,
                     uint64(int(cache_entry.last_use)),
+                    cache_entry.compression_level,
                 )
                 for path, cache_entry in self.items()
             }
@@ -146,6 +154,7 @@ class Cache:
                         cache_entry.pool_contract_puzzle_hash,
                         cache_entry.plot_public_key,
                         float(cache_entry.last_use),
+                        cache_entry.compression_level,
                     )
                     # TODO, drop the below entry dropping after few versions or whenever we force a cache recreation.
                     #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
@@ -153,7 +162,7 @@ class Cache:
                     #                - https://github.com/Chia-Network/chiapos/pull/337
                     k = new_entry.prover.get_size()
                     if k not in estimated_c2_sizes:
-                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
+                        estimated_c2_sizes[k] = ceil(2 ** k / 100_000_000) * ceil(k / 8)
                     memo_size = len(new_entry.prover.get_memo())
                     prover_size = len(cache_entry.prover_data)
                     # Estimated C2 size + memo size + 2000 (static data + path)

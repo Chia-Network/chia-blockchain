@@ -20,6 +20,7 @@ class ProtocolMessageTypes(Enum):
     request_signed_values = 10
     signed_values = 11
     farming_info = 12
+    farming_info_v2 = 93
 
     # Timelord protocol (timelord <-> full_node)
     new_peak_timelord = 13
@@ -89,14 +90,17 @@ class ProtocolMessageTypes(Enum):
     new_signage_point_harvester = 66
     request_plots = 67
     respond_plots = 68
+    respond_plots_v2 = 94
     plot_sync_start = 78
     plot_sync_loaded = 79
+    plot_sync_loaded_v2 = 95
     plot_sync_removed = 80
     plot_sync_invalid = 81
     plot_sync_keys_missing = 82
     plot_sync_duplicates = 83
     plot_sync_done = 84
     plot_sync_response = 85
+    harvesting_mode_update = 92
 
     # More wallet protocol
     coin_state_update = 69

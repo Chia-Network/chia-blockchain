@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -12,7 +12,7 @@ from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
-from chia.util.ints import uint32
+from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ class PlotInfo:
     plot_public_key: G1Element
     file_size: int
     time_modified: float
+    compression_level: Optional[uint8] = uint8(0)
 
 
 class PlotRefreshEvents(Enum):
@@ -82,6 +83,11 @@ class Params:
     memo: Optional[str]
     nobitfield: bool
     stripe_size: int = 65536
+
+
+class HarvestingMode(IntEnum):
+    CPU = 1
+    GPU = 2
 
 
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:

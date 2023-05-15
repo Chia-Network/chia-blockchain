@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from typing_extensions import Protocol
 
+from chia.plotting.util import HarvestingMode
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,
@@ -18,12 +19,14 @@ from chia.plot_sync.exceptions import (
 )
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.protocols.harvester_protocol import (
-    Plot,
+    HarvestingModeUpdate,
+    PlotV2,
     PlotSyncDone,
     PlotSyncError,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
+    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
 )
@@ -69,7 +72,7 @@ class Sync:
 
 
 class ReceiverUpdateCallback(Protocol):
-    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
+    def __call__(self, peer_id: bytes32, delta: Optional[Delta], other_update: bool = False) -> Awaitable[None]:
         pass
 
 
@@ -77,12 +80,13 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: Dict[str, Plot]
+    _plots: Dict[str, PlotV2]
     _invalid: List[str]
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
     _update_callback: ReceiverUpdateCallback
+    _harvesting_mode: Optional[HarvestingMode]
 
     def __init__(
         self,
@@ -98,10 +102,11 @@ class Receiver:
         self._duplicates = []
         self._total_plot_size = 0
         self._update_callback = update_callback
+        self._harvesting_mode = None
 
-    async def trigger_callback(self, update: Optional[Delta] = None) -> None:
+    async def trigger_callback(self, delta: Optional[Delta] = None, other_update: Optional[bool] = False) -> None:
         try:
-            await self._update_callback(self._connection.peer_node_id, update)
+            await self._update_callback(self._connection.peer_node_id, delta, other_update)
         except Exception as e:
             log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
@@ -114,6 +119,7 @@ class Receiver:
         self._keys_missing.clear()
         self._duplicates.clear()
         self._total_plot_size = 0
+        self._harvesting_mode = None
 
     def connection(self) -> WSChiaConnection:
         return self._connection
@@ -127,7 +133,7 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> Dict[str, Plot]:
+    def plots(self) -> Dict[str, PlotV2]:
         return self._plots
 
     def invalid(self) -> List[str]:
@@ -141,6 +147,9 @@ class Receiver:
 
     def total_plot_size(self) -> int:
         return self._total_plot_size
+
+    def harvesting_mode(self) -> Optional[HarvestingMode]:
+        return self._harvesting_mode
 
     async def _process(
         self, method: Callable[[T_PlotSyncMessage], Any], message_type: ProtocolMessageTypes, message: T_PlotSyncMessage
@@ -207,6 +216,33 @@ class Receiver:
         for plot_info in plot_infos.data:
             if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
                 raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
+            self._current_sync.delta.valid.additions[plot_info.filename] = PlotV2(
+                filename=plot_info.filename,
+                size=plot_info.size,
+                plot_id=plot_info.plot_id,
+                pool_public_key=plot_info.pool_public_key,
+                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
+                plot_public_key=plot_info.plot_public_key,
+                file_size=plot_info.file_size,
+                time_modified=plot_info.time_modified,
+                compression_level=None,
+            )
+            self._current_sync.bump_plots_processed()
+
+        # Let the callback receiver know about the sync progress updates
+        await self.trigger_callback()
+
+        if plot_infos.final:
+            self._current_sync.state = State.removed
+
+        self._current_sync.bump_next_message_id()
+
+    async def _process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
+        self._validate_identifier(plot_infos.identifier)
+
+        for plot_info in plot_infos.data:
+            if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
+                raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
             self._current_sync.delta.valid.additions[plot_info.filename] = plot_info
             self._current_sync.bump_plots_processed()
 
@@ -220,6 +256,9 @@ class Receiver:
 
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
+
+    async def process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
+        await self._process(self._process_loaded_v2, ProtocolMessageTypes.plot_sync_loaded_v2, plot_infos)
 
     async def process_path_list(
         self,
@@ -338,6 +377,13 @@ class Receiver:
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
+    async def _harvesting_mode_update(self, data: HarvestingModeUpdate) -> None:
+        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
+        await self.trigger_callback(None, True)
+
+    async def harvesting_mode_update(self, data: HarvestingModeUpdate) -> None:
+        await self._process(self._harvesting_mode_update, ProtocolMessageTypes.harvesting_mode_update, data)
+
     def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
         syncing = None
         if self._current_sync.in_progress():
@@ -359,4 +405,5 @@ class Receiver:
             "total_plot_size": self._total_plot_size,
             "syncing": syncing,
             "last_sync_time": self._last_sync.time_done,
+            "harvesting_mode": self._harvesting_mode,
         }
