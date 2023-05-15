@@ -15,11 +15,6 @@ class FilterMode(IntEnum):
     exclude = 2
 
 
-class CoinRecordOrder(IntEnum):
-    confirmed_height = 1
-    spent_height = 2
-
-
 @streamable
 @dataclass(frozen=True)
 class TransactionTypeFilter(Streamable):
