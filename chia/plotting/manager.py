@@ -56,7 +56,11 @@ class PlotManager:
         self.no_key_filenames = set()
         self.farmer_public_keys = []
         self.pool_public_keys = []
-        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
+        # Since `compression_level` property was added to Cache structure,
+        # previous cache file formats needs to be reset
+        # When user downgrades harvester, it looks 'plot_manager.dat` while
+        # latest harvester reads/writes 'plot_manager_v2.dat`
+        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager_v2.dat")
         self.match_str = match_str
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
@@ -160,7 +164,7 @@ class PlotManager:
             self._refresh_thread = None
 
     def trigger_refresh(self) -> None:
-        log.debug("trigger_refresh")
+        self.log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
     def _refresh_task(self, sleep_interval_ms: int):
@@ -262,7 +266,7 @@ class PlotManager:
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
             except Exception as e:
-                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+                self.log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
                 self.reset()
 
     def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
@@ -270,10 +274,10 @@ class PlotManager:
         result: PlotRefreshResult = PlotRefreshResult(processed=len(plot_paths))
         counter_lock = threading.Lock()
 
-        log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
+        self.log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
 
         if self.match_str is not None:
-            log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
+            self.log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
             if not self._refreshing_enabled:
@@ -296,7 +300,7 @@ class PlotManager:
             if entry is not None:
                 loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
-                    log.debug(f"Skip duplicated plot {str(file_path)}")
+                    self.log.debug(f"Skip duplicated plot {str(file_path)}")
                     return None
             try:
                 if not file_path.exists():
@@ -309,7 +313,7 @@ class PlotManager:
                 if not cache_hit:
                     prover = chiapos.DiskProver(str(file_path))
 
-                    log.debug(f"process_file {str(file_path)}")
+                    self.log.debug(f"process_file {str(file_path)}")
 
                     expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
@@ -340,13 +344,13 @@ class PlotManager:
                 assert cache_entry is not None
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
-                    log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
+                    self.log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
 
                 if cache_entry.pool_public_key is not None and cache_entry.pool_public_key not in self.pool_public_keys:
-                    log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
+                    self.log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
@@ -363,7 +367,7 @@ class PlotManager:
                         self.plot_filename_paths[file_path.name] = paths
                     else:
                         paths[1].add(str(Path(cache_entry.prover.get_filename()).parent))
-                        log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
+                        self.log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
                         return None
 
                 new_plot_info: PlotInfo = PlotInfo(
@@ -373,6 +377,7 @@ class PlotManager:
                     cache_entry.plot_public_key,
                     stat_info.st_size,
                     stat_info.st_mtime,
+                    cache_entry.compression_level,
                 )
 
                 cache_entry.bump_last_use()
@@ -385,10 +390,10 @@ class PlotManager:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                log.error(f"Failed to open file {file_path}. {e} {tb}")
+                self.log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
+            self.log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
 
             return new_plot_info
 

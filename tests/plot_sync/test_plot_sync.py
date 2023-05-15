@@ -71,6 +71,7 @@ class ExpectedResult:
                 G1Element(),
                 uint64(0),
                 uint64(0),
+                uint8(0),
             )
 
         self.valid_count += len(list_plots)

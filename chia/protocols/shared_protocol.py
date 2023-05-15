@@ -7,7 +7,7 @@ from typing import List, Tuple
 from chia.util.ints import uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.34"
+protocol_version = "0.0.35"
 
 """
 Handshake when establishing a connection between two servers.
