@@ -54,13 +54,11 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         .replace("[mypy-chia-exclusions]", exclusion_section)
     )
     mypy_config_path = here / "mypy.ini"
-    mypy_config_path.touch()
     mypy_config_path.write_text(mypy_config_data.strip() + "\n", encoding="utf-8", newline="\n")
 
 
 @main.command()
 def build_exclusions() -> None:
-    exclusion_file.touch()
     updated_file_content = [
         f"# File created by: python {file_path.name} build-exclusions",
         *build_exclusion_list(),
