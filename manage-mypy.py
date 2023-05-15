@@ -17,7 +17,7 @@ exclusion_file = here / "mypy-exclusions.txt"
 def build_exclusion_list() -> List[str]:
     # Create content for `mypy-exclusions.txt` based on a `mypy` run with `mypy.ini.template`
     command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
-    lines = run(command, capture_output=True, check=True, encoding="utf-8").stdout.splitlines()
+    lines = run(command, capture_output=True, encoding="utf-8").stdout.splitlines()
     return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in lines[0 : len(lines) - 1]})
 
 
