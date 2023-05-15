@@ -11,7 +11,7 @@ import click
 
 file_path = Path(__file__)
 here = file_path.parent
-exclusion_file = here / "mypy-exclusions.txt"
+exclusion_file = here.joinpath("mypy-exclusions.txt")
 
 
 def build_exclusion_list() -> List[str]:
@@ -53,8 +53,7 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         .read_text(encoding="utf-8")
         .replace("[mypy-chia-exclusions]", exclusion_section)
     )
-    mypy_config_path = here / "mypy.ini"
-    mypy_config_path.write_text(mypy_config_data.strip() + "\n", encoding="utf-8", newline="\n")
+    here.joinpath("mypy.ini").write_text(mypy_config_data.strip() + "\n", encoding="utf-8", newline="\n")
 
 
 @main.command()
