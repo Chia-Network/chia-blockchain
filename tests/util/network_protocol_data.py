@@ -749,6 +749,7 @@ plot = harvester_protocol.Plot(
     ),
     uint64(3368414292564311420),
     uint64(2573238947935295522),
+    uint8(0),
 )
 
 request_plots = harvester_protocol.RequestPlots()
