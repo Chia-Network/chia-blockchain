@@ -72,6 +72,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
@@ -858,9 +859,18 @@ class WalletRpcApi:
         to_puzzle_hash: Optional[bytes32] = None
         if to_address is not None:
             to_puzzle_hash = decode_puzzle_hash(to_address)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
+            wallet_id,
+            start,
+            end,
+            sort_key=sort_key,
+            reverse=reverse,
+            to_puzzle_hash=to_puzzle_hash,
+            type_filter=type_filter,
         )
         return {
             "transactions": [
