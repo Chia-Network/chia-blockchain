@@ -28,10 +28,14 @@ class ProofOfSpace(Streamable):
     proof: bytes
 
 
-def get_plot_id(pos: ProofOfSpace) -> bytes32:
-    assert pos.pool_public_key is None or pos.pool_contract_puzzle_hash is None
+def get_plot_id(pos: ProofOfSpace) -> Optional[bytes32]:
+    if pos.pool_public_key is not None and pos.pool_contract_puzzle_hash is not None:
+        log.error("get_plot_id Fail 1")
+        return None
     if pos.pool_public_key is None:
-        assert pos.pool_contract_puzzle_hash is not None
+        if pos.pool_contract_puzzle_hash is None:
+            log.error("get_plot_id Fail 2")
+            return None
         return calculate_plot_id_ph(pos.pool_contract_puzzle_hash, pos.plot_public_key)
     return calculate_plot_id_pk(pos.pool_public_key, pos.plot_public_key)
 
@@ -55,7 +59,10 @@ def verify_and_get_quality_string(
     if pos.size > constants.MAX_PLOT_SIZE:
         log.error("Fail 4")
         return None
-    plot_id: bytes32 = get_plot_id(pos)
+    plot_id: Optional[bytes32] = get_plot_id(pos)
+    if plot_id is None:
+        log.error("Got None plot_id")
+        return None
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:

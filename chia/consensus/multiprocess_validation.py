@@ -227,7 +227,9 @@ async def pre_validate_blocks_multiprocessing(
                 # TODO: Add `get_proof_of_space()` to BlockStore.
                 full_block = await block_store.get_full_block(curr.header_hash)
                 assert full_block is not None
-                recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
+                plot_id = get_plot_id(full_block.reward_chain_block.proof_of_space)
+                assert plot_id is not None
+                recent_plot_ids.append(plot_id)
             curr = block_records.block_record(curr.prev_hash)
         recent_blocks[curr.header_hash] = curr
         recent_blocks_compressed[curr.header_hash] = curr
@@ -257,7 +259,7 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
         )
         block_plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
-        if q_str is None or block_plot_id in recent_plot_ids:
+        if q_str is None or block_plot_id is None or block_plot_id in recent_plot_ids:
             for i, block_i in enumerate(blocks):
                 if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
                     block_records.remove_block_record(block_i.header_hash)
