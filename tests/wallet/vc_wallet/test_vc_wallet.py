@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import pytest
 
@@ -93,6 +93,18 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+
+    async def check_vc_record_has_parent_id(
+        parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
+    ) -> Optional[Literal[True]]:
+        vc_record = await client.vc_get(launcher_id)
+        if vc_record is not None:
+            return True if vc_record.vc.coin.parent_coin_info == parent_id else None
+        return None
+
+    await time_out_assert_not_none(
+        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_0, vc_record.vc.launcher_id
+    )
     vc_record_updated = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
 
