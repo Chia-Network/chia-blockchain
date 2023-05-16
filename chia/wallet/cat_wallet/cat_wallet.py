@@ -288,7 +288,7 @@ class CATWallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            txs = await self.generate_signed_transaction(
+            txs = await self.generate_signed_transactions(
                 [uint64(coin.amount)], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
             assert txs[0].spend_bundle
@@ -794,7 +794,7 @@ class CATWallet:
             chia_tx,
         )
 
-    async def generate_signed_transaction(
+    async def generate_signed_transactions(
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],

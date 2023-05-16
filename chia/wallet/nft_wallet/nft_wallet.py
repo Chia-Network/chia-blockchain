@@ -960,7 +960,7 @@ class NFTWallet:
                     txs = [tx]
                 elif asset not in fungible_asset_dict:
                     assert asset is not None
-                    txs = await wallet.generate_signed_transaction(
+                    txs = await wallet.generate_signed_transactions(
                         [abs(amount)],
                         [DESIRED_OFFER_MOD_HASH],
                         fee=fee_left_to_pay,
@@ -974,7 +974,7 @@ class NFTWallet:
                     )
                 else:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
-                    txs = await wallet.generate_signed_transaction(
+                    txs = await wallet.generate_signed_transactions(
                         [abs(amount), sum(p.amount for _, p in payments)],
                         [DESIRED_OFFER_MOD_HASH, DESIRED_OFFER_MOD_HASH],
                         fee=fee_left_to_pay,

@@ -617,7 +617,7 @@ class DataLayerWallet:
 
         return txs
 
-    async def generate_signed_transaction(
+    async def generate_signed_transactions(
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
@@ -1146,7 +1146,7 @@ class DataLayerWallet:
                 this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
             new_ph: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
-            txs: List[TransactionRecord] = await dl_wallet.generate_signed_transaction(
+            txs: List[TransactionRecord] = await dl_wallet.generate_signed_transactions(
                 [uint64(1)],
                 [new_ph],
                 fee=fee_left_to_pay,

@@ -261,7 +261,7 @@ class TradeManager:
                 all_txs.append(tx)
             else:
                 # ATTENTION: new_wallets
-                txs = await wallet.generate_signed_transaction(
+                txs = await wallet.generate_signed_transactions(
                     [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                 )
                 all_txs.extend(txs)
@@ -342,7 +342,7 @@ class TradeManager:
                         all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 else:
                     # ATTENTION: new_wallets
-                    txs = await wallet.generate_signed_transaction(
+                    txs = await wallet.generate_signed_transactions(
                         [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
                     )
                     for tx in txs:
@@ -581,7 +581,7 @@ class TradeManager:
                     # This is to generate the tx for specific nft assets, i.e. not using
                     # wallet_id as the selector which would select any coins from nft_wallet
                     amounts = [coin.amount for coin in selected_coins]
-                    txs = await wallet.generate_signed_transaction(
+                    txs = await wallet.generate_signed_transactions(
                         # [abs(offer_dict[id])],
                         amounts,
                         [OFFER_MOD_OLD_HASH if old else Offer.ph()],
@@ -593,7 +593,7 @@ class TradeManager:
                     all_transactions.extend(txs)
                 else:
                     # ATTENTION: new_wallets
-                    txs = await wallet.generate_signed_transaction(
+                    txs = await wallet.generate_signed_transactions(
                         [abs(offer_dict[id])],
                         [OFFER_MOD_OLD_HASH if old else Offer.ph()],
                         fee=fee_left_to_pay,

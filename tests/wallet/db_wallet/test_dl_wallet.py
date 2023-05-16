@@ -266,7 +266,7 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
-        txs = await dl_wallet.generate_signed_transaction(
+        txs = await dl_wallet.generate_signed_transactions(
             [previous_record.lineage_proof.amount],
             [previous_record.inner_puzzle_hash],
             launcher_id=previous_record.launcher_id,
@@ -275,7 +275,7 @@ class TestDLWallet:
         )
         assert txs[0].spend_bundle is not None
         with pytest.raises(ValueError, match="is currently pending"):
-            await dl_wallet.generate_signed_transaction(
+            await dl_wallet.generate_signed_transactions(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
                 coins=set([txs[0].spend_bundle.removals()[0]]),
