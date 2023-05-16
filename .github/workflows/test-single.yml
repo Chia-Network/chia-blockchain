@@ -251,7 +251,7 @@ jobs:
         with:
           flag-name: ${{ env.JOB_FILE_NAME }}
           parallel: true
-          path-to-lcov: "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          path-to-lcov: "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
 
       - name: Publish coverage data
         uses: actions/upload-artifact@v3
