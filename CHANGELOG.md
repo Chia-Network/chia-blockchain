@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.8.1 Chia blockchain 2023-05-17
+
+### Changed
+* Softfork2 testing by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15204
+* Move to Discord in docs and install scripts (#15193) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15210
+* hardcode `num` param when listing NFTs from CLI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15293
+* optimize compact proofs by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15304
+
+### Fixed
+* wallet: Avoid dict changes while iterating in `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15216
+* don't add transactions to the mempool before it has a valid peak by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15264
+
 ## 1.8.0 Chia blockchain 2023-05-03
 
 ### Added
