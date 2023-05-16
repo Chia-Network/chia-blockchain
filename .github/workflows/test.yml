@@ -87,6 +87,7 @@ jobs:
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
+    if: always()
     needs:
       - macos
       - ubuntu
