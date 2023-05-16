@@ -132,6 +132,14 @@ class TestGenesisBlock:
 
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
+    async def test_build_default_10000_blocks(self, default_10000_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_10000_blocks_compact(self, default_10000_blocks_compact):
+        pass
+
+    @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
         for block in blocks:
