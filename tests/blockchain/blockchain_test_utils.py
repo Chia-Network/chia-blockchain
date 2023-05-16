@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from chia.consensus.blockchain import Blockchain, AddBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err

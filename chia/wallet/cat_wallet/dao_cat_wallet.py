@@ -843,3 +843,10 @@ class DAOCATWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
+
+    async def get_pending_change_balance(self) -> uint64:
+        # No spendable or receivable value
+        return uint64(0)

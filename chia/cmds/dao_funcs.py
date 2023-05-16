@@ -11,13 +11,10 @@ from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
-from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.address_type import AddressType, ensure_valid_address
-from chia.wallet.util.wallet_types import WalletType
 
 
 async def add_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -89,10 +86,11 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    fee = Decimal(args["fee"])
-    final_fee: uint64 = uint64(int(fee * units["chia"]))
+    # fee = Decimal(args["fee"])
+    # final_fee: uint64 = uint64(int(fee * units["chia"]))
     final_amount: uint64 = uint64(int(amount * mojo_per_unit))
 
+    # TODO: Allow fee for adding DAO funds Transaction
     res = await wallet_client.dao_add_funds_to_treasury(
         wallet_id=wallet_id, funding_wallet_id=funding_wallet_id, amount=final_amount
     )
@@ -329,7 +327,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         fee=final_fee,
     )
     if res["success"]:
-        print(f"Successfully created proposal.")
+        print("Successfully created proposal.")
     else:
         print("Failed to create proposal.")
 
@@ -382,7 +380,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
         fee=final_fee,
     )
     if res["success"]:
-        print(f"Successfully created proposal.")
+        print("Successfully created proposal.")
     else:
         print("Failed to create proposal.")
 
@@ -393,6 +391,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcCli
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     cat_target_address = args["cat_target_address"]
     amount = args["amount"]
+    vote_amount = None
     if "vote_amount" in args:
         vote_amount = args["vote_amount"]
     res = await wallet_client.dao_create_proposal(
@@ -404,6 +403,6 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcCli
         fee=final_fee,
     )
     if res["success"]:
-        print(f"Successfully created proposal.")
+        print("Successfully created proposal.")
     else:
         print("Failed to create proposal.")

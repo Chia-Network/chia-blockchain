@@ -15,9 +15,8 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.dao_wallet.dao_utils import SINGLETON_LAUNCHER, SINGLETON_MOD
+from chia.wallet.dao_wallet.dao_utils import create_cat_launcher_for_singleton_id
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
