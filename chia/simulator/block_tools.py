@@ -1009,7 +1009,7 @@ class BlockTools:
                         if get_plot_id(proof_of_space) in recent_plot_ids:
                             print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
                             continue
-                        if random.randint(0, 3) == 0:
+                        if random.randint(0, 3) != 0:
                             continue
                         assert last_timestamp is not None
 
