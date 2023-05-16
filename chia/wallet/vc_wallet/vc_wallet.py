@@ -160,6 +160,7 @@ class VCWallet:
             provider_did,
             inner_puzzle_hash,
             [inner_puzzle_hash],
+            fee=fee,
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
