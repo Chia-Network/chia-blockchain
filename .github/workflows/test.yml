@@ -139,6 +139,8 @@ jobs:
         if: always()
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          parallel-finished: true
 
       - name: Coverage report (chia/)
         if: always()
