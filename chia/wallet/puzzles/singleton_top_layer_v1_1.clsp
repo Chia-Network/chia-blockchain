@@ -1,14 +1,14 @@
 (mod (SINGLETON_STRUCT INNER_PUZZLE lineage_proof my_amount inner_solution)
 
-;; SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+  ;; SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
 
-; SINGLETON_STRUCT, INNER_PUZZLE are curried in by the wallet
+  ; SINGLETON_STRUCT, INNER_PUZZLE are curried in by the wallet
 
-; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+  ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
 
-; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
-; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
+  ; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
+  ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
   (include condition_codes.clib)
   (include curry-and-treehash.clib)  ; also imports the constant ONE == 1
@@ -22,10 +22,10 @@
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
-                                      inner_puzzle_hash
-                                      (sha256tree SINGLETON_STRUCT)
-     )
+    (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree SINGLETON_STRUCT)
+    )
   )
 
   (defun-inline morph_condition (condition SINGLETON_STRUCT)
@@ -63,16 +63,16 @@
         )
         (assert has_odd_output_been_found ())
     )
-   )
+  )
 
- ; assert that either the lineage proof is for a parent singleton, or, if it's for the launcher, verify it matched our launcher ID
- ; then return a condition asserting it actually is our parent ID
- (defun verify_lineage_proof (SINGLETON_STRUCT parent_id is_not_launcher)
+  ; assert that either the lineage proof is for a parent singleton, or, if it's for the launcher, verify it matched our launcher ID
+  ; then return a condition asserting it actually is our parent ID
+  (defun verify_lineage_proof (SINGLETON_STRUCT parent_id is_not_launcher)
     (assert (any is_not_launcher (= parent_id (launcher_id_for_singleton_struct SINGLETON_STRUCT)))
       ; then
       (list ASSERT_MY_PARENT_ID parent_id)
     )
- )
+  )
 
   ; main
 
@@ -89,12 +89,12 @@
           (calculate_coin_id
             (parent_info_for_lineage_proof lineage_proof)
             (if (is_not_eve_proof lineage_proof)  ; The PH calculation changes based on the lineage proof
-              (calculate_full_puzzle_hash SINGLETON_STRUCT (puzzle_hash_for_lineage_proof lineage_proof))  ; wrap the innerpuz in a singleton
-              (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT) ; Use the static launcher puzzle hash
+                (calculate_full_puzzle_hash SINGLETON_STRUCT (puzzle_hash_for_lineage_proof lineage_proof))  ; wrap the innerpuz in a singleton
+                (launcher_puzzle_hash_for_singleton_struct SINGLETON_STRUCT)  ; Use the static launcher puzzle hash
             )
             (if (is_not_eve_proof lineage_proof)  ; The position of "amount" changes based on the type on lineage proof
-              (amount_for_lineage_proof lineage_proof)
-              (amount_for_eve_proof lineage_proof)
+                (amount_for_lineage_proof lineage_proof)
+                (amount_for_eve_proof lineage_proof)
             )
           )
           (is_not_eve_proof lineage_proof)
