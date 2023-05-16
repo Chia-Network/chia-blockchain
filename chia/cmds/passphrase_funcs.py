@@ -136,7 +136,7 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
     min_length: int = Keychain.minimum_passphrase_length()
     if min_length > 0:
         n = min_length
-        print(f"\nPassphrases must be {n} or more characters in length")  # lgtm [py/clear-text-logging-sensitive-data]
+        print(f"\nPassphrases must be {n} or more characters in length")
     while True:
         passphrase: str = getpass("New Passphrase: ")
         confirmation: str = getpass("Confirm Passphrase: ")
@@ -150,7 +150,7 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
 
             return passphrase, save_passphrase
         elif error_msg:
-            print(f"{error_msg}\n")  # lgtm [py/clear-text-logging-sensitive-data]
+            print(f"{error_msg}\n")
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
@@ -290,7 +290,7 @@ def using_default_passphrase() -> bool:
 def display_passphrase_hint() -> None:
     passphrase_hint = Keychain.get_master_passphrase_hint()
     if passphrase_hint is not None:
-        print(f"Passphrase hint: {passphrase_hint}")  # lgtm [py/clear-text-logging-sensitive-data]
+        print(f"Passphrase hint: {passphrase_hint}")
     else:
         print("Passphrase hint is not set")
 

@@ -389,9 +389,7 @@ def _search_derived(
             del remaining_search_terms[term]
             found_search_terms.append(term)
 
-            print(
-                f"Found {found_item_type.value}: {found_item} (HD path: {current_path})"
-            )  # lgtm [py/clear-text-logging-sensitive-data]
+            print(f"Found {found_item_type.value}: {found_item} (HD path: {current_path})")
 
             printed_match = True
 
@@ -406,7 +404,7 @@ def _search_derived(
             if printed_match:
                 # Write the path (without current_index_str) since we printed out a match
                 # e.g. m/12381/8444/2/
-                sys.stdout.write(f"{current_path}")  # lgtm [py/clear-text-logging-sensitive-data]
+                sys.stdout.write(f"{current_path}")
             # Remove the last index from the output
             else:
                 _clear_line_part(len(current_index_str))
@@ -513,7 +511,7 @@ def search_derive(
                 if show_progress:
                     # Print the current path index
                     # e.g. 2/ (example full output: m/12381/8444/2/)
-                    sys.stdout.write(f"{account_str}/")  # lgtm [py/clear-text-logging-sensitive-data]
+                    sys.stdout.write(f"{account_str}/")
 
                 found_terms = _search_derived(
                     sk,

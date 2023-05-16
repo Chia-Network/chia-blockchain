@@ -876,7 +876,7 @@ class WebSocketServer:
         id: str = job["id"]
         final_dir: str = job["final_dir"]
         exclude_final_dir: bool = job["exclude_final_dir"]
-        log.info(f"Post-processing plotter job with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
+        log.info(f"Post-processing plotter job with ID {id}")
         if not exclude_final_dir:
             try:
                 add_plot_directory(self.root_path, final_dir)
@@ -886,7 +886,7 @@ class WebSocketServer:
     async def _start_plotting(self, id: str, loop: asyncio.AbstractEventLoop, queue: str = "default"):
         current_process = None
         try:
-            log.info(f"Starting plotting with ID {id}")  # lgtm [py/clear-text-logging-sensitive-data]
+            log.info(f"Starting plotting with ID {id}")
             config = self._get_plots_queue_item(id)
 
             if config is None:
@@ -936,7 +936,7 @@ class WebSocketServer:
             self._post_process_plotting_job(config)
 
         except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
+            log.exception(f"problem starting {service_name}")
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
             config["error"] = error
@@ -975,7 +975,7 @@ class WebSocketServer:
             id = str(uuid.uuid4())
             ids.append(id)
             config = {
-                "id": id,  # lgtm [py/clear-text-logging-sensitive-data]
+                "id": id,
                 "size": size,
                 "queue": queue,
                 "plotter": plotter,
@@ -1218,7 +1218,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     else:
         plotter_path.parent.mkdir(parents=True, exist_ok=True)
     outfile = open(plotter_path.resolve(), "w")
-    log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
+    log.info(f"Service array: {service_array}")
     process = subprocess.Popen(
         service_array,
         shell=False,

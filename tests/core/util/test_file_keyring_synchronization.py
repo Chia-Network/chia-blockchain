@@ -46,8 +46,8 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
         if found_passphrase != passphrase:
             log.error(
                 f"[pid:{os.getpid()}] error: didn't get expected passphrase: "
-                f"get_passphrase: {found_passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
-                f", expected: {passphrase}"  # lgtm [py/clear-text-logging-sensitive-data]
+                f"get_passphrase: {found_passphrase}"
+                f", expected: {passphrase}"
             )
 
         # Write out a file indicating this process has completed its work

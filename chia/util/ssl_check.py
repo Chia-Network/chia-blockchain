@@ -78,9 +78,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
                     file = root_path / Path(traverse_dict(config, path))
                     parsed_list.append(file)
                 except Exception as e:
-                    print(
-                        f"Failed to lookup config value for {path}: {e}"
-                    )  # lgtm [py/clear-text-logging-sensitive-data]
+                    print(f"Failed to lookup config value for {path}: {e}")
 
         # Check the Mozilla Root CAs as well
         all_certs.append(Path(get_mozilla_ca_crt()))
@@ -93,7 +91,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
 def get_ssl_perm_warning(path: Path, actual_mode: int, expected_mode: int) -> str:
     return (
         f"Permissions {octal_mode_string(actual_mode)} for "
-        f"'{path}' are too open. "  # lgtm [py/clear-text-logging-sensitive-data]
+        f"'{path}' are too open. "
         f"Expected {octal_mode_string(expected_mode)}"
     )
 
@@ -123,7 +121,7 @@ def verify_ssl_certs_and_keys(
                 # permissions can't be dangerously wrong on nonexistent files
                 pass
             except Exception as e:
-                print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
+                print(f"Unable to check permissions for {path}: {e}")
 
     verify_paths(cert_paths, RESTRICT_MASK_CERT_FILE, DEFAULT_PERMISSIONS_CERT_FILE)
     verify_paths(key_paths, RESTRICT_MASK_KEY_FILE, DEFAULT_PERMISSIONS_KEY_FILE)
@@ -147,9 +145,7 @@ def check_ssl(root_path: Path) -> None:
         print("@             WARNING: UNPROTECTED SSL FILE!              @")
         print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         for path, actual_permissions, expected_permissions in invalid_files:
-            print(
-                get_ssl_perm_warning(path, actual_permissions, expected_permissions)
-            )  # lgtm [py/clear-text-logging-sensitive-data]
+            print(get_ssl_perm_warning(path, actual_permissions, expected_permissions))
         print("One or more SSL files were found with permission issues.")
         print("Run `chia init --fix-ssl-permissions` to fix issues.")
 
@@ -168,14 +164,11 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
         (good_perms, mode) = verify_file_permissions(file, mask)
         if not good_perms:
             valid = False
-            print(
-                f"Attempting to set permissions {octal_mode_string(updated_mode)} on "
-                f"{file}"  # lgtm [py/clear-text-logging-sensitive-data]
-            )
+            print(f"Attempting to set permissions {octal_mode_string(updated_mode)} on " f"{file}")
             os.chmod(str(file), updated_mode)
             updated = True
     except Exception as e:
-        print(f"Failed to change permissions on {file}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
+        print(f"Failed to change permissions on {file}: {e}")
         valid = False
 
     return valid, updated
