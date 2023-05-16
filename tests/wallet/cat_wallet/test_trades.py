@@ -30,7 +30,7 @@ from chia.wallet.util.transaction_type import TransactionType
 buffer_blocks = 4
 
 
-def create_tr_for_offer(offer: Offer) -> Tuple[TradeRecord, bytes32]:
+def create_tr_for_offer(offer: Offer) -> Tuple[TradeRecord, Offer]:
     now = uint64(int(time.time()))
     return (
         TradeRecord(
@@ -46,7 +46,7 @@ def create_tr_for_offer(offer: Offer) -> Tuple[TradeRecord, bytes32]:
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
             sent_to=[],
         ),
-        offer.name(),
+        offer,
     )
 
 

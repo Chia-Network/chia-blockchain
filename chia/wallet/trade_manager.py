@@ -389,9 +389,9 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord, offer_name: bytes32) -> None:
+    async def save_trade(self, trade: TradeRecord, offer: Offer) -> None:
+        offer_name: bytes32 = offer.name()
         await self.trade_store.add_trade_record(trade, offer_name)
-        offer: Offer = Offer.from_bytes(trade.offer)
 
         # We want to subscribe to the coin IDs of all coins that are not the ephemeral offer coins
         offered_coins: Set[Coin] = set([value for values in offer.get_offered_coins().values() for value in values])
@@ -448,7 +448,7 @@ class TradeManager:
         )
 
         if success is True and trade_offer is not None and not validate_only:
-            await self.save_trade(trade_offer, created_offer.name())
+            await self.save_trade(trade_offer, created_offer)
 
         return success, trade_offer, error
 
@@ -811,7 +811,7 @@ class TradeManager:
             sent_to=[],
         )
 
-        await self.save_trade(trade_record, offer.name())
+        await self.save_trade(trade_record, offer)
 
         # Dummy transaction for the sake of the wallet push
         push_tx = TransactionRecord(
