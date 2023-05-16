@@ -774,8 +774,18 @@ class DAOCATWallet:
     async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def get_pending_change_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+    ) -> Set[Coin]:
+        return set()
 
     async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
@@ -846,7 +856,3 @@ class DAOCATWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
-
-    async def get_pending_change_balance(self) -> uint64:
-        # No spendable or receivable value
-        return uint64(0)
