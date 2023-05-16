@@ -992,13 +992,10 @@ class WalletStateManager:
         )
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         assert isinstance(inner_puzzle, Program)
-        dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
+        dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             self,
             self.main_wallet,
-            coin_spend.coin,
-            inner_puzzle,
-            coin_spend,
-            coin_state.spent_height,  # this is included in CoinState, pass it in from WSM
+            singleton_id,
         )
         assert dao_wallet is not None
         return None
