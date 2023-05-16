@@ -224,7 +224,7 @@ class DAOWallet(WalletProtocol):
     @staticmethod
     async def create_new_dao_wallet_for_existing_dao(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        main_wallet: Wallet,
         treasury_id: bytes32,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
@@ -232,7 +232,7 @@ class DAOWallet(WalletProtocol):
         """
         Create a DAO wallet for existing DAO
         :param wallet_state_manager: Wallet state manager
-        :param wallet: Standard wallet
+        :param main_wallet: Standard wallet
         :param name: Wallet name
         :return: DAO wallet
         """
@@ -241,7 +241,7 @@ class DAOWallet(WalletProtocol):
         if name is None:
             name = self.generate_wallet_name()
 
-        self.standard_wallet = wallet
+        self.standard_wallet = main_wallet
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DAO wallet for existent DAO ...")
         self.dao_info = DAOInfo(
