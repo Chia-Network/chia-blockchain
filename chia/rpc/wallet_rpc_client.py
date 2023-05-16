@@ -243,12 +243,12 @@ class WalletRpcClient(RpcClient):
 
     async def spend_clawback_coins(
         self,
-        coin_ids: List[str],
+        coin_ids: List[bytes32],
         fee: int = 0,
     ) -> Dict:
         response = await self.fetch(
             "spend_clawback_coins",
-            {"coin_ids": coin_ids, "fee": fee},
+            {"coin_ids": [cid.hex() for cid in coin_ids], "fee": fee},
         )
         return response
 

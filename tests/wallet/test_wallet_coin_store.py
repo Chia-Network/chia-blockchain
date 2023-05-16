@@ -531,13 +531,13 @@ get_coin_records_spent_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinRe
 
 get_coin_records_order_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
     (
-        GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.spent_height)),
+        GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.SPENT_HEIGHT)),
         [record_1, record_2, record_3, record_4],
     ),
-    (GetCoinRecords(wallet_id=uint32(1), order=uint8(CoinRecordOrder.spent_height)), [record_5, record_8]),
+    (GetCoinRecords(wallet_id=uint32(1), order=uint8(CoinRecordOrder.SPENT_HEIGHT)), [record_5, record_8]),
     (
         GetCoinRecords(
-            confirmed_range=UInt32Range(start=uint32(4), stop=uint32(5)), order=uint8(CoinRecordOrder.spent_height)
+            confirmed_range=UInt32Range(start=uint32(4), stop=uint32(5)), order=uint8(CoinRecordOrder.SPENT_HEIGHT)
         ),
         [record_1, record_2, record_5, record_7, record_3, record_4, record_6],
     ),
@@ -545,11 +545,11 @@ get_coin_records_order_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]
 
 get_coin_records_reverse_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
     (
-        GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.spent_height), reverse=True),
+        GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.SPENT_HEIGHT), reverse=True),
         [record_4, record_3, record_1, record_2],
     ),
     (
-        GetCoinRecords(wallet_id=uint32(1), order=uint8(CoinRecordOrder.spent_height), reverse=True),
+        GetCoinRecords(wallet_id=uint32(1), order=uint8(CoinRecordOrder.SPENT_HEIGHT), reverse=True),
         [record_5, record_8],
     ),
     (
@@ -559,7 +559,7 @@ get_coin_records_reverse_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord
     (
         GetCoinRecords(
             confirmed_range=UInt32Range(start=uint32(4), stop=uint32(5)),
-            order=uint8(CoinRecordOrder.spent_height),
+            order=uint8(CoinRecordOrder.SPENT_HEIGHT),
             reverse=True,
         ),
         [record_4, record_6, record_3, record_1, record_2, record_5, record_7],
@@ -620,7 +620,7 @@ get_coin_records_mixed_tests: List[Tuple[GetCoinRecords, int, List[WalletCoinRec
             amount_range=UInt64Range(start=uint64(20), stop=uint64(200000)),
             confirmed_range=UInt32Range(start=uint32(2), stop=uint32(30)),
             spent_range=UInt32Range(start=uint32(1), stop=uint32(15)),
-            order=uint8(CoinRecordOrder.spent_height),
+            order=uint8(CoinRecordOrder.SPENT_HEIGHT),
             reverse=True,
             include_total_count=True,
         ),

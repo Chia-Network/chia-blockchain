@@ -19,8 +19,8 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 class CoinRecordOrder(IntEnum):
-    confirmed_height = 1
-    spent_height = 2
+    CONFIRMED_HEIGHT = 1
+    SPENT_HEIGHT = 2
 
 
 @streamable
@@ -38,7 +38,7 @@ class GetCoinRecords(Streamable):
     amount_range: Optional[UInt64Range] = None
     confirmed_range: Optional[UInt32Range] = None
     spent_range: Optional[UInt32Range] = None
-    order: uint8 = uint8(CoinRecordOrder.confirmed_height)
+    order: uint8 = uint8(CoinRecordOrder.CONFIRMED_HEIGHT)
     reverse: bool = False
     include_total_count: bool = False  # Include the total number of entries for the query without applying offset/limit
 
@@ -197,7 +197,7 @@ class WalletCoinStore:
         amount_range: Optional[UInt64Range] = None,
         confirmed_range: Optional[UInt32Range] = None,
         spent_range: Optional[UInt32Range] = None,
-        order: CoinRecordOrder = CoinRecordOrder.confirmed_height,
+        order: CoinRecordOrder = CoinRecordOrder.CONFIRMED_HEIGHT,
         reverse: bool = False,
         include_total_count: bool = False,
     ) -> GetCoinRecordsResult:

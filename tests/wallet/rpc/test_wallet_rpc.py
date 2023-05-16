@@ -618,7 +618,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
         fee=uint64(0),
         puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
     )
-    clawback_coin_id_1 = tx.additions[0].name().hex()
+    clawback_coin_id_1 = tx.additions[0].name()
     assert tx.spend_bundle is not None
     await farm_transaction(full_node_api, wallet_1_node, tx.spend_bundle)
     tx = await wallet_2_rpc.send_transaction(
@@ -629,7 +629,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
         puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
     )
     assert tx.spend_bundle is not None
-    clawback_coin_id_2 = tx.additions[0].name().hex()
+    clawback_coin_id_2 = tx.additions[0].name()
     await farm_transaction(full_node_api, wallet_2_node, tx.spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_1_rpc, 1)
     await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_2_rpc, 1)
@@ -642,14 +642,12 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
         has_exception = True
     assert has_exception
     # Test coin ID is not a Clawback coin
-    invalid_coin_id = tx.removals[0].name().hex()
+    invalid_coin_id = tx.removals[0].name()
     resp = await wallet_2_rpc.spend_clawback_coins([invalid_coin_id], 500)
     assert resp["success"]
     assert resp["transaction_ids"] == []
     # Test unsupported wallet
-    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(
-        bytes32.fromhex(clawback_coin_id_1)
-    )
+    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_1)
     assert coin_record is not None
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
         dataclasses.replace(coin_record, wallet_type=WalletType.CAT)
@@ -663,9 +661,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 0
     # Test coin puzzle hash doesn't match
-    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(
-        bytes32.fromhex(clawback_coin_id_2)
-    )
+    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_2)
     assert coin_record is not None
     fake_coin = Coin(coin_record.coin.parent_coin_info, wallet_2_puzhash, coin_record.coin.amount)
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
@@ -673,7 +669,7 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     )
     has_exception = False
     try:
-        await wallet_1_rpc.spend_clawback_coins([fake_coin.name().hex()], 100)
+        await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
     except ValueError:
         has_exception = True
     assert has_exception
