@@ -252,6 +252,7 @@ class Wallet:
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
+        magic_conditions: Optional[List[Any]] = None,
         fee=0,
     ) -> Program:
         assert fee >= 0
@@ -277,6 +278,8 @@ class Wallet:
         if puzzle_announcements_to_assert:
             for announcement_hash in puzzle_announcements_to_assert:
                 condition_list.append(make_assert_puzzle_announcement(announcement_hash))
+        if magic_conditions is not None:
+            condition_list.extend(magic_conditions)
         return solution_for_conditions(condition_list)
 
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
@@ -424,7 +427,7 @@ class Wallet:
                                 break
                     else:
                         change_puzzle_hash = await self.get_new_puzzlehash()
-                    primaries.append(Payment(change_puzzle_hash, uint64(change), []))
+                    primaries.append(Payment(change_puzzle_hash, uint64(change)))
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())

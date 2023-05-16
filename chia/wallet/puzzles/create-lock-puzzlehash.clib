@@ -3,10 +3,10 @@
 ; my-id is there on a discarded branch of the tree as a signal to another piece of code
 ; that will be checking if a coin whose puzzle is of this form, was created or spent.
 (
-    (defun-inline create-lock-puzzlehash (my-id)
-        (sha256tree (list r
-                          (list c
-                                (list q
-                                      my-id)
-                                (q (q ()))))))
+  (defun-inline create-lock-puzzlehash (my-id)
+    (sha256tree (list r
+        (list c
+          (list q
+          my-id)
+  (q (q ()))))))
 )

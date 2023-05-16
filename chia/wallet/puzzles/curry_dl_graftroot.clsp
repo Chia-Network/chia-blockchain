@@ -1,19 +1,19 @@
 (mod
   (
-      GRAFTROOT_MOD
-      SINGLETON_STRUCTS
-      METADATA_LAYER_HASHES
-      VALUES_TO_PROVE
-      inner_puzzle
+    GRAFTROOT_MOD
+    SINGLETON_STRUCTS
+    METADATA_LAYER_HASHES
+    VALUES_TO_PROVE
+    inner_puzzle
   )
 
   (qq (a
-    (q . (unquote GRAFTROOT_MOD))
-    (c (q . (unquote inner_puzzle))
-    (c (q . (unquote SINGLETON_STRUCTS))
-    (c (q . (unquote METADATA_LAYER_HASHES))
-    (c (q . (unquote VALUES_TO_PROVE))
-    1
-    ))))
+      (q . (unquote GRAFTROOT_MOD))
+      (c (q . (unquote inner_puzzle))
+        (c (q . (unquote SINGLETON_STRUCTS))
+          (c (q . (unquote METADATA_LAYER_HASHES))
+            (c (q . (unquote VALUES_TO_PROVE))
+              1
+      ))))
   ))
 )
