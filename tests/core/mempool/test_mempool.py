@@ -2524,21 +2524,21 @@ class TestPkmPairs:
     pk1 = G1Element.generator()
     pk2 = G1Element.generator()
 
-    def test_empty_list(self, softfork):
+    def test_empty_list(self):
         conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
-    def test_no_agg_sigs(self, softfork):
+    def test_no_agg_sigs(self):
         # one create coin: h1 amount: 1 and not hint
         spends = [Spend(self.h3, self.h4, None, None, None, None, None, None, [(self.h1, 1, b"")], [], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
-    def test_agg_sig_me(self, softfork):
+    def test_agg_sig_me(self):
         spends = [
             Spend(
                 self.h1,
@@ -2555,22 +2555,22 @@ class TestPkmPairs:
             )
         ]
         conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
 
-    def test_agg_sig_unsafe(self, softfork):
+    def test_agg_sig_unsafe(self):
         conds = SpendBundleConditions(
             [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
         )
-        pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
         assert msgs == [b"msg1", b"msg2"]
 
-    def test_agg_sig_mixed(self, softfork):
+    def test_agg_sig_mixed(self):
         spends = [Spend(self.h1, self.h2, None, None, None, None, None, None, [], [(bytes48(self.pk1), b"msg1")], 0)]
         conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar", soft_fork=softfork)
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
         assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]
 
@@ -2578,25 +2578,17 @@ class TestPkmPairs:
         conds = SpendBundleConditions(
             [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
         )
-        pks, msgs = pkm_pairs(conds, b"msg1", soft_fork=False)
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
-        assert msgs == [b"msg1", b"msg2"]
-
-        pks, msgs = pkm_pairs(conds, b"msg2", soft_fork=False)
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
-        assert msgs == [b"msg1", b"msg2"]
+        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
+            pkm_pairs(conds, b"msg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg1", soft_fork=True)
+            pkm_pairs(conds, b"sg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"sg1", soft_fork=True)
+            pkm_pairs(conds, b"msg2")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg2", soft_fork=True)
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"g2", soft_fork=True)
+            pkm_pairs(conds, b"g2")
 
 
 class TestPkmPairsForConditionDict:

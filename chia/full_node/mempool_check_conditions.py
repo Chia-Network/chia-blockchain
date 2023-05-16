@@ -40,10 +40,8 @@ def get_name_puzzle_conditions(
 ) -> NPCResult:
     if mempool_mode:
         flags = MEMPOOL_MODE
-    elif height >= constants.SOFT_FORK_HEIGHT:
-        flags = LIMIT_STACK
     else:
-        flags = 0
+        flags = LIMIT_STACK
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
