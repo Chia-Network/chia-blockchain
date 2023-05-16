@@ -7,7 +7,7 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
@@ -114,6 +114,11 @@ class DAOWallet(WalletProtocol):
       * Hear about a new proposal -- check interest threshold (how many votes)
       * Get Updated Proposal Data
     """
+
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DAOWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -1259,7 +1264,7 @@ class DAOWallet(WalletProtocol):
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, cats_new_innerpuzhash)
+        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, Program(cats_new_innerpuzhash))
         xch_conditions = [
             [
                 51,

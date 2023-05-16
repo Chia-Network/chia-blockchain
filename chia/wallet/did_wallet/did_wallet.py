@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
+import chia
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -184,7 +185,7 @@ class DIDWallet:
         inner_puzzle: Program,
         coin_spend: CoinSpend,
         name: Optional[str] = None,
-    ):
+    ) -> DIDWallet:
         """
         Create a DID wallet from a transfer
         :param wallet_state_manager: Wallet state manager
