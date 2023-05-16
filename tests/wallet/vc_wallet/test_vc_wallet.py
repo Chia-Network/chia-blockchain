@@ -109,9 +109,10 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
         parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
     ) -> Optional[Literal[True]]:
         vc_record = await client.vc_get(launcher_id)
+        result: Optional[Literal[True]] = None
         if vc_record is not None:
-            return True if vc_record.vc.coin.parent_coin_info == parent_id else None
-        return None
+            result = True if vc_record.vc.coin.parent_coin_info == parent_id else None
+        return result
 
     await time_out_assert_not_none(
         10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_0, vc_record.vc.launcher_id
