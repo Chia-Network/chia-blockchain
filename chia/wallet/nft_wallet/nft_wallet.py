@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
+from typing_extensions import Unpack
 
 import chia.wallet.singleton
 from chia.protocols.wallet_protocol import CoinState
@@ -56,14 +57,13 @@ from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 
 class NFTWallet:
     if TYPE_CHECKING:
-        from chia.wallet.wallet_protocol import WalletProtocol
-
         _protocol_check: ClassVar[WalletProtocol] = cast("NFTWallet", None)
 
     wallet_state_manager: Any
@@ -401,11 +401,11 @@ class NFTWallet:
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
             fee,
-            origin.name(),
             coins,
             None,
             False,
             announcement_set,
+            origin_id=origin.name(),
         )
         genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
 
@@ -621,19 +621,19 @@ class NFTWallet:
         puzzle_hashes: List[bytes32],
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
-        nft_coin: Optional[NFTCoinInfo] = None,
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         ignore_max_send_amount: bool = False,
-        new_owner: Optional[bytes] = None,
-        new_did_inner_hash: Optional[bytes] = None,
-        trade_prices_list: Optional[Program] = None,
-        additional_bundles: List[SpendBundle] = [],
-        metadata_update: Optional[Tuple[str, str]] = None,
         reuse_puzhash: Optional[bool] = None,
-        **kwargs: Any,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
+        nft_coin: Optional[NFTCoinInfo] = kwargs.get("nft_coin", None)
+        new_owner: Optional[bytes] = kwargs.get("new_owner", None)
+        new_did_inner_hash: Optional[bytes] = kwargs.get("new_did_inner_hash", None)
+        trade_prices_list: Optional[Program] = kwargs.get("trade_prices_list", None)
+        additional_bundles: List[SpendBundle] = kwargs.get("additional_bundles", [])
+        metadata_update: Optional[Tuple[str, str]] = kwargs.get("metadata_update", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 

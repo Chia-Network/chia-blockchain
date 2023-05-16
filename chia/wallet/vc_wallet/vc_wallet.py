@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -30,6 +31,7 @@ from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -204,11 +206,13 @@ class VCWallet:
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        new_proof_hash: Optional[bytes32] = None,  # Requires that this key posesses the DID to update the specified VC
-        provider_inner_puzhash: Optional[bytes32] = None,
         reuse_puzhash: Optional[bool] = None,
-        **kwargs: Any,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
+        new_proof_hash: Optional[bytes32] = kwargs.get(
+            "new_proof_hash", None
+        )  # Requires that this key posesses the DID to update the specified VC
+        provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
         """
         Entry point for two standard actions:
          - Cycle the singleton and make an announcement authorizing something
@@ -447,6 +451,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol  # pragma: no cover
-
     _dummy: WalletProtocol = VCWallet()  # pragma: no cover
