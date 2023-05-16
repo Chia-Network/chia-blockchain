@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+from blspy import AugSchemeMPL, G2Element
 from chia_rs import Coin
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
+from chia.types.coin_spend import CoinSpend
+from chia.types.eligible_coin_spends import EligibleCoinSpends
+from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
@@ -35,13 +37,6 @@ class MempoolRemoveReason(Enum):
     BLOCK_INCLUSION = 2
     POOL_FULL = 3
     EXPIRED = 4
-
-
-@dataclass(frozen=True)
-class InternalMempoolItem:
-    spend_bundle: SpendBundle
-    npc_result: NPCResult
-    height_added_to_mempool: uint32
 
 
 class Mempool:
@@ -123,6 +118,7 @@ class Mempool:
             assert_height,
             assert_before_height,
             assert_before_seconds,
+            bundle_coin_spends=item.bundle_coin_spends,
         )
 
     def total_mempool_fees(self) -> int:
@@ -355,7 +351,7 @@ class Mempool:
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
 
             self._items[item.name] = InternalMempoolItem(
-                item.spend_bundle, item.npc_result, item.height_added_to_mempool
+                item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
             )
 
         info = FeeMempoolInfo(self.mempool_info, self.total_mempool_cost(), self.total_mempool_fees(), datetime.now())
@@ -374,31 +370,50 @@ class Mempool:
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
-        spend_bundles: List[SpendBundle] = []
+        processed_spend_bundles = 0
         additions: List[Coin] = []
+        # This contains a map of coin ID to a coin spend solution and its isolated cost
+        # We reconstruct it for every bundle we create from mempool items because we
+        # deduplicate on the first coin spend solution that comes with the highest
+        # fee rate item, and that can change across calls
+        eligible_coin_spends = EligibleCoinSpends()
+        coin_spends: List[CoinSpend] = []
+        sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
-        for item in self.items_by_feerate():
-            if not item_inclusion_filter(item.name):
+        with self._db_conn:
+            cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        for row in cursor:
+            name = bytes32(row[0])
+            fee = int(row[1])
+            item = self._items[name]
+            if not item_inclusion_filter(name):
                 continue
-            log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
-            if (
-                item.cost + cost_sum > self.mempool_info.max_block_clvm_cost
-                or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
-            ):
-                break
-            spend_bundles.append(item.spend_bundle)
-            cost_sum += item.cost
-            fee_sum += item.fee
-            if item.npc_result.conds is not None:
-                for spend in item.npc_result.conds.spends:
-                    for puzzle_hash, amount, _ in spend.create_coin:
-                        coin = Coin(spend.coin_id, puzzle_hash, amount)
-                        additions.append(coin)
-        if len(spend_bundles) == 0:
+            try:
+                unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+                    bundle_coin_spends=item.bundle_coin_spends, max_cost=item.npc_result.cost
+                )
+                item_cost = item.npc_result.cost - cost_saving
+                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, fee / item_cost)
+                if (
+                    item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
+                    or fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
+                ):
+                    break
+                coin_spends.extend(unique_coin_spends)
+                additions.extend(unique_additions)
+                sigs.append(item.spend_bundle.aggregated_signature)
+                cost_sum += item_cost
+                fee_sum += fee
+                processed_spend_bundles += 1
+            except Exception as e:
+                log.debug(f"Exception while checking a mempool item for deduplication: {e}")
+                continue
+        if processed_spend_bundles == 0:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
             f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
         )
-        agg = SpendBundle.aggregate(spend_bundles)
+        aggregated_signature = AugSchemeMPL.aggregate(sigs)
+        agg = SpendBundle(coin_spends, aggregated_signature)
         return agg, additions

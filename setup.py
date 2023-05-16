@@ -8,7 +8,7 @@ from setuptools import setup
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
     "anyio==3.6.2",
-    "boto3==1.26.111",  # AWS S3 for DL s3 plugin
+    "boto3==1.26.131",  # AWS S3 for DL s3 plugin
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
@@ -123,6 +123,9 @@ kwargs = dict(
         "chia.wallet.nft_wallet",
         "chia.wallet.trading",
         "chia.wallet.util",
+        "chia.wallet.vc_wallet",
+        "chia.wallet.vc_wallet.vc_puzzles",
+        "chia.wallet.vc_wallet.cr_puzzles",
         "chia.ssl",
         "mozilla-ca",
     ],
