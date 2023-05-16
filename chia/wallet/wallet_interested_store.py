@@ -168,3 +168,16 @@ class WalletInterestedStore:
                 (asset_id,),
             )
             await cursor.close()
+
+    async def rollback_to_block(self, height: int) -> None:
+        """
+        Delete all ignored states above a certain height
+        :param height: Reorg height
+        :return None:
+        """
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "DELETE from unacknowledged_asset_token_states WHERE fork_height>?",
+                (height,),
+            )
+            await cursor.close()
