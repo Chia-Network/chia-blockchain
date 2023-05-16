@@ -11,6 +11,7 @@ import ssl
 import sys
 import tempfile
 import time
+import random
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -352,10 +353,10 @@ class BlockTools:
 
     async def setup_plots(
         self,
-        num_og_plots: int = 15,
-        num_pool_plots: int = 5,
+        num_og_plots: int = 60,
+        num_pool_plots: int = 20,
         num_non_keychain_plots: int = 3,
-        plot_size: int = 20,
+        plot_size: int = 22,
         bitfield: bool = True,
     ) -> bool:
         self.add_plot_directory(self.plot_dir)
@@ -705,6 +706,8 @@ class BlockTools:
                         if get_plot_id(proof_of_space) in recent_plot_ids:
                             print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
                             continue
+                        if random.randint(0, 3) != 0:
+                            continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -1005,6 +1008,8 @@ class BlockTools:
                             break
                         if get_plot_id(proof_of_space) in recent_plot_ids:
                             print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
+                            continue
+                        if random.randint(0, 3) == 0:
                             continue
                         assert last_timestamp is not None
 
