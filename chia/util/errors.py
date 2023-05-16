@@ -305,6 +305,10 @@ class KeychainLabelExists(KeychainLabelError):
 ##
 
 
+class ParseError(Exception):
+    pass
+
+
 class InvalidPathError(Exception):
     def __init__(self, path: Path, error_message: str):
         super().__init__(f"{error_message}: {str(path)!r}")

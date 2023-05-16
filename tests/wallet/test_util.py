@@ -11,6 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.errors import ParseError
 from chia.util.ints import uint64
 from chia.wallet.util.compute_hints import (
     hinted_coin_from_condition,
@@ -42,7 +43,7 @@ hinted_coins = [coin_generator.get(parent_coin.coin.name()) for _ in range(10)]
     ],
 )
 def test_hinted_coin_from_condition_failures(arguments: List[Any], error: str) -> None:
-    with pytest.raises(ValueError, match=re.escape(error)):
+    with pytest.raises(ParseError, match=re.escape(error)):
         hinted_coin_from_condition(Program.to(arguments), bytes32(b"0" * 32))
 
 

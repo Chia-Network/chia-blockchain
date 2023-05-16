@@ -10,6 +10,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.errors import ParseError
 from chia.util.ints import uint64
 
 
@@ -22,17 +23,17 @@ class HintedCoin:
 def hinted_coin_from_condition(condition: Program, parent_coin_id: bytes32) -> HintedCoin:
     data = condition.as_python()
     if len(data) != 4 or data[0] != ConditionOpcode.CREATE_COIN:
-        raise ValueError(f"Not a hinted coin: {data}")
+        raise ParseError(f"Not a hinted coin: {data}")
 
     try:
         coin = Coin(parent_coin_id, bytes32(data[1]), uint64(int_from_bytes(data[2])))
     except Exception as e:
-        raise ValueError(f"Invalid coin: {e}, data: {data[1:2]}") from e
+        raise ParseError(f"Invalid coin: {e}, data: {data[1:2]}") from e
 
     try:
         hint = bytes32(data[3][0])
     except Exception as e:
-        raise ValueError(f"Invalid hint: {e}, data: {data[3:]}") from e
+        raise ParseError(f"Invalid hint: {e}, data: {data[3:]}") from e
 
     return HintedCoin(coin, hint)
 
@@ -43,7 +44,7 @@ def hinted_coins_in_coin_spend(coin_spend: CoinSpend) -> Iterator[HintedCoin]:
     for condition in result_program.as_iter():
         try:
             yield hinted_coin_from_condition(condition, parent_coin_id)
-        except Exception:
+        except ParseError:
             continue
 
 
