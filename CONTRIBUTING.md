@@ -14,18 +14,22 @@ If you want to learn more about this project, read the [wiki](https://github.com
 Please review this [diagram](https://drive.google.com/file/d/1r7AXTrj7gtD0Xy-9BtTZR6yv7WXMPgeM/view?usp=sharing), to better understand the git workflow.
 
 We would be pleased to accept code contributions to this project.
-As we have now released, the main priority is improving the mainnet blockchain.
-You can visit our [Trello project board](https://trello.com/b/ZuNx7sET) to get a sense of what is in the backlog.
-Generally, things to the left are in progress or done. Some things go through "Coming up soon", but some will come directly out of other columns.
-Usually, the things closer to the top of each column are the ones that will be worked on soonest.
+As we have now released, the main priority is improving the mainnet blockchain. You can view our [Product Roadmap](https://roadmap.chia.net) to see what we are working on.
+
 If you are interested in cryptography, math, or just like hacking in python, there are many interesting problems to work on.
-Contact any of the team members on [Discord](https://discord.gg/chia), which we use as the main communication method. You can also comment on any Trello card.
+Contact any of the team members on [Discord](https://discord.gg/chia), which we use as the main communication method.
 
 We ask that external contributors create a fork of the `main` branch for any feature work they wish to take on.
 
 Members of the Chia organization may create feature branches from the `main` branch.
 
 In the event an emergency fix is required for the release version of Chia, members of the Chia organization will create a feature branch from the current release branch `latest`.
+
+## Creating Signed Commits
+
+Our branch protection rules require that all commits be signed. If you haven't signed your commits before, you can read about commit signing here: https://docs.github.com/en/authentication/managing-commit-signature-verification
+
+There are detailed, per-OS steps for setting up commit signing with either [GPG keys](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-gpg-key), [SSH keys](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-ssh-key), or [X.509 keys](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key#telling-git-about-your-x509-key).
 
 ## Branching Strategy
 
