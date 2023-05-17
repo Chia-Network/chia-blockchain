@@ -9,14 +9,14 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.8.1 Chia blockchain 2023-05-17
 
 ### Changed
-* Softfork2 testing by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15204
+* updated testnet softfork height so softfork rules take affect on testnet immediately by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15204
 * Move to Discord in docs and install scripts (#15193) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15210
-* hardcode `num` param when listing NFTs from CLI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15293
 * optimize compact proofs by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15304
 
 ### Fixed
-* wallet: Avoid dict changes while iterating in `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15216
-* don't add transactions to the mempool before it has a valid peak by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15264
+* issue where cli only listed first 50 NFTs by hardcoding `num` param when listing NFTs from CLI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15293
+* issue where wallet might display `RuntimeError: dictionary changed size during iteration` by avoiding dict changes while iterating in `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15216
+* issue where node had trouble keeping peers with `assert self.peak is not None` error by not adding transactions to the mempool before it has a valid peak (fixes #15217) by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15264
 
 ## 1.8.0 Chia blockchain 2023-05-03
 
