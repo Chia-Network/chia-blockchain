@@ -44,6 +44,10 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
                 raise click.ClickException(
                     f"The following fixed files need to be dropped from {exclusion_file.name}:\n{fixed}"
                 )
+            introduced = "\n".join(f"  -> {entry}" for entry in sorted(updated_set - old_set))
+            if len(introduced) > 0:
+                raise click.ClickException(f"The following files have new issues {exclusion_file.name}:\n{introduced}")
+
     # Create the `mypy.ini` with all entries from `mypy-exclusions.txt`
     exclusion_section = f"[mypy-{','.join(exclusion_lines)}]"
     mypy_config_data = (
