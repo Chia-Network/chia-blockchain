@@ -14,7 +14,7 @@ from chiapos import DiskProver
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
 from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
-from chia.util.generator_tools import list_to_batches
+from chia.util.generator_tools import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -180,19 +180,19 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
-                    batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
+                for batch in to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
+                    batch_result: PlotRefreshResult = self.refresh_batch(batch.entries, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
                         break
                     # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
-                    batch_result.remaining = remaining
+                    batch_result.remaining = batch.remaining
                     total_result.loaded += batch_result.loaded
                     total_result.processed += batch_result.processed
                     total_result.duration += batch_result.duration
 
                     self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
-                    if remaining == 0:
+                    if batch.remaining == 0:
                         break
                     batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                     self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
