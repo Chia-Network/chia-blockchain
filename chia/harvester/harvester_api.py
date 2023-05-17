@@ -195,7 +195,7 @@ class HarvesterAPI:
                 # This is being executed at the beginning of the slot
                 total += 1
                 if passes_plot_filter(
-                    self.harvester.constants,
+                    new_challenge.filter_prefix_bits,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
