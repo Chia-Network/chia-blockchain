@@ -39,7 +39,7 @@ class RemarkDataType:
     This will reduce the chance of collision with Remark announcements in other puzzles.
     """
 
-    CLAWBACK = b"CWBK"
+    CLAWBACK = bytes.fromhex("C001")
 
 
 @dataclass(frozen=True)
