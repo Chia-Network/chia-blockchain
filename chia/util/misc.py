@@ -3,12 +3,15 @@ from __future__ import annotations
 import dataclasses
 import signal
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Sequence, Union
+from typing import Any, Collection, Dict, Generic, Iterator, List, Sequence, TypeVar, Union
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+T = TypeVar("T")
 
 
 @streamable
@@ -129,3 +132,34 @@ class UInt32Range(Streamable):
 class UInt64Range(Streamable):
     start: uint64 = uint64(0)
     stop: uint64 = uint64(uint64.MAXIMUM_EXCLUSIVE - 1)
+
+
+@dataclass(frozen=True)
+class Batch(Generic[T]):
+    remaining: int
+    entries: List[T]
+
+
+def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
+    if batch_size <= 0:
+        raise ValueError("to_batches: batch_size must be greater than 0.")
+    total_size = len(to_split)
+    if total_size == 0:
+        return iter(())
+
+    if isinstance(to_split, list):
+        for batch_start in range(0, total_size, batch_size):
+            batch_end = min(batch_start + batch_size, total_size)
+            yield Batch(total_size - batch_end, to_split[batch_start:batch_end])
+    else:
+        processed = 0
+        entries = []
+        for entry in to_split:
+            entries.append(entry)
+            if len(entries) >= batch_size:
+                processed += len(entries)
+                yield Batch(total_size - processed, entries)
+                entries = []
+        if len(entries) > 0:
+            processed += len(entries)
+            yield Batch(total_size - processed, entries)

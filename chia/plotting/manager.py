@@ -14,7 +14,7 @@ from chiapos import DiskProver
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
 from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
-from chia.util.generator_tools import to_batches
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
