@@ -30,6 +30,22 @@ def get_inner_puzzle_from_singleton(puzzle: Program) -> Optional[Program]:
     return Program(INNER_PUZZLE)
 
 
+def get_singleton_id_from_singleton(puzzle: Program) -> Optional[bytes32]:
+    """
+    Extract the singleton_id from the full puzzle of a singleton
+    :param puzzle: Singleton puzzle
+    :return: Singleton ID
+    """
+    r = puzzle.uncurry()
+    if r is None:
+        return None
+    inner_f, args = r
+    if not is_singleton(inner_f):
+        return None
+    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    return bytes32(SINGLETON_STRUCT.at("rf").as_atom())
+
+
 def is_singleton(inner_f: Program) -> bool:
     """
     Check if a puzzle is a singleton mod
