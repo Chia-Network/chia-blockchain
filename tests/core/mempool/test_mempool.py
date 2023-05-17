@@ -16,7 +16,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -52,6 +52,7 @@ from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.mempool.test_mempool_manager import (
     IDENTITY_PUZZLE_HASH,
+    TEST_COIN,
     make_test_coins,
     mempool_item_from_spendbundle,
     mk_item,
@@ -2945,3 +2946,10 @@ def test_aggregating_on_a_solution_then_a_more_cost_saving_one_appears() -> None
     # We ran with solution A and missed bigger savings on solution B
     assert mempool.size() == 5
     assert [c.coin for c in agg.coin_spends] == [coins[0], coins[1], coins[2]]
+
+
+def test_get_puzzle_and_solution_for_coin_failure():
+    with pytest.raises(
+        ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: failed to fill whole buffer"
+    ):
+        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram(), [], []), TEST_COIN)
