@@ -351,10 +351,10 @@ class BlockTools:
 
     async def setup_plots(
         self,
-        num_og_plots: int = 60,
-        num_pool_plots: int = 20,
+        num_og_plots: int = 15,
+        num_pool_plots: int = 5,
         num_non_keychain_plots: int = 3,
-        plot_size: int = 22,
+        plot_size: int = 20,
         bitfield: bool = True,
     ) -> bool:
         self.add_plot_directory(self.plot_dir)
