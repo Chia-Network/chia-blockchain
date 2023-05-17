@@ -9,7 +9,7 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.8.1 Chia blockchain 2023-05-17
 
 ### Changed
-- Updated testnet softfork height so softfork rules take affect on testnet immediately
+- Updated testnet softfork height so softfork rules take effect on testnet immediately
 - Move to Discord in docs and install scripts (#15193)
 - Optimize compact proofs
 
