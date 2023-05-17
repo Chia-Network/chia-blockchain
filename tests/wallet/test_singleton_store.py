@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+import time
+from secrets import token_bytes
+
+import pytest
+
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
+from chia.util.ints import uint32, uint64
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.singleton_coin_record import SingletonCoinRecord
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
+from tests.util.db_connection import DBConnection
+
+
+def get_new_singleton_record() -> SingletonCoinRecord:
+    singleton_id: bytes32 = bytes32(token_bytes(32))
+    inner_puz: Program = Program.to(1)
+    parent_puz: Program = create_singleton_puzzle(inner_puz, singleton_id)
+    parent_puz_hash: bytes32 = parent_puz.get_tree_hash()
+    parent_coin: Coin = Coin(singleton_id, parent_puz_hash, uint64(1))
+    inner_sol: Program = Program.to([[51, inner_puz, 1]])
+    lineage_proof: LineageProof = LineageProof(singleton_id, inner_puz.get_tree_hash(), uint64(1))
+    parent_sol: Program = Program.to([lineage_proof.to_program(), 1, inner_sol])
+    parent_coin_spend: CoinSpend = CoinSpend(parent_coin, parent_puz, parent_sol)
+    child_coin: Coin = Coin(parent_coin.name(), parent_puz.get_tree_hash(), uint64(1))
+    record = SingletonCoinRecord(
+        coin=child_coin,
+        singleton_id=singleton_id,
+        wallet_id=uint32(2),
+        parent_coin_spend=parent_coin_spend,
+        inner_puzzle_hash=inner_puz.get_tree_hash(),
+        confirmed=False,
+        confirmed_at_height=uint32(0),
+        spent_height=uint32(0),
+        lineage_proof=lineage_proof,
+        custom_data="{'key': 'value'}",
+        generation=uint32(0),
+        timestamp=uint64(time.time()),
+    )
+    return record
+
+
+def get_next_singleton_record(record: SingletonCoinRecord) -> SingletonCoinRecord:
+    inner_puz: Program = Program.to(1)
+    parent_puz: Program = create_singleton_puzzle(inner_puz, record.singleton_id)
+    inner_sol: Program = Program.to([[51, inner_puz, 1]])
+    next_lineage_proof: LineageProof = LineageProof(record.coin.parent_coin_info, inner_puz.get_tree_hash(), uint64(1))
+    parent_sol: Program = Program.to([record.lineage_proof.to_program(), 1, inner_sol])
+    parent_coin_spend: CoinSpend = CoinSpend(record.coin, parent_puz, parent_sol)
+    child_coin: Coin = Coin(record.coin.name(), parent_puz.get_tree_hash(), uint64(1))
+    next_record = SingletonCoinRecord(
+        coin=child_coin,
+        singleton_id=record.singleton_id,
+        wallet_id=record.wallet_id,
+        parent_coin_spend=parent_coin_spend,
+        inner_puzzle_hash=inner_puz.get_tree_hash(),
+        confirmed=False,
+        confirmed_at_height=uint32(0),
+        spent_height=uint32(0),
+        lineage_proof=next_lineage_proof,
+        custom_data=record.custom_data,
+        generation=uint32(record.generation + 1),
+        timestamp=uint64(time.time()),
+    )
+    return next_record
+
+
+@pytest.mark.asyncio
+async def test_singleton_store() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        record = get_new_singleton_record()
+        singleton_id = record.singleton_id
+        # add record to DB
+        await db.add_singleton_record(record)
+
+        # fetch record by coin_id
+        rec = await db.get_record_by_coin_id(record.name())
+        assert rec == record
+
+        # fetch non-existent coin
+        rec = await db.get_record_by_coin_id(bytes32(token_bytes(32)))
+        assert rec is None
+
+        # make record confirmed
+        confirmed_height = uint32(10)
+        timestamp = uint64(time.time())
+        await db.set_confirmed(record.name(), confirmed_height, timestamp)
+        rec = await db.get_record_by_coin_id(record.name())
+        assert isinstance(rec, SingletonCoinRecord)
+        assert rec.confirmed
+        assert rec.confirmed_at_height == confirmed_height
+
+        # get the next singleton record and add it to DB
+        next_record = get_next_singleton_record(record)
+        await db.add_singleton_record(next_record)
+
+        # check the new record exists and the old record has been set to spent
+        recs = await db.get_records_by_singleton_id(record.singleton_id)
+        assert len(recs) == 2
+        assert not recs[0].confirmed
+        assert recs[1].confirmed
+        assert recs[0].generation == 1
+        assert recs[1].spent_height == 0
+
+        # check get_latest_singleton with and without filtering confirmed
+        latest = await db.get_latest_singleton(singleton_id)
+        assert latest == recs[0]
+        latest = await db.get_latest_singleton(singleton_id, only_confirmed=True)
+        assert latest == recs[1]
+
+        # check get_unconfirmed_singletons
+        unconfirmed = await db.get_unconfirmed_singletons(singleton_id)
+        assert len(unconfirmed) == 1
+        assert unconfirmed[0] == recs[0]
+
+        # confirm the new record
+        await db.set_confirmed(next_record.name(), uint32(20), uint64(time.time()))
+        recs = await db.get_records_by_singleton_id(record.singleton_id)
+        assert recs[0].confirmed
+        assert recs[1].spent_height == recs[0].confirmed_at_height == uint32(20)
+
+        # Delete the last record
+        await db.delete_record_by_coin_id(next_record.name())
+        recs = await db.get_records_by_singleton_id(singleton_id)
+        assert len(recs) == 1
+        assert recs[0].name() == record.name()
+
+        # Delete all records by id
+        await db.delete_records_by_singleton_id(singleton_id)
+        recs = await db.get_records_by_singleton_id(singleton_id)
+        assert len(recs) == 0
