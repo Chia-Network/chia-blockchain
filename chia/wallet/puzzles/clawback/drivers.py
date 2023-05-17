@@ -150,7 +150,8 @@ def match_clawback_puzzle(
             if condition.opcode == ConditionOpcode.CREATE_COIN:
                 new_puzhash.add(bytes32.from_bytes(condition.vars[0]))
     # Check if the inner puzzle matches the coin puzzle hash
-    assert metadata is not None, "Clawback metadata is None"
+    if metadata is None:
+        return metadata
     puzzle: Program = create_merkle_puzzle(
         metadata.time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash
     )
