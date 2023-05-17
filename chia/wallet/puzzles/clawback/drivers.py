@@ -143,7 +143,7 @@ def match_clawback_puzzle(
             ):
                 try:
                     metadata = ClawbackMetadata.from_bytes(VersionedBlob.from_bytes(condition.vars[1]).blob)
-                except Exception:
+                except Exception:  # pragma: no cover
                     # Invalid Clawback metadata
                     log.error(f"Invalid Clawback metadata {condition.vars[1].hex()}")  # pragma: no cover
                     return None  # pragma: no cover
