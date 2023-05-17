@@ -3,9 +3,9 @@
 
   (defun decompress_cses (decompress_puzzle decompress_coin_spend_entry cses deserialize puzzle_prefix)
     (if cses
-      (c (a decompress_coin_spend_entry (list deserialize decompress_puzzle puzzle_prefix (f cses)))
-         (decompress_cses decompress_puzzle decompress_coin_spend_entry (r cses) deserialize puzzle_prefix ))
-      ()) )
+        (c (a decompress_coin_spend_entry (list deserialize decompress_puzzle puzzle_prefix (f cses)))
+        (decompress_cses decompress_puzzle decompress_coin_spend_entry (r cses) deserialize puzzle_prefix ))
+  ()) )
 
   (defun join_gen_args (generators start1 end1 start2 end2)
     (concat

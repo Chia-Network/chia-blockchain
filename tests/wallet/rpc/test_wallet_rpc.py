@@ -49,6 +49,8 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.query_filter import TransactionTypeFilter
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
@@ -201,7 +203,7 @@ def assert_tx_amounts(
 ) -> None:
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
-    expected_additions = len(outputs) if change_expected is None else len(outputs) + 1
+    expected_additions = len(outputs) + 1 if change_expected else len(outputs)
     if is_cat and amount_fee:
         expected_additions += 1
     assert len(tx.additions) == expected_additions
@@ -339,6 +341,55 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.asyncio
+async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
+
+    result = await wallet_rpc_client.get_farmed_amount()
+
+    expected_result = {
+        "farmed_amount": 4_000_000_000_000,
+        "farmer_reward_amount": 500_000_000_000,
+        "fee_amount": 0,
+        "last_height_farmed": 2,
+        "pool_reward_amount": 3_500_000_000_000,
+        "success": True,
+    }
+
+    assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    wallet_node: WalletNode = env.wallet_1.node
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    fee_amount = 100
+    tx = await wallet.generate_signed_transaction(
+        amount=uint64(5),
+        puzzle_hash=bytes32([0] * 32),
+        fee=uint64(fee_amount),
+    )
+    await wallet.push_transaction(tx)
+
+    our_ph = await wallet.get_new_puzzlehash()
+    await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    result = await wallet_rpc_client.get_farmed_amount()
+    assert result["fee_amount"] == fee_amount
+
+
+@pytest.mark.asyncio
 async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
@@ -364,6 +415,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
             False,
         ),
         ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
+        ([(120000000000, None), (120000000000, None)], 10000000000, True, False),
     ],
 )
 @pytest.mark.asyncio
@@ -418,7 +470,8 @@ async def test_create_signed_transaction(
         fee=amount_fee,
         wallet_id=wallet_id,
     )
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin, is_cat=is_cat)
+    change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
+    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
@@ -473,7 +526,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
     tx_res: TransactionRecord = await client.create_signed_transaction(
         outputs, coin_announcements=tx_coin_announcements
     )
-    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=False)
+    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
 
 
@@ -636,6 +689,13 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
+
+    # Test type filter
+    all_transactions = await client.get_transactions(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+    )
+    assert len(all_transactions) == 5
+    assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
 
 
 @pytest.mark.asyncio

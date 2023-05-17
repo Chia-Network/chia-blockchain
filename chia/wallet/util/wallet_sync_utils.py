@@ -9,10 +9,11 @@ from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import wallet_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     CoinState,
+    RegisterForCoinUpdates,
+    RegisterForPhUpdates,
     RejectAdditionsRequest,
     RejectBlockHeaders,
     RejectHeaderBlocks,
@@ -20,10 +21,12 @@ from chia.protocols.wallet_protocol import (
     RequestAdditions,
     RequestBlockHeaders,
     RequestHeaderBlocks,
+    RequestPuzzleSolution,
     RequestRemovals,
     RespondAdditions,
     RespondBlockHeaders,
     RespondHeaderBlocks,
+    RespondPuzzleSolution,
     RespondRemovals,
     RespondToCoinUpdates,
     RespondToPhUpdates,
@@ -71,7 +74,7 @@ async def subscribe_to_phs(
     """
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
-    msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
+    msg = RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
     all_coins_state: Optional[RespondToPhUpdates] = await peer.call_api(
         FullNodeAPI.register_interest_in_puzzle_hash, msg, timeout=300
     )
@@ -88,7 +91,7 @@ async def subscribe_to_coin_updates(
     """
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
-    msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
+    msg = RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
     all_coins_state: Optional[RespondToCoinUpdates] = await peer.call_api(
         FullNodeAPI.register_interest_in_coin, msg, timeout=300
     )
@@ -315,6 +318,17 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
+def sort_coin_states(coin_states: List[CoinState]) -> List[CoinState]:
+    return sorted(
+        coin_states,
+        key=lambda coin_state: (
+            last_change_height_cs(coin_state),
+            0 if coin_state.created_height is None else coin_state.created_height,
+            0 if coin_state.spent_height is None else coin_state.spent_height,
+        ),
+    )
+
+
 def get_block_header(block: FullBlock) -> HeaderBlock:
     return HeaderBlock(
         block.finished_sub_slots,
@@ -413,9 +427,9 @@ async def fetch_header_blocks_in_range(
 
 async def fetch_coin_spend(height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
     solution_response = await peer.call_api(
-        FullNodeAPI.request_puzzle_solution, wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        FullNodeAPI.request_puzzle_solution, RequestPuzzleSolution(coin.name(), height)
     )
-    if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+    if solution_response is None or not isinstance(solution_response, RespondPuzzleSolution):
         raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
     assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
     assert solution_response.response.coin_name == coin.name()
