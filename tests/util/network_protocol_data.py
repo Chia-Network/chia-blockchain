@@ -48,6 +48,7 @@ new_signage_point = farmer_protocol.NewSignagePoint(
     uint64(2329045448547720842),
     uint64(8265724497259558930),
     uint8(194),
+    uint8(9),
 )
 
 proof_of_space = ProofOfSpace(
@@ -698,6 +699,7 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
     uint8(148),
     bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
     [pool_difficulty],
+    uint8(9),
 )
 
 new_proof_of_space = harvester_protocol.NewProofOfSpace(
