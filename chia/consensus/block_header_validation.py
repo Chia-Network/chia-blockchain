@@ -486,7 +486,7 @@ def validate_unfinished_header_block(
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
     q_str: Optional[bytes32] = verify_and_get_quality_string(
-        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
+        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=height
     )
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)

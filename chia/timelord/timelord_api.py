@@ -68,6 +68,7 @@ class TimelordAPI:
                     new_unfinished_block.reward_chain_block,
                     self.timelord.last_state.get_sub_slot_iters(),
                     self.timelord.last_state.get_difficulty(),
+                    self.timelord.get_height(),
                 )
             except Exception:
                 return None

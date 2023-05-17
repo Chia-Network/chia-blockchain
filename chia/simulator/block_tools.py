@@ -76,6 +76,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     passes_plot_filter,
@@ -682,6 +683,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
 
@@ -979,6 +981,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1130,6 +1133,7 @@ class BlockTools:
                     assert signage_point.cc_vdf is not None
                     cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                # we're creating the genesis block, its height is always 0
                 qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                     constants,
                     cc_challenge,
@@ -1137,6 +1141,7 @@ class BlockTools:
                     seed,
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
+                    uint32(0),
                 )
 
                 # Try each of the proofs of space
@@ -1283,6 +1288,7 @@ class BlockTools:
         seed: bytes,
         difficulty: uint64,
         sub_slot_iters: uint64,
+        height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
@@ -1292,7 +1298,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            if passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
+            prefix_bits = calculate_prefix_bits(constants, height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
@@ -1549,7 +1556,7 @@ def load_block_list(
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
         quality_str = verify_and_get_quality_string(
-            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash
+            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
         )
         assert quality_str is not None
         required_iters: uint64 = calculate_iterations_quality(
