@@ -703,7 +703,7 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        if get_plot_id(proof_of_space) in recent_plot_ids:
+                        if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
                             print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
                             continue
                         if random.randint(0, 3) != 0:
@@ -1006,7 +1006,7 @@ class BlockTools:
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
-                        if get_plot_id(proof_of_space) in recent_plot_ids:
+                        if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
                             print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
                             continue
                         if random.randint(0, 3) != 0:

@@ -68,6 +68,9 @@ class ConsensusConstants:
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
 
+    # soft fork initiated in 2.0 release
+    SOFT_FORK3_HEIGHT: uint32
+
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 

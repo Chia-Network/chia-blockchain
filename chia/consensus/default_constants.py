@@ -58,6 +58,8 @@ default_kwargs = {
     "POOL_SUB_SLOT_ITERS": 37600000000,  # iters limit * NUM_SPS
     "SOFT_FORK_HEIGHT": 3630000,
     "SOFT_FORK2_HEIGHT": 3886635,
+    # Spetember 2023
+    "SOFT_FORK3_HEIGHT": 4200000,
 }
 
 
