@@ -26,6 +26,7 @@ class NewSignagePoint(Streamable):
     difficulty: uint64
     sub_slot_iters: uint64
     signage_point_index: uint8
+    filter_prefix_bits: uint8
 
 
 @streamable

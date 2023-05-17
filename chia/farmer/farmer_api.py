@@ -63,8 +63,9 @@ class FarmerAPI:
         self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
     ) -> None:
         """
-        This is a response from the harvester, for a NewChallenge. Here we check if the proof
-        of space is sufficiently good, and if so, we ask for the whole proof.
+        This is a response from the harvester, for a NewSignagePointHarvester.
+        Here we check if the proof of space is sufficiently good, and if so, we
+        ask for the whole proof.
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
@@ -94,6 +95,8 @@ class FarmerAPI:
                 self.farmer.constants,
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
+                height=None,
+                filter_prefix_bits=sp.filter_prefix_bits,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
@@ -318,8 +321,13 @@ class FarmerAPI:
         assert pospace is not None
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
+        # we skip plot filter validation here, we trust the harvester
         computed_quality_string = verify_and_get_quality_string(
-            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash
+            pospace,
+            self.farmer.constants,
+            response.challenge_hash,
+            response.sp_hash,
+            height=None,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -476,6 +484,7 @@ class FarmerAPI:
                 new_signage_point.signage_point_index,
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
+                new_signage_point.filter_prefix_bits,
             )
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)

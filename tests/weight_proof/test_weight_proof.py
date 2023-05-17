@@ -13,7 +13,7 @@ from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality
 from chia.full_node.block_store import BlockStore
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
@@ -51,6 +51,7 @@ async def load_blocks_dont_validate(
             constants,
             block.reward_chain_block.pos_ss_cc_challenge_hash,
             cc_sp,
+            height=block.height,
         )
         assert quality_string is not None
 
@@ -523,6 +524,36 @@ class TestWeightProof:
         await connection.close()
         assert valid
         print(f"size of proof is {get_size(wp)}")
+
+
+@pytest.mark.parametrize(
+    "height,expected",
+    [
+        (0, 3),
+        (5496000, 2),
+        (10542000, 1),
+        (15592000, 0),
+        (20643000, 0),
+    ],
+)
+def test_calculate_prefix_bits_calmp_zero(height: uint32, expected: int):
+    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=3)
+    assert calculate_prefix_bits(constants, height) == expected
+
+
+@pytest.mark.parametrize(
+    "height,expected",
+    [
+        (0, 9),
+        (5496000, 8),
+        (10542000, 7),
+        (15592000, 6),
+        (20643000, 5),
+    ],
+)
+def test_calculate_prefix_bits_default(height: uint32, expected: int):
+    constants = DEFAULT_CONSTANTS
+    assert calculate_prefix_bits(constants, height) == expected
 
 
 def get_size(obj, seen=None):
