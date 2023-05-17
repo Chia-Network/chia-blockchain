@@ -11,11 +11,9 @@ import ssl
 import sys
 import tempfile
 import time
-import random
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-from datetime import datetime
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
@@ -693,7 +691,6 @@ class BlockTools:
                         force_plot_id=force_plot_id,
                     )
 
-                    print(f"New signage point #{signage_point_index}. Diff: {difficulty}. Sub slot iters: {sub_slot_iters}. Timestamp: {datetime.now()}")
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS or force_overflow:
                             break
@@ -704,9 +701,6 @@ class BlockTools:
                                     continue
                         assert latest_block.header_hash in blocks
                         if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
-                            print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
-                            continue
-                        if random.randint(0, 3) != 0:
                             continue
                         additions = None
                         removals = None
@@ -806,10 +800,7 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        print(
-                            f"Created block {block_record.height} ove=False, iters {block_record.total_iters}"
-                            f"Timestamp: {datetime.now()}"
-                        )
+                        self.log.info(f"Created block {block_record.height} ove=False, iters {block_record.total_iters}")
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -1002,14 +993,10 @@ class BlockTools:
                         force_plot_id=force_plot_id,
                     )
 
-                    print(f"New signage point #{signage_point_index}. Diff: {difficulty}. Sub slot iters: {sub_slot_iters}. Timestamp: {datetime.now()}")
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
-                            print(f"Block dropped due to CHIP-13. Timestamp: {datetime.now()}")
-                            continue
-                        if random.randint(0, 3) != 0:
                             continue
                         assert last_timestamp is not None
 
@@ -1100,10 +1087,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        print(
-                            f"Created block {block_record.height } ov=True, iters {block_record.total_iters}"
-                            f"Timestamp: {datetime.now()}"
-                        )
+                        self.log.info(f"Created block {block_record.height } ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
