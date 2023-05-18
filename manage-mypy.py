@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from subprocess import run
-from typing import List
+from subprocess import CalledProcessError, run
+from typing import List, cast
 
 import click
 
@@ -17,7 +17,13 @@ exclusion_file = here.joinpath("mypy-exclusions.txt")
 def get_mypy_failures() -> List[str]:
     # Get a list of all mypy failures when only running mypy with the template file `mypy.ini.template`
     command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
-    return run(command, capture_output=True, encoding="utf-8").stdout.splitlines()
+    try:
+        run(command, capture_output=True, check=True, encoding="utf-8")
+    except CalledProcessError as e:
+        if e.returncode == 1:
+            return cast(List[str], e.stdout.splitlines())
+        raise click.ClickException(f"Unexpected mypy failure:\n{e.stderr}") from e
+    return []
 
 
 def build_exclusion_list(mypy_failures: List[str]) -> List[str]:
