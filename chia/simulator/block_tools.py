@@ -628,7 +628,7 @@ class BlockTools:
         pending_ses: bool = False
 
         recent_plot_ids: List[bytes32] = []
-        for block in block_list[-constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:]:
+        for block in block_list[-constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS :]:
             plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
             assert plot_id not in recent_plot_ids
             recent_plot_ids.append(plot_id)
@@ -699,7 +699,10 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
+                        if (
+                            get_plot_id(proof_of_space) in recent_plot_ids
+                            and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT
+                        ):
                             continue
                         additions = None
                         removals = None
@@ -995,7 +998,10 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-                        if get_plot_id(proof_of_space) in recent_plot_ids and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT:
+                        if (
+                            get_plot_id(proof_of_space) in recent_plot_ids
+                            and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT
+                        ):
                             continue
 
                         if proof_of_space.pool_contract_puzzle_hash is not None:
