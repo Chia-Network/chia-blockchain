@@ -64,6 +64,7 @@ async def run_add_block_benchmark(version: int) -> None:
         required_iters = uint64(100)
         transaction_block_counter = 0
         prev_transaction_block = bytes32([0] * 32)
+        plot_id = bytes32([0] * 32)
         prev_transaction_height = uint32(0)
         total_time = 0.0
         ses_counter = 0
@@ -203,6 +204,7 @@ async def run_add_block_benchmark(version: int) -> None:
                 deficit,
                 deficit == 16,
                 prev_transaction_height,
+                plot_id,
                 timestamp if is_transaction else None,
                 prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
                 None if fees == 0 else fees,

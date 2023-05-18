@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Set
 
 from blspy import AugSchemeMPL
 
@@ -23,7 +23,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import get_plot_id, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -492,12 +492,15 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_POSPACE)
 
     # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
-    if header_block.height >= constants.SOFT_FORK3_HEIGHT:
-        curr = prev_b
-        recent_plot_ids: List[bytes32] = []
-        while curr is not None and len(recent_plot_ids) < constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
-            recent_plot_ids.append(curr.plot_id)
-            curr = blocks.try_block_record(curr.prev_hash)
+    if height >= constants.SOFT_FORK3_HEIGHT:
+        curr_optional_block_record: Optional[BlockRecord] = prev_b
+        recent_plot_ids: Set[bytes32] = set()
+        while (
+            curr_optional_block_record is not None
+            and len(recent_plot_ids) < constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS
+        ):
+            recent_plot_ids.add(curr_optional_block_record.plot_id)
+            curr_optional_block_record = blocks.try_block_record(curr_optional_block_record.prev_hash)
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         if plot_id in recent_plot_ids:
             return None, ValidationError(Err.INVALID_POSPACE)
