@@ -628,9 +628,12 @@ class BlockTools:
         pending_ses: bool = False
 
         recent_plot_ids: List[bytes32] = []
-        for block in block_list[-constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS :]:
+        for block in block_list:
             plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
-            assert plot_id not in recent_plot_ids
+            if block.height >= constants.SOFT_FORK3_HEIGHT:
+                assert plot_id not in recent_plot_ids
+            if len(recent_plot_ids) == constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
+                recent_plot_ids.pop(0)
             recent_plot_ids.append(plot_id)
 
         # Start at the last block in block list
