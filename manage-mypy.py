@@ -32,7 +32,8 @@ def get_mypy_failures() -> List[str]:
 
 
 def build_exclusion_list(mypy_failures: List[str]) -> List[str]:
-    # Create content for `mypy-exclusions.txt` from a list of mypy failures
+    # Create content for `mypy-exclusions.txt` from a list of mypy failures which look like:
+    #     # chia/cmds/wallet_funcs.py:1251: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment] # noqa
     return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in mypy_failures[:-1]})
 
 
