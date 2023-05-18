@@ -14,6 +14,11 @@ here = file_path.parent
 exclusion_file = here.joinpath("mypy-exclusions.txt")
 
 
+def write_file(path: Path, content: str) -> None:
+    with path.open(mode="w", encoding="utf-8", newline="\n") as file:
+        file.write(content.strip() + "\n")
+
+
 def get_mypy_failures() -> List[str]:
     # Get a list of all mypy failures when only running mypy with the template file `mypy.ini.template`
     command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
@@ -75,7 +80,7 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
         .read_text(encoding="utf-8")
         .replace("[mypy-chia-exclusions]", exclusion_section)
     )
-    here.joinpath("mypy.ini").write_text(mypy_config_data.strip() + "\n", encoding="utf-8")
+    write_file(here.joinpath("mypy.ini"), mypy_config_data)
 
 
 @main.command()
@@ -84,7 +89,7 @@ def build_exclusions() -> None:
         f"# File created by: python {file_path.name} build-exclusions",
         *build_exclusion_list(get_mypy_failures()),
     ]
-    exclusion_file.write_text("\n".join(updated_file_content) + "\n", encoding="utf-8")
+    write_file(exclusion_file, "\n".join(updated_file_content))
 
 
 sys.exit(main())
