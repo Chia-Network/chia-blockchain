@@ -21,7 +21,7 @@ def write_file(path: Path, content: str) -> None:
 
 def get_mypy_failures() -> List[str]:
     # Get a list of all mypy failures when only running mypy with the template file `mypy.ini.template`
-    command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
+    command = [sys.executable, "activated.py", "mypy", "--config-file", "mypy.ini.template"]
     try:
         run(command, capture_output=True, check=True, encoding="utf-8")
     except CalledProcessError as e:
