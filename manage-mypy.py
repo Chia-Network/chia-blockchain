@@ -14,11 +14,17 @@ here = file_path.parent
 exclusion_file = here.joinpath("mypy-exclusions.txt")
 
 
-def build_exclusion_list() -> List[str]:
-    # Create content for `mypy-exclusions.txt` based on a `mypy` run with `mypy.ini.template`
+def get_mypy_failures() -> List[str]:
+    # Get a list of all mypy failures when only running mypy with the template file `mypy.ini.template`
     command = ["python", "activated.py", "mypy", "--config-file", "mypy.ini.template"]
-    lines = run(command, capture_output=True, encoding="utf-8").stdout.splitlines()
-    return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in lines[0 : len(lines) - 1]})
+    return run(command, capture_output=True, encoding="utf-8").stdout.splitlines()
+
+
+def build_exclusion_list(mypy_failures: List[str]) -> List[str]:
+    # Create content for `mypy-exclusions.txt` from a list of mypy failures
+    return sorted(
+        {".".join(Path(line[: line.find(".py")]).parts) for line in mypy_failures[0 : len(mypy_failures) - 1]}
+    )
 
 
 @click.group()
@@ -34,7 +40,8 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
     exclusion_file_content = exclusion_file.read_text(encoding="utf-8").splitlines()
     exclusion_lines = [line for line in exclusion_file_content if not line.startswith("#") and len(line.strip()) > 0]
     if check_exclusions:
-        updated_exclusions = build_exclusion_list()
+        mypy_failures = get_mypy_failures()
+        updated_exclusions = build_exclusion_list(mypy_failures)
         # Compare the old content with the new content and fail if some file without issues is excluded.
         updated_set = set(updated_exclusions)
         old_set = set(exclusion_lines)
@@ -44,9 +51,16 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
                 raise click.ClickException(
                     f"The following fixed files need to be dropped from {exclusion_file.name}:\n{fixed}"
                 )
-            introduced = "\n".join(f"  -> {entry}" for entry in sorted(updated_set - old_set))
-            if len(introduced) > 0:
-                raise click.ClickException(f"The following files have new issues {exclusion_file.name}:\n{introduced}")
+            new_exclusions = sorted(updated_set - old_set)
+            new_failures = "\n".join(
+                sorted(
+                    line.strip()
+                    for line in mypy_failures
+                    if any(exclusion.split(".")[-1] + ".py" in line for exclusion in new_exclusions)
+                )
+            )
+            if len(new_failures) > 0:
+                raise click.ClickException(f"The following new issues have been introduced:\n{new_failures}")
 
     # Create the `mypy.ini` with all entries from `mypy-exclusions.txt`
     exclusion_section = f"[mypy-{','.join(exclusion_lines)}]"
@@ -62,7 +76,7 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
 def build_exclusions() -> None:
     updated_file_content = [
         f"# File created by: python {file_path.name} build-exclusions",
-        *build_exclusion_list(),
+        *build_exclusion_list(get_mypy_failures()),
     ]
     exclusion_file.write_text("\n".join(updated_file_content) + "\n", encoding="utf-8")
 
