@@ -53,6 +53,7 @@ if [ "$NOTARIZE" == true ]; then
 	export CSC_LINK=$APPLE_DEV_ID_APP
 	export CSC_KEY_PASSWORD=$APPLE_DEV_ID_APP_PASS
 	export PUBLISH_FOR_PULL_REQUEST=true
+	export CSC_FOR_PULL_REQUEST=true
 else
 	echo "Not on ci or no secrets so not signing"
 	export CSC_IDENTITY_AUTO_DISCOVERY=false
