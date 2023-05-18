@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Optional, Tuple, Set
+from typing import Optional, Set, Tuple
 
 from blspy import AugSchemeMPL
 
