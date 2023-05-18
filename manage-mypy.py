@@ -31,10 +31,14 @@ def get_mypy_failures() -> List[str]:
     return []
 
 
+def split_mypy_failure(line: str) -> List[str]:
+    return list(Path(line[: line.find(".py")]).parts)
+
+
 def build_exclusion_list(mypy_failures: List[str]) -> List[str]:
     # Create content for `mypy-exclusions.txt` from a list of mypy failures which look like:
     #     # chia/cmds/wallet_funcs.py:1251: error: Incompatible types in assignment (expression has type "str", variable has type "int")  [assignment] # noqa
-    return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in mypy_failures[:-1]})
+    return sorted({".".join(split_mypy_failure(line)) for line in mypy_failures[:-1]})
 
 
 @click.group()
@@ -62,15 +66,14 @@ def build_mypy_ini(check_exclusions: bool = False) -> None:
                     f"The following fixed files need to be dropped from {exclusion_file.name}:\n{fixed}"
                 )
             new_exclusions = sorted(updated_set - old_set)
-            new_failures = "\n".join(
-                sorted(
-                    line.strip()
-                    for line in mypy_failures
-                    if any(exclusion.split(".")[-1] + ".py" in line for exclusion in new_exclusions)
-                )
+            new_failures = sorted(
+                line.strip()
+                for line in mypy_failures
+                if any(exclusion.split(".") == split_mypy_failure(line) for exclusion in new_exclusions)
             )
             if len(new_failures) > 0:
-                raise click.ClickException(f"The following new issues have been introduced:\n{new_failures}")
+                new_failures_string = "\n".join(new_failures)
+                raise click.ClickException(f"The following new issues have been introduced:\n{new_failures_string}")
 
     # Create the `mypy.ini` with all entries from `mypy-exclusions.txt`
     exclusion_section = f"[mypy-{','.join(exclusion_lines)}]"
