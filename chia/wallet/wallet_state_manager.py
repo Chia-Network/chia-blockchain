@@ -728,7 +728,7 @@ class WalletStateManager:
         tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
         min_amount = uint64(self.config.get("auto_claim", {}).get("min_amount", 0))
         for coin in unspent_coins:
-            if coin.metadata is None:
+            if coin.metadata is None or coin.metadata.blob == b"":
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
             metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
