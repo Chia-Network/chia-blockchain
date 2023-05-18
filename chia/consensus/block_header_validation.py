@@ -491,6 +491,17 @@ def validate_unfinished_header_block(
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)
 
+    # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
+    if header_block.height >= constants.SOFT_FORK3_HEIGHT:
+        curr = prev_b
+        recent_plot_ids: List[bytes32] = []
+        while curr is not None and len(recent_plot_ids) < constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
+            recent_plot_ids.append(curr.plot_id)
+            curr = blocks.try_block_record(curr.prev_hash)
+        plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
+        if plot_id in recent_plot_ids:
+            return None, ValidationError(Err.INVALID_POSPACE)
+
     # 6. check signage point index
     # no need to check negative values as this is uint 8
     if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:

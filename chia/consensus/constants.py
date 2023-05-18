@@ -68,6 +68,12 @@ class ConsensusConstants:
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
 
+    # soft fork initiated in 2.0 release
+    SOFT_FORK3_HEIGHT: uint32
+
+    # number of consecutive plot ids required to be distinct
+    NUM_DISTINCT_CONSECUTIVE_PLOT_IDS: uint8
+
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 

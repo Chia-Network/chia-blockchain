@@ -10,6 +10,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.proof_of_space import get_plot_id
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -141,6 +142,7 @@ def header_block_to_sub_block_record(
     )
     timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
+    plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
 
     return BlockRecord(
         block.header_hash,
@@ -160,6 +162,7 @@ def header_block_to_sub_block_record(
         deficit,
         overflow,
         prev_transaction_block_height,
+        plot_id,
         timestamp,
         prev_transaction_block_hash,
         fees,
