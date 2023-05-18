@@ -33,9 +33,7 @@ def get_mypy_failures() -> List[str]:
 
 def build_exclusion_list(mypy_failures: List[str]) -> List[str]:
     # Create content for `mypy-exclusions.txt` from a list of mypy failures
-    return sorted(
-        {".".join(Path(line[: line.find(".py")]).parts) for line in mypy_failures[0 : len(mypy_failures) - 1]}
-    )
+    return sorted({".".join(Path(line[: line.find(".py")]).parts) for line in mypy_failures[:-1]})
 
 
 @click.group()
