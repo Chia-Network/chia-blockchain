@@ -68,9 +68,11 @@ class LockQueue(Generic[_T_Comparable]):
         queued_callback: Optional[Callable[[], object]] = None,
     ) -> AsyncIterator[None]:
         task = asyncio.current_task()
-        if task is None:
+        if task is None:  # pragma: no cover
+            # Ignoring coverage since this is an async function and thus would only be run with a current task.
+            # If we can find a way to test this, we should.
             raise Exception(f"unable to check current task, got: {task}")
-        if self._active is not None and self._active.task is asyncio.current_task():
+        if self._active is not None and self._active.task is task:
             raise NestedLockUnsupportedError()
 
         if self._queue.empty():
