@@ -84,9 +84,18 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
+@pytest.fixture(scope="session", params=[0, 4200000], ids=["soft_fork3_0", "soft_fork3_4200000"])
+def soft_fork3(request):
+    return request.param
+
+
 @pytest.fixture(scope="session", name="bt")
-def block_tools_fixture(get_keychain) -> BlockTools:
+def block_tools_fixture(get_keychain, soft_fork3) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
+    test_constants.replace(
+        "SOFT_FORK3_HEIGHT": soft_fork3,
+    )
+
     _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
     return _shared_block_tools
 
