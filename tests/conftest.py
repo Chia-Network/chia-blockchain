@@ -92,11 +92,11 @@ def soft_fork3(request):
 @pytest.fixture(scope="session", name="bt")
 def block_tools_fixture(get_keychain, soft_fork3) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    test_constants.replace(
+    updated_test_constants = test_constants.replace(
         SOFT_FORK3_HEIGHT=soft_fork3,
     )
 
-    _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
+    _shared_block_tools = create_block_tools(constants=updated_test_constants, keychain=get_keychain)
     return _shared_block_tools
 
 
@@ -117,14 +117,18 @@ def self_hostname():
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request):
+async def empty_blockchain(request, soft_fork3):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from chia.simulator.setup_nodes import test_constants
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
+    updated_test_constants = test_constants.replace(
+        SOFT_FORK3_HEIGHT=soft_fork3,
+    )
+
+    bc1, db_wrapper, db_path = await create_blockchain(updated_test_constants, request.param)
     yield bc1
 
     await db_wrapper.close()
