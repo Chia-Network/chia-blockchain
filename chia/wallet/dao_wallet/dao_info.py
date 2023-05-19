@@ -45,8 +45,10 @@ class DAOInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class DAORules(Streamable):
+    mint_puzzle_hash: Optional[bytes32]
     proposal_timelock: uint64
     soft_close_length: uint64
+    current_cat_issuance: uint64
     attendance_required: uint64
     pass_percentage: uint64
     self_destruct_length: uint64

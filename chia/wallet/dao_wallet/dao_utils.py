@@ -39,9 +39,8 @@ DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
 DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clsp")
 DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clsp")
-DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
 DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
+DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")
 P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
 DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clsp")
@@ -50,6 +49,7 @@ P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
+DAO_CAT_TAIL: Program = load_clvm("genesis_by_puzzle_hash.clsp")
 
 log = logging.Logger(__name__)
 
@@ -62,6 +62,15 @@ def singleton_struct_for_id(id: bytes32) -> Program:
 def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
     singleton_struct = singleton_struct_for_id(id)
     return DAO_CAT_LAUNCHER.curry(singleton_struct)
+
+
+def curry_cat_eve(next_puzzle_hash: bytes32) -> Program:
+    return DAO_CAT_EVE.curry(next_puzzle_hash)
+
+
+def curry_cat_tail(treasury_id: bytes32) -> Program:
+    launcher = create_cat_launcher_for_singleton_id(treasury_id)
+    return DAO_CAT_TAIL.curry(launcher.get_tree_hash())
 
 
 def create_new_proposal_puzzle(
@@ -107,18 +116,30 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         cat_tail_hash,
     )
     # TREASURY_MOD_HASH
+    # DAO_CAT_LAUNCHER_PUZHASH  ; this is the pre-curryed dao cat launcher
+    # MINT_PUZHASH
     # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
     # PROPOSAL_LENGTH
     # PROPOSAL_SOFTCLOSE_LENGTH
-    # ATTENDANCE_REQUIRED
+    # CURRENT_CAT_ISSUANCE
+    # ATTENDANCE_REQUIRED  ; this is a percentage of current_cat_issuance
     # PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
-    # PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
+    # PROPOSAL_SELF_DESTRUCT_TIME  ; time in seconds after which proposals can be automatically closed
     # ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
+
+    dao_cat_launcher = create_cat_launcher_for_singleton_id(treasury_id)
+    if dao_rules.mint_puzzle_hash is None:
+        mint_puzhash = get_p2_singleton_puzhash(treasury_id)
+    else:
+        mint_puzhash = dao_rules.mint_puzzle_hash
     puzzle = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD_HASH,
+        dao_cat_launcher.get_tree_hash(),
+        mint_puzhash,
         proposal_validator,
         dao_rules.proposal_timelock,
         dao_rules.soft_close_length,
+        dao_rules.current_cat_issuance,
         dao_rules.attendance_required,
         dao_rules.pass_percentage,
         dao_rules.self_destruct_length,
@@ -592,9 +613,9 @@ def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
     return curried_args
 
 
-def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:
+def generate_cat_tail(treasury_id: bytes32) -> Program:
     dao_cat_launcher = create_cat_launcher_for_singleton_id(treasury_id).get_tree_hash()
-    puzzle = DAO_CAT_TAIL.curry(genesis_coin_id, dao_cat_launcher)
+    puzzle = DAO_CAT_TAIL.curry(dao_cat_launcher)
     return puzzle
 
 

@@ -112,8 +112,10 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     cat_amt = 2000
     dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -274,8 +276,10 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
 
     cat_amt = 300000
     dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -423,8 +427,10 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     cat_amt = 300000
     dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -604,8 +610,10 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Create an update proposal
     new_dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(5),
         soft_close_length=uint64(4),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(200000),  # 100%
         pass_percentage=uint64(10000),  # 100%
         self_destruct_length=uint64(8),
@@ -842,8 +850,10 @@ async def test_dao_proposal_partial_vote(
 
     cat_amt = 300000
     dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -1013,10 +1023,10 @@ async def test_dao_proposal_partial_vote(
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
 
-    # await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
+    await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
     # breakpoint()
 
 
@@ -1070,8 +1080,10 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
     cat_amt = 300000
     fee = 10000
     dao_rules = DAORules(
+        mint_puzzle_hash=None,
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -1353,8 +1365,10 @@ async def test_dao_rpc_client(
         cat_amt = 150000
         amount_of_cats = cat_amt * 2
         dao_rules = DAORules(
+            mint_puzzle_hash=None,
             proposal_timelock=uint64(8),
             soft_close_length=uint64(4),
+            current_cat_issuance=cat_amt,
             attendance_required=uint64(1000),  # 10%
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),
@@ -1578,8 +1592,10 @@ async def test_dao_cat_exits(
         cat_amt = 150000
         amount_of_cats = cat_amt
         dao_rules = DAORules(
+            mint_puzzle_hash=None,
             proposal_timelock=uint64(8),
             soft_close_length=uint64(4),
+            current_cat_issuance=cat_amt,
             attendance_required=uint64(1000),  # 10%
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),

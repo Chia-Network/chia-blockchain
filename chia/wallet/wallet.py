@@ -326,6 +326,7 @@ class Wallet:
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
+        make_change: bool = True,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -400,7 +401,7 @@ class Wallet:
             # Only one coin creates outputs
             if origin_id in (None, coin.name()):
                 origin_id = coin.name()
-                if change > 0:
+                if change > 0 and make_change:
                     if reuse_puzhash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
                         for primary in primaries:
@@ -490,6 +491,7 @@ class Wallet:
         exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
+        make_change: bool = True,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -519,6 +521,7 @@ class Wallet:
             exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
             reuse_puzhash=reuse_puzhash,
+            make_change=make_change,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
@@ -538,7 +541,7 @@ class Wallet:
         input_amount = sum(r.amount for r in rem_list)
         if negative_change_allowed:
             assert output_amount >= input_amount
-        else:
+        elif make_change:
             assert output_amount == input_amount
 
         return TransactionRecord(
