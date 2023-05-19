@@ -299,6 +299,7 @@ async def environment(
             file.write(bytes(100))
 
     harvester_services, farmer_service, bt = farmer_two_harvester_not_started
+    farmer_service.reconnect_retry_seconds = 1
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
     harvesters: List[Harvester] = [

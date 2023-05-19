@@ -1,0 +1,34 @@
+; This is a new generator ROM that does not pass in the CLVM parser program as
+; the first argument to the generator program, but instead passes NULL.
+; It is intended to be used once the 2.0 hard fork activates, in an attempt to
+; simplify the consensus rules
+(mod (block_decompresser_program (historical_blocks_tree))
+
+  (defconstant null ()
+  )
+
+  (defun sha256tree
+    (TREE)
+    (if (l TREE)
+        (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+        (sha256 1 TREE)
+    )
+  )
+
+  (defun process_coin_spend ((parent puzzle amount solution . spend_level_extras))
+    (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))
+  )
+
+  (defun recurse (coin_spends)
+    (if coin_spends
+        (c (process_coin_spend (f coin_spends)) (recurse (r coin_spends)))
+        0
+    )
+  )
+
+  (defun process-decompressor ((coin_spends . block-level-extras))
+    (c (recurse coin_spends) block-level-extras)
+  )
+
+(process-decompressor (a block_decompresser_program (list null historical_blocks_tree))))
+)
