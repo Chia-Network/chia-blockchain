@@ -156,7 +156,7 @@ saved_blocks_version = "rc5"
 
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -166,7 +166,7 @@ def default_400_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
     from tests.util.blockchain import persistent_blocks
 
@@ -175,7 +175,7 @@ def default_1000_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -191,7 +191,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -201,7 +201,7 @@ def default_1500_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_10000_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -211,7 +211,7 @@ def default_10000_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_20000_blocks(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -221,7 +221,7 @@ def default_20000_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -238,7 +238,7 @@ def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
@@ -257,7 +257,7 @@ def default_2000_blocks_compact(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def default_10000_blocks_compact(bt, soft_fork3):
-    if soft_fork3 == 4200000:
+    if soft_fork3 == 0:
         pytest.skip("Test cache blocks missing")
 
     from tests.util.blockchain import persistent_blocks
