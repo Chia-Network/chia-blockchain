@@ -93,7 +93,7 @@ def soft_fork3(request):
 def block_tools_fixture(get_keychain, soft_fork3) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
     test_constants.replace(
-        "SOFT_FORK3_HEIGHT": soft_fork3,
+        SOFT_FORK3_HEIGHT=soft_fork3,
     )
 
     _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
