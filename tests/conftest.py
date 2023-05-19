@@ -332,8 +332,10 @@ async def five_nodes(db_version, self_hostname):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
+async def wallet_nodes(soft_fork3):
+    async_gen = setup_simulators_and_wallets(
+        2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK3_HEIGHT": soft_fork3}
+    )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
