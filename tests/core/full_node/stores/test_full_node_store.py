@@ -46,8 +46,9 @@ async def empty_blockchain(request):
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain_with_original_constants(request):
-    bc1, db_wrapper, db_path = await create_blockchain(test_constants_original, request.param)
+async def empty_blockchain_with_original_constants(request, soft_fork3):
+    constants_with_softfork = test_constants_original.replace(**{"SOFT_FORK3_HEIGHT": soft_fork3})
+    bc1, db_wrapper, db_path = await create_blockchain(constants_with_softfork, request.param)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
