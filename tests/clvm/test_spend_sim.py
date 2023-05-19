@@ -128,8 +128,8 @@ class TestSimClient:
             assert removals
 
             # get_puzzle_and_solution
-            coin_solution = await sim_client.get_puzzle_and_solution(spendable_coin.name(), latest_block.height)
-            assert coin_solution
+            coin_spend = await sim_client.get_puzzle_and_solution(spendable_coin.name(), latest_block.height)
+            assert coin_spend == bundle.coin_spends[0]
 
             # get_coin_records_by_parent_ids
             new_coin = next(x.coin for x in additions if x.coin.puzzle_hash == puzzle_hash)
