@@ -70,7 +70,7 @@
               )
             )
             (list CREATE_COIN DAO_CAT_LAUNCHER_PUZHASH CURRENT_CAT_ISSUANCE)
-            (list CREATE_COIN_ANNOUNCEMENT MINT_PUZHASH)
+            (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list 'm' MINT_PUZHASH)))
           )
           (list (list ASSERT_HEIGHT_RELATIVE ORACLE_SPEND_DELAY))
       )
