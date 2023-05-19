@@ -211,6 +211,7 @@ def default_10000_blocks(bt, soft_fork3):
     from tests.util.blockchain import persistent_blocks
 
     if soft_fork3 == 0:
+        pytest.skip("Test cache not available")
         return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}_softfork3.db", bt, seed=b"10000")
     else:
         return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
@@ -228,7 +229,6 @@ def default_20000_blocks(bt, soft_fork3):
 
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
-
     from tests.util.blockchain import persistent_blocks
 
     if soft_fork3 == 0:
@@ -249,6 +249,7 @@ def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
             seed=b"reorg_blocks",
             time_per_block=8,
         )
+
 
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, soft_fork3):
@@ -283,6 +284,7 @@ def default_10000_blocks_compact(bt, soft_fork3):
     from tests.util.blockchain import persistent_blocks
 
     if soft_fork3 == 0:
+        pytest.skip("Test cache not available")
         return persistent_blocks(
             10000,
             f"test_blocks_10000_compact_{saved_blocks_version}_softfork3.db",
