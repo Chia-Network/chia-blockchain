@@ -175,3 +175,86 @@ async def test_get_record_by_coin_id() -> None:
         # fetch record by coin_id
         rec = await db.get_record_by_coin_id(record.name())
         assert rec == record
+
+async def test_get_latest_singleton() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        record_1 = get_new_singleton_record()
+        await db.add_singleton_record(record_1)
+        record_2 = get_new_singleton_record()
+        await db.add_singleton_record(record_2)
+
+        # Test we can get record 1
+        latest = await db.get_latest_singleton(record_1.singleton_id)
+        assert latest == record_1
+        # Test we get nothing if requesting only_confirmed
+        latest = await db.get_latest_singleton(record_1.singleton_id, only_confirmed=True)
+        assert latest is None
+
+        # confirm record 1 and check it is returned in only_confirmed
+        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        latest = await db.get_latest_singleton(record_1.singleton_id, only_confirmed=True)
+        assert isinstance(latest, SingletonCoinRecord)
+        assert latest.singleton_id == record_1.singleton_id
+
+
+@pytest.mark.asyncio
+async def test_set_spent() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        record_1 = get_new_singleton_record()
+        await db.add_singleton_record(record_1)
+        # Don't add the second record
+        record_2 = get_new_singleton_record()
+
+        # set record_1 confirmed and spent
+        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        latest = await db.get_latest_singleton(record_1.singleton_id, only_confirmed=True)
+        assert isinstance(latest, SingletonCoinRecord)
+        await db.set_spent(latest.name(), uint32(20), uint64(time.time()))
+        last_record = await db.get_record_by_coin_id(latest.name())
+        assert isinstance(last_record, SingletonCoinRecord)
+        assert last_record.spent_height == uint32(20)
+
+        # Try to set spent for non-existing record
+        await db.set_spent(record_2.name(), uint32(20), uint64(time.time()))
+        res = await db.get_record_by_coin_id(record_2.name())
+        assert res is None
+
+
+@pytest.mark.asyncio
+async def test_set_confirmed() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        record_1 = get_new_singleton_record()
+        await db.add_singleton_record(record_1)
+        # Don't add the second record
+        record_2 = get_new_singleton_record()
+
+        # set record_1 confirmed (it has no parent)
+        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        res = await db.get_record_by_coin_id(record_1.coin.parent_coin_info)  # this is probably redundant
+        assert res is None
+
+        latest = await db.get_latest_singleton(record_1.singleton_id)
+        assert isinstance(latest, SingletonCoinRecord)
+        assert latest.confirmed
+
+        # set confirmed for non-existent record_2
+        await db.set_confirmed(record_2.name(), uint32(10), uint64(time.time()))
+        res = await db.get_record_by_coin_id(record_2.name())
+        assert res is None
+
+        # add record_2 and set confirmed
+        await db.add_singleton_record(record_2)
+        await db.set_confirmed(record_2.name(), uint32(20), uint64(time.time()))
+
+        # get next record and add it
+        next_record_2 = get_next_singleton_record(record_2)
+        await db.add_singleton_record(next_record_2)
+        await db.set_confirmed(next_record_2.name(), uint32(30), uint64(time.time()))
+
+        # check parent has been set to spent
+        parent_record = await db.get_record_by_coin_id(record_2.name())
+        assert isinstance(parent_record, SingletonCoinRecord)
+        assert parent_record.spent_height == uint32(30)
