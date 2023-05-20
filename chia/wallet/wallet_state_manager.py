@@ -765,7 +765,13 @@ class WalletStateManager:
                 )
             inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             inner_solution: Program = self.main_wallet.make_solution(
-                primaries=[Payment(derivation_record.puzzle_hash, uint64(coin.amount), [])],
+                primaries=[
+                    Payment(
+                        derivation_record.puzzle_hash,
+                        uint64(coin.amount),
+                        [] if metadata.memos is None else metadata.memos,
+                    )
+                ],
                 coin_announcements=None if len(txs) > 0 or fee == 0 else {message},
             )
             to_puzhash: Optional[bytes32] = derivation_record.puzzle_hash
@@ -814,8 +820,8 @@ class WalletStateManager:
         refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
         tx_ids: List[bytes32] = []
         for tx in refined_tx_list:
-            await self.add_pending_transaction(tx)
             if tx.name != fee_tx_id:
+                await self.add_pending_transaction(tx)
                 tx_ids.append(tx.name)
 
         return tx_ids
@@ -1162,6 +1168,10 @@ class WalletStateManager:
             # For the recipient we need to manually subscribe the merkle coin
             await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
         if is_recipient is not None:
+            spend_bundle = SpendBundle([coin_spend], G2Element())
+            memos = compute_memos(spend_bundle)
+            # Add memo
+            metadata = dataclasses.replace(metadata, memos=memos.get(coin_state.coin.name(), None))
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
@@ -1198,7 +1208,7 @@ class WalletStateManager:
                     else TransactionType.INCOMING_CLAWBACK_SEND
                 ),
                 name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
+                memos=list(memos.items()),
             )
             await self.tx_store.add_transaction_record(tx_record)
         return None

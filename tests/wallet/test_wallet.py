@@ -323,6 +323,7 @@ class TestWalletSimulator:
             normal_puzhash,
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
+            memos=[b"Test"],
         )
 
         await wallet.push_transaction(tx)
@@ -386,6 +387,9 @@ class TestWalletSimulator:
         )
         await time_out_assert(10, wallet.get_confirmed_balance, 3999999999000)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000001000)
+        resp = await api_0.get_transactions(dict(wallet_id=1, reverse=True))
+        xch_tx = resp["transactions"][0]
+        assert list(xch_tx["memos"].values())[0] == b"Test".hex()
 
     @pytest.mark.parametrize(
         "trusted",

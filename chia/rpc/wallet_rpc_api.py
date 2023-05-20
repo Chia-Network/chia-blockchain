@@ -63,7 +63,6 @@ from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.clawback.drivers import match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.singleton import create_singleton_puzzle
@@ -904,14 +903,19 @@ class WalletRpcApi:
         clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
         for tx in txs:
             if tx["type"] in clawback_types and tx["spend_bundle"] is not None:
-                spend_bundle: SpendBundle = SpendBundle.from_json_dict(tx["spend_bundle"])
-                puzzle = Program.from_bytes(bytes(spend_bundle.coin_spends[0].puzzle_reveal))
-                solution = Program.from_bytes(bytes(spend_bundle.coin_spends[0].solution))
-                uncurried = uncurry_puzzle(puzzle)
-                clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                coin: Coin = Coin.from_json_dict(tx["additions"][0])
+                record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                    coin.name()
+                )
+                assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
+                assert (
+                    record.metadata is not None
+                ), f"Cannot find metadata for clawback transaction {record.coin.name().hex()}"
+                clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
                 if clawback_metadata is not None:
                     tx["metadata"] = clawback_metadata.to_json_dict()
-                    tx["metadata"]["coin_id"] = Coin.from_json_dict(tx["additions"][0]).name().hex()
+                    tx["metadata"]["coin_id"] = coin.name().hex()
+                    tx["metadata"]["spent"] = record.spent
 
         return {
             "transactions": txs,

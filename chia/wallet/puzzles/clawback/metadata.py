@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import List, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
@@ -15,6 +16,7 @@ class ClawbackMetadata(Streamable):
     time_lock: uint64
     sender_puzzle_hash: bytes32
     recipient_puzzle_hash: bytes32
+    memos: Optional[List[bytes]] = None
 
     async def is_recipient(self, puzzle_store: WalletPuzzleStore) -> bool:
         if await puzzle_store.puzzle_hash_exists(self.sender_puzzle_hash):
