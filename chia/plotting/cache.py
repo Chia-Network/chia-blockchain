@@ -74,9 +74,7 @@ class CacheEntry:
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
         )
 
-        # @TODO Activate the line below when chiapos is ready
-        # compression_level = prover.get_compression_level()
-        compression_level = uint8(0)
+        compression_level = prover.get_compresion_level()
 
         return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time(),
                    compression_level)
