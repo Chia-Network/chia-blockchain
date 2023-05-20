@@ -69,7 +69,9 @@ SERVERS = [
 
 entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
 
-hiddenimports = []
+# all chia modules
+hiddenimports = [".".join(path.relative_to(root).with_suffix("").parts) for path in root.joinpath("chia").rglob("*.py")]
+# TODO: consider removing these
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
