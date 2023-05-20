@@ -5,6 +5,7 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
+from packaging.version import Version
 from pathlib import Path
 from typing import Any, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
 
@@ -31,7 +32,6 @@ from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int8, int16, uint32, uint64
-from chia.util.version import compare_version
 
 log = logging.getLogger(__name__)
 
@@ -297,7 +297,7 @@ class Sender:
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            if self._connection is not None and compare_version(self._connection.protocol_version, '0.3.5') >= 0:
+            if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
                 converted = _convert_plot_info_list_v2(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded_v2, PlotSyncPlotListV2, converted, remaining == 0)
             else:
@@ -331,7 +331,7 @@ class Sender:
 
     def harvesting_mode_update(self, mode: HarvestingMode):
         log.debug(f"harvesting_mode_update: {mode}")
-        if self._connection is not None and compare_version(self._connection.protocol_version, '0.3.5') >= 0:
+        if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
             self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
         else:
             log.debug(

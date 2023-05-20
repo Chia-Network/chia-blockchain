@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from packaging.version import Version
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -25,7 +26,6 @@ from chia.types.blockchain_format.proof_of_space import (
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.version import compare_version
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
@@ -236,7 +236,7 @@ class HarvesterAPI:
 
         now = uint64(int(time.time()))
 
-        if compare_version(peer.protocol_version, '0.0.35') >= 0:
+        if peer.protocol_version >= Version('0.0.35'):
             farming_info = FarmingInfoV2(
                 new_challenge.challenge_hash,
                 new_challenge.sp_hash,
@@ -329,7 +329,7 @@ class HarvesterAPI:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
 
-        if compare_version(peer.protocol_version, '0.0.35') >= 0:
+        if peer.protocol_version >= Version('0.0.35'):
             for plot in plots:
                 plots_response.append(
                     PlotV2(
