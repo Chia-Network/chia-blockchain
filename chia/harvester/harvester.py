@@ -210,20 +210,5 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvesting_mode_info(self) -> Dict[str, Any]:
-        return {
-            "support_gpu": self._support_gpu,
-            "mode": self._mode,
-        }
-
-    async def change_harvesting_mode(self, mode: HarvestingMode) -> None:
-        # Check whether the harvester is eligible for GPU harvesting if it is requested
-        if mode == HarvestingMode.GPU and not self._support_gpu:
-            raise ValueError("GPU harvesting is not available on this system")
-
-        self._mode = mode
-        self.plot_sync_sender.harvesting_mode_update(mode)
-        self.state_changed("harvesting_mode_changed", {"mode": mode})
-
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
