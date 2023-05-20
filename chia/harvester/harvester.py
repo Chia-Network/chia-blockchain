@@ -76,7 +76,6 @@ class Harvester:
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
-        self.plot_sync_sender = Sender(self.plot_manager)
         self._shut_down = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self._server = None
@@ -85,7 +84,6 @@ class Harvester:
         self.parallel_read: bool = config.get("parallel_read", True)
         # @TODO Do something to check whether GPU harvesting is available
         self._support_gpu = True
-        self._mode = HarvestingMode.GPU if self._support_gpu and config.get("use_gpu_harvesting", False) else HarvestingMode.CPU
 
         context_count = config.get("parallel_decompressers_count", 5)
         thread_count = config.get("decompresser_thread_count", 0)
@@ -98,7 +96,7 @@ class Harvester:
         enforce_gpu_index = config.get("enforce_gpu_index", False)
 
         try:
-            self.plot_manager.configure_decompresser(
+            self._mode = self.plot_manager.configure_decompresser(
                 context_count,
                 thread_count,
                 disable_cpu_affinity,
@@ -110,6 +108,8 @@ class Harvester:
         except Exception as e:
             self.log.error(f"{type(e)} {e} while configuring decompresser.")
             raise
+
+        self.plot_sync_sender = Sender(self.plot_manager, self._mode)
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()
