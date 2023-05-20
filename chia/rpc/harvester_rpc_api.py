@@ -21,8 +21,6 @@ class HarvesterRpcApi:
             "/add_plot_directory": self.add_plot_directory,
             "/get_plot_directories": self.get_plot_directories,
             "/remove_plot_directory": self.remove_plot_directory,
-            "/get_harvesting_mode_info": self.get_harvesting_mode_info,
-            "/change_harvesting_mode": self.change_harvesting_mode,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
@@ -45,9 +43,6 @@ class HarvesterRpcApi:
 
         if change == "close_connection":
             payloads.append(create_payload_dict("close_connection", change_data, self.service_name, "metrics"))
-
-        if change == "harvesting_mode_changed":
-            payloads.append(create_payload_dict("harvesting_mode_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
@@ -84,12 +79,3 @@ class HarvesterRpcApi:
         if await self.service.remove_plot_directory(directory_name):
             return {}
         raise ValueError(f"Did not remove plot directory {directory_name}")
-
-    async def get_harvesting_mode_info(self, request: Dict) -> EndpointResult:
-        info = await self.service.get_harvesting_mode_info()
-        return info
-
-    async def change_harvesting_mode(self, request: Dict):
-        mode = HarvestingMode(int(request["mode"]))
-        await self.service.change_harvesting_mode(mode)
-        return {}
