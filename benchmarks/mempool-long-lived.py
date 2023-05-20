@@ -81,7 +81,6 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-
     coin_records: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:

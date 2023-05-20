@@ -40,20 +40,14 @@ def make_puzzle(amount: int) -> int:
     print(f"Address: {encode_puzzle_hash(puzzle_hash, prefix)}")
 
     result = puzzle_prog.run(solution)
-    error, result_human = parse_sexp_to_conditions(result)
-
     total_chia = 0
-    if error:
-        print(f"Error: {error}")
-    else:
-        assert result_human is not None
-        for cvp in result_human:
-            assert len(cvp.vars) == 2
-            total_chia += int_from_bytes(cvp.vars[1])
-            print(
-                f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(bytes32(cvp.vars[0]), prefix)},"
-                f" amount: {int_from_bytes(cvp.vars[1])}"
-            )
+    for cvp in parse_sexp_to_conditions(result):
+        assert len(cvp.vars) == 2
+        total_chia += int_from_bytes(cvp.vars[1])
+        print(
+            f"{ConditionOpcode(cvp.opcode).name}: {encode_puzzle_hash(bytes32(cvp.vars[0]), prefix)},"
+            f" amount: {int_from_bytes(cvp.vars[1])}"
+        )
     return total_chia
 
 
