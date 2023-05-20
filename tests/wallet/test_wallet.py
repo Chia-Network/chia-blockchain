@@ -274,6 +274,8 @@ class TestWalletSimulator:
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await asyncio.sleep(5)
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        await asyncio.sleep(5)
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
