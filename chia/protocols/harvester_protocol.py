@@ -146,6 +146,23 @@ class PlotSyncStart(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PlotSyncStartV2(Streamable):
+    identifier: PlotSyncIdentifier
+    initial: bool
+    last_sync_id: uint64
+    plot_file_count: uint32
+    harvesting_mode: uint8
+
+    def __str__(self) -> str:
+        return (
+            f"PlotSyncStart: identifier {self.identifier}, initial {self.initial}, "
+            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}, "
+            f"harvesting_mode {self.harvesting_mode}"
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class PlotSyncPathList(Streamable):
     identifier: PlotSyncIdentifier
     data: List[str]

@@ -13,7 +13,7 @@ from blspy import G1Element
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
+from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames, HarvestingMode
 from chia.util.generator_tools import list_to_batches
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class PlotManager:
         use_gpu_harvesting: bool,
         gpu_index: int,
         enforce_gpu_index: bool,
-    ) -> None:
+    ) -> HarvestingMode:
         decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
         if max_compression_level_allowed > 7:
             log.error(
@@ -112,6 +112,7 @@ class PlotManager:
                 f"Falling back to CPU harvesting: {context_count} decompressers count, {thread_count} threads."
             )
         self.max_compression_level_allowed = max_compression_level_allowed
+        return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
         with self:

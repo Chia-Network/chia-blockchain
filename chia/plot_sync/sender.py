@@ -26,6 +26,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
+    PlotSyncStartV2,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -121,8 +122,9 @@ class Sender:
     _stop_requested = False
     _task: Optional[asyncio.Task[None]]
     _response: Optional[ExpectedResponse]
+    _harvesting_mode: HarvestingMode
 
-    def __init__(self, plot_manager: PlotManager) -> None:
+    def __init__(self, plot_manager: PlotManager, harvesting_mode: HarvestingMode) -> None:
         self._plot_manager = plot_manager
         self._connection = None
         self._sync_id = uint64(0)
@@ -132,6 +134,7 @@ class Sender:
         self._stop_requested = False
         self._task = None
         self._response = None
+        self._harvesting_mode = harvesting_mode
 
     def __str__(self) -> str:
         return f"sync_id {self._sync_id}, next_message_id {self._next_message_id}, messages {len(self._messages)}"
@@ -290,9 +293,20 @@ class Sender:
             sync_id = sync_id + 1
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
-        self._add_message(
-            ProtocolMessageTypes.plot_sync_start, PlotSyncStart, initial, self._last_sync_id, uint32(int(count))
-        )
+
+        if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
+            self._add_message(
+                ProtocolMessageTypes.plot_sync_start_v2, PlotSyncStartV2, initial, self._last_sync_id, uint32(int(count)), self._harvesting_mode
+            )
+        else:
+            self._add_message(
+                ProtocolMessageTypes.plot_sync_start, PlotSyncStart, initial, self._last_sync_id, uint32(int(count))
+            )
+            log.debug(
+                "harvesting_mode_update message has not been sent "
+                "because protocol version of peer farmer is "
+                + (self._connection.protocol_version if self._connection is not None else "unknown")
+            )
 
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")

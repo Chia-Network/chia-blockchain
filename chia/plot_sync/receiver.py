@@ -29,6 +29,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
+    PlotSyncStartV2,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
@@ -209,6 +210,18 @@ class Receiver:
 
     async def sync_started(self, data: PlotSyncStart) -> None:
         await self._process(self._sync_started, ProtocolMessageTypes.plot_sync_start, data)
+
+    async def _sync_started_v2(self, data: PlotSyncStartV2) -> None:
+        await self._sync_started(PlotSyncStart(
+            data.identifier,
+            data.initial,
+            data.last_sync_id,
+            data.plot_file_count,
+        ))
+        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
+
+    async def sync_started_v2(self, data: PlotSyncStartV2) -> None:
+        await self._process(self._sync_started_v2, ProtocolMessageTypes.plot_sync_start_v2, data)
 
     async def _process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         self._validate_identifier(plot_infos.identifier)
