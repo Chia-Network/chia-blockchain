@@ -92,8 +92,9 @@ class ProtocolMessageTypes(Enum):
     respond_plots = 68
     respond_plots_v2 = 94
     plot_sync_start = 78
+    plot_sync_start_v2 = 95
     plot_sync_loaded = 79
-    plot_sync_loaded_v2 = 95
+    plot_sync_loaded_v2 = 96
     plot_sync_removed = 80
     plot_sync_invalid = 81
     plot_sync_keys_missing = 82
