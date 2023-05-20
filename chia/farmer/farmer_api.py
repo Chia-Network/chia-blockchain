@@ -19,6 +19,7 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncPlotListV2,
     PlotSyncStart,
+    PlotSyncStartV2,
     PoolDifficulty,
 )
 from chia.protocols.pool_protocol import (
@@ -567,6 +568,10 @@ class FarmerAPI:
     @api_request(peer_required=True)
     async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection):
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_start_v2(self, message: PlotSyncStartV2, peer: WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started_v2(message)
 
     @api_request(peer_required=True)
     async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection):
