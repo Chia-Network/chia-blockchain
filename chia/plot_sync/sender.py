@@ -294,9 +294,14 @@ class Sender:
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
 
-        if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
+        if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
             self._add_message(
-                ProtocolMessageTypes.plot_sync_start_v2, PlotSyncStartV2, initial, self._last_sync_id, uint32(int(count)), self._harvesting_mode
+                ProtocolMessageTypes.plot_sync_start_v2,
+                PlotSyncStartV2,
+                initial,
+                self._last_sync_id,
+                uint32(int(count)),
+                self._harvesting_mode,
             )
         else:
             self._add_message(
@@ -305,13 +310,13 @@ class Sender:
             log.debug(
                 "harvesting_mode_update message has not been sent "
                 "because protocol version of peer farmer is "
-                + (self._connection.protocol_version if self._connection is not None else "unknown")
+                + (str(self._connection.protocol_version) if self._connection is not None else "unknown")
             )
 
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
+            if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
                 converted = _convert_plot_info_list_v2(loaded)
                 self._add_message(ProtocolMessageTypes.plot_sync_loaded_v2, PlotSyncPlotListV2, converted, remaining == 0)
             else:
@@ -345,13 +350,13 @@ class Sender:
 
     def harvesting_mode_update(self, mode: HarvestingMode):
         log.debug(f"harvesting_mode_update: {mode}")
-        if self._connection is not None and self._connection.protocol_version >= Version('0.3.5'):
+        if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
             self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
         else:
             log.debug(
                 "harvesting_mode_update message has not been sent "
                 "because protocol version of peer farmer is "
-                + (self._connection.protocol_version if self._connection is not None else "unknown")
+                + (str(self._connection.protocol_version) if self._connection is not None else "unknown")
             )
 
     def sync_active(self) -> bool:
