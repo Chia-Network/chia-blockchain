@@ -65,9 +65,16 @@ SERVERS = [
     "timelord",
 ]
 
-# all chia modules
-hiddenimports = collect_submodules("chia")
-hiddenimports.extend(keyring_imports)
+if THIS_IS_WINDOWS:
+    hidden_imports_for_windows = ["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
+else:
+    hidden_imports_for_windows = []
+
+hiddenimports = [
+    *collect_submodules("chia"),
+    *keyring_imports,
+    *hidden_imports_for_windows,
+]
 
 binaries = []
 
@@ -94,9 +101,6 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit"):
             "bladebit"
         )
     ])
-
-if THIS_IS_WINDOWS:
-    hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
