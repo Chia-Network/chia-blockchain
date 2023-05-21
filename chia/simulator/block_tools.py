@@ -541,7 +541,7 @@ class BlockTools:
         seen_signage_points: Set[bytes32] = {cc_sp_hash}
         for block in reversed(blocks):
             if len(seen_signage_points) >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
-                continue
+                break
 
             challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
             if block.reward_chain_block.challenge_chain_sp_vdf is None:

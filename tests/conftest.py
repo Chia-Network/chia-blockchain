@@ -256,6 +256,7 @@ def default_2000_blocks_compact(bt, soft_fork3):
     from tests.util.blockchain import persistent_blocks
 
     if soft_fork3 == 0:
+        pytest.skip("No cache available")
         return persistent_blocks(
             2000,
             f"test_blocks_2000_compact_{saved_blocks_version}_softfork3.db",
