@@ -67,7 +67,8 @@ default_kwargs = {
     "PLOT_FILTER_64_HEIGHT": 15592000,
     # June 2033
     "PLOT_FILTER_32_HEIGHT": 20643000,
-    "NUM_DISTINCT_CONSECUTIVE_PLOT_IDS": 4,
+    # Disallow plots from passing the plot filter for more than one out of any four consecutive signage points.
+    "NUM_PLOT_FILTERS_DISALLOWED_TO_PASS": 4,
 }
 
 

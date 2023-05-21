@@ -23,7 +23,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import get_plot_id, verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -494,15 +494,27 @@ def validate_unfinished_header_block(
     # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
     if height >= constants.SOFT_FORK3_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = prev_b
-        recent_plot_ids: Set[bytes32] = set()
+        plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
+        passed_previous_sp: bool = False
+        seen_signage_points: Set[bytes32] = {cc_sp_hash}
+
         while (
             curr_optional_block_record is not None
-            and len(recent_plot_ids) < constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS
+            and len(seen_signage_points) < constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS
         ):
-            recent_plot_ids.add(curr_optional_block_record.plot_id)
+            if passes_plot_filter(
+                constants,
+                plot_id,
+                curr_optional_block_record.pos_ss_cc_challenge_hash,
+                curr_optional_block_record.cc_sp_hash,
+            ):
+                passed_previous_sp = True
+                break
+
+            seen_signage_points.add(curr_optional_block_record.cc_sp_hash)
             curr_optional_block_record = blocks.try_block_record(curr_optional_block_record.prev_hash)
-        plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
-        if plot_id in recent_plot_ids:
+
+        if passed_previous_sp:
             return None, ValidationError(Err.INVALID_POSPACE)
 
     # 6. check signage point index

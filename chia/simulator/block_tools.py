@@ -537,6 +537,24 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
+    def plot_id_passes_previous_filters(plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
+        seen_signage_points: Set[bytes32] = {cc_sp_hash}
+        for block in reversed(blocks):
+            if len(seen_signage_points) >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
+                continue
+
+            challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
+            if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                # Edge case of first sp (start of slot), where sp_iters == 0
+                cc_sp_hash = challenge
+            else:
+                cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            if passes_plot_filter(self.constants, plot_id, challenge, cc_sp_hash):
+                return True
+            seen_signage_points.add(cc_sp_hash)
+
+        return False
+
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -627,15 +645,6 @@ class BlockTools:
         sub_slots_finished = 0
         pending_ses: bool = False
 
-        recent_plot_ids: List[bytes32] = []
-        for block in block_list:
-            plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
-            if block.height >= constants.SOFT_FORK3_HEIGHT:
-                assert plot_id not in recent_plot_ids
-            if len(recent_plot_ids) == constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
-                recent_plot_ids.pop(0)
-            recent_plot_ids.append(plot_id)
-
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
@@ -702,11 +711,10 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        if (
-                            get_plot_id(proof_of_space) in recent_plot_ids
-                            and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT
-                        ):
-                            continue
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passes_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -790,9 +798,6 @@ class BlockTools:
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
-                        if len(recent_plot_ids) == constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
-                            recent_plot_ids.pop(0)
-                        recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
@@ -1001,12 +1006,10 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-                        if (
-                            get_plot_id(proof_of_space) in recent_plot_ids
-                            and latest_block.height + 1 >= self.constants.SOFT_FORK3_HEIGHT
-                        ):
-                            continue
-
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passes_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
@@ -1081,9 +1084,6 @@ class BlockTools:
                             pending_ses = False
 
                         block_list.append(full_block)
-                        if len(recent_plot_ids) == constants.NUM_DISTINCT_CONSECUTIVE_PLOT_IDS:
-                            recent_plot_ids.pop(0)
-                        recent_plot_ids.append(get_plot_id(full_block.reward_chain_block.proof_of_space))
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator

@@ -142,7 +142,12 @@ def header_block_to_sub_block_record(
     )
     timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
-    plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
+
+    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+        # Edge case of first sp (start of slot), where sp_iters == 0
+        cc_sp_hash: bytes32 = challenge
+    else:
+        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
     return BlockRecord(
         block.header_hash,
@@ -162,7 +167,8 @@ def header_block_to_sub_block_record(
         deficit,
         overflow,
         prev_transaction_block_height,
-        plot_id,
+        block.reward_chain_block.pos_ss_cc_challenge_hash,
+        cc_sp_hash,
         timestamp,
         prev_transaction_block_hash,
         fees,
