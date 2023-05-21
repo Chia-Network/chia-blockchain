@@ -10,7 +10,6 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import get_plot_id
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -145,7 +144,7 @@ def header_block_to_sub_block_record(
 
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
         # Edge case of first sp (start of slot), where sp_iters == 0
-        cc_sp_hash: bytes32 = challenge
+        cc_sp_hash: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
     else:
         cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 

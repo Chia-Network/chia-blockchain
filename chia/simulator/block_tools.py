@@ -13,7 +13,7 @@ import tempfile
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
@@ -537,7 +537,7 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
-    def plot_id_passes_previous_filters(plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
+    def plot_id_passes_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
         seen_signage_points: Set[bytes32] = {cc_sp_hash}
         for block in reversed(blocks):
             if len(seen_signage_points) >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
