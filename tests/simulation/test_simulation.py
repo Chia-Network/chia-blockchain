@@ -45,12 +45,11 @@ test_constants_modified = test_constants.replace(
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
-async def extra_node(self_hostname, soft_fork3):
+async def extra_node(self_hostname):
     with TempKeyring() as keychain:
-        softfork_test_constants = test_constants_modified.replace(**{"SOFT_FORK3_HEIGHT": soft_fork3})
-        b_tools = await create_block_tools_async(constants=softfork_test_constants, keychain=keychain)
+        b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
         async for service in setup_full_node(
-            softfork_test_constants,
+            test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
@@ -60,9 +59,8 @@ async def extra_node(self_hostname, soft_fork3):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt, soft_fork3):
-    softfork_test_constants = test_constants_modified.replace(**{"SOFT_FORK3_HEIGHT": soft_fork3})
-    async for _ in setup_full_system(softfork_test_constants, bt, db_version=1):
+async def simulation(bt):
+    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 
 
