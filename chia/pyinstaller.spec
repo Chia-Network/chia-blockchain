@@ -65,14 +65,8 @@ SERVERS = [
     "timelord",
 ]
 
-# TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
-
-entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
-
 # all chia modules
-hiddenimports = [".".join(path.relative_to(ROOT).with_suffix("").parts) for path in ROOT.joinpath("chia").rglob("*.py")]
-# TODO: consider removing these
-hiddenimports.extend(entry_points)
+hiddenimports = collect_submodules("chia")
 hiddenimports.extend(keyring_imports)
 
 binaries = []
@@ -103,10 +97,6 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit"):
 
 if THIS_IS_WINDOWS:
     hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
-
-# this probably isn't necessary
-if THIS_IS_WINDOWS:
-    entry_points.extend(["aiohttp", "chia.util.bip39"])
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
