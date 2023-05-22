@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import pytest
+from typing_extensions import Literal
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -103,6 +104,19 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
+
+    async def check_vc_record_has_parent_id(
+        parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
+    ) -> Optional[Literal[True]]:
+        vc_record = await client.vc_get(launcher_id)
+        result: Optional[Literal[True]] = None
+        if vc_record is not None:
+            result = True if vc_record.vc.coin.parent_coin_info == parent_id else None
+        return result
+
+    await time_out_assert_not_none(
+        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_0, vc_record.vc.launcher_id
+    )
     vc_record_updated = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
 
