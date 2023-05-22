@@ -23,6 +23,8 @@ from chia.plotting.util import (
     get_plot_directories,
     remove_plot,
     remove_plot_directory,
+    get_harvesting_mode,
+    update_harvesting_mode,
 )
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
@@ -208,6 +210,23 @@ class Harvester:
     async def remove_plot_directory(self, str_path: str) -> bool:
         remove_plot_directory(self.root_path, str_path)
         self.plot_manager.trigger_refresh()
+        return True
+
+    async def get_harvesting_mode(self) -> Dict:
+        return get_harvesting_mode(self.root_path)
+
+    async def update_harvesting_mode(
+        self,
+        use_gpu_harvesting: Optional[bool] = None,
+        gpu_index: Optional[int] = None,
+        enforce_gpu_index: Optional[bool] = None,
+    ):
+        update_harvesting_mode(
+            self.root_path,
+            use_gpu_harvesting=use_gpu_harvesting,
+            gpu_index=gpu_index,
+            enforce_gpu_index=enforce_gpu_index,
+        )
         return True
 
     def set_server(self, server: ChiaServer) -> None:
