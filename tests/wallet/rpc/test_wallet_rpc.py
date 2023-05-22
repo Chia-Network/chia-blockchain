@@ -22,7 +22,7 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -674,9 +674,12 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1, clawback_coin_id_2], 100)
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 2
-    await asyncio.sleep(10)
-    await farm_transaction_block(full_node_api, wallet_2_node)
-    await asyncio.sleep(10)
+    await time_out_assert_not_none(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+    )
+    await time_out_assert_not_none(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][1])
+    )
     await farm_transaction_block(full_node_api, wallet_2_node)
     await time_out_assert(20, get_confirmed_balance, generated_funds + 300, wallet_2_rpc, 1)
     # Test spent coin

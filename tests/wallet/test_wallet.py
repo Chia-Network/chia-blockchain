@@ -15,7 +15,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, wait_for_coins_in_wallet
 from chia.simulator.simulator_protocol import ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
@@ -360,7 +360,9 @@ class TestWalletSimulator:
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
-        await asyncio.sleep(5)
+        await time_out_assert_not_none(
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+        )
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(
             20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
@@ -458,7 +460,9 @@ class TestWalletSimulator:
         assert resp["success"]
         assert len(resp["transaction_ids"]) == 1
         # Wait mempool update
-        await asyncio.sleep(5)
+        await time_out_assert_not_none(
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+        )
         expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         await time_out_assert(
             20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK

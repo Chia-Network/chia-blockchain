@@ -729,7 +729,7 @@ class WalletStateManager:
         tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
         min_amount = uint64(self.config.get("auto_claim", {}).get("min_amount", 0))
         for coin in unspent_coins:
-            if coin.metadata is None or coin.metadata.blob == b"":
+            if coin.metadata is None or coin.metadata.blob is None or len(coin.metadata.blob) <= 1:
                 self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
                 continue
             metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
@@ -822,7 +822,9 @@ class WalletStateManager:
             refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
         spend_bundle = SpendBundle.aggregate(spend_bundles)
         # Add all spend bundles to the first tx
-        refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+        refined_tx_list[0] = dataclasses.replace(
+            refined_tx_list[0], spend_bundle=spend_bundle, name=spend_bundle.name()
+        )
         tx_ids: List[bytes32] = []
         for tx in refined_tx_list:
             await self.add_pending_transaction(tx)

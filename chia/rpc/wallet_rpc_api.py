@@ -909,13 +909,12 @@ class WalletRpcApi:
                 )
                 assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
                 assert (
-                    record.metadata is not None
+                    record.metadata is not None and record.metadata.blob is not None and len(record.metadata.blob) > 1
                 ), f"Cannot find metadata for clawback transaction {record.coin.name().hex()}"
                 clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-                if clawback_metadata is not None:
-                    tx["metadata"] = clawback_metadata.to_json_dict()
-                    tx["metadata"]["coin_id"] = coin.name().hex()
-                    tx["metadata"]["spent"] = record.spent
+                tx["metadata"] = clawback_metadata.to_json_dict()
+                tx["metadata"]["coin_id"] = coin.name().hex()
+                tx["metadata"]["spent"] = record.spent
 
         return {
             "transactions": txs,
