@@ -1077,9 +1077,11 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
 
 async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
+    num = args["num"]
+    start_index = args["start_index"]
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        response = await wallet_client.list_nfts(wallet_id)
+        response = await wallet_client.list_nfts(wallet_id, num, start_index)
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
             for n in nft_list:
