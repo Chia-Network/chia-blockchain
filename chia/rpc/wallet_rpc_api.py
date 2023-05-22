@@ -72,7 +72,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.query_filter import TransactionTypeFilter
+from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
@@ -80,7 +80,6 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import HashFilter
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
