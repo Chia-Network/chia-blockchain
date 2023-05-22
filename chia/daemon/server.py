@@ -735,7 +735,7 @@ class WebSocketServer:
             command_args.append("--nonuma")
         if no_cpu_affinity is True:
             command_args.append("--no-cpu-affinity")
-        if compress is not None and str.isdigit(compress):
+        if compress is not None and str(compress).isdigit():
             command_args.append("--compress")
             command_args.append(str(compress))
 
@@ -748,7 +748,7 @@ class WebSocketServer:
             device_index = request.get("device", None)
             no_direct_downloads = request.get("no_direct_downloads", False)
 
-            if device_index is not None and str.isdigit(device_index):
+            if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
                 command_args.append(str(device_index))
             if no_direct_downloads:
