@@ -144,6 +144,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "MEMPOOL_BLOCK_BUFFER": 6,
+        "NUM_PLOT_FILTERS_DISALLOWED_TO_PASS": 2,
     }
 )
 
