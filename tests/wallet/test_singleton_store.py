@@ -176,6 +176,8 @@ async def test_get_record_by_coin_id() -> None:
         rec = await db.get_record_by_coin_id(record.name())
         assert rec == record
 
+
+@pytest.mark.asyncio
 async def test_get_latest_singleton() -> None:
     async with DBConnection(1) as wrapper:
         db = await WalletSingletonStore.create(wrapper)
