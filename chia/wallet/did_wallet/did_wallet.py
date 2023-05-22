@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# mypy: ignore-errors
 import dataclasses
 import json
 import logging
@@ -11,7 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-import chia
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -185,7 +183,7 @@ class DIDWallet:
         inner_puzzle: Program,
         coin_spend: CoinSpend,
         name: Optional[str] = None,
-    ) -> DIDWallet:
+    ):
         """
         Create a DID wallet from a transfer
         :param wallet_state_manager: Wallet state manager
@@ -235,7 +233,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(chia.wallet.did_wallet.did_wallet_puzzles.did_program_to_metadata(metadata)),
+            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -472,14 +470,13 @@ class DIDWallet:
             did_info.backup_ids,
             did_info.num_of_backup_ids_needed,
             did_info.origin_coin.name(),
-            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
         parent_coin: Coin = did_info.origin_coin
         while True:
             peer = wallet_node.get_full_node_peer()
             children = await wallet_node.fetch_children(parent_coin.name(), peer)
-            # breakpoint()
             if len(children) == 0:
                 break
 
@@ -527,7 +524,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 self.did_info.num_of_backup_ids_needed,
                 self.did_info.origin_coin.name(),
-                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
             return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
@@ -544,7 +541,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             origin_coin_name,
-            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
@@ -688,7 +685,7 @@ class DIDWallet:
             backup_ids,
             backup_required,
             self.did_info.origin_coin.name(),
-            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
@@ -1099,7 +1096,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 self.did_info.origin_coin.name(),
-                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
@@ -1107,7 +1104,7 @@ class DIDWallet:
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 origin_id,
-                chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
         else:
             raise ValueError("must have origin coin")
@@ -1132,7 +1129,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             uint64(self.did_info.num_of_backup_ids_needed),
             self.did_info.origin_coin.name(),
-            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
@@ -1158,7 +1155,7 @@ class DIDWallet:
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),
-            chia.wallet.singleton.metadata_to_program(json.loads(self.did_info.metadata)),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             old_recovery_list_hash,
         )
         return inner_puzzle
