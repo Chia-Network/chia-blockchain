@@ -98,6 +98,7 @@ async def setup_full_node(
     connect_to_daemon: bool = False,
     db_version: int = 1,
     disable_capabilities: Optional[List[Capability]] = None,
+    *,
     reuse_db: bool = False,
 ) -> AsyncGenerator[Service[FullNode], None]:
     db_path = local_bt.root_path / f"{db_name}"
