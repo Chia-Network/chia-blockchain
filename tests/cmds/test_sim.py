@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from shutil import rmtree
 
 from click.testing import CliRunner, Result
@@ -15,11 +16,24 @@ fingerprint = 2640131813
 std_farming_address = "txch1mh4qanzyawn3v4uphgaj2cg6hrjazwyp0sx653fhn9apg6mfajlqtj0ztp"
 burn_address = "txch1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqm6ksh7qddh"  # 0x0...dead
 
+SIMULATOR_ROOT_PATH.mkdir(parents=True, exist_ok=True)  # this simplifies code later
+
+
+def get_profile_path(starting_string: str) -> str:
+    """
+    Returns the name of a profile that does not exist yet.
+    """
+    i = 0
+    while Path(SIMULATOR_ROOT_PATH / (starting_string + str(i))).exists():
+        i += 1
+    return starting_string + str(i)
+
 
 def test_every_simulator_command() -> None:
+    starting_str = "ci_test"
+    simulator_name = get_profile_path(starting_str)
     runner: CliRunner = CliRunner()
     address = std_farming_address
-    simulator_name = "ci_test"
     start_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic])
     assert start_result.exit_code == 0
     assert f"Farming & Prefarm reward address: {address}" in start_result.output
@@ -35,7 +49,8 @@ def test_every_simulator_command() -> None:
 def test_custom_farming_address() -> None:
     runner: CliRunner = CliRunner()
     address = burn_address
-    simulator_name = "ci_address_test"
+    starting_str = "ci_address_test"
+    simulator_name = get_profile_path(starting_str)
     start_result: Result = runner.invoke(
         cli, ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic, "--reward-address", address]
     )
