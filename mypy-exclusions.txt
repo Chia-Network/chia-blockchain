@@ -7,7 +7,6 @@ chia.cmds.wallet_funcs
 chia.daemon.server
 chia.data_layer.data_layer_wallet
 chia.farmer.farmer_api
-chia.full_node.weight_proof
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
@@ -114,7 +113,6 @@ tests.connection_utils
 tests.core.cmds.test_keys
 tests.core.consensus.test_pot_iterations
 tests.core.custom_types.test_coin
-tests.core.custom_types.test_proof_of_space
 tests.core.custom_types.test_spend_bundle
 tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
