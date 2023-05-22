@@ -166,7 +166,6 @@ tests.simulation.test_simulation
 tests.tools.test_full_sync
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.build_network_protocol_files
 tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
