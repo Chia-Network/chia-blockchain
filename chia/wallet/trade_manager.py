@@ -28,11 +28,11 @@ from chia.wallet.trading.offer import OFFER_MOD_OLD_HASH, NotarizedPayment, Offe
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import HashFilter
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
