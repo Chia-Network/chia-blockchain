@@ -50,7 +50,6 @@ chia.util.block_cache
 chia.util.chia_logging
 chia.util.config
 chia.util.db_wrapper
-chia.util.dump_keyring
 chia.util.hash
 chia.util.json_util
 chia.util.keychain
