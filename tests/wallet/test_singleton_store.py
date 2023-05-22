@@ -16,6 +16,8 @@ from chia.wallet.singleton_coin_record import SingletonCoinRecord
 from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from tests.util.db_connection import DBConnection
 
+fake_singleton_id = bytes32(b"N" * 32)
+
 
 def get_new_singleton_record() -> SingletonCoinRecord:
     singleton_id: bytes32 = bytes32(token_bytes(32))
@@ -135,3 +137,41 @@ async def test_singleton_store() -> None:
         await db.delete_records_by_singleton_id(singleton_id)
         recs = await db.get_records_by_singleton_id(singleton_id)
         assert len(recs) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_records_by_singleton_id() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        one = uint32(1)
+
+        recs = await db.get_records_by_singleton_id(fake_singleton_id)
+        assert recs == []
+        record = get_new_singleton_record()
+        recs = await db.get_records_by_singleton_id(record.singleton_id)
+        assert len(recs) == 0
+        recs = await db.get_records_by_singleton_id(record.singleton_id, one, one, one)
+        assert len(recs) == 0
+        await db.add_singleton_record(record)
+        recs = await db.get_records_by_singleton_id(record.singleton_id)
+        assert len(recs) == 1
+        recs = await db.get_records_by_singleton_id(record.singleton_id, one, one, one)
+        assert len(recs) == 0
+        recs = await db.get_records_by_singleton_id(record.singleton_id, one, uint32(20), one)
+
+
+@pytest.mark.asyncio
+async def test_get_record_by_coin_id() -> None:
+    async with DBConnection(1) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+
+        rec = await db.get_record_by_coin_id(fake_singleton_id)
+        assert rec is None
+
+        # add record to DB
+        record = get_new_singleton_record()
+        await db.add_singleton_record(record)
+
+        # fetch record by coin_id
+        rec = await db.get_record_by_coin_id(record.name())
+        assert rec == record
