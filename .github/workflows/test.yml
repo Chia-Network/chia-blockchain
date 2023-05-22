@@ -136,6 +136,12 @@ jobs:
           coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
+      - run: |
+          echo ----
+          echo ${{ needs }}
+          echo ----
+          echo ${{ needs.*.result }}
+
       - uses: coverallsapp/github-action@v2
         if: needs.*.result == fromJSON('["success", "success", "success"]')
         env:
