@@ -152,6 +152,33 @@ def remove_plot(path: Path):
         path.unlink()
 
 
+def get_harvesting_mode(root_path: Path, config: Dict = None) -> Dict:
+    if config is None:
+        config = load_config(root_path, "config.yaml")
+    return {
+        "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting"),
+        "gpu_index": config["harvester"].get("gpu_index"),
+        "enforce_gpu_index": config["harvester"].get("enforce_gpu_index"),
+    }
+
+
+def update_harvesting_mode(
+    root_path: Path,
+    *,
+    use_gpu_harvesting: Optional[bool] = None,
+    gpu_index: Optional[int] = None,
+    enforce_gpu_index: Optional[bool] = None,
+):
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        if use_gpu_harvesting is not None:
+            config["harvester"]["use_gpu_harvesting"] = use_gpu_harvesting
+        if gpu_index is not None:
+            config["harvester"]["gpu_index"] = gpu_index
+        if enforce_gpu_index is not None:
+            config["harvester"]["enforce_gpu_index"] = enforce_gpu_index
+        save_config(root_path, "config.yaml", config)
+
+
 def get_filenames(directory: Path, recursive: bool) -> List[Path]:
     try:
         if not directory.exists():
