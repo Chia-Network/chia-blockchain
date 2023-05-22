@@ -2658,13 +2658,13 @@ class WalletRpcApi:
         coin_ids = []
         nft_ids = []
         fee = uint64(request.get("fee", 0))
+        nft_wallet: NFTWallet
         for nft_coin in request["nft_coin_list"]:
             if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             nft_coin_id = nft_coin["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_id = decode_puzzle_hash(nft_coin_id)
@@ -2686,8 +2686,7 @@ class WalletRpcApi:
         first = True
         nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
                 tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id))
             else:
@@ -2747,13 +2746,13 @@ class WalletRpcApi:
         tx_list: List[TransactionRecord] = []
         coin_ids = []
         fee = uint64(request.get("fee", 0))
+        nft_wallet: NFTWallet
         for nft_coin in request["nft_coin_list"]:
             if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot transfer NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             nft_coin_id = nft_coin["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_id = decode_puzzle_hash(nft_coin_id)
@@ -2769,8 +2768,7 @@ class WalletRpcApi:
         first = True
         nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
                 tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash))
             else:
