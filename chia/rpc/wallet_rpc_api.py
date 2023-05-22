@@ -282,7 +282,7 @@ class WalletRpcApi:
         )
 
     async def get_latest_singleton_coin_spend(
-            self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
+        self, peer: WSChiaConnection, coin_id: bytes32, latest: bool = True
     ) -> Tuple[CoinSpend, CoinState]:
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
@@ -431,7 +431,7 @@ class WalletRpcApi:
         return {}
 
     async def _check_key_used_for_rewards(
-            self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
+        self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
     ) -> Tuple[bool, bool]:
         """Checks if the given key is used for either the farmer rewards or pool rewards
         returns a tuple of two booleans
@@ -796,7 +796,6 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-
     async def _get_wallet_balance(self, wallet_id: uint32) -> Dict:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
@@ -816,7 +815,7 @@ class WalletRpcApi:
         return {"wallet_balance": wallet_balance}
 
     async def get_wallet_balances(self, request: Dict) -> EndpointResult:
-        wallet_ids: List[uint32] = [uint32(int(wallet_id)) for wallet_id in request['wallet_ids']]
+        wallet_ids: List[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
         wallet_balances: Dict[uint32, Dict] = {}
         for wallet_id in wallet_ids:
             wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)
@@ -947,7 +946,7 @@ class WalletRpcApi:
         address = request["address"]
         selected_network = self.service.config["selected_network"]
         expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
-        if address[0: len(expected_prefix)] != expected_prefix:
+        if address[0 : len(expected_prefix)] != expected_prefix:
             raise ValueError("Unexpected Address Prefix")
         puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
@@ -1307,7 +1306,7 @@ class WalletRpcApi:
             # that was used to sign the message.
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
             if puzzle_hash != puzzle_hash_for_synthetic_public_key(
-                    G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
+                G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             ):
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
@@ -1622,7 +1621,7 @@ class WalletRpcApi:
         for spend in bundle.coin_spends:
             mod, _ = spend.puzzle_reveal.to_program().uncurry()
             if mod.get_tree_hash() == bytes32.from_hexstr(
-                    "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
             ):
                 raise ValueError("CAT1s are no longer supported")
         ###
@@ -1952,10 +1951,10 @@ class WalletRpcApi:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
-                        did_wallet is not None
-                        and did_wallet.did_info.current_inner is not None
-                        and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
-                        == coin_state.coin.puzzle_hash
+                    did_wallet is not None
+                    and did_wallet.did_info.current_inner is not None
+                    and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    == coin_state.coin.puzzle_hash
                 ):
                     # Check if the old wallet has the inner puzzle
                     did_puzzle = did_wallet.did_info.current_inner
@@ -2000,7 +1999,7 @@ class WalletRpcApi:
                         return {
                             "success": False,
                             "error": f"Cannot recover DID {launcher_id.hex()}"
-                                     f" because the last spend updated recovery_list_hash/num_verification/metadata.",
+                            f" because the last spend updated recovery_list_hash/num_verification/metadata.",
                         }
 
             if did_wallet is None:
@@ -2369,7 +2368,7 @@ class WalletRpcApi:
             did_id = decode_puzzle_hash(did_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
-                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
         fee = uint64(request.get("fee", 0))
@@ -2414,7 +2413,7 @@ class WalletRpcApi:
                 nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             assert nft_coin_info is not None
             if not (
-                    await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
             ).supports_did:
                 log.warning(f"Skipping NFT {nft_coin_info.nft_id.hex()}, doesn't support setting a DID.")
                 continue
@@ -2941,9 +2940,9 @@ class WalletRpcApi:
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (
-                "coin_announcements" in request
-                and request["coin_announcements"] is not None
-                and len(request["coin_announcements"]) > 0
+            "coin_announcements" in request
+            and request["coin_announcements"] is not None
+            and len(request["coin_announcements"]) > 0
         ):
             coin_announcements = {
                 Announcement(
@@ -2958,9 +2957,9 @@ class WalletRpcApi:
 
         puzzle_announcements: Optional[Set[Announcement]] = None
         if (
-                "puzzle_announcements" in request
-                and request["puzzle_announcements"] is not None
-                and len(request["puzzle_announcements"]) > 0
+            "puzzle_announcements" in request
+            and request["puzzle_announcements"] is not None
+            and len(request["puzzle_announcements"]) > 0
         ):
             puzzle_announcements = {
                 Announcement(
