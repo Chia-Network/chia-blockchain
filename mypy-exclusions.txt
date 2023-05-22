@@ -41,10 +41,8 @@ chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
 chia.timelord.iters_from_block
-chia.timelord.timelord
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
-chia.timelord.timelord_state
 chia.types.blockchain_format.program
 chia.util.block_cache
 chia.util.chia_logging
