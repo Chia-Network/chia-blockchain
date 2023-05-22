@@ -105,6 +105,10 @@ class VCWallet:
             return  # pragma: no cover
         vc = VerifiedCredential.get_next_from_coin_spend(cs)
         vc_record: VCRecord = VCRecord(vc, height)
+        # Send notification
+        self.wallet_state_manager.state_changed(
+            "vc_received", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+        )
         await self.store.add_or_replace_vc_record(vc_record)
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
@@ -117,6 +121,9 @@ class VCWallet:
         vc_record: Optional[VCRecord] = await self.store.get_vc_record_by_coin_id(coin.name())
         if vc_record is not None:
             await self.store.delete_vc_record(vc_record.vc.launcher_id)
+            self.wallet_state_manager.state_changed(
+                "vc_removed", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+            )
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
         """
