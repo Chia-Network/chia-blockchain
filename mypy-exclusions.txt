@@ -153,8 +153,6 @@ tests.core.util.test_significant_bits
 tests.farmer_harvester.test_farmer_harvester
 tests.generator.test_list_to_batches
 tests.generator.test_scan
-tests.plot_sync.test_plot_sync
-tests.plot_sync.test_sync_simulated
 tests.plotting.test_plot_manager
 tests.pools.test_pool_cmdline
 tests.pools.test_pool_config
