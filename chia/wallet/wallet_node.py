@@ -664,7 +664,7 @@ class WalletNode:
         if self._wallet_state_manager is None:
             return None
 
-        if Version(peer.protocol_version) < Version("0.0.33"):
+        if peer.protocol_version < Version("0.0.33"):
             self.log.info("Disconnecting, full node running old software")
             await peer.close()
 
