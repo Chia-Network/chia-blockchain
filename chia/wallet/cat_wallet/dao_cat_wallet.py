@@ -4,7 +4,7 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -61,6 +61,11 @@ QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 class DAOCATWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DAOCATWallet", None)
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -769,8 +774,18 @@ class DAOCATWallet:
     async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def get_pending_change_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
+    async def get_pending_change_balance(self) -> uint64:
+        return uint64(0)
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+    ) -> Set[Coin]:
+        return set()
 
     async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
@@ -838,3 +853,6 @@ class DAOCATWallet:
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
+
+    def get_name(self) -> str:
+        return self.wallet_info.name

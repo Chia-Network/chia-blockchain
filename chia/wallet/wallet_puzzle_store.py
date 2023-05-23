@@ -358,3 +358,24 @@ class WalletPuzzleStore:
             return uint32(row[0])
 
         return None
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # First fetch all puzzle hashes since we need them to drop them from the cache
+            rows = await conn.execute_fetchall(
+                "SELECT puzzle_hash FROM derivation_paths WHERE wallet_id=?", (wallet_id,)
+            )
+            cursor = await conn.execute("DELETE FROM derivation_paths WHERE wallet_id=?;", (wallet_id,))
+            await cursor.close()
+        # Clear caches
+        puzzle_hashes = set(bytes32.fromhex(row[0]) for row in rows)
+        for puzzle_hash in puzzle_hashes:
+            try:
+                self.wallet_identifier_cache.remove(puzzle_hash)
+            except KeyError:
+                pass
+        try:
+            self.last_wallet_derivation_index.pop(wallet_id)
+        except KeyError:
+            pass
+        self.last_derivation_index = None

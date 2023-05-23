@@ -98,6 +98,9 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
+from chia.wallet.vc_wallet.vc_store import VCStore
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -131,6 +134,7 @@ class WalletStateManager:
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
     nft_store: WalletNftStore
+    vc_store: VCStore
     basic_store: KeyValStore
 
     # Makes sure only one asyncio thread is changing the blockchain state at one time
@@ -209,6 +213,7 @@ class WalletStateManager:
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
+        self.vc_store = await VCStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
@@ -282,6 +287,12 @@ class WalletStateManager:
                 )
             elif wallet_type == WalletType.DAO_CAT:
                 wallet = await DAOCATWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_type == WalletType.VC:  # pragma: no cover
+                wallet = await VCWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -719,6 +730,11 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
+        # Check if the coin is a VC
+        is_vc, err_msg = VerifiedCredential.is_vc(uncurried)
+        if is_vc:
+            return await self.handle_vc(coin_spend)
+
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None
@@ -976,13 +992,10 @@ class WalletStateManager:
         )
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         assert isinstance(inner_puzzle, Program)
-        dao_wallet = await DAOWallet.create_new_did_wallet_from_coin_spend(
+        dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             self,
             self.main_wallet,
-            coin_spend.coin,
-            inner_puzzle,
-            coin_spend,
-            coin_state.spent_height,  # this is included in CoinState, pass it in from WSM
+            singleton_id,
         )
         assert dao_wallet is not None
         return None
@@ -1118,6 +1131,25 @@ class WalletStateManager:
             )
             wallet_identifier = WalletIdentifier.create(new_nft_wallet)
         return wallet_identifier
+
+    async def handle_vc(self, parent_coin_spend: CoinSpend) -> Optional[WalletIdentifier]:
+        # Check the ownership
+        vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(parent_coin_spend)
+        derivation_record: Optional[DerivationRecord] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+            vc.inner_puzzle_hash
+        )
+        if derivation_record is None:
+            self.log.warning(
+                f"Verified credential {vc.launcher_id.hex()} is not belong to the current wallet."
+            )  # pragma: no cover
+            return None  # pragma: no cover
+        self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
+        for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
+            return WalletIdentifier(wallet_info.id, WalletType.VC)
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)  # pragma: no cover
+            return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
 
     async def _add_coin_states(
         self,
@@ -1416,6 +1448,10 @@ class WalletStateManager:
                             if coin_state.spent_height is not None:
                                 nft_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=NFTWallet)
                                 await nft_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
+                        elif record.wallet_type == WalletType.VC:
+                            if coin_state.spent_height is not None:
+                                vc_wallet = self.get_wallet(id=uint32(record.wallet_id), required_type=VCWallet)
+                                await vc_wallet.remove_coin(coin_state.coin, uint32(coin_state.spent_height))
 
                         # Check if a child is a singleton launcher
                         for child in children:
@@ -1921,3 +1957,15 @@ class WalletStateManager:
                 ), f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
                 return wallet
         raise ValueError("DataLayerWallet not available")
+
+    async def get_or_create_vc_wallet(self) -> VCWallet:
+        for _, wallet in self.wallets.items():
+            if WalletType(wallet.type()) == WalletType.VC:
+                assert isinstance(wallet, VCWallet)
+                vc_wallet: VCWallet = wallet
+                break
+        else:
+            # Create a new VC wallet
+            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
+
+        return vc_wallet
