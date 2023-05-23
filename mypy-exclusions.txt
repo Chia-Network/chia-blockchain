@@ -6,7 +6,6 @@ chia.cmds.wallet
 chia.cmds.wallet_funcs
 chia.daemon.server
 chia.data_layer.data_layer_wallet
-chia.farmer.farmer_api
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
@@ -32,7 +31,6 @@ chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
 chia.server.start_harvester
-chia.simulator.block_tools
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services
@@ -40,7 +38,6 @@ chia.simulator.start_simulator
 chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
-chia.timelord.iters_from_block
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
@@ -150,7 +147,6 @@ tests.core.util.test_keychain
 tests.core.util.test_keyring_wrapper
 tests.core.util.test_lru_cache
 tests.core.util.test_significant_bits
-tests.farmer_harvester.test_farmer_harvester
 tests.generator.test_list_to_batches
 tests.generator.test_scan
 tests.plotting.test_plot_manager

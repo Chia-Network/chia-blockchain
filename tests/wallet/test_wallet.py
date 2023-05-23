@@ -626,10 +626,10 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        resp = await api_0.get_coins(dict({"wallet_id": 1, "coin_type": 1}))
+        resp = await api_0.get_coin_records(dict({"wallet_id": 1, "coin_type": 1}))
         json.dumps(resp)
-        assert len(resp["coins"]) == 1
-        assert resp["coins"][0]["coin_id"] == merkle_coin.name().hex()
+        assert len(resp["coin_records"]) == 1
+        assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
 
     @pytest.mark.parametrize(
         "trusted",
