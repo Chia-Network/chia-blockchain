@@ -1345,12 +1345,13 @@ async def test_plotter_roundtrip(
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
 
+
 @pytest.mark.asyncio
 async def test_plotter_stop_plotting(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
-    
+
     # register for chia_plotter events
     service_name = "chia_plotter"
     data = {"service": service_name}
@@ -1428,4 +1429,3 @@ async def test_plotter_stop_plotting(
     # 4) Finished
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
-

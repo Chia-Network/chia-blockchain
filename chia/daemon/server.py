@@ -1198,7 +1198,9 @@ def plotter_log_path(root_path: Path, id: str):
     return root_path / "plotter" / f"plotter_log_{id}.txt"
 
 
-def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str, test_mode: bool = False) -> Tuple[subprocess.Popen, Path]:
+def launch_plotter(
+    root_path: Path, service_name: str, service_array: List[str], id: str, test_mode: bool = False
+) -> Tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -1223,9 +1225,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
     if test_mode:
-        process = subprocess.Popen(
-            ["chia", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        process = subprocess.Popen(["chia", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         process = subprocess.Popen(
             service_array,
