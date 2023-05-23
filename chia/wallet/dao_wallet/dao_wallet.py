@@ -233,6 +233,8 @@ class DAOWallet(WalletProtocol):
         name: Optional[str] = None,
     ) -> DAOWallet:
         """
+        Register to follow an existing DAO ("joining" a DAO)
+
         Create a DAO wallet for existing DAO
         :param wallet_state_manager: Wallet state manager
         :param main_wallet: Standard wallet
@@ -413,6 +415,12 @@ class DAOWallet(WalletProtocol):
         fee: uint64 = uint64(0),
     ) -> DAOWallet:
         """
+        EXPERIMENTAL & UNSUPPORTED: This is a mechanism to create a new DAO,
+        using an already-existing CAT tail as the voting CAT.
+
+        Doing this removes several features from the wallet (for that DAO), including the following:
+        - Tracking Voting CCAT issuance
+
         Create a brand new DAO wallet
         This must be called under the wallet state manager lock
         :param wallet_state_manager: Wallet state manager
@@ -1148,7 +1156,7 @@ class DAOWallet(WalletProtocol):
         return full_spend
 
     async def generate_treasury_eve_spend(
-        self, inner_puz: Program, eve_coin: Coin, mint_amount: int, origin: Coin, fee: uint64 = uint64(0)
+        self, inner_puz: Program, treasury_eve_coin: Coin, mint_amount: int, origin: Coin, fee: uint64 = uint64(0)
     ) -> SpendBundle:
         """
         Create the eve spend of the treasury
@@ -1174,11 +1182,11 @@ class DAOWallet(WalletProtocol):
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
-                eve_coin.amount,
+                treasury_eve_coin.amount,
                 inner_sol,
             ]
         )
-        eve_coin_spend = CoinSpend(eve_coin, full_treasury_puzzle, fullsol)
+        eve_coin_spend = CoinSpend(treasury_eve_coin, full_treasury_puzzle, fullsol)
         eve_spend_bundle = SpendBundle([eve_coin_spend], G2Element())
 
         # assert self.dao_info.current_treasury_innerpuz
@@ -1218,16 +1226,16 @@ class DAOWallet(WalletProtocol):
             oracle_spend_delay,
         ) = curried_args
         next_proof = LineageProof(
-            eve_coin.parent_coin_info,
+            treasury_eve_coin.parent_coin_info,
             inner_puz.get_tree_hash(),
-            uint64(eve_coin.amount),
+            uint64(treasury_eve_coin.amount),
         )
         tail_puz = curry_cat_tail(self.dao_info.treasury_id)
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
-        launcher_cat_coin = Coin(eve_coin.name(), cat_launcher.get_tree_hash(), mint_amount)
+        launcher_cat_coin = Coin(treasury_eve_coin.name(), cat_launcher.get_tree_hash(), mint_amount)
         solution = Program.to([
             inner_puz.get_tree_hash(),
-            eve_coin.parent_coin_info,
+            treasury_eve_coin.parent_coin_info,
             mint_puzhash,
             mint_amount,
         ])
@@ -1254,8 +1262,8 @@ class DAOWallet(WalletProtocol):
         ])
 
         # breakpoint()
-        next_coin = Coin(eve_coin.name(), eve_coin.puzzle_hash, eve_coin.amount)
-        await self.add_parent(eve_coin.name(), next_proof)
+        next_coin = Coin(treasury_eve_coin.name(), treasury_eve_coin.puzzle_hash, treasury_eve_coin.amount)
+        await self.add_parent(treasury_eve_coin.name(), next_proof)
         await self.wallet_state_manager.add_interested_coin_ids([next_coin.name()], [self.wallet_id])
 
         dao_info = dataclasses.replace(self.dao_info, current_treasury_coin=next_coin)
@@ -1320,6 +1328,7 @@ class DAOWallet(WalletProtocol):
             ],  # create cat_launcher coin
             [
                 60,
+                # See the announcement check in dao_treasury_with_hack.clsp
                 Program.to(["m", full_puz.get_tree_hash()]).get_tree_hash(),
             ],  # make an announcement for the launcher to assert
         ]
@@ -2368,6 +2377,7 @@ class DAOWallet(WalletProtocol):
     async def create_new_dao_cats(
         self, amount: uint64, push: bool = False
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
+        "Put voting cats into the lockup state"
         # get the lockup puzzle hash
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         return await dao_cat_wallet.create_new_dao_cats(amount, push)
