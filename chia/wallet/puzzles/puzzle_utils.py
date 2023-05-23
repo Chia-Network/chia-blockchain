@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from chia.types.condition_opcodes import ConditionOpcode
 
 
-def make_create_coin_condition(puzzle_hash, amount, memos: Optional[List[bytes]]) -> List:
-    if memos is not None:
-        return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount, memos]
-    return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
+def make_create_coin_condition(puzzle_hash, amount, memos: List[bytes]) -> List:
+    condition = [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
+    if len(memos) > 0:
+        condition.append(memos)
+    return condition
 
 
 def make_assert_aggsig_condition(pubkey):

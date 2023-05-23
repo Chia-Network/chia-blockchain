@@ -1,7 +1,0 @@
-(mod (
-    TARGET
-    AMOUNT
-  )
-  (include condition_codes.clvm)
-  (list (list CREATE_COIN TARGET AMOUNT) (list CREATE_COIN_ANNOUNCEMENT ()))
-)

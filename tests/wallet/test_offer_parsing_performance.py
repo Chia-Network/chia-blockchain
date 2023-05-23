@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import cProfile
+import sys
 from contextlib import contextmanager
 from typing import Iterator
 
@@ -17,6 +18,9 @@ with_profile = False
 
 @contextmanager
 def enable_profiler(name: str) -> Iterator[None]:
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
+
     if not with_profile:
         yield
         return

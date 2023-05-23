@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -28,11 +28,13 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
+from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
+from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -59,9 +61,10 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.singleton import create_fullpuz
+from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -69,10 +72,15 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -86,6 +94,9 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
+    max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
+    max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
+
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None
         self.service = wallet_node
@@ -126,6 +137,7 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/send_transaction_multi": self.send_transaction_multi,
+            "/get_coin_records": self.get_coin_records,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
@@ -210,6 +222,14 @@ class WalletRpcApi:
             "/dl_get_mirrors": self.dl_get_mirrors,
             "/dl_new_mirror": self.dl_new_mirror,
             "/dl_delete_mirror": self.dl_delete_mirror,
+            # Verified Credential
+            "/vc_mint": self.vc_mint,
+            "/vc_get": self.vc_get,
+            "/vc_get_list": self.vc_get_list,
+            "/vc_spend": self.vc_spend,
+            "/vc_add_proofs": self.vc_add_proofs,
+            "/vc_get_proofs_for_root": self.vc_get_proofs_for_root,
+            "/vc_revoke": self.vc_revoke,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -296,9 +316,7 @@ class WalletRpcApi:
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
         parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
         return coin_spend, coin_state
 
     ##########################################################################################
@@ -821,9 +839,7 @@ class WalletRpcApi:
                     [tr.additions[0].parent_coin_info], peer=peer
                 )
                 assert len(coin_state_list) == 1
-                coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state_list[0].spent_height, coin_state_list[0].coin, peer
-                )
+                coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
                 tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
@@ -847,9 +863,18 @@ class WalletRpcApi:
         to_puzzle_hash: Optional[bytes32] = None
         if to_address is not None:
             to_puzzle_hash = decode_puzzle_hash(to_address)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id, start, end, sort_key=sort_key, reverse=reverse, to_puzzle_hash=to_puzzle_hash
+            wallet_id,
+            start,
+            end,
+            sort_key=sort_key,
+            reverse=reverse,
+            to_puzzle_hash=to_puzzle_hash,
+            type_filter=type_filter,
         )
         return {
             "transactions": [
@@ -932,10 +957,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in coin_records.values()}
+            exclude_coins = {wr.coin for wr in result.records}
         else:
             exclude_coins = set()
 
@@ -1105,24 +1130,28 @@ class WalletRpcApi:
 
         if "names" not in request:
             raise ValueError("Names not in request")
+        coin_ids = [bytes32.from_hexstr(name) for name in request["names"]]
         kwargs: Dict[str, Any] = {
-            "include_spent_coins": False,
-            "coin_names": [hexstr_to_bytes(name) for name in request["names"]],
+            "coin_id_filter": HashFilter.include(coin_ids),
         }
-        if "start_height" in request:
-            kwargs["start_height"] = uint32(request["start_height"])
-        if "end_height" in request:
-            kwargs["end_height"] = uint32(request["end_height"])
 
-        if "include_spent_coins" in request:
-            kwargs["include_spent_coins"] = request["include_spent_coins"]
+        confirmed_range = UInt32Range()
+        if "start_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, start=uint32(request["start_height"]))
+        if "end_height" in request:
+            confirmed_range = dataclasses.replace(confirmed_range, stop=uint32(request["end_height"]))
+        if confirmed_range != UInt32Range():
+            kwargs["confirmed_range"] = confirmed_range
+
+        if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
+            kwargs["spent_range"] = UInt32Range(start=uint32(uint32.MAXIMUM_EXCLUSIVE - 1))
 
         async with self.service.wallet_state_manager.lock:
             coin_records: List[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
                 **kwargs
             )
             missed_coins: List[str] = [
-                "0x" + c_id.hex() for c_id in kwargs["coin_names"] if c_id not in [cr.name for cr in coin_records]
+                "0x" + c_id.hex() for c_id in coin_ids if c_id not in [cr.name for cr in coin_records]
             ]
             if missed_coins:
                 raise ValueError(f"Coin ID's: {missed_coins} not found.")
@@ -1424,10 +1453,10 @@ class WalletRpcApi:
             exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
         exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
         if exclude_coin_ids is not None:
-            coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+            result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in coin_records.values()}
+            exclude_coins = {wr.coin for wr in result.records}
         else:
             exclude_coins = None
         cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
@@ -1825,13 +1854,17 @@ class WalletRpcApi:
                 hints.append(memo.hex())
         return {
             "success": True,
+            "did_id": encode_puzzle_hash(
+                bytes32.from_hexstr(singleton_struct.rest().first().atom.hex()),
+                AddressType.DID.hrp(self.service.config),
+            ),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
-            "public_key": public_key.as_python().hex(),
-            "recovery_list_hash": recovery_list_hash.as_python().hex(),
+            "public_key": public_key.atom.hex(),
+            "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
             "metadata": program_to_metadata(metadata),
-            "launcher_id": singleton_struct.rest().first().as_python().hex(),
+            "launcher_id": singleton_struct.rest().first().atom.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
             "hints": hints,
@@ -1893,7 +1926,7 @@ class WalletRpcApi:
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
             )
-            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
@@ -1906,14 +1939,14 @@ class WalletRpcApi:
                         did_wallet = wallet
                         break
 
-            full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launcher_id)
+            full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launcher_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 if full_puzzle_empty_recovery.get_tree_hash() == coin_state.coin.puzzle_hash:
                     did_puzzle = did_puzzle_empty_recovery
                 elif (
                     did_wallet is not None
                     and did_wallet.did_info.current_inner is not None
-                    and create_fullpuz(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
+                    and create_singleton_puzzle(did_wallet.did_info.current_inner, launcher_id).get_tree_hash()
                     == coin_state.coin.puzzle_hash
                 ):
                     # Check if the old wallet has the inner puzzle
@@ -1928,7 +1961,7 @@ class WalletRpcApi:
                     did_puzzle = DID_INNERPUZ_MOD.curry(
                         our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                     )
-                    full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                    full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                     matched = True
                     if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                         matched = False
@@ -1944,7 +1977,7 @@ class WalletRpcApi:
                             did_puzzle = DID_INNERPUZ_MOD.curry(
                                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
                             )
-                            full_puzzle = create_fullpuz(did_puzzle, launcher_id)
+                            full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
                             if full_puzzle.get_tree_hash() == coin_state.coin.puzzle_hash:
                                 matched = True
                                 break
@@ -2357,13 +2390,13 @@ class WalletRpcApi:
         coin_ids = []
         nft_ids = []
         fee = uint64(request.get("fee", 0))
+        nft_wallet: NFTWallet
         for nft_coin in request["nft_coin_list"]:
             if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot set DID for NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             nft_coin_id = nft_coin["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_id = decode_puzzle_hash(nft_coin_id)
@@ -2385,8 +2418,7 @@ class WalletRpcApi:
         first = True
         nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
                 tx_list.extend(await nft_wallet.set_bulk_nft_did(nft_list, did_id))
             else:
@@ -2446,13 +2478,13 @@ class WalletRpcApi:
         tx_list: List[TransactionRecord] = []
         coin_ids = []
         fee = uint64(request.get("fee", 0))
+        nft_wallet: NFTWallet
         for nft_coin in request["nft_coin_list"]:
             if "nft_coin_id" not in nft_coin or "wallet_id" not in nft_coin:
                 log.error(f"Cannot transfer NFT :{nft_coin}, missing nft_coin_id or wallet_id.")
                 continue
             wallet_id = uint32(nft_coin["wallet_id"])
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             nft_coin_id = nft_coin["nft_coin_id"]
             if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_id = decode_puzzle_hash(nft_coin_id)
@@ -2468,8 +2500,7 @@ class WalletRpcApi:
         first = True
         nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
-            nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            assert isinstance(nft_wallet, NFTWallet)
+            nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
                 tx_list.extend(await nft_wallet.bulk_transfer_nft(nft_list, puzzle_hash))
             else:
@@ -2810,6 +2841,51 @@ class WalletRpcApi:
             "nft_id_list": nft_id_list,
         }
 
+    async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
+        parsed_request = GetCoinRecords.from_json_dict(request)
+
+        if (
+            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
+            and parsed_request.limit > self.max_get_coin_records_limit
+        ):
+            raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
+
+        for filter_name, filter in {
+            "coin_id_filter": parsed_request.coin_id_filter,
+            "puzzle_hash_filter": parsed_request.puzzle_hash_filter,
+            "parent_coin_id_filter": parsed_request.parent_coin_id_filter,
+            "amount_filter": parsed_request.amount_filter,
+        }.items():
+            if filter is None:
+                continue
+            if len(filter.values) > self.max_get_coin_records_filter_items:
+                raise ValueError(
+                    f"{filter_name} max items {self.max_get_coin_records_filter_items} exceeded: {len(filter.values)}"
+                )
+
+        result = await self.service.wallet_state_manager.coin_store.get_coin_records(
+            offset=parsed_request.offset,
+            limit=parsed_request.limit,
+            wallet_id=parsed_request.wallet_id,
+            wallet_type=None if parsed_request.wallet_type is None else WalletType(parsed_request.wallet_type),
+            coin_type=None if parsed_request.coin_type is None else CoinType(parsed_request.coin_type),
+            coin_id_filter=parsed_request.coin_id_filter,
+            puzzle_hash_filter=parsed_request.puzzle_hash_filter,
+            parent_coin_id_filter=parsed_request.parent_coin_id_filter,
+            amount_filter=parsed_request.amount_filter,
+            amount_range=parsed_request.amount_range,
+            confirmed_range=parsed_request.confirmed_range,
+            spent_range=parsed_request.spent_range,
+            order=CoinRecordOrder(parsed_request.order),
+            reverse=parsed_request.reverse,
+            include_total_count=parsed_request.include_total_count,
+        )
+
+        return {
+            "coin_records": [coin_record.to_json_dict_parsed_metadata() for coin_record in result.records],
+            "total_count": result.total_count,
+        }
+
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
         amount = 0
@@ -2870,7 +2946,7 @@ class WalletRpcApi:
 
         memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
-        additional_outputs: List[AmountWithPuzzlehash] = []
+        additional_outputs: List[Payment] = []
         for addition in additions[1:]:
             receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
             if len(receiver_ph) != 32:
@@ -2879,7 +2955,7 @@ class WalletRpcApi:
             if amount > self.service.constants.MAX_COIN_AMOUNT:
                 raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
-            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
+            additional_outputs.append(Payment(receiver_ph, amount, memos))
 
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
@@ -2957,13 +3033,13 @@ class WalletRpcApi:
                 assert isinstance(wallet, CATWallet)
 
                 txs = await wallet.generate_signed_transaction(
-                    [amount_0] + [output["amount"] for output in additional_outputs],
-                    [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
+                    [amount_0] + [output.amount for output in additional_outputs],
+                    [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                     fee,
                     coins=coins,
                     exclude_cat_coins=exclude_coins,
                     ignore_max_send_amount=True,
-                    memos=[memos_0] + [output["memos"] for output in additional_outputs],
+                    memos=[memos_0] + [output.memos for output in additional_outputs],
                     coin_announcements_to_consume=coin_announcements,
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
@@ -3253,6 +3329,188 @@ class WalletRpcApi:
             )
             for tx in txs:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    ##########################################################################################
+    # Verified Credential
+    ##########################################################################################
+    async def vc_mint(self, request) -> Dict:
+        """
+        Mint a verified credential using the assigned DID
+        :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
+        as a 'fee' for the mint tx
+        :return: a 'vc_record' containing all the information of the soon-to-be-confirmed vc as well as any relevant
+        'transactions'
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCMint(Streamable):
+            did_id: str
+            target_address: Optional[str] = None
+            fee: uint64 = uint64(0)
+
+        parsed_request = VCMint.from_json_dict(request)
+
+        did_id = decode_puzzle_hash(parsed_request.did_id)
+        puzhash: Optional[bytes32] = None
+        if parsed_request.target_address is not None:
+            puzhash = decode_puzzle_hash(parsed_request.target_address)
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+        vc_record, tx_list = await vc_wallet.launch_new_vc(did_id, puzhash, parsed_request.fee)
+        for tx in tx_list:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {
+            "vc_record": vc_record.to_json_dict(),
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
+        }
+
+    async def vc_get(self, request) -> Dict:
+        """
+        Given a launcher ID get the verified credential
+        :param request: the 'vc_id' launcher id of a verifiable credential
+        :return: the 'vc_record' representing the specified verifiable credential
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCGet(Streamable):
+            vc_id: bytes32
+
+        parsed_request = VCGet.from_json_dict(request)
+
+        vc_record = await self.service.wallet_state_manager.vc_store.get_vc_record(parsed_request.vc_id)
+        return {"vc_record": vc_record}
+
+    async def vc_get_list(self, request) -> Dict:
+        """
+        Get a list of verified credentials
+        :param request: optional parameters for pagination 'start' and 'count'
+        :return: all 'vc_records' in the specified range and any 'proofs' associated with the roots contained within
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCGetList(Streamable):
+            start: uint32 = uint32(0)
+            end: uint32 = uint32(50)
+
+        parsed_request = VCGetList.from_json_dict(request)
+
+        vc_list = await self.service.wallet_state_manager.vc_store.get_vc_record_list(
+            parsed_request.start, parsed_request.end
+        )
+        return {
+            "vc_records": [{"coin_id": "0x" + vc.vc.coin.name().hex(), **vc.to_json_dict()} for vc in vc_list],
+            "proofs": {
+                rec.vc.proof_hash.hex(): None if fetched_proof is None else fetched_proof.key_value_pairs
+                for rec in vc_list
+                if rec.vc.proof_hash is not None
+                for fetched_proof in (
+                    await self.service.wallet_state_manager.vc_store.get_proofs_for_root(rec.vc.proof_hash),
+                )
+            },
+        }
+
+    async def vc_spend(self, request) -> Dict:
+        """
+        Spend a verified credential
+        :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional paramaters for a 'new_puzhash'
+        for the vc to end up at and 'new_proof_hash' & 'provider_inner_puzhash' which can be used to update the vc's
+        proofs. Also standard 'fee' & 'reuse_puzhash' parameters for the transaction.
+        :return: a list of all relevant 'transactions' to perform this spend
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCSpend(Streamable):
+            vc_id: bytes32
+            new_puzhash: Optional[bytes32] = None
+            new_proof_hash: Optional[bytes32] = None
+            provider_inner_puzhash: Optional[bytes32] = None
+            fee: uint64 = uint64(0)
+            reuse_puzhash: Optional[bool] = None
+
+        parsed_request = VCSpend.from_json_dict(request)
+
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+        txs = await vc_wallet.generate_signed_transaction(
+            parsed_request.vc_id,
+            parsed_request.fee,
+            parsed_request.new_puzhash,
+            new_proof_hash=parsed_request.new_proof_hash,
+            provider_inner_puzhash=parsed_request.provider_inner_puzhash,
+            reuse_puzhash=parsed_request.reuse_puzhash,
+        )
+        for tx in txs:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    async def vc_add_proofs(self, request) -> Dict:
+        """
+        Add a set of proofs to the DB that can be used when spending a VC. VCs are near useless until their proofs have
+        been added.
+        :param request: 'proofs' is a dictionary of key/value pairs
+        :return:
+        """
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
+
+        return {}
+
+    async def vc_get_proofs_for_root(self, request) -> Dict:
+        """
+        Given a specified vc root, get any proofs associated with that root.
+        :param request: must specify 'root' representing the tree hash of some set of proofs
+        :return: a dictionary of root hashes mapped to dictionaries of key value pairs of 'proofs'
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCGetProofsForRoot(Streamable):
+            root: bytes32
+
+        parsed_request = VCGetProofsForRoot.from_json_dict(request)
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        vc_proofs: Optional[VCProofs] = await vc_wallet.store.get_proofs_for_root(parsed_request.root)
+        if vc_proofs is None:
+            raise ValueError("no proofs found for specified root")  # pragma: no cover
+        return {"proofs": vc_proofs.key_value_pairs}
+
+    async def vc_revoke(self, request) -> Dict:
+        """
+        Revoke an on chain VC provided the correct DID is available
+        :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
+        :return: all relevant 'transactions'
+        """
+
+        @streamable
+        @dataclasses.dataclass(frozen=True)
+        class VCRevoke(Streamable):
+            vc_parent_id: bytes32
+            fee: uint64 = uint64(0)
+            reuse_puzhash: Optional[bool] = None
+
+        parsed_request = VCRevoke.from_json_dict(request)
+        vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
+
+        txs = await vc_wallet.revoke_vc(
+            parsed_request.vc_parent_id,
+            self.service.get_full_node_peer(),
+            parsed_request.fee,
+            parsed_request.reuse_puzhash,
+        )
+        for tx in txs:
+            await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         return {
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],

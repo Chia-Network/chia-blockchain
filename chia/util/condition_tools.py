@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -18,19 +18,17 @@ from chia.util.ints import uint64
 #       since asserts can be stripped with python `-OO` flag
 
 
-def parse_sexp_to_condition(
-    sexp: Program,
-) -> Tuple[Optional[Err], Optional[ConditionWithArgs]]:
+def parse_sexp_to_condition(sexp: Program) -> ConditionWithArgs:
     """
     Takes a ChiaLisp sexp and returns a ConditionWithArgs.
-    If it fails, returns an Error
+    Raises an ConsensusError if it fails.
     """
     first = sexp.pair
     if first is None:
-        return Err.INVALID_CONDITION, None
+        raise ConsensusError(Err.INVALID_CONDITION, ["first is None"])
     op = first[0].atom
     if op is None or len(op) != 1:
-        return Err.INVALID_CONDITION, None
+        raise ConsensusError(Err.INVALID_CONDITION, ["invalid op"])
 
     # since the ConditionWithArgs only has atoms as the args, we can't parse
     # hints and memos with this function. We just exit the loop if we encounter
@@ -46,52 +44,24 @@ def parse_sexp_to_condition(
         if len(vars) > 3:
             break
 
-    return None, ConditionWithArgs(ConditionOpcode(op), vars)
+    return ConditionWithArgs(ConditionOpcode(op), vars)
 
 
-def parse_sexp_to_conditions(
-    sexp: Program,
-) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]]]:
+def parse_sexp_to_conditions(sexp: Program) -> List[ConditionWithArgs]:
     """
     Takes a ChiaLisp sexp (list) and returns the list of ConditionWithArgss
-    If it fails, returns as Error
+    Raises an ConsensusError if it fails.
     """
-    results: List[ConditionWithArgs] = []
-    try:
-        for _ in sexp.as_iter():
-            error, cvp = parse_sexp_to_condition(_)
-            if error:
-                return error, None
-            results.append(cvp)  # type: ignore # noqa
-    except ConsensusError:
-        return Err.INVALID_CONDITION, None
-    return None, results
+    return [parse_sexp_to_condition(s) for s in sexp.as_iter()]
 
 
-def conditions_by_opcode(
-    conditions: List[ConditionWithArgs],
-) -> Dict[ConditionOpcode, List[ConditionWithArgs]]:
-    """
-    Takes a list of ConditionWithArgss(CVP) and return dictionary of CVPs keyed of their opcode
-    """
-    d: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
-    cvp: ConditionWithArgs
-    for cvp in conditions:
-        if cvp.opcode not in d:
-            d[cvp.opcode] = list()
-        d[cvp.opcode].append(cvp)
-    return d
-
-
-def pkm_pairs(
-    conditions: SpendBundleConditions, additional_data: bytes, *, soft_fork: bool
-) -> Tuple[List[bytes48], List[bytes]]:
+def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
     ret: Tuple[List[bytes48], List[bytes]] = ([], [])
 
     for pk, msg in conditions.agg_sig_unsafe:
         ret[0].append(bytes48(pk))
         ret[1].append(msg)
-        if soft_fork and msg.endswith(additional_data):
+        if msg.endswith(additional_data):
             raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
@@ -140,22 +110,21 @@ def conditions_dict_for_solution(
     puzzle_reveal: SerializedProgram,
     solution: SerializedProgram,
     max_cost: int,
-) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionWithArgs]]], uint64]:
-    error, result, cost = conditions_for_solution(puzzle_reveal, solution, max_cost)
-    if error or result is None:
-        return error, None, uint64(0)
-    return None, conditions_by_opcode(result), cost
+) -> Dict[ConditionOpcode, List[ConditionWithArgs]]:
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {}
+    for cvp in conditions_for_solution(puzzle_reveal, solution, max_cost):
+        conditions_dict.setdefault(cvp.opcode, list()).append(cvp)
+    return conditions_dict
 
 
 def conditions_for_solution(
     puzzle_reveal: SerializedProgram,
     solution: SerializedProgram,
     max_cost: int,
-) -> Tuple[Optional[Err], Optional[List[ConditionWithArgs]], uint64]:
+) -> List[ConditionWithArgs]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
         cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
-        error, result = parse_sexp_to_conditions(r)
-        return error, result, uint64(cost)
-    except Program.EvalError:
-        return Err.SEXP_ERROR, None, uint64(0)
+        return parse_sexp_to_conditions(r)
+    except Program.EvalError as e:
+        raise ConsensusError(Err.SEXP_ERROR, [str(e)]) from e

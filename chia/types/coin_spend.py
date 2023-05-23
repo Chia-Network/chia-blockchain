@@ -65,3 +65,10 @@ def compute_additions_with_cost(
 
 def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
     return compute_additions_with_cost(cs, max_cost=max_cost)[0]
+
+
+@streamable
+@dataclass(frozen=True)
+class SpendInfo(Streamable):
+    puzzle: SerializedProgram
+    solution: SerializedProgram
