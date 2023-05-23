@@ -1792,3 +1792,7 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert bal["1"]["confirmed_wallet_balance"] == 1999999999880
     assert bal["2"]["confirmed_wallet_balance"] == 100
     assert bal["3"]["confirmed_wallet_balance"] == 20
+    bal_ids = await client.get_wallet_balances([3, 2])
+    assert len(bal_ids) == 2
+    assert bal["2"]["confirmed_wallet_balance"] == 100
+    assert bal["3"]["confirmed_wallet_balance"] == 20
