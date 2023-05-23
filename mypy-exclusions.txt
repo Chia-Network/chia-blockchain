@@ -9,7 +9,6 @@ chia.data_layer.data_layer_wallet
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
-chia.plotters.chiapos
 chia.plotters.madmax
 chia.plotters.plotters
 chia.plotters.plotters_util
@@ -49,12 +48,10 @@ chia.util.hash
 chia.util.json_util
 chia.util.keychain
 chia.util.keyring_wrapper
-chia.util.log_exceptions
 chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler
-chia.util.safe_cancel_task
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
@@ -138,7 +135,6 @@ tests.core.test_farmer_harvester_rpc
 tests.core.test_filter
 tests.core.test_full_node_rpc
 tests.core.test_merkle_set
-tests.core.test_setproctitle
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
@@ -158,7 +154,6 @@ tests.simulation.test_simulation
 tests.tools.test_full_sync
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.build_network_protocol_files
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils
