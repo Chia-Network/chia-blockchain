@@ -125,7 +125,6 @@ tests.core.full_node.test_transactions
 tests.core.make_block_generator
 tests.core.mempool.test_mempool
 tests.core.mempool.test_mempool_performance
-tests.core.node_height
 tests.core.server.test_dos
 tests.core.server.test_rate_limits
 tests.core.ssl.test_ssl
