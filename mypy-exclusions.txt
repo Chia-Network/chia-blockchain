@@ -138,7 +138,6 @@ tests.core.test_farmer_harvester_rpc
 tests.core.test_filter
 tests.core.test_full_node_rpc
 tests.core.test_merkle_set
-tests.core.test_setproctitle
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
