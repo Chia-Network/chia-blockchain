@@ -6,7 +6,6 @@ chia.cmds.wallet
 chia.cmds.wallet_funcs
 chia.daemon.server
 chia.data_layer.data_layer_wallet
-chia.farmer.farmer_api
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
