@@ -38,7 +38,7 @@ def make_mempoolitem() -> MempoolItem:
     ph = wallet_tool.get_new_puzzlehash()
     coin = Coin(ph, ph, uint64(10000))
     spend_bundle = wallet_tool.generate_signed_transaction(uint64(10000), ph, coin)
-    cost = uint64(1000000)
+    cost = uint64(5000000)
     block_height = 1
 
     fee = uint64(10000000)

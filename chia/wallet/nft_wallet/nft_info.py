@@ -11,7 +11,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
+LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
@@ -28,9 +28,6 @@ class NFTInfo(Streamable):
 
     nft_coin_id: bytes32
     """Current NFT coin ID"""
-
-    nft_coin_confirmation_height: uint32
-    """Current NFT coin confirmation height"""
 
     owner_did: Optional[bytes32]
     """Owner DID"""

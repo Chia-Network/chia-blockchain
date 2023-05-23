@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import pytest
 from blspy import G1Element
 
-from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import Farmer
 from chia.harvester.harvester import Harvester
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
 
@@ -11,7 +11,7 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.util.wallet_types import WalletType
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class WalletPuzzleStore:
 
     lock: asyncio.Lock
     db_wrapper: DBWrapper2
-    wallet_identifier_cache: LRUCache
+    wallet_info_for_ph_cache: LRUCache
     # maps wallet_id -> last_derivation_index
     last_wallet_derivation_index: Dict[uint32, uint32]
     last_derivation_index: Optional[uint32]
@@ -64,7 +64,7 @@ class WalletPuzzleStore:
 
         # the lock is locked by the users of this class
         self.lock = asyncio.Lock()
-        self.wallet_identifier_cache = LRUCache(100)
+        self.wallet_info_for_ph_cache = LRUCache(100)
         self.last_derivation_index = None
         self.last_wallet_derivation_index = {}
         return self
@@ -267,12 +267,12 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
+    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[int, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
         """
-        cached = self.wallet_identifier_cache.get(puzzle_hash)
+        cached = self.wallet_info_for_ph_cache.get(puzzle_hash)
         if cached is not None:
             return cached
 
@@ -282,9 +282,8 @@ class WalletPuzzleStore:
             )
 
         if row is not None:
-            wallet_identifier = WalletIdentifier(uint32(row[1]), WalletType(row[0]))
-            self.wallet_identifier_cache.put(puzzle_hash, wallet_identifier)
-            return wallet_identifier
+            self.wallet_info_for_ph_cache.put(puzzle_hash, (row[1], WalletType(row[0])))
+            return row[1], WalletType(row[0])
 
         return None
 
@@ -358,24 +357,3 @@ class WalletPuzzleStore:
             return uint32(row[0])
 
         return None
-
-    async def delete_wallet(self, wallet_id: uint32) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # First fetch all puzzle hashes since we need them to drop them from the cache
-            rows = await conn.execute_fetchall(
-                "SELECT puzzle_hash FROM derivation_paths WHERE wallet_id=?", (wallet_id,)
-            )
-            cursor = await conn.execute("DELETE FROM derivation_paths WHERE wallet_id=?;", (wallet_id,))
-            await cursor.close()
-        # Clear caches
-        puzzle_hashes = set(bytes32.fromhex(row[0]) for row in rows)
-        for puzzle_hash in puzzle_hashes:
-            try:
-                self.wallet_identifier_cache.remove(puzzle_hash)
-            except KeyError:
-                pass
-        try:
-            self.last_wallet_derivation_index.pop(wallet_id)
-        except KeyError:
-            pass
-        self.last_derivation_index = None

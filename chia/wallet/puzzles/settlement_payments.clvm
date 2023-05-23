@@ -1,0 +1,49 @@
+(mod notarized_payments
+  ;; `notarized_payments` is a list of notarized coin payments
+  ;; a notarized coin payment is `(nonce . ((puzzle_hash amount ...) (puzzle_hash amount ...) ...))`
+  ;; Each notarized coin payment creates some `(CREATE_COIN puzzle_hash amount ...)` payments
+  ;; and a `(CREATE_PUZZLE_ANNOUNCEMENT (sha256tree notarized_coin_payment))` announcement
+  ;; The idea is the other side of this trade requires observing the announcement from a
+  ;; `settlement_payments` puzzle hash as a condition of one or more coin spends.
+
+  (include condition_codes.clvm)
+  (include utility_macros.clib)
+
+  (defun sha256tree (TREE)
+     (if (l TREE)
+         (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+         (sha256 1 TREE)
+     )
+  )
+
+  (defun create_coins_for_payment (payment_params so_far)
+    (if payment_params
+        (assert (> (f (r (f payment_params))) 0)  ; assert the amount is positive
+          ; then
+          (c (c CREATE_COIN (f payment_params)) (create_coins_for_payment (r payment_params) so_far))
+        )
+        so_far
+    )
+  )
+
+  (defun-inline create_announcement_for_payment (notarized_payment)
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+            (sha256tree notarized_payment))
+  )
+
+  (defun-inline augment_condition_list (notarized_payment so_far)
+    (c
+      (create_announcement_for_payment notarized_payment)
+      (create_coins_for_payment (r notarized_payment) so_far)
+    )
+  )
+
+  (defun construct_condition_list (notarized_payments)
+    (if notarized_payments
+        (augment_condition_list (f notarized_payments) (construct_condition_list (r notarized_payments)))
+        ()
+    )
+  )
+
+  (construct_condition_list notarized_payments)
+)

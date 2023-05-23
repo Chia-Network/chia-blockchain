@@ -53,9 +53,7 @@ async def init_data_layer(
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     save_config(bt.root_path, "config.yaml", config)
-    service = create_data_layer_service(
-        root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
-    )
+    service = create_data_layer_service(root_path=bt.root_path, config=config, wallet_service=wallet_service)
     await service.start()
     try:
         yield service._api.data_layer

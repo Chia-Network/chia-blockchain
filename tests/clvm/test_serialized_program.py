@@ -6,7 +6,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-SHA256TREE_MOD = load_clvm("sha256tree_module.clsp")
+SHA256TREE_MOD = load_clvm("sha256tree_module.clvm")
 
 
 # TODO: test multiple args

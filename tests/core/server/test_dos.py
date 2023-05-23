@@ -171,8 +171,8 @@ class TestDos:
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
         ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
 
-        ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
-        ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         new_tx_message = make_msg(
             ProtocolMessageTypes.new_transaction,
@@ -226,8 +226,8 @@ class TestDos:
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
         ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
 
-        ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
-        ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         def is_closed():
             return ws_con.closed
@@ -275,8 +275,8 @@ class TestDos:
         ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
         ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
 
-        ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
-        ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
+        ws_con.peer_host = "1.2.3.4"
+        ws_con_2.peer_host = "1.2.3.4"
 
         def is_closed():
             return ws_con.closed

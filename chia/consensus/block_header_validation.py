@@ -815,11 +815,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
-        if height >= constants.SOFT_FORK2_HEIGHT:
-            max_future_time = constants.MAX_FUTURE_TIME2
-        else:
-            max_future_time = constants.MAX_FUTURE_TIME
-        if header_block.foliage_transaction_block.timestamp > int(time.time() + max_future_time):
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
             return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
         if prev_b is not None:

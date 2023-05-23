@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -87,20 +86,13 @@ async def insert_into_data_store_from_file(
     await data_store.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root_hash, status=Status.COMMITTED)
 
 
-@dataclass
-class WriteFilesResult:
-    result: bool
-    full_tree: Path
-    diff_tree: Path
-
-
 async def write_files_for_root(
     data_store: DataStore,
     tree_id: bytes32,
     root: Root,
     foldername: Path,
     overwrite: bool = False,
-) -> WriteFilesResult:
+) -> bool:
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
@@ -132,7 +124,7 @@ async def write_files_for_root(
     except FileExistsError:
         pass
 
-    return WriteFilesResult(written, filename_full_tree, filename_diff_tree)
+    return written
 
 
 async def insert_from_delta_file(
@@ -145,25 +137,37 @@ async def insert_from_delta_file(
     timeout: int,
     log: logging.Logger,
     proxy_url: str,
-    downloader: Optional[str],
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
-        request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
-        if downloader is None:
-            # use http downloader
-            if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                break
-        else:
-            log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
+
+        try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(downloader + "/download", json=request_json) as response:
-                    res_json = await response.json()
-                    if not res_json["downloaded"]:
-                        log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
-                        break
+                headers = {"accept-encoding": "gzip"}
+                async with session.get(
+                    server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
+                ) as resp:
+                    resp.raise_for_status()
+                    size = int(resp.headers.get("content-length", 0))
+                    log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
+                    progress_byte = 0
+                    progress_percentage = "{:.0%}".format(0)
+                    target_filename = client_foldername.joinpath(filename)
+                    with target_filename.open(mode="wb") as f:
+                        async for chunk, _ in resp.content.iter_chunks():
+                            f.write(chunk)
+                            progress_byte += len(chunk)
+                            new_percentage = "{:.0%}".format(progress_byte / size)
+                            if new_percentage != progress_percentage:
+                                progress_percentage = new_percentage
+                                log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+        except Exception:
+            target_filename = client_foldername.joinpath(filename)
+            os.remove(target_filename)
+            await data_store.server_misses_file(tree_id, server_info, timestamp)
+            raise
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
@@ -194,36 +198,5 @@ async def insert_from_delta_file(
             await data_store.received_incorrect_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
-
-    return True
-
-
-async def http_download(
-    client_folder: Path,
-    filename: str,
-    proxy_url: str,
-    server_info: ServerInfo,
-    timeout: int,
-    log: logging.Logger,
-) -> bool:
-    async with aiohttp.ClientSession() as session:
-        headers = {"accept-encoding": "gzip"}
-        async with session.get(
-            server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
-        ) as resp:
-            resp.raise_for_status()
-            size = int(resp.headers.get("content-length", 0))
-            log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
-            progress_byte = 0
-            progress_percentage = "{:.0%}".format(0)
-            target_filename = client_folder.joinpath(filename)
-            with target_filename.open(mode="wb") as f:
-                async for chunk, _ in resp.content.iter_chunks():
-                    f.write(chunk)
-                    progress_byte += len(chunk)
-                    new_percentage = "{:.0%}".format(progress_byte / size)
-                    if new_percentage != progress_percentage:
-                        progress_percentage = new_percentage
-                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
 
     return True

@@ -85,9 +85,10 @@ class TestCostCalculation:
 
         coin_spend = spend_bundle.coin_spends[0]
         assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-        spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
-        assert spend_info.puzzle == coin_spend.puzzle_reveal
-        assert spend_info.solution == coin_spend.solution
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
+        assert error is None
+        assert puzzle == coin_spend.puzzle_reveal
+        assert solution == coin_spend.solution
 
         clvm_cost = 404560
         byte_cost = len(bytes(program.program)) * test_constants.COST_PER_BYTE
@@ -155,8 +156,8 @@ class TestCostCalculation:
             bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
             300,
         )
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin)
-        assert spend_info.puzzle.to_program() == puzzle
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin)
+        assert error is None
 
     @pytest.mark.asyncio
     async def test_clvm_mempool_mode(self, softfork_height):
@@ -273,5 +274,6 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     with assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
-                spend_info = get_puzzle_and_solution_for_coin(generator, c)
-                assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash
+                err, puzzle, solution = get_puzzle_and_solution_for_coin(generator, c)
+                assert err is None
+                assert puzzle.get_tree_hash() == c.puzzle_hash

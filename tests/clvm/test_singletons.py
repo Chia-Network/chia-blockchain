@@ -23,11 +23,11 @@ from tests.util.key_tool import KeyTool
 """
 This test suite aims to test:
     - chia.wallet.puzzles.singleton_top_layer.py
-    - chia.wallet.puzzles.singleton_top_layer.clsp
+    - chia.wallet.puzzles.singleton_top_layer.clvm
     - chia.wallet.puzzles.singleton_top_layer_v1_1.py
-    - chia.wallet.puzzles.singleton_top_layer_v1_1.clsp
-    - chia.wallet.puzzles.p2_singleton.clsp
-    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clsp
+    - chia.wallet.puzzles.singleton_top_layer_v1_1.clvm
+    - chia.wallet.puzzles.p2_singleton.clvm
+    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
 """
 
 

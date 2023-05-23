@@ -30,7 +30,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
-from chia.types.peer_info import UnresolvedPeerInfo
+from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, lock_and_load_config, save_config
 from chia.util.ints import uint16
@@ -242,7 +242,7 @@ async def setup_wallet_node(
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
-    farmer_peer: Optional[UnresolvedPeerInfo],
+    farmer_peer: Optional[PeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ) -> AsyncGenerator[Service[Harvester], None]:

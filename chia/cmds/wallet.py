@@ -14,13 +14,13 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 
 
-@click.group("wallet", help="Manage your wallet")
+@click.group("wallet", short_help="Manage your wallet")
 @click.pass_context
 def wallet_cmd(ctx: click.Context) -> None:
     pass
 
 
-@wallet_cmd.command("get_transaction", help="Get a transaction")
+@wallet_cmd.command("get_transaction", short_help="Get a transaction")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -28,7 +28,7 @@ def wallet_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
@@ -41,7 +41,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
 
 
-@wallet_cmd.command("get_transactions", help="Get all transactions")
+@wallet_cmd.command("get_transactions", short_help="Get all transactions")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -49,7 +49,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-o",
@@ -132,7 +132,7 @@ def get_transactions_cmd(
     sys.stdout.close()
 
 
-@wallet_cmd.command("send", help="Send chia to another wallet")
+@wallet_cmd.command("send", short_help="Send chia to another wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -140,7 +140,7 @@ def get_transactions_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-a", "--amount", help="How much chia to send, in XCH", type=str, required=True)
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
@@ -180,6 +180,7 @@ def get_transactions_cmd(
     help="Exclude this coin from being spent.",
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -218,7 +219,7 @@ def send_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
 
 
-@wallet_cmd.command("show", help="Show wallet information")
+@wallet_cmd.command("show", short_help="Show wallet information")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -226,7 +227,7 @@ def send_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
     "-w",
     "--wallet_type",
@@ -245,7 +246,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, args, print_balances))
 
 
-@wallet_cmd.command("get_address", help="Get a wallet receive address")
+@wallet_cmd.command("get_address", short_help="Get a wallet receive address")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -254,7 +255,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
     default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
     "-n/-l",
     "--new-address/--latest-address",
@@ -274,7 +275,9 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
 
 
-@wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
+@wallet_cmd.command(
+    "delete_unconfirmed_transactions", short_help="Deletes all unconfirmed transactions for this wallet ID"
+)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -283,7 +286,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
     default=None,
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
     extra_params = {"id": id}
     import asyncio
@@ -293,7 +296,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
 
-@wallet_cmd.command("get_derivation_index", help="Get the last puzzle hash derivation path index")
+@wallet_cmd.command("get_derivation_index", short_help="Get the last puzzle hash derivation path index")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -301,7 +304,7 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
     extra_params: Dict[str, Any] = {}
     import asyncio
@@ -311,7 +314,7 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_derivation_index))
 
 
-@wallet_cmd.command("sign_message", help="Sign a message by a derivation address")
+@wallet_cmd.command("sign_message", short_help="Sign a message by a derivation address")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -319,7 +322,7 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-a", "--address", help="The address you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
 def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, address: str, hex_message: str) -> None:
@@ -332,7 +335,7 @@ def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, addre
 
 
 @wallet_cmd.command(
-    "update_derivation_index", help="Generate additional derived puzzle hashes starting at the provided index"
+    "update_derivation_index", short_help="Generate additional derived puzzle hashes starting at the provided index"
 )
 @click.option(
     "-wp",
@@ -341,7 +344,7 @@ def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, addre
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
     "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
 )
@@ -354,7 +357,7 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_derivation_index))
 
 
-@wallet_cmd.command("add_token", help="Add/Rename a CAT to the wallet by its asset ID")
+@wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -389,7 +392,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
 
 
-@wallet_cmd.command("make_offer", help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
+@wallet_cmd.command("make_offer", short_help="Create an offer of XCH/CATs/NFTs for XCH/CATs/NFTs")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -397,7 +400,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option(
     "-o",
     "--offer",
@@ -417,6 +420,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the offer.",
     is_flag=True,
@@ -446,7 +450,7 @@ def make_offer_cmd(
 
 
 @wallet_cmd.command(
-    "get_offers", help="Get the status of existing offers. Displays only active/pending offers by default."
+    "get_offers", short_help="Get the status of existing offers. Displays only active/pending offers by default."
 )
 @click.option(
     "-wp",
@@ -455,7 +459,7 @@ def make_offer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-id", "--id", help="The ID of the offer that you wish to examine")
 @click.option("-p", "--filepath", help="The path to rewrite the offer file to (must be used in conjunction with --id)")
 @click.option("-em", "--exclude-my-offers", help="Exclude your own offers from the output", is_flag=True)
@@ -492,7 +496,7 @@ def get_offers_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_offers))
 
 
-@wallet_cmd.command("take_offer", help="Examine or take an offer")
+@wallet_cmd.command("take_offer", short_help="Examine or take an offer")
 @click.argument("path_or_hex", type=str, nargs=1, required=True)
 @click.option(
     "-wp",
@@ -501,12 +505,13 @@ def get_offers_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-e", "--examine-only", help="Print the summary of the offer file but do not take it", is_flag=True)
 @click.option(
     "-m", "--fee", help="The fee to use when pushing the completed offer, in XCH", default="0", show_default=True
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the offer.",
     is_flag=True,
@@ -533,7 +538,7 @@ def take_offer_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, take_offer))
 
 
-@wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
+@wallet_cmd.command("cancel_offer", short_help="Cancel an existing offer")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -541,7 +546,7 @@ def take_offer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True)
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @click.option(
@@ -571,12 +576,12 @@ def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
     asyncio.run(scan(ctx.obj["root_path"], db_path, verbose=verbose))
 
 
-@wallet_cmd.group("did", help="DID related actions")
+@wallet_cmd.group("did", short_help="DID related actions")
 def did_cmd():
     pass
 
 
-@did_cmd.command("create", help="Create DID wallet")
+@did_cmd.command("create", short_help="Create DID wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -584,7 +589,7 @@ def did_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-n", "--name", help="Set the DID wallet name", type=str)
 @click.option(
     "-a",
@@ -614,7 +619,7 @@ def did_create_wallet_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
 
 
-@did_cmd.command("sign_message", help="Sign a message by a DID")
+@did_cmd.command("sign_message", short_help="Sign a message by a DID")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -622,7 +627,7 @@ def did_create_wallet_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--did_id", help="DID ID you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: str, hex_message: str) -> None:
@@ -634,7 +639,7 @@ def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: s
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
-@did_cmd.command("set_name", help="Set DID wallet name")
+@did_cmd.command("set_name", short_help="Set DID wallet name")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -642,7 +647,7 @@ def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: s
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
 @click.option("-n", "--name", help="Set the DID wallet name", type=str, required=True)
 def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
@@ -654,7 +659,7 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_set_wallet_name))
 
 
-@did_cmd.command("get_did", help="Get DID from wallet")
+@did_cmd.command("get_did", short_help="Get DID from wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -662,7 +667,7 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, required=True)
 def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
@@ -673,218 +678,12 @@ def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_did))
 
 
-@did_cmd.command("get_details", help="Get more details of any DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
-@click.option("-l", "--latest", help="Return latest DID information", is_flag=True, default=True)
-def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_id: str, latest: bool) -> None:
-    import asyncio
-
-    from .wallet_funcs import get_did_info
-
-    extra_params = {"coin_id": coin_id, "latest": latest}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_did_info))
-
-
-@did_cmd.command("update_metadata", help="Update the metadata of a DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option("-d", "--metadata", help="The new whole metadata in json format", type=str, required=True)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-def did_update_metadata_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool
-) -> None:
-    import asyncio
-
-    from .wallet_funcs import update_did_metadata
-
-    extra_params = {"did_wallet_id": id, "metadata": metadata, "reuse_puzhash": reuse}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_did_metadata))
-
-
-@did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-id", "--coin_id", help="Id of the DID or any coin ID of the DID", type=str, required=True)
-@click.option("-m", "--metadata", help="The new whole metadata in json format", type=str, required=False)
-@click.option(
-    "-r",
-    "--recovery_list_hash",
-    help="Override the recovery list hash of the DID. Only set this if your last DID spend updated the recovery list",
-    type=str,
-    required=False,
-)
-@click.option(
-    "-n",
-    "--num_verification",
-    help="Override the required verification number of the DID."
-    " Only set this if your last DID spend updated the required verification number",
-    type=int,
-    required=False,
-)
-def did_find_lost_cmd(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    coin_id: str,
-    metadata: Optional[str],
-    recovery_list_hash: Optional[str],
-    num_verification: Optional[int],
-) -> None:
-    import asyncio
-
-    from .wallet_funcs import find_lost_did
-
-    extra_params = {
-        "coin_id": coin_id,
-        "metadata": metadata,
-        "recovery_list_hash": recovery_list_hash,
-        "num_verification": num_verification,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, find_lost_did))
-
-
-@did_cmd.command("message_spend", help="Generate a DID spend bundle for announcements")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option(
-    "-pa",
-    "--puzzle_announcements",
-    help="The list of puzzle announcement hex strings, split by comma (,)",
-    type=str,
-    required=False,
-)
-@click.option(
-    "-ca",
-    "--coin_announcements",
-    help="The list of coin announcement hex strings, split by comma (,)",
-    type=str,
-    required=False,
-)
-def did_message_spend_cmd(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    id: int,
-    puzzle_announcements: Optional[str],
-    coin_announcements: Optional[str],
-) -> None:
-    import asyncio
-
-    from .wallet_funcs import did_message_spend
-
-    puzzle_list: List[str] = []
-    coin_list: List[str] = []
-    if puzzle_announcements is not None:
-        try:
-            puzzle_list = puzzle_announcements.split(",")
-            # validate puzzle announcements is list of hex strings
-            for announcement in puzzle_list:
-                bytes.fromhex(announcement)
-        except ValueError:
-            print("Invalid puzzle announcement format, should be a list of hex strings.")
-            return
-    if coin_announcements is not None:
-        try:
-            coin_list = coin_announcements.split(",")
-            # validate that coin announcements is a list of hex strings
-            for announcement in coin_list:
-                bytes.fromhex(announcement)
-        except ValueError:
-            print("Invalid coin announcement format, should be a list of hex strings.")
-            return
-    extra_params = {"did_wallet_id": id, "puzzle_announcements": puzzle_list, "coin_announcements": coin_list}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_message_spend))
-
-
-@did_cmd.command("transfer", help="Transfer a DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="Id of the DID wallet to use", type=int, required=True)
-@click.option("-ta", "--target-address", help="Target recipient wallet address", type=str, required=True)
-@click.option(
-    "-rr", "--reset_recovery", help="If you want to reset the recovery DID settings.", is_flag=True, default=False
-)
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
-@click.option(
-    "--reuse",
-    help="Reuse existing address for the change.",
-    is_flag=True,
-    default=False,
-)
-def did_transfer_did(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    id: int,
-    target_address: str,
-    reset_recovery: bool,
-    fee: str,
-    reuse: bool,
-) -> None:
-    import asyncio
-
-    from .wallet_funcs import transfer_did
-
-    extra_params = {
-        "did_wallet_id": id,
-        "with_recovery": reset_recovery is False,
-        "target_address": target_address,
-        "fee": fee,
-        "reuse_puzhash": True if reuse else None,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_did))
-
-
-@wallet_cmd.group("nft", help="NFT related actions")
+@wallet_cmd.group("nft", short_help="NFT related actions")
 def nft_cmd():
     pass
 
 
-@nft_cmd.command("create", help="Create an NFT wallet")
+@nft_cmd.command("create", short_help="Create an NFT wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -892,7 +691,7 @@ def nft_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-di", "--did-id", help="DID Id to use", type=str)
 @click.option("-n", "--name", help="Set the NFT wallet name", type=str)
 def nft_wallet_create_cmd(
@@ -906,7 +705,7 @@ def nft_wallet_create_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
 
 
-@nft_cmd.command("sign_message", help="Sign a message by a NFT")
+@nft_cmd.command("sign_message", short_help="Sign a message by a NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -914,7 +713,7 @@ def nft_wallet_create_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=str, required=True)
 @click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
 def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: str, hex_message: str) -> None:
@@ -926,7 +725,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
-@nft_cmd.command("mint", help="Mint an NFT")
+@nft_cmd.command("mint", short_help="Mint an NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -934,7 +733,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ra", "--royalty-address", help="Royalty address", type=str)
 @click.option("-ta", "--target-address", help="Target address", type=str)
@@ -965,6 +764,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     show_default=True,
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1023,7 +823,7 @@ def nft_mint_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_nft))
 
 
-@nft_cmd.command("add_uri", help="Add an URI to an NFT")
+@nft_cmd.command("add_uri", short_help="Add an URI to an NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1031,7 +831,7 @@ def nft_mint_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
 @click.option("-u", "--uri", help="URI to add to the NFT", type=str)
@@ -1047,6 +847,7 @@ def nft_mint_cmd(
     callback=validate_fee,
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1079,7 +880,7 @@ def nft_add_uri_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))
 
 
-@nft_cmd.command("transfer", help="Transfer an NFT")
+@nft_cmd.command("transfer", short_help="Transfer an NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1087,7 +888,7 @@ def nft_add_uri_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to transfer", type=str, required=True)
 @click.option("-ta", "--target-address", help="Target recipient wallet address", type=str, required=True)
@@ -1101,6 +902,7 @@ def nft_add_uri_cmd(
     callback=validate_fee,
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1129,7 +931,7 @@ def nft_transfer_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))
 
 
-@nft_cmd.command("list", help="List the current NFTs")
+@nft_cmd.command("list", short_help="List the current NFTs")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1137,7 +939,7 @@ def nft_transfer_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
@@ -1148,7 +950,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_nfts))
 
 
-@nft_cmd.command("set_did", help="Set a DID on an NFT")
+@nft_cmd.command("set_did", short_help="Set a DID on an NFT")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1156,7 +958,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-di", "--did-id", help="DID Id to set on the NFT", type=str, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to set the DID on", type=str, required=True)
@@ -1170,6 +972,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> N
     callback=validate_fee,
 )
 @click.option(
+    "-r",
     "--reuse",
     help="Reuse existing address for the change.",
     is_flag=True,
@@ -1198,7 +1001,7 @@ def nft_set_did_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, set_nft_did))
 
 
-@nft_cmd.command("get_info", help="Get NFT information")
+@nft_cmd.command("get_info", short_help="Get NFT information")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1206,7 +1009,7 @@ def nft_set_did_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
 def nft_get_info_cmd(
     wallet_rpc_port: Optional[int],
@@ -1227,12 +1030,12 @@ def nft_get_info_cmd(
 wallet_cmd.add_command(coins_cmd)
 
 
-@wallet_cmd.group("notifications", help="Send/Manage notifications")
+@wallet_cmd.group("notifications", short_help="Send/Manage notifications")
 def notification_cmd():
     pass
 
 
-@notification_cmd.command("send", help="Send a notification to the owner of an address")
+@notification_cmd.command("send", short_help="Send a notification to the owner of an address")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1240,7 +1043,7 @@ def notification_cmd():
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-t", "--to-address", help="The address to send the notification to", type=str, required=True)
 @click.option(
     "-a",
@@ -1252,7 +1055,7 @@ def notification_cmd():
     show_default=True,
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
-@click.option("-m", "--fee", help="The fee for the transaction, in XCH", type=str)
+@click.option("-m", "--fee", help="The fee for the transaction", type=str)
 def _send_notification(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1276,7 +1079,7 @@ def _send_notification(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send_notification))
 
 
-@notification_cmd.command("get", help="Get notification(s) that are in your wallet")
+@notification_cmd.command("get", short_help="Get notification(s) that are in your wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1284,7 +1087,7 @@ def _send_notification(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="The specific notification ID to show", type=str, default=[], multiple=True)
 @click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
 @click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
@@ -1309,7 +1112,7 @@ def _get_notifications(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_notifications))
 
 
-@notification_cmd.command("delete", help="Delete notification(s) that are in your wallet")
+@notification_cmd.command("delete", short_help="Delete notification(s) that are in your wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -1317,7 +1120,7 @@ def _get_notifications(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 def _delete_notifications(
@@ -1337,220 +1140,3 @@ def _delete_notifications(
         "all": all,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))
-
-
-@wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
-def vcs_cmd():  # pragma: no cover
-    pass
-
-
-@vcs_cmd.command("mint", short_help="Mint a VC")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
-@click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
-@click.option("-m", "--fee", help="Blockchain fee for mint transaction, in XCH", type=str, required=False)
-def _mint_vc(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    did: str,
-    target_address: Optional[str],
-    fee: Optional[str],
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import mint_vc
-
-    extra_params = {
-        "did": did,
-        "target_address": target_address,
-        "fee": fee,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, mint_vc))
-
-
-@vcs_cmd.command("get", short_help="Get a list of existing VCs")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option(
-    "-s", "--start", help="The index to start the list at", type=int, required=False, default=0, show_default=True
-)
-@click.option(
-    "-c", "--count", help="How many results to return", type=int, required=False, default=50, show_default=True
-)
-def _get_vcs(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    start: int,
-    count: int,
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import get_vcs
-
-    extra_params = {
-        "start": start,
-        "count": count,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_vcs))
-
-
-@vcs_cmd.command("update_proofs", short_help="Update a VC's proofs if you have the provider DID")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-l", "--vc-id", help="The launcher ID of the VC whose proofs should be updated", type=str, required=True)
-@click.option(
-    "-t",
-    "--new-puzhash",
-    help="The address to send the VC after the proofs have been updated",
-    type=str,
-    required=False,
-)
-@click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
-@click.option("-m", "--fee", help="Blockchain fee for update transaction, in XCH", type=str, required=False)
-@click.option(
-    "--reuse-puzhash/--generate-new-puzhash",
-    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
-    default=False,
-    show_default=True,
-)
-def _spend_vc(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    vc_id: str,
-    new_puzhash: Optional[str],
-    new_proof_hash: str,
-    fee: str,
-    reuse_puzhash: bool,
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import spend_vc
-
-    extra_params = {
-        "vc_id": vc_id,
-        "new_puzhash": new_puzhash,
-        "new_proof_hash": new_proof_hash,
-        "fee": fee,
-        "reuse_puzhash": reuse_puzhash,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, spend_vc))
-
-
-@vcs_cmd.command("add_proof_reveal", short_help="Add a series of proofs that will combine to a single proof hash")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
-@click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
-def _add_proof_reveal(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    proof: List[str],
-    root_only: bool,
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import add_proof_reveal
-
-    extra_params = {
-        "proofs": proof,
-        "root_only": root_only,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_proof_reveal))
-
-
-@vcs_cmd.command("get_proofs_for_root", short_help="Get the stored proof flags for a given proof hash")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-r", "--proof-hash", help="The root to search for", type=str, required=True)
-def _get_proofs_for_root(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    proof_hash: str,
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import get_proofs_for_root
-
-    extra_params = {
-        "proof_hash": proof_hash,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_proofs_for_root))
-
-
-@vcs_cmd.command("revoke", short_help="Revoke any VC if you have the proper DID and the VCs parent coin")
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-p", "--parent-coin-id", help="The ID of the parent coin of the VC", type=str, required=True)
-@click.option("-m", "--fee", help="Blockchain fee for revocation transaction, in XCH", type=str, required=False)
-@click.option(
-    "--reuse-puzhash/--generate-new-puzhash",
-    help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
-    default=False,
-    show_default=True,
-)
-def _revoke_vc(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    parent_coin_id: str,
-    fee: str,
-    reuse_puzhash: bool,
-) -> None:  # pragma: no cover
-    import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
-
-    from .wallet_funcs import revoke_vc
-
-    extra_params = {
-        "parent_coin_id": parent_coin_id,
-        "fee": fee,
-        "reuse_puzhash": reuse_puzhash,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, revoke_vc))

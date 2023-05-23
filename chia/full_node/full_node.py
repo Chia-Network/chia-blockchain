@@ -280,8 +280,8 @@ class FullNode:
             con_dict: Dict[str, Any] = {
                 "type": con.connection_type,
                 "local_port": con.local_port,
-                "peer_host": con.peer_info.host,
-                "peer_port": con.peer_info.port,
+                "peer_host": con.peer_host,
+                "peer_port": con.peer_port,
                 "peer_server_port": con.peer_server_port,
                 "node_id": con.peer_node_id,
                 "creation_time": con.creation_time,
@@ -988,8 +988,7 @@ class FullNode:
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {target_peak.height}")
             weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
             self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} "
-                f"up to height {target_peak.height}"
+                f"Requesting weight proof from peer {weight_proof_peer.peer_host} up to height {target_peak.height}"
             )
             cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
             if cur_peak is not None and target_peak.weight <= cur_peak.weight:
@@ -1007,22 +1006,20 @@ class FullNode:
             # Disconnect from this peer, because they have not behaved properly
             if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
                 await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
+                raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.height != target_peak.height:
                 await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
+                raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_host}")
             if response.wp.recent_chain_data[-1].reward_chain_block.weight != target_peak.weight:
                 await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_info.host}")
+                raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_host}")
 
             # dont sync to wp if local peak is heavier,
             # dont ban peer, we asked for this peak
             current_peak = self.blockchain.get_peak()
             if current_peak is not None:
                 if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
-                    raise RuntimeError(
-                        f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
-                    )
+                    raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_host}")
 
             try:
                 validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
@@ -1078,16 +1075,19 @@ class FullNode:
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
+                            peers_with_peak.remove(peer)
                             continue
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         if response is None:
                             await peer.close()
+                            peers_with_peak.remove(peer)
                         elif isinstance(response, RespondBlocks):
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
                             break
                     if fetched is False:
                         self.log.error(f"failed fetching {start_height} to {end_height} from peers")
+                        await batch_queue.put(None)
                         return
                     if self.sync_store.peers_changed.is_set():
                         new_peers_with_peak = self.get_peers_with_peak(peak_hash)
@@ -1114,6 +1114,8 @@ class FullNode:
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
+                    if peer in peers_with_peak:
+                        peers_with_peak.remove(peer)
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
@@ -1879,7 +1881,11 @@ class FullNode:
             # blockchain.run_generator throws on errors, so npc_result is
             # guaranteed to represent a successful run
             assert npc_result.conds is not None
-            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+            pairs_pks, pairs_msgs = pkm_pairs(
+                npc_result.conds,
+                self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+                soft_fork=height >= self.constants.SOFT_FORK_HEIGHT,
+            )
             if not cached_bls.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):
@@ -2203,9 +2209,8 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
         self.log.debug(f"Processing transaction: {spend_name}")
-        # Ignore if syncing or if we have not yet received a block
-        # the mempool must have a peak to validate transactions
-        if self.sync_store.get_sync_mode() or self.mempool_manager.peak is None:
+        # Ignore if syncing
+        if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
             self.mempool_manager.remove_seen(spend_name)
@@ -2397,11 +2402,6 @@ class FullNode:
                 raise
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
-        peak = self.blockchain.get_peak()
-        if peak is None or peak.height - request.height < 5:
-            self.log.info(f"Ignoring add_compact_proof_of_time, height {request.height} too recent.")
-            return None
-
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
@@ -2421,10 +2421,6 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
-        peak = self.blockchain.get_peak()
-        if peak is None or peak.height - request.height < 5:
-            self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")
-            return None
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return None

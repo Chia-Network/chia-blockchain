@@ -17,9 +17,7 @@ from chia.util.lock import Lockfile
 
 compile_clvm_py = None
 
-recompile_requested = (
-    (os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
-) and os.environ.get("CHIA_DEV_COMPILE_CLVM_DISABLED", None) is None
+recompile_requested = (os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
 
 
 def translate_path(p_):
@@ -84,8 +82,8 @@ def load_serialized_clvm(
     clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
 ) -> SerializedProgram:
     """
-    This function takes a .clsp file in the given package and compiles it to a
-    .clsp.hex file if the .hex file is missing or older than the .clsp file, then
+    This function takes a .clvm file in the given package and compiles it to a
+    .clvm.hex file if the .hex file is missing or older than the .clvm file, then
     returns the contents of the .hex file as a `Program`.
 
     clvm_filename: file name

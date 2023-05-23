@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Sequence, Union
 
 from chia.util.errors import InvalidPathError
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
@@ -115,17 +115,3 @@ if sys.platform == "win32" or sys.platform == "cygwin":
 else:
     termination_signals = [signal.SIGINT, signal.SIGTERM]
     sendable_termination_signals = termination_signals
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class UInt32Range(Streamable):
-    start: uint32 = uint32(0)
-    stop: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1)
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class UInt64Range(Streamable):
-    start: uint64 = uint64(0)
-    stop: uint64 = uint64(uint64.MAXIMUM_EXCLUSIVE - 1)

@@ -15,7 +15,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution
+from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -180,9 +180,12 @@ class WalletTool:
         for coin_spend in coin_spends:  # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-            conditions_dict = conditions_dict_for_solution(
+            err, con, cost = conditions_for_solution(
                 coin_spend.puzzle_reveal, coin_spend.solution, self.constants.MAX_BLOCK_COST_CLVM
             )
+            if not con:
+                raise ValueError(err)
+            conditions_dict = conditions_by_opcode(con)
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
                 msg = cwa.vars[1]

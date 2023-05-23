@@ -1,0 +1,100 @@
+(mod
+  (
+    INNER_PUZZLE
+    SINGLETON_STRUCTS
+    METADATA_LAYER_HASHES
+    VALUES_TO_PROVE  ; this is a list of BRANCHES in the merkle tree to prove (so as to prove a whole subtree)
+    proofs_of_inclusion
+    new_metadatas  ; (root . etc)
+    new_metadata_updaters
+    new_inner_puzs
+    inner_solution
+  )
+
+  (include condition_codes.clvm)
+  (include merkle_utils.clib)
+  (include curry-and-treehash.clinc)
+
+  (defmacro assert items
+      (if (r items)
+          (list if (f items) (c assert (r items)) (q . (x)))
+          (f items)
+      )
+  )
+
+  (defun-inline construct_singleton (SINGLETON_STRUCT METADATA_LAYER_HASH new_metadata new_metadata_updater new_inner_puz)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                    (puzzle-hash-of-curried-function METADATA_LAYER_HASH
+                                                                     new_inner_puz
+                                                                     (sha256tree new_metadata_updater)
+                                                                     (sha256tree new_metadata)
+                                                                     (sha256tree METADATA_LAYER_HASH)
+                                    )
+                                    (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+  (defun verify_proofs (new_root VALUES_TO_PROVE proofs_of_inclusion)
+    (if proofs_of_inclusion
+        (assert (= new_root (simplify_merkle_proof_after_leaf (f VALUES_TO_PROVE) (f proofs_of_inclusion)))
+          ; then
+          (verify_proofs new_root (r VALUES_TO_PROVE) (r proofs_of_inclusion))
+        )
+        1
+    )
+  )
+
+  (defun loop_over_curried_params
+    (
+      SINGLETON_STRUCTS
+      METADATA_LAYER_HASHES
+      VALUES_TO_PROVE
+      proofs_of_inclusion
+      new_metadatas
+      new_metadata_updaters
+      new_inner_puzs
+      conditions
+    )
+
+    (if SINGLETON_STRUCTS
+      (assert (verify_proofs (f (f new_metadatas)) (f VALUES_TO_PROVE) (f proofs_of_inclusion))
+        ; then
+        (loop_over_curried_params
+          (r SINGLETON_STRUCTS)
+          (r METADATA_LAYER_HASHES)
+          (r VALUES_TO_PROVE)
+          (r proofs_of_inclusion)
+          (r new_metadatas)
+          (r new_metadata_updaters)
+          (r new_inner_puzs)
+          (c
+            (list
+              ASSERT_PUZZLE_ANNOUNCEMENT
+              (sha256
+                (construct_singleton (f SINGLETON_STRUCTS) (f METADATA_LAYER_HASHES) (f new_metadatas) (f new_metadata_updaters) (f new_inner_puzs))
+                '$'
+              )
+            )
+            conditions
+          )
+        )
+      )
+      conditions
+    )
+  )
+
+  (if proofs_of_inclusion
+    (loop_over_curried_params
+      SINGLETON_STRUCTS
+      METADATA_LAYER_HASHES
+      VALUES_TO_PROVE
+      proofs_of_inclusion
+      new_metadatas
+      new_metadata_updaters
+      new_inner_puzs
+      (a INNER_PUZZLE inner_solution)
+    )
+    ; You may want to run the puzzle without a raise to examine conditions so we'll make a "blessed" way to fail
+    (c (list ASSERT_MY_AMOUNT -1) (a INNER_PUZZLE inner_solution))
+  )
+)

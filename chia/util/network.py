@@ -110,11 +110,7 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
 
 
 def is_localhost(peer_host: str) -> bool:
-    return peer_host in ["127.0.0.1", "localhost", "::1", "0:0:0:0:0:0:0:1"]
-
-
-def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
-    return not testing and is_localhost(host) or node_id.hex() in trusted_peers
+    return peer_host == "127.0.0.1" or peer_host == "localhost" or peer_host == "::1" or peer_host == "0:0:0:0:0:0:0:1"
 
 
 def class_for_type(type: NodeType) -> Any:
@@ -145,14 +141,14 @@ def class_for_type(type: NodeType) -> Any:
     raise ValueError("No class for type")
 
 
-async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
+def get_host_addr(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     try:
         return IPAddress.create(host)
     except ValueError:
         pass
     addrset: List[
         Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
-    ] = await asyncio.get_event_loop().getaddrinfo(host, None)
+    ] = socket.getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []
     ips_v6 = []
@@ -169,6 +165,17 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
         return alternative[0]
     else:
         raise ValueError(f"failed to resolve {host} into an IP address")
+
+
+def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict, testing: bool) -> bool:
+    if trusted_peers is None:
+        return False
+    if not testing and peer_host == "127.0.0.1":
+        return True
+    if peer_node_id.hex() not in trusted_peers:
+        return False
+
+    return True
 
 
 def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:

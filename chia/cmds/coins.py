@@ -9,13 +9,13 @@ from chia.cmds.cmds_util import execute_with_wallet
 from chia.util.config import load_config, selected_network_address_prefix
 
 
-@click.group("coins", help="Manage your wallets coins")
+@click.group("coins", short_help="Manage your wallets coins")
 @click.pass_context
 def coins_cmd(ctx: click.Context) -> None:
     pass
 
 
-@coins_cmd.command("list", help="List all coins")
+@coins_cmd.command("list", short_help="List all coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -23,7 +23,7 @@ def coins_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
@@ -85,7 +85,7 @@ def list_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_list))
 
 
-@coins_cmd.command("combine", help="Combine dust coins")
+@coins_cmd.command("combine", short_help="Combine dust coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -93,7 +93,7 @@ def list_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-a",
@@ -179,7 +179,7 @@ def combine_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_combine))
 
 
-@coins_cmd.command("split", help="Split up larger coins")
+@coins_cmd.command("split", short_help="Split up larger coins")
 @click.option(
     "-p",
     "--wallet-rpc-port",
@@ -187,7 +187,7 @@ def combine_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-n",

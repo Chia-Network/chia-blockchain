@@ -1,9 +1,7 @@
 # flake8: noqa
 from __future__ import annotations
 
-import ast
-import inspect
-from typing import Any, Set, cast
+from typing import Any, List, Set
 
 from chia.protocols import (
     farmer_protocol,
@@ -21,16 +19,16 @@ from chia.protocols import (
 
 
 def types_in_module(mod: Any) -> Set[str]:
-    parsed = ast.parse(inspect.getsource(mod))
-    types = set()
-    for line in parsed.body:
-        if isinstance(line, ast.Assign):
-            name = cast(ast.Name, line.targets[0])
-            if inspect.isclass(getattr(mod, name.id)):
-                types.add(name.id)
-        elif isinstance(line, ast.ClassDef):
-            types.add(line.name)
-    return types
+    ret: List[str] = []
+    mod_name = mod.__name__
+    for sym in dir(mod):
+        obj = getattr(mod, sym)
+        if hasattr(obj, "__module__") and obj.__module__ == mod_name:
+            ret.append(sym)
+
+    if hasattr(mod, "__all__"):
+        ret += getattr(mod, "__all__")
+    return set(ret)
 
 
 def test_missing_messages_state_machine() -> None:
@@ -157,6 +155,8 @@ def test_missing_messages() -> None:
         "PutFarmerPayload",
         "PutFarmerRequest",
         "PutFarmerResponse",
+        "get_current_authentication_token",
+        "validate_authentication_token",
     }
 
     timelord_msgs = {

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import List
+import sys
 
 import click
 
@@ -25,31 +25,6 @@ log_levels = {
 
 
 ignores = {"__pycache__", ".pytest_cache"}
-
-
-def traverse_directory(path: pathlib.Path) -> List[pathlib.Path]:
-    of_interest: List[pathlib.Path] = []
-
-    file_found = False
-
-    for member in path.iterdir():
-        if not member.is_dir():
-            file_found = True
-            continue
-
-        if member.name in ignores:
-            continue
-
-        found = traverse_directory(path=member)
-        of_interest.extend(found)
-
-        if len(found) > 0:
-            of_interest.append(member)
-
-    if len(of_interest) > 0 or file_found:
-        of_interest.append(path)
-
-    return of_interest
 
 
 @click.command()
@@ -67,9 +42,12 @@ def command(verbose, root_str):
     tree_roots = ["benchmarks", "build_scripts", "chia", "tests", "tools"]
     failed = False
     root = pathlib.Path(root_str).resolve()
-    directories = [
-        directory for tree_root in tree_roots for directory in traverse_directory(path=root.joinpath(tree_root))
-    ]
+    directories = sorted(
+        path
+        for tree_root in tree_roots
+        for path in root.joinpath(tree_root).rglob("**/")
+        if all(part not in ignores for part in path.parts)
+    )
 
     for path in directories:
         init_path = path.joinpath("__init__.py")
@@ -84,7 +62,7 @@ def command(verbose, root_str):
             logger.warning(f"Created : {init_path}")
         else:
             failed = True
-            logger.error(f"Fail    : present but not a regular file: {init_path}")
+            logger.error(f"Fail    : present but not a regular file: {init_path}", file=sys.stderr)
 
     if failed:
         raise click.ClickException("At least one __init__.py created or not a regular file")

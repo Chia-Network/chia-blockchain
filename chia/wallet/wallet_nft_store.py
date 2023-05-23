@@ -272,8 +272,3 @@ class WalletNftStore:
             if result.rowcount > 0:
                 return True
             return False
-
-    async def delete_wallet(self, wallet_id: uint32) -> None:
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute("DELETE FROM users_nfts WHERE wallet_id=?", (wallet_id,))
-            await cursor.close()

@@ -10,8 +10,8 @@ import click
 from chia.util.config import load_config
 
 
-@click.group("passphrase", help="Manage your keyring passphrase")
-def passphrase_cmd() -> None:
+@click.group("passphrase", short_help="Manage your keyring passphrase")
+def passphrase_cmd():
     pass
 
 
@@ -103,28 +103,28 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
         sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
 
-@passphrase_cmd.group("hint", help="Manage the optional keyring passphrase hint")
+@passphrase_cmd.group("hint", short_help="Manage the optional keyring passphrase hint")
 def hint_cmd() -> None:
     pass
 
 
-@hint_cmd.command("display", help="Display the keyring passphrase hint")
-def display_hint() -> None:
+@hint_cmd.command("display", short_help="Display the keyring passphrase hint")
+def display_hint():
     from .passphrase_funcs import display_passphrase_hint
 
     display_passphrase_hint()
 
 
-@hint_cmd.command("set", help="Set or update the keyring passphrase hint")
+@hint_cmd.command("set", short_help="Set or update the keyring passphrase hint")
 @click.argument("hint", nargs=1)
-def set_hint(hint: str) -> None:
+def set_hint(hint):
     from .passphrase_funcs import set_passphrase_hint
 
     set_passphrase_hint(hint)
 
 
-@hint_cmd.command("remove", help="Remove the keyring passphrase hint")
-def remove_hint() -> None:
+@hint_cmd.command("remove", short_help="Remove the keyring passphrase hint")
+def remove_hint():
     from .passphrase_funcs import remove_passphrase_hint
 
     remove_passphrase_hint()

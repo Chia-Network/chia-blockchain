@@ -215,6 +215,6 @@ async def acquire_connection_to_daemon(
         yield daemon  # <----
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-    finally:
-        if daemon is not None:
-            await daemon.close()
+
+    if daemon is not None:
+        await daemon.close()

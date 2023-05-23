@@ -39,7 +39,13 @@ async def sign_coin_spends(
     msg_list: List[bytes] = []
     for coin_spend in coin_spends:
         # Get AGG_SIG conditions
-        conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, max_cost)
+        err, conditions_dict, cost = conditions_dict_for_solution(
+            coin_spend.puzzle_reveal, coin_spend.solution, max_cost
+        )
+        if err or conditions_dict is None:
+            error_msg = f"Sign transaction failed, con:{conditions_dict}, error: {err}"
+            raise ValueError(error_msg)
+
         # Create signature
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin.name(), additional_data):
             pk = blspy.G1Element.from_bytes(pk_bytes)

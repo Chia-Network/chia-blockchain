@@ -11,7 +11,7 @@ from chia.types.blockchain_format.program import Program
 
 from .load_clvm import load_clvm_maybe_recompile
 
-MOD = load_clvm_maybe_recompile("p2_m_of_n_delegate_direct.clsp")
+MOD = load_clvm_maybe_recompile("p2_m_of_n_delegate_direct.clvm")
 
 
 def puzzle_for_m_of_public_key_list(m, public_key_list) -> Program:

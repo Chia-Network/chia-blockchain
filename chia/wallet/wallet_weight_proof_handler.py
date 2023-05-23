@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import tempfile
-import time
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Optional
+from typing import IO, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.weight_proof import WeightProof
 from chia.util.ints import uint32
 from chia.util.setproctitle import getproctitle, setproctitle
@@ -37,35 +37,42 @@ class WalletWeightProofHandler:
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )
+        self._weight_proof_tasks: List[asyncio.Task[Tuple[bool, List[BlockRecord]]]] = []
 
     def cancel_weight_proof_tasks(self) -> None:
+        for task in self._weight_proof_tasks:
+            if not task.done():
+                task.cancel()
+        self._weight_proof_tasks = []
         self._executor_shutdown_tempfile.close()
         self._executor.shutdown(wait=True)
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
-    ) -> List[BlockRecord]:
-        start_time = time.time()
+    ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None or sub_epoch_weight_list is None:
-            raise ValueError("weight proof failed sub epoch data validation")
+            log.error("weight proof failed sub epoch data validation")
+            return False, [], []
         validate_from = get_fork_ses_idx(old_proof, weight_proof)
-        valid, block_records = await validate_weight_proof_inner(
-            self._constants,
-            self._executor,
-            self._executor_shutdown_tempfile.name,
-            self._num_processes,
-            weight_proof,
-            summaries,
-            sub_epoch_weight_list,
-            skip_segment_validation,
-            validate_from,
+        task = asyncio.create_task(
+            validate_weight_proof_inner(
+                self._constants,
+                self._executor,
+                self._executor_shutdown_tempfile.name,
+                self._num_processes,
+                weight_proof,
+                summaries,
+                sub_epoch_weight_list,
+                skip_segment_validation,
+                validate_from,
+            )
         )
-        if not valid:
-            raise ValueError("weight proof validation failed")
-        log.info(f"It took {time.time() - start_time} time to validate the weight proof {weight_proof.get_hash()}")
-        return block_records
+        self._weight_proof_tasks.append(task)
+        valid, block_records = await task
+        self._weight_proof_tasks.remove(task)
+        return valid, summaries, block_records
 
 
 def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:

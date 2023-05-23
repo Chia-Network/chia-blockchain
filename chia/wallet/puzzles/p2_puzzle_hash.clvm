@@ -1,0 +1,18 @@
+(mod
+  (inner_puzzle_hash inner_puzzle inner_puzzle_solution)
+
+  ;; hash a tree
+  ;; This is used to calculate a puzzle hash given a puzzle program.
+  (defun sha256tree1
+         (TREE)
+         (if (l TREE)
+             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+             (sha256 1 TREE)
+         )
+  )
+
+  (if (= inner_puzzle_hash (sha256tree1 inner_puzzle))
+    (a inner_puzzle inner_puzzle_solution)
+    (x)
+  )
+)

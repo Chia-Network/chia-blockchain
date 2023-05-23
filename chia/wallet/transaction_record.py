@@ -16,8 +16,6 @@ from chia.wallet.util.transaction_type import TransactionType
 
 T = TypeVar("T")
 
-minimum_send_attempts = 6
-
 
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
@@ -114,13 +112,14 @@ class TransactionRecord(Streamable):
         return formatted
 
     def is_valid(self) -> bool:
-        if len(self.sent_to) < minimum_send_attempts:
+        past_receipts = self.sent_to
+        if len(past_receipts) < 6:
             # we haven't tried enough peers yet
             return True
-        if any(x[1] == MempoolInclusionStatus.SUCCESS for x in self.sent_to):
+        if any([x[0] for x in past_receipts if x[0] == MempoolInclusionStatus.SUCCESS.value]):
             # we managed to push it to mempool at least once
             return True
-        if any(x[2] in (Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name) for x in self.sent_to):
+        if any([x[1] for x in past_receipts if x[1] in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)]):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False

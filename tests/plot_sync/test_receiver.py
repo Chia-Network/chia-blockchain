@@ -247,8 +247,8 @@ async def test_to_dict(counts_only: bool) -> None:
     assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
         "node_id": receiver.connection().peer_node_id,
-        "host": receiver.connection().peer_info.host,
-        "port": receiver.connection().peer_info.port,
+        "host": receiver.connection().peer_host,
+        "port": receiver.connection().peer_port,
     }
 
     # We should get equal dicts

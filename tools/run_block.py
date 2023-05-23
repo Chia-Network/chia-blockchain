@@ -61,7 +61,7 @@ from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles"
+    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
 )
 
 

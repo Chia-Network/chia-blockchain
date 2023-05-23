@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union, overload
+from typing import Optional, Tuple, Union
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
-from typing_extensions import Literal
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
@@ -110,23 +109,8 @@ class KeyringWrapper:
         """
         KeyringWrapper.__keys_root_path = keys_root_path
 
-    @overload
     @staticmethod
-    def get_shared_instance() -> KeyringWrapper:
-        ...
-
-    @overload
-    @staticmethod
-    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper:
-        ...
-
-    @overload
-    @staticmethod
-    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]:
-        ...
-
-    @staticmethod
-    def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:
+    def get_shared_instance(create_if_necessary: bool = True):
         if not KeyringWrapper.__shared_instance and create_if_necessary:
             KeyringWrapper.__shared_instance = KeyringWrapper(keys_root_path=KeyringWrapper.__keys_root_path)
 

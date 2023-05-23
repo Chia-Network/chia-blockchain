@@ -62,6 +62,7 @@ async def add_dummy_connection(
         log,
         True,
         server.received_message_callback,
+        self_hostname,
         None,
         peer_id,
         100,

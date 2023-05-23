@@ -24,6 +24,7 @@ async def test_multiple_register_same(get_daemon: WebSocketServer, bt: BlockTool
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
+
             service_name = "test_service"
             data = {"service": service_name}
             payload = create_payload("register_service", data, service_name, "daemon")
@@ -51,6 +52,7 @@ async def test_multiple_register_different(get_daemon: WebSocketServer, bt: Bloc
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
+
             test_service_names = ["service1", "service2", "service3"]
 
             for service_name in test_service_names:
@@ -87,6 +89,7 @@ async def test_remove_connection(get_daemon: WebSocketServer, bt: BlockTools) ->
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
+
             test_service_names = ["service1", "service2", "service3", "service4", "service5"]
 
             for service_name in test_service_names:

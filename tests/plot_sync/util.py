@@ -13,15 +13,16 @@ from chia.server.outbound_message import Message, NodeType
 from chia.server.start_service import Service
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
-from chia.util.ints import uint16, uint64
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint64
 
 
 @dataclass
 class WSChiaConnectionDummy:
     connection_type: NodeType
     peer_node_id: bytes32
-    peer_info: PeerInfo = PeerInfo("127.0.0.1", uint16(0))
+    peer_host: str = "localhost"
+    peer_port: int = 0
     last_sent_message: Optional[Message] = None
 
     async def send_message(self, message: Message) -> None:
@@ -40,9 +41,8 @@ async def start_harvester_service(harvester_service: Service[Harvester], farmer_
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
-    harvester_service.reconnect_retry_seconds = 1
     await harvester_service.start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
+    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     harvester.plot_manager.stop_refreshing()
 
     assert harvester.plot_sync_sender._sync_id == 0

@@ -11,7 +11,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp")
+NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clvm")
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
 

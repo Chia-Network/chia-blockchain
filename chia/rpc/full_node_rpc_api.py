@@ -694,8 +694,14 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        spend_info = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
-        return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
+        if error is not None:
+            raise ValueError(f"Error: {error}")
+
+        assert puzzle is not None
+        assert solution is not None
+
+        return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
 
     async def get_additions_and_removals(self, request: Dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
@@ -718,12 +724,12 @@ class FullNodeRpcApi:
         }
 
     async def get_all_mempool_tx_ids(self, _: Dict[str, Any]) -> EndpointResult:
-        ids = list(self.service.mempool_manager.mempool.all_item_ids())
+        ids = list(self.service.mempool_manager.mempool.all_spend_ids())
         return {"tx_ids": ids}
 
     async def get_all_mempool_items(self, _: Dict[str, Any]) -> EndpointResult:
         spends = {}
-        for item in self.service.mempool_manager.mempool.all_items():
+        for item in self.service.mempool_manager.mempool.all_spends():
             spends[item.name.hex()] = item.to_json_dict()
         return {"mempool_items": spends}
 
@@ -804,7 +810,6 @@ class FullNodeRpcApi:
         # at set times into the future. This can lead to situations that users do not expect,
         # such as estimating a higher fee for a longer transaction time.
         estimates = make_monotonically_decreasing(estimates)
-        estimates = [uint64(e) for e in estimates]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
         mempool_size = self.service.mempool_manager.mempool.total_mempool_cost()
         mempool_fees = self.service.mempool_manager.mempool.total_mempool_fees()

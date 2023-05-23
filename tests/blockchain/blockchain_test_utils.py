@@ -1,12 +1,10 @@
-from __future__ import annotations
+from typing import Optional, List
 
-from typing import List, Optional
-
-from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.blockchain import Blockchain, AddBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64, uint32
 
 
 async def check_block_store_invariant(bc: Blockchain):

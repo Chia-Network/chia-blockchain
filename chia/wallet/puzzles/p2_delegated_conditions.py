@@ -12,7 +12,7 @@ from chia.types.blockchain_format.program import Program
 
 from .load_clvm import load_clvm_maybe_recompile
 
-MOD = load_clvm_maybe_recompile("p2_delegated_conditions.clsp")
+MOD = load_clvm_maybe_recompile("p2_delegated_conditions.clvm")
 
 
 def puzzle_for_pk(public_key: Program) -> Program:

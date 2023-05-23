@@ -1,18 +1,18 @@
 (
   (defun simplify_merkle_proof_after_leaf (leaf_hash (bitpath . hashes_path))
-    (if hashes_path
-        (simplify_merkle_proof_after_leaf
-          (if (logand 1 bitpath)
-              (sha256 0x02 (f hashes_path) leaf_hash)
-              (sha256 0x02 leaf_hash (f hashes_path))
-          )
-          (c (lsh bitpath -1) (r hashes_path))
-        )
-        leaf_hash
-    )
-  )
+        (if hashes_path
+            (simplify_merkle_proof_after_leaf
+                (if (logand 1 bitpath)
+                    (sha256 0x02 (f hashes_path) leaf_hash)
+                    (sha256 0x02 leaf_hash (f hashes_path))
+                )
+                (c (lsh bitpath -1) (r hashes_path))
+            )
+            leaf_hash
+         )
+ )
 
-  (defun-inline simplify_merkle_proof (leaf proof)
-    (simplify_merkle_proof_after_leaf (sha256 0x01 leaf) proof)
-  )
+ (defun-inline simplify_merkle_proof (leaf proof)
+  (simplify_merkle_proof_after_leaf (sha256 0x01 leaf) proof)
+ )
 )

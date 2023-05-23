@@ -60,7 +60,7 @@ async def generate_coins(
             if tail_str:
                 tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
+                payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
@@ -75,7 +75,7 @@ async def generate_coins(
                     )
                 )
             else:
-                payments.append(Payment(acs_ph, amount))
+                payments.append(Payment(acs_ph, amount, []))
 
     # This bundle creates all of the initial coins
     parent_bundle = SpendBundle(

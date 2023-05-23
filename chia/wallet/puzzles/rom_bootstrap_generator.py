@@ -4,5 +4,8 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 
 from .load_clvm import load_serialized_clvm_maybe_recompile
 
-GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile("rom_bootstrap_generator.clsp")
-GENERATOR2_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile("rom_bootstrap_generator2.clsp")
+MOD = load_serialized_clvm_maybe_recompile("rom_bootstrap_generator.clvm")
+
+
+def get_generator() -> SerializedProgram:
+    return MOD

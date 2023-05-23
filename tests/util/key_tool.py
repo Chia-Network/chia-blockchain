@@ -6,7 +6,7 @@ from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from chia.simulator.block_tools import test_constants
 from chia.types.coin_spend import CoinSpend
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution, pkm_pairs_for_conditions_dict
 from tests.core.make_block_generator import GROUP_ORDER, int_to_public_key
 
 
@@ -28,9 +28,11 @@ class KeyTool(dict):
 
     def signature_for_solution(self, coin_spend: CoinSpend, additional_data: bytes) -> AugSchemeMPL:
         signatures = []
-        conditions_dict = conditions_dict_for_solution(
+        err, conditions, cost = conditions_for_solution(
             coin_spend.puzzle_reveal, coin_spend.solution, test_constants.MAX_BLOCK_COST_CLVM
         )
+        assert conditions is not None
+        conditions_dict = conditions_by_opcode(conditions)
         for public_key, message in pkm_pairs_for_conditions_dict(
             conditions_dict, coin_spend.coin.name(), additional_data
         ):

@@ -2,24 +2,24 @@
 
   (defun search_list_then_resume (key json_object result)
     (if result
-        result
-        (search_for_value_given_key key (r json_object))
+      result
+      (search_for_value_given_key key (r json_object))
     )
   )
 
   (defun search_for_value_given_key (key json_object)
     (if json_object
-        (if (l (f from_json_dict))  ; if we are hitting an unlabelled item (atom), just move on
-            (if (= (f (f json_object)) key)  ; if we have found our key
-                (r (f json_object))  ; return the value
-                (if (l (r (f json_object)))  ; otherwise check if we have hit another dictionary
-                    (search_list_then_resume key json_object (search_for_value_given_key key (r (f json_object))))  ; check new dictionary
-                    (search_for_value_given_key key (r json_object))
-                )
-            )
+      (if (l (f from_json_dict)) ; if we are hitting an unlabelled item (atom), just move on
+        (if (= (f (f json_object)) key)  ; if we have found our key
+          (r (f json_object))  ; return the value
+          (if (l (r (f json_object)))  ; otherwise check if we have hit another dictionary
+            (search_list_then_resume key json_object (search_for_value_given_key key (r (f json_object)))) ; check new dictionary
             (search_for_value_given_key key (r json_object))
+          )
         )
-        ()
+        (search_for_value_given_key key (r json_object))
+      )
+      ()
     )
   )
 )

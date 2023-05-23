@@ -116,7 +116,3 @@ class DataLayerRpcClient(RpcClient):
     async def get_sync_status(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_sync_status", {"id": store_id.hex()})
         return response
-
-    async def check_plugins(self) -> Dict[str, Any]:
-        response = await self.fetch("check_plugins", {})
-        return response

@@ -46,7 +46,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
@@ -1903,61 +1902,6 @@ class TestFullNodeProtocol:
             if block.challenge_chain_sp_proof is not None:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
-
-    @pytest.mark.asyncio
-    async def test_respond_compact_proof_message_limit(self, setup_two_nodes_fixture):
-        nodes, _, bt = setup_two_nodes_fixture
-        full_node_1 = nodes[0]
-        full_node_2 = nodes[1]
-        NUM_BLOCKS = 20
-        # We don't compactify the last 5 blocks.
-        EXPECTED_COMPACTIFIED = NUM_BLOCKS - 5
-        blocks = bt.get_consecutive_blocks(num_blocks=NUM_BLOCKS)
-        finished_compact_proofs = []
-        for block in blocks:
-            await full_node_1.full_node.add_block(block)
-            await full_node_2.full_node.add_block(block)
-            vdf_info, vdf_proof = get_vdf_info_and_proof(
-                test_constants,
-                ClassgroupElement.get_default_element(),
-                block.reward_chain_block.challenge_chain_ip_vdf.challenge,
-                block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
-                True,
-            )
-            finished_compact_proofs.append(
-                timelord_protocol.RespondCompactProofOfTime(
-                    vdf_info,
-                    vdf_proof,
-                    block.header_hash,
-                    block.height,
-                    CompressibleVDFField.CC_IP_VDF,
-                )
-            )
-
-        async def coro(full_node, compact_proof):
-            await full_node.respond_compact_proof_of_time(compact_proof)
-
-        full_node_1.full_node._compact_vdf_sem = LimitedSemaphore.create(active_limit=1, waiting_limit=2)
-        tasks = asyncio.gather(
-            *[coro(full_node_1, respond_compact_proof) for respond_compact_proof in finished_compact_proofs]
-        )
-        await tasks
-        stored_blocks = await full_node_1.get_all_full_blocks()
-        compactified = 0
-        for block in stored_blocks:
-            if block.challenge_chain_ip_proof.normalized_to_identity:
-                compactified += 1
-        assert compactified == 3
-
-        # The other full node receives the compact messages one at a time.
-        for respond_compact_proof in finished_compact_proofs:
-            await full_node_2.full_node.add_compact_proof_of_time(respond_compact_proof)
-        stored_blocks = await full_node_2.get_all_full_blocks()
-        compactified = 0
-        for block in stored_blocks:
-            if block.challenge_chain_ip_proof.normalized_to_identity:
-                compactified += 1
-        assert compactified == EXPECTED_COMPACTIFIED
 
     @pytest.mark.parametrize(
         argnames=["custom_capabilities", "expect_success"],
