@@ -353,7 +353,7 @@ class WebSocketServer:
         elif command == "start_plotting":
             response = await self.start_plotting(data, test_mode=test_mode)
         elif command == "stop_plotting":
-            response = await self.stop_plotting(data, test_mode=test_mode)
+            response = await self.stop_plotting(data)
         elif command == "stop_service":
             response = await self.stop_service(data)
         elif command == "running_services":
@@ -915,15 +915,7 @@ class WebSocketServer:
 
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            if test_mode:
-                process = subprocess.Popen(
-                    ["python", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-                plotter_log = plotter_log_path(self.root_path, id).absolute()
-                plotter_log.parent.mkdir(parents=True, exist_ok=True)
-                plotter_log.touch(exist_ok=True)
-            else:
-                process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id, test_mode)
 
             current_process = process
 
@@ -1028,7 +1020,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request: Dict[str, Any], test_mode=False) -> Dict[str, Any]:
+    async def stop_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -1206,7 +1198,7 @@ def plotter_log_path(root_path: Path, id: str):
     return root_path / "plotter" / f"plotter_log_{id}.txt"
 
 
-def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str):
+def launch_plotter(root_path: Path, service_name: str, service_array: List[str], id: str, test_mode: bool = False) -> Tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -1230,14 +1222,19 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         plotter_path.parent.mkdir(parents=True, exist_ok=True)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
-    process = subprocess.Popen(
-        service_array,
-        shell=False,
-        stderr=outfile,
-        stdout=outfile,
-        startupinfo=startupinfo,
-        creationflags=creationflags,
-    )
+    if test_mode:
+        process = subprocess.Popen(
+            ["chia", "version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    else:
+        process = subprocess.Popen(
+            service_array,
+            shell=False,
+            stderr=outfile,
+            stdout=outfile,
+            startupinfo=startupinfo,
+            creationflags=creationflags,
+        )
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:

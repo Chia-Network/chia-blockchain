@@ -1344,3 +1344,88 @@ async def test_plotter_roundtrip(
     # 4) Finished
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+
+@pytest.mark.asyncio
+async def test_plotter_stop_plotting(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+    
+    # register for chia_plotter events
+    service_name = "chia_plotter"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, "chia_plotter", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response_success_only(response)
+
+    root_path = get_b_tools.root_path
+    print(root_path)
+
+    plotting_request = {
+        "service": "chia_plotter",
+        "plotter": "chiapos",
+        "k": 25,
+        "r": 2,
+        "u": 128,
+        "e": False,
+        "parallel": False,
+        "n": 1,
+        "queue": "default",
+        "d": "/Volumes/CHIA",
+        "t": "/private/tmp",
+        "t2": "",
+        "f": "",
+        "plotNFTContractAddr": "",
+        "x": False,
+        "b": 512,
+        "overrideK": True,
+        "delay": 0,
+        "a": 3598820529,
+    }
+
+    #
+    # Using CI_test as the origin, this causes the daemon to not really start the plotter
+    #
+    payload = create_payload(
+        "start_plotting",
+        plotting_request,
+        "CI_test",
+        "daemon",
+    )
+    await ws.send_str(payload)
+
+    # should first get response to start_plotting
+    response = await ws.receive()
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    assert message["data"]["success"] is True
+    plot_id = message["data"]["ids"][0]
+
+    # 1) Submitted
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "SUBMITTED")
+
+    # 2) Running
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "RUNNING")
+
+    payload = create_payload(
+        "stop_plotting",
+        {"id": plot_id},
+        "service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response(response, {"success": True})
+
+    # 3) removing
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "REMOVING")
+
+    # 4) Finished
+    response = await ws.receive()
+    assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+
