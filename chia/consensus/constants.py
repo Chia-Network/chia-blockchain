@@ -36,6 +36,7 @@ class ConsensusConstants:
     SUB_SLOT_TIME_TARGET: int  # The target number of seconds per sub-slot
     NUM_SP_INTERVALS_EXTRA: int  # The difference between signage point and infusion point (plus required_iters)
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
+    MAX_FUTURE_TIME2: int  # After soft-fork2, this is the new MAX_FUTURE_TIME
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
@@ -61,11 +62,21 @@ class ConsensusConstants:
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
-    # soft fork initiated in 1.7.0 release
-    SOFT_FORK_HEIGHT: uint32
 
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
+
+    # soft fork initiated in 2.0 release
+    SOFT_FORK3_HEIGHT: uint32
+
+    # the hard fork planned with the 2.0 release
+    # this is the block with the first plot filter adjustment
+    HARD_FORK_HEIGHT: uint32
+
+    # the plot filter adjustment heights
+    PLOT_FILTER_128_HEIGHT: uint32
+    PLOT_FILTER_64_HEIGHT: uint32
+    PLOT_FILTER_32_HEIGHT: uint32
 
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)

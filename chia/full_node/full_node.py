@@ -1078,12 +1078,10 @@ class FullNode:
                     fetched = False
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
-                            peers_with_peak.remove(peer)
                             continue
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         if response is None:
                             await peer.close()
-                            peers_with_peak.remove(peer)
                         elif isinstance(response, RespondBlocks):
                             await batch_queue.put((peer, response.blocks))
                             fetched = True
@@ -1116,8 +1114,6 @@ class FullNode:
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
-                    if peer in peers_with_peak:
-                        peers_with_peak.remove(peer)
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
@@ -1883,11 +1879,7 @@ class FullNode:
             # blockchain.run_generator throws on errors, so npc_result is
             # guaranteed to represent a successful run
             assert npc_result.conds is not None
-            pairs_pks, pairs_msgs = pkm_pairs(
-                npc_result.conds,
-                self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-                soft_fork=height >= self.constants.SOFT_FORK_HEIGHT,
-            )
+            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
             if not cached_bls.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):
@@ -2211,8 +2203,9 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
         self.log.debug(f"Processing transaction: {spend_name}")
-        # Ignore if syncing
-        if self.sync_store.get_sync_mode():
+        # Ignore if syncing or if we have not yet received a block
+        # the mempool must have a peak to validate transactions
+        if self.sync_store.get_sync_mode() or self.mempool_manager.peak is None:
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
             self.mempool_manager.remove_seen(spend_name)
@@ -2404,6 +2397,11 @@ class FullNode:
                 raise
 
     async def add_compact_proof_of_time(self, request: timelord_protocol.RespondCompactProofOfTime) -> None:
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - request.height < 5:
+            self.log.info(f"Ignoring add_compact_proof_of_time, height {request.height} too recent.")
+            return None
+
         field_vdf = CompressibleVDFField(int(request.field_vdf))
         if not await self._can_accept_compact_proof(
             request.vdf_info, request.vdf_proof, request.height, request.header_hash, field_vdf
@@ -2423,6 +2421,10 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection) -> None:
+        peak = self.blockchain.get_peak()
+        if peak is None or peak.height - request.height < 5:
+            self.log.info(f"Ignoring new_compact_vdf, height {request.height} too recent.")
+            return None
         is_fully_compactified = await self.block_store.is_fully_compactified(request.header_hash)
         if is_fully_compactified is None or is_fully_compactified:
             return None

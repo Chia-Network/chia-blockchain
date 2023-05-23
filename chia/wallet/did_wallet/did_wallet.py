@@ -6,12 +6,10 @@ import logging
 import re
 import time
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -29,6 +27,7 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -44,7 +43,7 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -52,6 +51,11 @@ from chia.wallet.wallet_info import WalletInfo
 
 
 class DIDWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
+
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -382,14 +386,8 @@ class DIDWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            assert parent_state.spent_height is not None
-            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                coin.parent_coin_info, uint32(parent_state.spent_height)
-            )
-            response = await peer.call_api(FullNodeAPI.request_puzzle_solution, puzzle_solution_request)
-            req_puz_sol = response.response
-            assert req_puz_sol.puzzle is not None
-            parent_innerpuz = get_inner_puzzle_from_singleton(req_puz_sol.puzzle.to_program())
+            response = await fetch_coin_spend_for_coin_state(parent_state, peer)
+            parent_innerpuz = get_inner_puzzle_from_singleton(response.puzzle_reveal.to_program())
             if parent_innerpuz:
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
@@ -580,13 +578,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_inner_puzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             coin_announcements={coin.name()},
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -696,13 +688,7 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_did_puzhash,
-                    "amount": uint64(coin.amount),
-                    "memos": [new_puzhash],
-                }
-            ],
+            primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             coin_announcements={coin.name()},
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -770,6 +756,8 @@ class DIDWallet:
         self,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
+        coin_announcements_to_assert: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_assert: Optional[Set[Announcement]] = None,
         new_innerpuzzle: Optional[Program] = None,
     ):
         assert self.did_info.current_inner is not None
@@ -785,15 +773,15 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ],
+            primaries=[Payment(new_innerpuzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
+            coin_announcements_to_assert={a.name() for a in coin_announcements_to_assert}
+            if coin_announcements_to_assert is not None
+            else None,
+            puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_assert}
+            if puzzle_announcements_to_assert is not None
+            else None,
         )
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, p2_solution])
@@ -902,12 +890,8 @@ class DIDWallet:
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                },
-                {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
+                Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
+                Payment(innermessage, uint64(0)),
             ],
         )
         innersol = Program.to([1, p2_solution])
@@ -1325,13 +1309,7 @@ class DIDWallet:
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[
-                {
-                    "puzzlehash": innerpuz.get_tree_hash(),
-                    "amount": uint64(coin.amount),
-                    "memos": [p2_puzzle.get_tree_hash()],
-                }
-            ]
+            primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])]
         )
         innersol = Program.to([1, p2_solution])
         # full solution is (lineage_proof my_amount inner_solution)
@@ -1482,9 +1460,3 @@ class DIDWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = DIDWallet()

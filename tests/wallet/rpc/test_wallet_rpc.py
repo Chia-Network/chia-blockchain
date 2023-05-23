@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 from operator import attrgetter
+from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
@@ -36,6 +37,7 @@ from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -49,10 +51,40 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from tests.wallet.test_wallet_coin_store import (
+    get_coin_records_amount_filter_tests,
+    get_coin_records_amount_range_tests,
+    get_coin_records_coin_id_filter_tests,
+    get_coin_records_coin_type_tests,
+    get_coin_records_confirmed_range_tests,
+    get_coin_records_include_total_count_tests,
+    get_coin_records_mixed_tests,
+    get_coin_records_offset_limit_tests,
+    get_coin_records_order_tests,
+    get_coin_records_parent_coin_id_filter_tests,
+    get_coin_records_puzzle_hash_filter_tests,
+    get_coin_records_reverse_tests,
+    get_coin_records_spent_range_tests,
+    get_coin_records_wallet_id_tests,
+    get_coin_records_wallet_type_tests,
+    record_1,
+    record_2,
+    record_3,
+    record_4,
+    record_5,
+    record_6,
+    record_7,
+    record_8,
+    record_9,
+)
 
 log = logging.getLogger(__name__)
 
@@ -201,7 +233,7 @@ def assert_tx_amounts(
 ) -> None:
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
-    expected_additions = len(outputs) if change_expected is None else len(outputs) + 1
+    expected_additions = len(outputs) + 1 if change_expected else len(outputs)
     if is_cat and amount_fee:
         expected_additions += 1
     assert len(tx.additions) == expected_additions
@@ -339,6 +371,55 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.asyncio
+async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
+
+    result = await wallet_rpc_client.get_farmed_amount()
+
+    expected_result = {
+        "farmed_amount": 4_000_000_000_000,
+        "farmer_reward_amount": 500_000_000_000,
+        "fee_amount": 0,
+        "last_height_farmed": 2,
+        "pool_reward_amount": 3_500_000_000_000,
+        "success": True,
+    }
+
+    assert result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env = wallet_rpc_environment
+    wallet: Wallet = env.wallet_1.wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_rpc_client = env.wallet_1.rpc_client
+    wallet_node: WalletNode = env.wallet_1.node
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    fee_amount = 100
+    tx = await wallet.generate_signed_transaction(
+        amount=uint64(5),
+        puzzle_hash=bytes32([0] * 32),
+        fee=uint64(fee_amount),
+    )
+    await wallet.push_transaction(tx)
+
+    our_ph = await wallet.get_new_puzzlehash()
+    await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    result = await wallet_rpc_client.get_farmed_amount()
+    assert result["fee_amount"] == fee_amount
+
+
+@pytest.mark.asyncio
 async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
@@ -364,6 +445,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
             False,
         ),
         ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
+        ([(120000000000, None), (120000000000, None)], 10000000000, True, False),
     ],
 )
 @pytest.mark.asyncio
@@ -418,7 +500,8 @@ async def test_create_signed_transaction(
         fee=amount_fee,
         wallet_id=wallet_id,
     )
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin, is_cat=is_cat)
+    change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
+    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
@@ -473,7 +556,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
     tx_res: TransactionRecord = await client.create_signed_transaction(
         outputs, coin_announcements=tx_coin_announcements
     )
-    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=False)
+    assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
 
 
@@ -636,6 +719,13 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
+
+    # Test type filter
+    all_transactions = await client.get_transactions(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+    )
+    assert len(all_transactions) == 5
+    assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
 
 
 @pytest.mark.asyncio
@@ -1309,6 +1399,169 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_coins_2[0].coin == coin_300[0]
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(wallet_id=1, excluded_coin_ids=["a"])
+
+
+@pytest.mark.asyncio
+async def test_get_coin_records_rpc(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    wallet_node: WalletNode = env.wallet_1.node
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    store = wallet_node.wallet_state_manager.coin_store
+
+    for record in [record_1, record_2, record_3, record_4, record_5, record_6, record_7, record_8, record_9]:
+        await store.add_coin_record(record)
+
+    async def run_test_case(
+        test_case: str,
+        test_request: GetCoinRecords,
+        test_total_count: Optional[int],
+        test_records: List[WalletCoinRecord],
+    ):
+        response = await client.get_coin_records(test_request)
+        assert response["coin_records"] == [coin.to_json_dict_parsed_metadata() for coin in test_records], test_case
+        assert response["total_count"] == test_total_count, test_case
+
+    for name, tests in {
+        "offset_limit": get_coin_records_offset_limit_tests,
+        "wallet_id": get_coin_records_wallet_id_tests,
+        "wallet_type": get_coin_records_wallet_type_tests,
+        "coin_type": get_coin_records_coin_type_tests,
+        "coin_id_filter": get_coin_records_coin_id_filter_tests,
+        "puzzle_hash_filter": get_coin_records_puzzle_hash_filter_tests,
+        "parent_coin_id_filter": get_coin_records_parent_coin_id_filter_tests,
+        "amount_filter": get_coin_records_amount_filter_tests,
+        "amount_range": get_coin_records_amount_range_tests,
+        "confirmed_range": get_coin_records_confirmed_range_tests,
+        "spent_range": get_coin_records_spent_range_tests,
+        "order": get_coin_records_order_tests,
+        "reverse": get_coin_records_reverse_tests,
+    }.items():
+        for i, (request, expected_records) in enumerate(tests):
+            await run_test_case(f"{name}-{i}", request, None, expected_records)
+
+    for name, total_count_tests in {
+        "total_count": get_coin_records_include_total_count_tests,
+        "mixed": get_coin_records_mixed_tests,
+    }.items():
+        for i, (request, expected_total_count, expected_records) in enumerate(total_count_tests):
+            await run_test_case(f"{name}-{i}", request, expected_total_count, expected_records)
+
+
+@pytest.mark.asyncio
+async def test_get_coin_records_rpc_limits(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    wallet_node: WalletNode = env.wallet_1.node
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    store = wallet_node.wallet_state_manager.coin_store
+
+    max_coins = api.max_get_coin_records_limit * 10
+    coin_records = [
+        WalletCoinRecord(
+            Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
+            uint32(uint32.from_bytes(token_bytes(4))),
+            uint32(0),
+            False,
+            False,
+            WalletType.STANDARD_WALLET,
+            uint32(0),
+            CoinType.NORMAL,
+            None,
+        )
+        for _ in range(max_coins)
+    ]
+    for record in coin_records:
+        await store.add_coin_record(record)
+
+    limit = api.max_get_coin_records_limit
+    response_records = []
+    for i in range(int(max_coins / api.max_get_coin_records_limit)):
+        offset = uint32(api.max_get_coin_records_limit * i)
+        response = await client.get_coin_records(GetCoinRecords(limit=limit, offset=offset, include_total_count=True))
+        response_records.extend(list(response["coin_records"]))
+
+    assert len(response_records) == max_coins
+    # Make sure we got all expected records
+    parsed_records = [coin.to_json_dict_parsed_metadata() for coin in coin_records]
+    for expected_record in parsed_records:
+        assert expected_record in response_records
+
+    # Request coins with the max number of filter items
+    max_filter_items = api.max_get_coin_records_filter_items
+    filter_records = coin_records[:max_filter_items]
+    coin_id_filter = HashFilter.include([coin.name() for coin in filter_records])
+    puzzle_hash_filter = HashFilter.include([coin.coin.puzzle_hash for coin in filter_records])
+    parent_coin_id_filter = HashFilter.include([coin.coin.parent_coin_info for coin in filter_records])
+    amount_filter = AmountFilter.include([uint64(coin.coin.amount) for coin in coin_records[:max_filter_items]])
+    for request in [
+        GetCoinRecords(coin_id_filter=coin_id_filter),
+        GetCoinRecords(puzzle_hash_filter=puzzle_hash_filter),
+        GetCoinRecords(parent_coin_id_filter=parent_coin_id_filter),
+        GetCoinRecords(amount_filter=amount_filter),
+        GetCoinRecords(
+            coin_id_filter=coin_id_filter,
+            puzzle_hash_filter=puzzle_hash_filter,
+            parent_coin_id_filter=parent_coin_id_filter,
+            amount_filter=amount_filter,
+        ),
+    ]:
+        response = await client.get_coin_records(request)
+        parsed_records = [coin.to_json_dict_parsed_metadata() for coin in filter_records]
+        for expected_record in parsed_records:
+            assert expected_record in response["coin_records"]
+
+
+@pytest.mark.asyncio
+async def test_get_coin_records_rpc_failures(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+) -> None:
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    assert rpc_server is not None
+    api = cast(WalletRpcApi, rpc_server.rpc_api)
+
+    too_many_hashes = [bytes32(token_bytes(32)) for _ in range(api.max_get_coin_records_filter_items + 1)]
+    too_many_amounts = [
+        uint64(uint64.from_bytes(token_bytes(8))) for _ in range(api.max_get_coin_records_filter_items + 1)
+    ]
+    # Run requests which exceeds the allowed limit and contain too much filter items
+    for name, request in {
+        "limit": GetCoinRecords(limit=uint32(api.max_get_coin_records_limit + 1)),
+        "coin_id_filter": GetCoinRecords(coin_id_filter=HashFilter.include(too_many_hashes)),
+        "puzzle_hash_filter": GetCoinRecords(puzzle_hash_filter=HashFilter.include(too_many_hashes)),
+        "parent_coin_id_filter": GetCoinRecords(parent_coin_id_filter=HashFilter.include(too_many_hashes)),
+        "amount_filter": GetCoinRecords(amount_filter=AmountFilter.include(too_many_amounts)),
+    }.items():
+        with pytest.raises(ValueError, match=name):
+            await client.get_coin_records(request)
+
+    # Type validation is handled via `Streamable.from_json_dict´ but the below should make at least sure it triggers.
+    for field, value in {
+        "offset": "invalid",
+        "limit": "invalid",
+        "wallet_id": "invalid",
+        "wallet_type": 100,
+        "coin_type": 100,
+        "coin_id_filter": "invalid",
+        "puzzle_hash_filter": "invalid",
+        "parent_coin_id_filter": "invalid",
+        "amount_filter": "invalid",
+        "amount_range": "invalid",
+        "confirmed_range": "invalid",
+        "spent_range": "invalid",
+        "order": 8,
+    }.items():
+        with pytest.raises((ConversionError, InvalidTypeError, ValueError)):
+            json_dict = GetCoinRecords().to_json_dict()
+            json_dict[field] = value
+            await api.get_coin_records(json_dict)
 
 
 @pytest.mark.asyncio

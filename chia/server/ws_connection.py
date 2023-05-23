@@ -13,6 +13,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, U
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
@@ -110,8 +111,8 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: str = field(default_factory=str)
-    protocol_version: str = field(default_factory=str)
+    version: Version = field(default_factory=lambda: Version("0"))
+    protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
         default_factory=create_default_last_message_time_dict,
@@ -128,7 +129,6 @@ class WSChiaConnection:
         log: logging.Logger,
         is_outbound: bool,
         received_message_callback: Optional[ConnectionCallback],
-        peer_host: str,
         close_callback: Optional[ConnectionClosedCallbackProtocol],
         peer_id: bytes32,
         inbound_rate_limit_percent: int,
@@ -140,7 +140,7 @@ class WSChiaConnection:
         peername = ws._writer.transport.get_extra_info("peername")
 
         if peername is None:
-            raise ValueError(f"Was not able to get peername from {peer_host}")
+            raise ValueError(f"Was not able to get peername for {peer_id}")
 
         if is_outbound:
             request_nonce = uint16(0)
@@ -156,7 +156,7 @@ class WSChiaConnection:
             local_port=server_port,
             local_capabilities_for_handshake=local_capabilities_for_handshake,
             local_capabilities=known_active_capabilities(local_capabilities_for_handshake),
-            peer_info=PeerInfo(peer_host, peername[1]),
+            peer_info=PeerInfo(peername[0], peername[1]),
             peer_node_id=peer_id,
             log=log,
             close_callback=close_callback,
@@ -219,8 +219,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = inbound_handshake.software_version
-            self.protocol_version = inbound_handshake.protocol_version
+            self.version = Version(inbound_handshake.software_version)
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -673,7 +673,7 @@ class WSChiaConnection:
 
     # Used by the Chia Seeder.
     def get_version(self) -> str:
-        return self.version
+        return str(self.version)
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")
