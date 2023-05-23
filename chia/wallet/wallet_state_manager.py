@@ -8,20 +8,7 @@ import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Type, TypeVar
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -275,17 +262,13 @@ class WalletStateManager:
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
 
-    async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
+    async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
-            raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if record.hardened:
-            private = master_sk_to_wallet_sk(self.private_key, record.index)
-            pubkey = private.get_g1()
-            return pubkey, private
-        private = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
-        pubkey = private.get_g1()
-        return pubkey, private
+            return master_sk_to_wallet_sk(self.private_key, record.index)
+        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
 
     def get_wallet(self, id: uint32, required_type: Type[TWalletType]) -> TWalletType:
         wallet = self.wallets[id]
