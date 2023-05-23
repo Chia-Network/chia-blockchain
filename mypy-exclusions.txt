@@ -77,7 +77,6 @@ chia.wallet.puzzles.prefarm.spend_prefarm
 chia.wallet.puzzles.puzzle_utils
 chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
-chia.wallet.secret_key_store
 chia.wallet.trading.trade_store
 chia.wallet.transaction_record
 chia.wallet.util.debug_spend_bundle
