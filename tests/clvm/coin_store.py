@@ -54,19 +54,12 @@ class CoinStore:
         self._add_coin_entry(coin, birthday)
         return coin
 
-    def validate_spend_bundle(
-        self,
-        spend_bundle: SpendBundle,
-        now: CoinTimestamp,
-        max_cost: int,
-        cost_per_byte: int,
-    ) -> int:
+    def validate_spend_bundle(self, spend_bundle: SpendBundle, now: CoinTimestamp, max_cost: int) -> int:
         # this should use blockchain consensus code
 
         program = simple_solution_generator(spend_bundle)
-        result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, cost_per_byte=cost_per_byte, mempool_mode=True
-        )
+        # always use the post soft-fork2 semantics
+        result: NPCResult = get_name_puzzle_conditions(program, max_cost, mempool_mode=True, height=uint32(3886635))
         if result.error is not None:
             raise BadSpendBundleError(f"condition validation failure {Err(result.error)}")
 
@@ -87,7 +80,11 @@ class CoinStore:
         err = mempool_check_time_locks(
             ephemeral_db,
             result.conds,
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's height
             uint32(now.height),
+            # TODO: this is technically not right, it's supposed to be the
+            # previous transaction block's timestamp
             uint64(now.seconds),
         )
 
@@ -101,9 +98,8 @@ class CoinStore:
         spend_bundle: SpendBundle,
         now: CoinTimestamp,
         max_cost: int,
-        cost_per_byte: int,
     ):
-        err = self.validate_spend_bundle(spend_bundle, now, max_cost, cost_per_byte)
+        err = self.validate_spend_bundle(spend_bundle, now, max_cost)
         if err != 0:
             raise BadSpendBundleError(f"validation failure {err}")
         additions = spend_bundle.additions()

@@ -11,6 +11,7 @@ from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
+from chia.cmds.dev import dev_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
@@ -83,12 +84,12 @@ def cli(
     check_ssl(Path(root_path))
 
 
-@cli.command("version", short_help="Show chia version")
+@cli.command("version", help="Show chia version")
 def version_cmd() -> None:
     print(__version__)
 
 
-@cli.command("run_daemon", short_help="Runs chia daemon")
+@cli.command("run_daemon", help="Runs chia daemon")
 @click.option(
     "--wait-for-unlock",
     help="If the keyring is passphrase-protected, the daemon will wait for an unlock command before accessing keys",
@@ -127,6 +128,7 @@ cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 cli.add_command(beta_cmd)
 cli.add_command(completion)
+cli.add_command(dev_cmd)
 
 
 def main() -> None:

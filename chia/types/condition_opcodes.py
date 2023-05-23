@@ -4,7 +4,7 @@ import enum
 from typing import Any
 
 
-# See chia/wallet/puzzles/condition_codes.clvm
+# See chia/wallet/puzzles/condition_codes.clib
 class ConditionOpcode(bytes, enum.Enum):
     # AGG_SIG is ascii "1"
 
@@ -35,6 +35,7 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_MY_AMOUNT = bytes([73])
     ASSERT_MY_BIRTH_SECONDS = bytes([74])
     ASSERT_MY_BIRTH_HEIGHT = bytes([75])
+    ASSERT_EPHEMERAL = bytes([76])
 
     # the conditions below ensure that we're "far enough" in the future
 

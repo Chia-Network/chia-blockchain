@@ -41,7 +41,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
-          echo matrix_mode=${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }} >> $GITHUB_OUTPUT
+          echo matrix_mode=${{ ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || 'main' }} >> $GITHUB_OUTPUT
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
@@ -131,23 +131,38 @@ jobs:
 
       - name: Coverage Processing
         run: |
-          coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
-          coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
-          coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
+          coverage combine --rcfile=.coveragerc --data-file=coverage-reports/.coverage coverage-data/
+          coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
+          coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
+
+      - uses: coverallsapp/github-action@v2
+        if: always()
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
       - name: Coverage report (chia/)
+        if: always()
         run: |
-          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+          set -o pipefail
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
       - name: Coverage report (tests/)
+        if: always()
         run: |
-          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+          set -o pipefail
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
       - name: Coverage report (diff)
+        if: always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ env.compare-branch }} --html-report coverage-reports/diff-cover.html --markdown-report coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          set -o pipefail
+          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+
+      - name: Add diff coverage report to workflow summary
+        if: always()
+        run: |
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports

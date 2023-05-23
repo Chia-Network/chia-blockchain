@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final
@@ -45,7 +45,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -59,6 +59,11 @@ from chia.wallet.wallet_info import WalletInfo
 @final
 @dataclasses.dataclass
 class PoolWallet:
+    if TYPE_CHECKING:
+        from chia.wallet.wallet_protocol import WalletProtocol
+
+        _protocol_check: ClassVar[WalletProtocol] = cast("PoolWallet", None)
+
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
@@ -119,8 +124,8 @@ class PoolWallet:
     """
 
     @classmethod
-    def type(cls) -> uint8:
-        return uint8(WalletType.POOLING_WALLET)
+    def type(cls) -> WalletType:
+        return WalletType.POOLING_WALLET
 
     def id(self) -> uint32:
         return self.wallet_info.id
@@ -255,12 +260,6 @@ class PoolWallet:
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
-    @staticmethod
-    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
-        # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
-        # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
-        return get_most_recent_singleton_coin_from_coin_spend(spend)
-
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
         Updates the Pool state (including DB) with new singleton spends.
@@ -360,7 +359,7 @@ class PoolWallet:
         await pool_wallet.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
-        await wallet_state_manager.add_new_wallet(pool_wallet, pool_wallet.wallet_id, create_puzzle_hashes=False)
+        await wallet_state_manager.add_new_wallet(pool_wallet)
         await wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [pool_wallet.wallet_id])
 
         return pool_wallet
@@ -988,9 +987,3 @@ class PoolWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
-
-
-if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol
-
-    _dummy: WalletProtocol = cast(PoolWallet, None)

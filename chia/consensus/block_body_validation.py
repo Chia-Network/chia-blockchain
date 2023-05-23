@@ -59,6 +59,7 @@ async def validate_block_body(
     if isinstance(block, FullBlock):
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
+    prev_transaction_block_timestamp: uint64 = uint64(0)
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are
@@ -103,6 +104,8 @@ async def validate_block_body(
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
         prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
         prev_transaction_block_height = prev_transaction_block.height
+        assert prev_transaction_block.timestamp
+        prev_transaction_block_timestamp = prev_transaction_block.timestamp
         assert prev_transaction_block.fees is not None
         pool_coin = create_pool_coin(
             prev_transaction_block_height,
@@ -316,7 +319,6 @@ async def validate_block_body(
                 curr_npc_result = get_name_puzzle_conditions(
                     curr_block_generator,
                     min(constants.MAX_BLOCK_COST_CLVM, curr.transactions_info.cost),
-                    cost_per_byte=constants.COST_PER_BYTE,
                     mempool_mode=False,
                     height=curr.height,
                     constants=constants,
@@ -457,11 +459,18 @@ async def validate_block_body(
     # verify absolute/relative height/time conditions
     if npc_result is not None:
         assert npc_result.conds is not None
+
+        block_timestamp: uint64
+        if height < constants.SOFT_FORK2_HEIGHT:
+            block_timestamp = block.foliage_transaction_block.timestamp
+        else:
+            block_timestamp = prev_transaction_block_timestamp
+
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block.foliage_transaction_block.timestamp,
+            block_timestamp,
         )
         if error:
             return error, None
@@ -471,9 +480,7 @@ async def validate_block_body(
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None
-        pairs_pks, pairs_msgs = pkm_pairs(
-            npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA, soft_fork=height >= constants.SOFT_FORK_HEIGHT
-        )
+        pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
 
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster

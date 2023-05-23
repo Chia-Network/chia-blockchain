@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 from typing_extensions import Literal
 
@@ -28,17 +28,18 @@ from chia.wallet.trading.offer import OFFER_MOD_OLD_HASH, NotarizedPayment, Offe
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
 
 class TradeManager:
     """
-    This class is a driver for creating and accepting settlement_payments.clvm style offers.
+    This class is a driver for creating and accepting settlement_payments.clsp style offers.
 
     By default, standard XCH is supported but to support other types of assets you must implement certain functions on
     the asset's wallet as well as create a driver for its puzzle(s).  Here is a guide to integrating a new types of
@@ -137,10 +138,11 @@ class TradeManager:
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
-        our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
-            primary_coin_ids
+        # TODO: Add `WalletCoinStore.get_coins`.
+        result = await self.wallet_state_manager.coin_store.get_coin_records(
+            coin_id_filter=HashFilter.include(primary_coin_ids)
         )
-        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records]
+        our_primary_coins: List[Coin] = [cr.coin for cr in result.records]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.additions())
         )
@@ -176,7 +178,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -190,13 +192,17 @@ class TradeManager:
         for trade_offer in all_pending:
             coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
-        result = {}
-        coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
-        for record in coin_records:
-            if wallet_id is None or record.wallet_id == wallet_id:
-                result[record.name()] = record
-
-        return result
+        # TODO:
+        #  - No need to get the coin records here, we are only interested in the coin_id on the call site.
+        #  - The cast here is required for now because TradeManager.wallet_state_manager is hinted as Any.
+        return cast(
+            Dict[bytes32, WalletCoinRecord],
+            (
+                await self.wallet_state_manager.coin_store.get_coin_records(
+                    coin_id_filter=HashFilter.include(coins_of_interest)
+                )
+            ).coin_id_to_record,
+        )
 
     async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
@@ -508,8 +514,12 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
+                    # For the XCH wallet also include the fee amount to the coins we use to pay this offer
+                    amount_to_select = abs(amount)
+                    if wallet.type() == WalletType.STANDARD_WALLET:
+                        amount_to_select += fee
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
+                        asset_id, uint64(amount_to_select), min_coin_amount, max_coin_amount
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -548,7 +558,10 @@ class TradeManager:
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
-            for id, selected_coins in coins_to_offer.items():
+            # The access of the sorted keys here makes sure we create the XCH transaction first to make sure we pay fee
+            # with the XCH side of the offer and don't create an extra fee transaction in other wallets.
+            for id in sorted(coins_to_offer.keys()):
+                selected_coins = coins_to_offer[id]
                 if isinstance(id, int):
                     wallet = self.wallet_state_manager.wallets[id]
                 else:
@@ -641,11 +654,12 @@ class TradeManager:
 
         addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(addition.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                addition.puzzle_hash
+            )
+            if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
-                    wallet = self.wallet_state_manager.wallets[wallet_id]
+                    wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(
@@ -659,7 +673,7 @@ class TradeManager:
                             spend_bundle=None,
                             additions=[addition],
                             removals=[],
-                            wallet_id=wallet_id,
+                            wallet_id=wallet_identifier.id,
                             sent_to=[],
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
@@ -668,17 +682,18 @@ class TradeManager:
                         )
                     )
                 else:  # This is change
-                    addition_dict.setdefault(wallet_id, [])
-                    addition_dict[wallet_id].append(addition)
+                    addition_dict.setdefault(wallet_identifier.id, [])
+                    addition_dict[wallet_identifier.id].append(addition)
 
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            wallet_info = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(removal.puzzle_hash)
-            if wallet_info is not None:
-                wallet_id, _ = wallet_info
-                removal_dict.setdefault(wallet_id, [])
-                removal_dict[wallet_id].append(removal)
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                removal.puzzle_hash
+            )
+            if wallet_identifier is not None:
+                removal_dict.setdefault(wallet_identifier.id, [])
+                removal_dict[wallet_identifier.id].append(removal)
 
         all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
 

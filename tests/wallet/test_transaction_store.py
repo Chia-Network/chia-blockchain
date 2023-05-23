@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from secrets import token_bytes
-from typing import Any, List
+from typing import Any, List, Optional, Tuple
 
 import pytest
 
@@ -11,7 +11,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
 from tests.util.db_connection import DBConnection
@@ -446,6 +447,9 @@ async def test_get_transactions_between_confirmed() -> None:
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(2))
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3))
         tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4))
+        tr6 = dataclasses.replace(
+            tr1, name=token_bytes(32), confirmed_at_height=uint32(5), type=uint32(TransactionType.COINBASE_REWARD.value)
+        )
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
@@ -479,6 +483,36 @@ async def test_get_transactions_between_confirmed() -> None:
         assert await store.get_transactions_between(1, 1, 100, reverse=True) == [tr4, tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 2, 100, reverse=True) == [tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 3, 100, reverse=True) == [tr2, tr1]
+
+        # test type filter (coinbase reward)
+        await store.add_transaction_record(tr6)
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+        ) == [tr6]
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.exclude([TransactionType.COINBASE_REWARD])
+        ) == [tr5]
+        assert (
+            await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.include([]))
+            == []
+        )
+        assert await store.get_transactions_between(
+            1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.exclude([])
+        ) == [
+            tr6,
+            tr5,
+            tr4,
+            tr3,
+            tr2,
+            tr1,
+        ]
+        assert await store.get_transactions_between(
+            1,
+            0,
+            100,
+            reverse=True,
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD, TransactionType.OUTGOING_TX]),
+        ) == [tr6, tr5, tr4, tr3, tr2, tr1]
 
 
 @pytest.mark.asyncio
@@ -652,3 +686,26 @@ async def test_get_not_sent() -> None:
         assert cmp(not_sent, [])
 
         # TODO: also cover include_accepted_txs=True
+
+
+@pytest.mark.asyncio
+async def test_transaction_record_is_valid() -> None:
+    invalid_attempts: List[Tuple[str, uint8, Optional[str]]] = []
+    # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
+    while len(invalid_attempts) < minimum_send_attempts:
+        assert dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
+        invalid_attempts.append(("peer", uint8(MempoolInclusionStatus.FAILED), None))
+    # The tx should be invalid now with more than minimum failed attempts
+    assert len(invalid_attempts) == minimum_send_attempts
+    assert not dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()
+    mempool_success = ("success", uint8(MempoolInclusionStatus.SUCCESS), None)
+    low_fee = ("low_fee", uint8(MempoolInclusionStatus.FAILED), Err.INVALID_FEE_LOW_FEE.name)
+    close_to_zero = (
+        "close_to_zero",
+        uint8(MempoolInclusionStatus.FAILED),
+        Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name,
+    )
+    # But it should become valid with one of the above attempts
+    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [mempool_success]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [low_fee]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()

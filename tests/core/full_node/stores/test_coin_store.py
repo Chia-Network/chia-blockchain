@@ -6,7 +6,7 @@ from typing import List, Optional, Set, Tuple
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -96,11 +96,7 @@ class TestCoinStoreWithBlocks:
                     if block.transactions_generator is not None:
                         block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [], [])
                         npc_result = get_name_puzzle_conditions(
-                            block_gen,
-                            bt.constants.MAX_BLOCK_COST_CLVM,
-                            cost_per_byte=bt.constants.COST_PER_BYTE,
-                            mempool_mode=False,
-                            height=softfork_height,
+                            block_gen, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
@@ -324,7 +320,7 @@ class TestCoinStoreWithBlocks:
             blocks = bt.get_consecutive_blocks(initial_block_count)
             coin_store = await CoinStore.create(db_wrapper)
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
+            b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
             try:
                 records: List[Optional[CoinRecord]] = []
 
@@ -350,15 +346,11 @@ class TestCoinStoreWithBlocks:
 
                 for reorg_block in blocks_reorg_chain:
                     if reorg_block.height < initial_block_count - 10:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
                     elif reorg_block.height < initial_block_count:
-                        await _validate_and_add_block(
-                            b, reorg_block, expected_result=ReceiveBlockResult.ADDED_AS_ORPHAN
-                        )
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
                     elif reorg_block.height >= initial_block_count:
-                        await _validate_and_add_block(b, reorg_block, expected_result=ReceiveBlockResult.NEW_PEAK)
+                        await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.NEW_PEAK)
                         if reorg_block.is_transaction_block():
                             coins = reorg_block.get_included_reward_coins()
                             records = [await coin_store.get_coin_record(coin.name()) for coin in coins]
@@ -387,7 +379,7 @@ class TestCoinStoreWithBlocks:
             )
             coin_store = await CoinStore.create(db_wrapper)
             store = await BlockStore.create(db_wrapper)
-            b: Blockchain = await Blockchain.create(coin_store, store, test_constants, tmp_dir, 2)
+            b: Blockchain = await Blockchain.create(coin_store, store, bt.constants, tmp_dir, 2)
             for block in blocks:
                 await _validate_and_add_block(b, block)
             peak = b.get_peak()

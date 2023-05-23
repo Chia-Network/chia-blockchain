@@ -7,44 +7,34 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import click
 import zstd
 from blspy import AugSchemeMPL, G1Element
-from chia_rs import MEMPOOL_MODE, run_generator
+from chia_rs import MEMPOOL_MODE, SpendBundleConditions, run_block_generator
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_ROM = bytes(get_generator())
 
 
-# returns an optional error code and an optional PySpendBundleConditions (from chia_rs)
+# returns an optional error code and an optional SpendBundleConditions (from chia_rs)
 # exactly one of those will hold a value and the number of seconds it took to
 # run
-def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
-    cost_per_byte = DEFAULT_CONSTANTS.COST_PER_BYTE
-
-    # we don't charge for the size of the generator ROM. However, we do charge
-    # cost for the operations it executes
-    max_cost -= len(env_data) * cost_per_byte
-
-    env_data = b"\xff" + env_data + b"\xff" + block_program_args + b"\x80"
-
+def run_gen(
+    generator_program: SerializedProgram, block_program_args: List[bytes], flags: int
+) -> Tuple[Optional[int], Optional[SpendBundleConditions], float]:
     try:
         start_time = time()
-        err, result = run_generator(
-            GENERATOR_ROM,
-            env_data,
-            max_cost,
+        err, result = run_block_generator(
+            bytes(generator_program),
+            block_program_args,
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             flags,
         )
         run_time = time() - start_time
@@ -131,17 +121,12 @@ def default_call(
     num_refs = len(generator_blobs)
 
     # add the block program arguments
-    block_program_args = bytearray(b"\xff")
-    for ref_block_blob in generator_blobs:
-        block_program_args += b"\xff"
-        block_program_args += Program.to(ref_block_blob).as_bin()
-    block_program_args += b"\x80\x80"
-
     assert block.transactions_generator is not None
-    err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
+    err, result, run_time = run_gen(block.transactions_generator, generator_blobs, flags)
     if err is not None:
         sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
         return
+    assert result is not None
 
     num_removals = len(result.spends)
     fees = result.reserve_fee
@@ -155,7 +140,7 @@ def default_call(
         # create hash_key list for aggsig check
         pairs_pks: List[bytes48] = []
         pairs_msgs: List[bytes] = []
-        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA, soft_fork=False)
+        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
         pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
         assert block.transactions_info is not None
         assert block.transactions_info.aggregated_signature is not None

@@ -41,6 +41,14 @@ class TestPuzzleCompression:
         assert coin_spend == CoinSpend.from_bytes(decompress_object_with_puzzles(compressed))
         self.compression_factors["standard_puzzle"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
+    def test_decompress_limit(self):
+        buffer = bytearray(10 * 1024 * 1024)
+        compressed = compress_object_with_puzzles(buffer, LATEST_VERSION)
+        print(len(compressed))
+        decompressed = decompress_object_with_puzzles(compressed)
+        print(len(decompressed))
+        assert len(decompressed) <= 6 * 1024 * 1024
+
     def test_cat_puzzle(self):
         coin_spend = CoinSpend(
             COIN,

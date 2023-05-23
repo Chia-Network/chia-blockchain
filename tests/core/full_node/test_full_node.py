@@ -25,7 +25,9 @@ from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import BlockTools, get_signage_point, test_constants
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -46,6 +48,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
@@ -591,7 +594,7 @@ class TestFullNodeProtocol:
         # Create empty slots
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=6)
         block = blocks[-1]
-        if is_overflow_block(test_constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
             finished_ss = block.finished_sub_slots[:-1]
         else:
             finished_ss = block.finished_sub_slots
@@ -623,7 +626,7 @@ class TestFullNodeProtocol:
 
         block = blocks[-1]
 
-        if is_overflow_block(test_constants, block.reward_chain_block.signage_point_index):
+        if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
             finished_ss = block.finished_sub_slots[:-1]
         else:
             finished_ss = block.finished_sub_slots
@@ -1167,7 +1170,7 @@ class TestFullNodeProtocol:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
         unf = UnfinishedBlock(
             block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_block.get_unfinished(),
@@ -1200,6 +1203,7 @@ class TestFullNodeProtocol:
             (4, Err.INVALID_PLOT_SIGNATURE),
             (5, Err.INVALID_POSPACE),
             (6, Err.INVALID_POSPACE),
+            (7, Err.TOO_MANY_GENERATOR_REFS),
         ],
     )
     async def test_unfinished_block_with_replaced_generator(self, wallet_nodes, self_hostname, committment, expected):
@@ -1210,7 +1214,7 @@ class TestFullNodeProtocol:
 
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block: FullBlock = blocks[0]
-        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
 
         replaced_generator = SerializedProgram.from_bytes(b"\x80")
 
@@ -1315,6 +1319,10 @@ class TestFullNodeProtocol:
         else:
             reward_chain_block = block.reward_chain_block.get_unfinished()
 
+        generator_refs: List[uint32] = []
+        if committment > 6:
+            generator_refs = [uint32(n) for n in range(600)]
+
         unf = UnfinishedBlock(
             block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             reward_chain_block,
@@ -1324,7 +1332,7 @@ class TestFullNodeProtocol:
             transaction_block,
             transactions_info,
             replaced_generator,
-            [],
+            generator_refs,
         )
 
         _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
@@ -1358,7 +1366,7 @@ class TestFullNodeProtocol:
         )
 
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
         unf: UnfinishedBlock = UnfinishedBlock(
             block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_block.get_unfinished(),
@@ -1395,7 +1403,7 @@ class TestFullNodeProtocol:
         for block in blocks[:-1]:
             await full_node_1.full_node.add_block(block)
         block: FullBlock = blocks[-1]
-        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+        overflow = is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index)
         unf = UnfinishedBlock(
             block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
             block.reward_chain_block.get_unfinished(),
@@ -1430,10 +1438,10 @@ class TestFullNodeProtocol:
         peak = blockchain.get_peak()
 
         sp = get_signage_point(
-            test_constants,
+            bt.constants,
             blockchain,
             peak,
-            peak.ip_sub_slot_total_iters(test_constants),
+            peak.ip_sub_slot_total_iters(bt.constants),
             uint8(11),
             [],
             peak.sub_slot_iters,
@@ -1496,10 +1504,10 @@ class TestFullNodeProtocol:
         # Creates a signage point based on the last block
         peak_2 = second_blockchain.get_peak()
         sp: SignagePoint = get_signage_point(
-            test_constants,
+            bt.constants,
             blockchain,
             peak_2,
-            peak_2.ip_sub_slot_total_iters(test_constants),
+            peak_2.ip_sub_slot_total_iters(bt.constants),
             uint8(4),
             [],
             peak_2.sub_slot_iters,
@@ -1566,7 +1574,7 @@ class TestFullNodeProtocol:
         cc_eos_count = 0
         for sub_slot in block.finished_sub_slots:
             vdf_info, vdf_proof = get_vdf_info_and_proof(
-                test_constants,
+                bt.constants,
                 ClassgroupElement.get_default_element(),
                 sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                 sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
@@ -1591,7 +1599,7 @@ class TestFullNodeProtocol:
             if sub_slot.infused_challenge_chain is not None:
                 icc_eos_count += 1
                 vdf_info, vdf_proof = get_vdf_info_and_proof(
-                    test_constants,
+                    bt.constants,
                     ClassgroupElement.get_default_element(),
                     sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
                     sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
@@ -1608,7 +1616,7 @@ class TestFullNodeProtocol:
                 )
         assert block.reward_chain_block.challenge_chain_sp_vdf is not None
         vdf_info, vdf_proof = get_vdf_info_and_proof(
-            test_constants,
+            bt.constants,
             ClassgroupElement.get_default_element(),
             block.reward_chain_block.challenge_chain_sp_vdf.challenge,
             block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
@@ -1624,7 +1632,7 @@ class TestFullNodeProtocol:
             )
         )
         vdf_info, vdf_proof = get_vdf_info_and_proof(
-            test_constants,
+            bt.constants,
             ClassgroupElement.get_default_element(),
             block.reward_chain_block.challenge_chain_ip_vdf.challenge,
             block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
@@ -1684,7 +1692,7 @@ class TestFullNodeProtocol:
         # (wrong_vdf_info, wrong_vdf_proof) pair verifies, but it's not present in the blockchain at all.
         block = blocks_2[2]
         wrong_vdf_info, wrong_vdf_proof = get_vdf_info_and_proof(
-            test_constants,
+            bt.constants,
             ClassgroupElement.get_default_element(),
             block.reward_chain_block.challenge_chain_ip_vdf.challenge,
             block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
@@ -1695,7 +1703,7 @@ class TestFullNodeProtocol:
         for block in blocks_2[:2]:
             for sub_slot in block.finished_sub_slots:
                 vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
-                    test_constants,
+                    bt.constants,
                     ClassgroupElement.get_default_element(),
                     sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations,
@@ -1722,7 +1730,7 @@ class TestFullNodeProtocol:
                 )
                 if sub_slot.infused_challenge_chain is not None:
                     vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
-                        test_constants,
+                        bt.constants,
                         ClassgroupElement.get_default_element(),
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge,
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.number_of_iterations,
@@ -1750,7 +1758,7 @@ class TestFullNodeProtocol:
 
             if block.reward_chain_block.challenge_chain_sp_vdf is not None:
                 vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
-                    test_constants,
+                    bt.constants,
                     ClassgroupElement.get_default_element(),
                     block.reward_chain_block.challenge_chain_sp_vdf.challenge,
                     block.reward_chain_block.challenge_chain_sp_vdf.number_of_iterations,
@@ -1780,7 +1788,7 @@ class TestFullNodeProtocol:
                 )
 
             vdf_info, correct_vdf_proof = get_vdf_info_and_proof(
-                test_constants,
+                bt.constants,
                 ClassgroupElement.get_default_element(),
                 block.reward_chain_block.challenge_chain_ip_vdf.challenge,
                 block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
@@ -1898,6 +1906,61 @@ class TestFullNodeProtocol:
                 assert not block.challenge_chain_sp_proof.normalized_to_identity
             assert not block.challenge_chain_ip_proof.normalized_to_identity
 
+    @pytest.mark.asyncio
+    async def test_respond_compact_proof_message_limit(self, setup_two_nodes_fixture):
+        nodes, _, bt = setup_two_nodes_fixture
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
+        NUM_BLOCKS = 20
+        # We don't compactify the last 5 blocks.
+        EXPECTED_COMPACTIFIED = NUM_BLOCKS - 5
+        blocks = bt.get_consecutive_blocks(num_blocks=NUM_BLOCKS)
+        finished_compact_proofs = []
+        for block in blocks:
+            await full_node_1.full_node.add_block(block)
+            await full_node_2.full_node.add_block(block)
+            vdf_info, vdf_proof = get_vdf_info_and_proof(
+                bt.constants,
+                ClassgroupElement.get_default_element(),
+                block.reward_chain_block.challenge_chain_ip_vdf.challenge,
+                block.reward_chain_block.challenge_chain_ip_vdf.number_of_iterations,
+                True,
+            )
+            finished_compact_proofs.append(
+                timelord_protocol.RespondCompactProofOfTime(
+                    vdf_info,
+                    vdf_proof,
+                    block.header_hash,
+                    block.height,
+                    CompressibleVDFField.CC_IP_VDF,
+                )
+            )
+
+        async def coro(full_node, compact_proof):
+            await full_node.respond_compact_proof_of_time(compact_proof)
+
+        full_node_1.full_node._compact_vdf_sem = LimitedSemaphore.create(active_limit=1, waiting_limit=2)
+        tasks = asyncio.gather(
+            *[coro(full_node_1, respond_compact_proof) for respond_compact_proof in finished_compact_proofs]
+        )
+        await tasks
+        stored_blocks = await full_node_1.get_all_full_blocks()
+        compactified = 0
+        for block in stored_blocks:
+            if block.challenge_chain_ip_proof.normalized_to_identity:
+                compactified += 1
+        assert compactified == 3
+
+        # The other full node receives the compact messages one at a time.
+        for respond_compact_proof in finished_compact_proofs:
+            await full_node_2.full_node.add_compact_proof_of_time(respond_compact_proof)
+        stored_blocks = await full_node_2.get_all_full_blocks()
+        compactified = 0
+        for block in stored_blocks:
+            if block.challenge_chain_ip_proof.normalized_to_identity:
+                compactified += 1
+        assert compactified == EXPECTED_COMPACTIFIED
+
     @pytest.mark.parametrize(
         argnames=["custom_capabilities", "expect_success"],
         argvalues=[
@@ -1935,3 +1998,30 @@ class TestFullNodeProtocol:
 
         connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
         assert connected == expect_success, custom_capabilities
+
+
+@pytest.mark.asyncio
+async def test_node_start_with_existing_blocks(db_version: int) -> None:
+    with TempKeyring(populate=True) as keychain:
+        block_tools = await create_block_tools_async(keychain=keychain)
+
+        blocks_per_cycle = 5
+        expected_height = 0
+
+        for cycle in range(2):
+            async for service in setup_full_node(
+                consensus_constants=block_tools.constants,
+                db_name="node_restart_test.db",
+                self_hostname=block_tools.config["self_hostname"],
+                local_bt=block_tools,
+                simulator=True,
+                db_version=db_version,
+                reuse_db=True,
+            ):
+                await service._api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+
+                expected_height += blocks_per_cycle
+                block_record = service._api.full_node._blockchain.get_peak()
+
+                assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
+                assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
