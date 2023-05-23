@@ -150,7 +150,6 @@ tests.core.util.test_keychain
 tests.core.util.test_keyring_wrapper
 tests.core.util.test_lru_cache
 tests.core.util.test_significant_bits
-tests.farmer_harvester.test_farmer_harvester
 tests.generator.test_list_to_batches
 tests.generator.test_scan
 tests.plotting.test_plot_manager
