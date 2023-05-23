@@ -75,7 +75,23 @@ class S3Plugin:
         self.server_files_path = server_files_path
 
     async def add_store_id(self, request: web.Request) -> web.Response:
-        """Add a store id to the config file. Returns False for store ids that are already in the config."""
+        """
+        Example request:
+        {
+            "store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9",
+            "bucket": "com.example",
+            "urls": [
+                "s3://com.example/path/to/file"
+            ]
+        }
+        Example response:
+        {
+            "success": true,
+            "id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9"
+        }
+
+        Add a store id to the config file. Returns False for store ids that are already in the config.
+        """
         self.update_instance_from_config()
         try:
             data = await request.json()
@@ -100,7 +116,17 @@ class S3Plugin:
         return web.json_response({"success": True, "id": store_id.hex()})
 
     async def remove_store_id(self, request: web.Request) -> web.Response:
-        """Remove a store id from the config file. Returns True for store ids that are not in the config."""
+        """
+        Example request:
+        {"store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9"}
+        Example response:
+        {
+            "success": true,
+            "store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9"
+        }
+
+        Remove a store id from the config file. Returns True for store ids that are not in the config.
+        """
         self.update_instance_from_config()
         try:
             data = await request.json()
@@ -122,6 +148,15 @@ class S3Plugin:
         return web.json_response({"success": True, "store_id": store_id.hex()})
 
     async def handle_upload(self, request: web.Request) -> web.Response:
+        """
+        Example request:
+        {"store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9"}
+        Example response:
+        {"handle_upload": true}
+
+        Check if the requested store ID is handled by this service. Response parameter handle_upload is true if this
+        service can handle uploads for that store ID.
+        """
         self.update_instance_from_config()
         try:
             data = await request.json()
@@ -137,6 +172,19 @@ class S3Plugin:
         return web.json_response({"handle_upload": False})
 
     async def upload(self, request: web.Request) -> web.Response:
+        """
+        Example request:
+        {
+            "store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9",
+            "full_tree_filename": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9-5341c186e5f7194feb0d
+                                   db2084dc02faa08decc03323b94b8561a132559356bb-full-1-v1.0.dat",
+            "diff_filename": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9-5341c186e5f7194feb0ddb208
+                              4dc02faa08decc03323b94b8561a132559356bb-delta-1-v1.0.dat"
+        }
+        Example response:
+        {"uploaded": true}
+        Chia informs the service about a new data file, providing the full file and the delta.
+        """
         try:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
@@ -189,6 +237,23 @@ class S3Plugin:
         )
 
     async def handle_download(self, request: web.Request) -> web.Response:
+        """
+        Example request:
+        {
+            "store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9",
+            "url": "s3://com.example/path/to/file"
+        }
+        Example response:
+        {
+            "handle_download": true,
+            "urls": [
+                "s3://com.example/path/to/file"
+            ]
+        }
+
+        Check if the requested store ID can be downloaded from at the requested URL by this service. Response parameter
+        handle_download is true if this service handles downloads for the store ID at the requested URL.
+        """
         self.update_instance_from_config()
         try:
             data = await request.json()
@@ -205,6 +270,19 @@ class S3Plugin:
         return web.json_response({"handle_download": False})
 
     async def download(self, request: web.Request) -> web.Response:
+        """
+        Example request:
+        {
+            "filename": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9-5341c186e5f7194feb0ddb2084dc02
+                         faa08decc03323b94b8561a132559356bb-full-1-v1.0.dat",
+            "url": "s3://com.example/path/to/file"
+        }
+        Example response:
+        {"downloaded": true}
+
+        Download the requested file at the specified URL if this service is configured to do so. Response parameter
+        downloaded is true if the file was successfully downloaded.
+        """
         try:
             data = await request.json()
             url = data["url"]
@@ -242,6 +320,18 @@ class S3Plugin:
         return web.json_response({"downloaded": True})
 
     async def add_missing_files(self, request: web.Request) -> web.Response:
+        """
+        Example request:
+        {
+            "store_id": "58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9",
+            "files": "[\"58f2b9daf0a45385892014f7e1031eeeef2b08bb0b3aa3c607ee5ac94bdb76b9-5341c186e5f7194feb0ddb2084dc02
+                         faa08decc03323b94b8561a132559356bb-delta-1-v1.0.dat\"]"
+        }
+        Example response:
+        {"uploaded": true}
+
+        Make this service aware of multiple files.
+        """
         try:
             data = await request.json()
             store_id = bytes32.from_hexstr(data["store_id"])
