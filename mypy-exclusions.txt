@@ -54,7 +54,6 @@ chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler
-chia.util.safe_cancel_task
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
