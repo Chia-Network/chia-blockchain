@@ -62,6 +62,7 @@ jobs:
           - name: mypy
             command: |
               echo "MYPY VERSION IS: $(mypy --version)"
+              python manage-mypy.py build-mypy-ini
               mypy
         exclude:
           - os:
