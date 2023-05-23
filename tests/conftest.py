@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import sysconfig
 import tempfile
+from enum import Enum
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -15,8 +16,10 @@ import pytest_asyncio
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-# Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import CostLogger
+
+# Set spawn after stdlib imports, but before other imports
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -84,10 +87,21 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
+class Mode(Enum):
+    PLAIN = 0
+
+
+@pytest.fixture(scope="session", params=[Mode.PLAIN])
+def blockchain_constants(request: SubRequest) -> ConsensusConstants:
+    if request.param == Mode.PLAIN:
+        return test_constants
+    raise AssertionError("Invalid Blockchain mode in simulation")
+
+
 @pytest.fixture(scope="session", name="bt")
-def block_tools_fixture(get_keychain) -> BlockTools:
+def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    _shared_block_tools = create_block_tools(constants=test_constants, keychain=get_keychain)
+    _shared_block_tools = create_block_tools(constants=blockchain_constants, keychain=get_keychain)
     return _shared_block_tools
 
 
@@ -108,14 +122,13 @@ def self_hostname():
 
 
 @pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request):
+async def empty_blockchain(request, blockchain_constants):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
-    from chia.simulator.setup_nodes import test_constants
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
     yield bc1
 
     await db_wrapper.close()
@@ -263,8 +276,8 @@ async def node_with_params(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname):
-    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+async def two_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_two_nodes(blockchain_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
@@ -275,20 +288,20 @@ async def setup_two_nodes_fixture(db_version):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
+async def three_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 3, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
+async def four_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 4, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def five_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
+async def five_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 5, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
@@ -563,7 +576,7 @@ async def two_nodes_one_block():
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=True):
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
         yield _
 
 
@@ -571,7 +584,7 @@ async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[
 async def farmer_one_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -579,7 +592,7 @@ async def farmer_one_harvester_not_started(
 async def farmer_two_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -587,7 +600,7 @@ async def farmer_two_harvester_not_started(
 async def farmer_three_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -761,13 +774,13 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, test_constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
         yield _
 
 
