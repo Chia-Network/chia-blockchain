@@ -15,14 +15,15 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
-EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
+GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clsp")
+GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clsp")
+EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clsp")
+DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clsp")
 
 
 class LimitationsProgram:
@@ -91,9 +92,7 @@ class GenesisById(LimitationsProgram):
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
-            ),
+            wallet.standard_wallet.make_solution(primaries=[Payment(cat_inner.get_tree_hash(), amount)]),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,

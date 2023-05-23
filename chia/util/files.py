@@ -13,7 +13,7 @@ from typing_extensions import Literal
 log = logging.getLogger(__name__)
 
 
-def move_file(src: Path, dst: Path):
+def move_file(src: Path, dst: Path) -> None:
     """
     Attempts to move the file at src to dst, falling back to a copy if the move fails.
     """
@@ -35,7 +35,7 @@ def move_file(src: Path, dst: Path):
             raise
 
 
-async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: float = 0.5):
+async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattempt_delay: float = 0.5) -> None:
     """
     Attempts to move the file at src to dst, making multiple attempts if the move fails.
     """
@@ -60,7 +60,9 @@ async def move_file_async(src: Path, dst: Path, *, reattempts: int = 6, reattemp
         log.debug(f"Moved {src} to {dst}")
 
 
-async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mode: int = 0o600, dir_mode: int = 0o700):
+async def write_file_async(
+    file_path: Path, data: Union[str, bytes], *, file_mode: int = 0o600, dir_mode: int = 0o700
+) -> None:
     """
     Writes the provided data to a temporary file and then moves it to the final destination.
     """
@@ -71,6 +73,8 @@ async def write_file_async(file_path: Path, data: Union[str, bytes], *, file_mod
     mode: Literal["w+", "w+b"] = "w+" if type(data) == str else "w+b"
     temp_file_path: Path
     async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
+        # Ignoring type error since it is not obvious how to tie the type of the data
+        # being passed in to the type of the file object, etc.
         temp_file_path = f.name  # type: ignore[assignment]
         await f.write(data)  # type: ignore[arg-type]
         await f.flush()

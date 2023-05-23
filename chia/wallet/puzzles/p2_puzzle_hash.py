@@ -12,7 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 
 from .load_clvm import load_clvm_maybe_recompile
 
-MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clvm")
+MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
 
 
 def puzzle_for_inner_puzzle_hash(inner_puzzle_hash: bytes32) -> Program:
