@@ -40,29 +40,14 @@ GENERATOR_CODE = """
 """
 
 
-COMPILED_GENERATOR_CODE = bytes.fromhex(
-    "ff02ffff01ff04ffff02ff04ffff04ff02ffff04ff05ffff04ff0bff8080808080ffff02"
-    "ff06ffff04ff02ffff04ff05ffff04ff0bff808080808080ffff04ffff01ffff02ff05ff"
-    "1380ff02ff05ff2b80ff018080"
-)
-
 COMPILED_GENERATOR_CODE = bytes(Program.to(compile_clvm_text(GENERATOR_CODE, [])))  # type: ignore[no-untyped-call]
 
 FIRST_GENERATOR = Program.to(
-    binutils.assemble(
-        '((parent_id (c 1 (q "puzzle blob")) 50000 "solution is here" extra data for coin))'
-    )  # type: ignore[no-untyped-call]
-).as_bin()
-
-SECOND_GENERATOR = Program.to(binutils.assemble("(extra data for block)")).as_bin()  # type: ignore[no-untyped-call]
-
-
-FIRST_GENERATOR = Program.to(
-    binutils.assemble(
+    binutils.assemble(  # type: ignore[no-untyped-call]
         """
         ((0x0000000000000000000000000000000000000000000000000000000000000000 1 50000
         ((51 0x0000000000000000000000000000000000000000000000000000000000000001 500))
-        "extra" "data" "for" "coin" ))"""  # type: ignore[no-untyped-call]
+        "extra" "data" "for" "coin" ))"""
     )
 ).as_bin()
 

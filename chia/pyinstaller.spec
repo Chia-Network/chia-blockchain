@@ -65,13 +65,16 @@ SERVERS = [
     "timelord",
 ]
 
-# TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
+if THIS_IS_WINDOWS:
+    hidden_imports_for_windows = ["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
+else:
+    hidden_imports_for_windows = []
 
-entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
-
-hiddenimports = []
-hiddenimports.extend(entry_points)
-hiddenimports.extend(keyring_imports)
+hiddenimports = [
+    *collect_submodules("chia"),
+    *keyring_imports,
+    *hidden_imports_for_windows,
+]
 
 binaries = []
 
@@ -98,13 +101,6 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit"):
             "bladebit"
         )
     ])
-
-if THIS_IS_WINDOWS:
-    hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
-
-# this probably isn't necessary
-if THIS_IS_WINDOWS:
-    entry_points.extend(["aiohttp", "chia.util.bip39"])
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
@@ -142,7 +138,8 @@ datas = []
 
 datas.append((f"{ROOT}/chia/util/english.txt", "chia/util"))
 datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
-datas.append((f"{ROOT}/chia/wallet/puzzles/*.hex", "chia/wallet/puzzles"))
+for path in sorted({path.parent for path in ROOT.joinpath("chia").rglob("*.hex")}):
+    datas.append((f"{path}/*.hex", path.relative_to(ROOT)))
 datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.append(version_data)

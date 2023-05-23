@@ -5,9 +5,9 @@
 
   (defconstant TWO 2)
   (defconstant constant_tree (
-     (0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a .   ;  = `(sha256 1)`
+      (0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a .  ;  = `(sha256 1)`
       0x9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2) .  ;  = `(sha256 1 1)` = `(sha256 1 #q)`
-     (0x02a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222 . ;  = `(concat 2 (sha256 1 #a))`
+      (0x02a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222 .  ;  = `(concat 2 (sha256 1 #a))`
       0x02a8d5dd63fba471ebcb1f3e8f7c1e1879b7152a6e7298a91ce119a63400ade7c5)  ;  = `(concat 2 (sha256 1 #c))`
     )
   )
@@ -28,8 +28,8 @@
 
   ;; this returns the sha256 tree hash of expression F = `((q . a1) a2)`
   (defun hash_expression_F (a1 a2)
-         (sha256 TWO (sha256 TWO (sha256_one_one) a1)
-                 (sha256 TWO a2 (sha256_one)))
+    (sha256 TWO (sha256 TWO (sha256_one_one) a1)
+    (sha256 TWO a2 (sha256_one)))
   )
 
   ;; Given the tree hash `environment_hash` of an environment tree E
@@ -41,7 +41,7 @@
   ;; Note that `(c (q . P) E)` = `(c . ((q . P) . (E . 0)))`
 
   (defun-inline update_hash_for_parameter_hash (parameter_hash environment_hash)
-     (sha256 (two_sha256_one_c_kw) (hash_expression_F parameter_hash environment_hash))
+    (sha256 (two_sha256_one_c_kw) (hash_expression_F parameter_hash environment_hash))
   )
 
   ;; Given the tree hash `environment_hash` of an environment tree E
@@ -54,16 +54,16 @@
   ;; Note that `(a (q . M) E)` = `(a . ((q . M)  . (E . 0)))`
 
   (defun-inline tree_hash_of_apply (mod_hash environment_hash)
-     (sha256 (two_sha256_one_a_kw) (hash_expression_F mod_hash environment_hash))
+    (sha256 (two_sha256_one_a_kw) (hash_expression_F mod_hash environment_hash))
   )
 
   ;; This function recursively calls `update_hash_for_parameter_hash`
 
   (defun calculate_hash_of_curried_parameters (curry_parameter_hashes)
-     (if curry_parameter_hashes
-      (update_hash_for_parameter_hash (f curry_parameter_hashes) (calculate_hash_of_curried_parameters (r curry_parameter_hashes)))
-      (sha256_one_one)
-     )
+    (if curry_parameter_hashes
+        (update_hash_for_parameter_hash (f curry_parameter_hashes) (calculate_hash_of_curried_parameters (r curry_parameter_hashes)))
+        (sha256_one_one)
+    )
   )
 
   ;; mod_hash:
@@ -82,8 +82,8 @@
   ;; inline functions that take varargs don't seem to work, so we can't inline `curry`
 
   (defun curry_hashes (mod_hash . curry_parameter_hashes)
-     (tree_hash_of_apply mod_hash
-                         (calculate_hash_of_curried_parameters curry_parameter_hashes))
+    (tree_hash_of_apply mod_hash
+    (calculate_hash_of_curried_parameters curry_parameter_hashes))
   )
 
 
