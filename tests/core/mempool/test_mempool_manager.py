@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import pytest
 from blspy import G1Element, G2Element
+from chia_rs import ELIGIBLE_FOR_DEDUP
 from chiabip158 import PyBIP158
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.mempool_check_conditions import mempool_check_time_locks
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
     MempoolManager,
@@ -20,21 +22,33 @@ from chia.full_node.mempool_manager import (
     optional_max,
     optional_min,
 )
+from chia.protocols import wallet_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.eligible_coin_spends import DedupCoinSpend, EligibleCoinSpends, run_for_cost
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
+from chia.types.mempool_item import BundleCoinSpend, MempoolItem
+from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.payment import Payment
+from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_node import WalletNode
 
-IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE = SerializedProgram.from_program(Program.to(1))
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 TEST_TIMESTAMP = uint64(10040)
@@ -138,11 +152,12 @@ def make_test_conds(
     before_seconds_relative: Optional[int] = None,
     before_seconds_absolute: Optional[int] = None,
     cost: int = 0,
+    spend_ids: List[bytes32] = [TEST_COIN_ID],
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
             Spend(
-                TEST_COIN.name(),
+                spend_id,
                 IDENTITY_PUZZLE_HASH,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
@@ -154,6 +169,7 @@ def make_test_conds(
                 [],
                 0,
             )
+            for spend_id in spend_ids
         ],
         0,
         uint32(height_absolute),
@@ -321,6 +337,46 @@ async def generate_and_add_spendbundle(
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
     return (sb, sb_name, result)
+
+
+def make_bundle_spends_map_and_fee(
+    spend_bundle: SpendBundle, npc_result: NPCResult
+) -> Tuple[Dict[bytes32, BundleCoinSpend], uint64]:
+    bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = {}
+    eligibility_and_additions: Dict[bytes32, Tuple[bool, List[Coin]]] = {}
+    removals_amount = 0
+    additions_amount = 0
+    assert npc_result.conds is not None
+    for spend in npc_result.conds.spends:
+        coin_id = bytes32(spend.coin_id)
+        spend_additions = []
+        for puzzle_hash, amount, _ in spend.create_coin:
+            spend_additions.append(Coin(coin_id, puzzle_hash, amount))
+            additions_amount += amount
+        eligibility_and_additions[coin_id] = (bool(spend.flags & ELIGIBLE_FOR_DEDUP), spend_additions)
+    for coin_spend in spend_bundle.coin_spends:
+        coin_id = coin_spend.coin.name()
+        removals_amount += coin_spend.coin.amount
+        eligible_for_dedup, spend_additions = eligibility_and_additions.get(coin_id, (False, []))
+        bundle_coin_spends[coin_id] = BundleCoinSpend(coin_spend, eligible_for_dedup, spend_additions)
+    fee = uint64(removals_amount - additions_amount)
+    return bundle_coin_spends, fee
+
+
+def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
+    generator = simple_solution_generator(spend_bundle)
+    npc_result = get_name_puzzle_conditions(
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
+    )
+    bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
+    return MempoolItem(
+        spend_bundle=spend_bundle,
+        fee=fee,
+        npc_result=npc_result,
+        spend_bundle_name=spend_bundle.name(),
+        height_added_to_mempool=TEST_HEIGHT,
+        bundle_coin_spends=bundle_coin_spends,
+    )
 
 
 @pytest.mark.asyncio
@@ -619,11 +675,11 @@ def mk_item(
     # can_replace()
     spends = [CoinSpend(c, SerializedProgram(), SerializedProgram()) for c in coins]
     spend_bundle = SpendBundle(spends, G2Element())
-    npc_results = NPCResult(None, make_test_conds(cost=cost), uint64(cost))
+    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]), uint64(cost))
     return MempoolItem(
         spend_bundle,
         uint64(fee),
-        npc_results,
+        npc_result,
         spend_bundle.name(),
         uint32(0),
         None if assert_height is None else uint32(assert_height),
@@ -775,9 +831,8 @@ coins = make_test_coins()
     ],
 )
 def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
-
     removals = set(c.name() for c in new_item.spend_bundle.removals())
-    assert can_replace(set(existing_items), removals, new_item) == expected
+    assert can_replace(existing_items, removals, new_item) == expected
 
 
 @pytest.mark.asyncio
@@ -827,7 +882,6 @@ async def test_get_items_not_in_filter() -> None:
 
 @pytest.mark.asyncio
 async def test_total_mempool_fees() -> None:
-
     coin_records: Dict[bytes32, CoinRecord] = {}
 
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
@@ -919,33 +973,35 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
     assert mempool_manager.peak is not None
     result = mempool_manager.create_bundle_from_mempool(mempool_manager.peak.header_hash)
     assert result is not None
-    agg, additions, removals = result
+    agg, additions = result
     # The second spend bundle has a higher FPC so it should get picked first
     assert agg == sb2
     # The first spend bundle hits the maximum block clvm cost and gets skipped
     assert additions == [Coin(coins[1].name(), IDENTITY_PUZZLE_HASH, coins[1].amount - 2)]
-    assert removals == [coins[1]]
+    assert agg.removals() == [coins[1]]
 
 
 @pytest.mark.parametrize(
-    "opcode,arg,expect_eviction",
+    "opcode,arg,expect_eviction, expect_limit",
     [
         # current height: 10 current_time: 10000
         # we step the chain forward 1 block and 19 seconds
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True),
-        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True),
-        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10001, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10019, True, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10020, False, 10020),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 11, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 12, False, 12),
         # the coin was created at height: 5 timestamp: 9900
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True),
-        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True),
-        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 6, True, None),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 7, False, 5 + 7),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 119, True, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 120, False, 9900 + 120),
     ],
 )
 @pytest.mark.asyncio
-async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expect_eviction: bool) -> None:
+async def test_assert_before_expiration(
+    opcode: ConditionOpcode, arg: int, expect_eviction: bool, expect_limit: Optional[int]
+) -> None:
     async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
         return {TEST_COIN.name(): CoinRecord(TEST_COIN, uint32(5), uint32(0), False, uint64(9900))}.get(coin_id)
 
@@ -973,13 +1029,22 @@ async def test_assert_before_expiration(opcode: ConditionOpcode, arg: int, expec
 
     still_in_pool = mempool_manager.get_spendbundle(bundle_name) == bundle
     assert still_in_pool != expect_eviction
+    if still_in_pool:
+        assert expect_limit is not None
+        item = mempool_manager.get_mempool_item(bundle_name)
+        assert item is not None
+        if opcode in [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE]:
+            assert item.assert_before_seconds == expect_limit
+        elif opcode in [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE]:
+            assert item.assert_before_height == expect_limit
+        else:
+            assert False
 
 
-def make_test_spendbundle(coin: Coin, *, fee: int = 0) -> SpendBundle:
-    conditions = [
-        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)],
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
-    ]
+def make_test_spendbundle(coin: Coin, *, fee: int = 0, eligible_spend: bool = False) -> SpendBundle:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)]]
+    if not eligible_spend:
+        conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH])
     return spend_bundle_from_conditions(conditions, coin)
 
 
@@ -1106,28 +1171,392 @@ async def test_sufficient_total_fpc_increase() -> None:
 
 
 @pytest.mark.asyncio
-async def test_spends_by_feerate() -> None:
-    # This test makes sure we're properly sorting items by fee rate
-    async def send_to_mempool_returning_item(
-        mempool_manager: MempoolManager, coin: Coin, *, fee: int = 0
-    ) -> MempoolItem:
-        conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - fee]]
-        sb = spend_bundle_from_conditions(conditions, coin)
-        result = await add_spendbundle(mempool_manager, sb, sb.name())
-        assert result[1] == MempoolInclusionStatus.SUCCESS
-        mi = mempool_manager.get_mempool_item(sb.name())
-        assert mi is not None
-        return mi
+async def test_replace_with_extra_eligible_coin() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb1234 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(4)])
+    await send_spendbundle(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb1234)
+    # Replace sb1234 with sb1234_2 which spends an eligible coin additionally
+    eligible_sb = make_test_spendbundle(coins[4], fee=MEMPOOL_MIN_FEE_INCREASE, eligible_spend=True)
+    sb1234_2 = SpendBundle.aggregate([sb1234, eligible_sb])
+    await send_spendbundle(mempool_manager, sb1234_2)
+    assert_sb_not_in_pool(mempool_manager, sb1234)
+    assert_sb_in_pool(mempool_manager, sb1234_2)
 
+
+@pytest.mark.asyncio
+async def test_replacing_one_with_an_eligible_coin() -> None:
+    mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000010)))
+    sb123 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(3)])
+    eligible_sb = make_test_spendbundle(coins[3], eligible_spend=True)
+    sb123e = SpendBundle.aggregate([sb123, eligible_sb])
+    await send_spendbundle(mempool_manager, sb123e)
+    assert_sb_in_pool(mempool_manager, sb123e)
+    # Replace sb123e with sb123e4
+    sb4 = make_test_spendbundle(coins[4], fee=MEMPOOL_MIN_FEE_INCREASE)
+    sb123e4 = SpendBundle.aggregate([sb123e, sb4])
+    await send_spendbundle(mempool_manager, sb123e4)
+    assert_sb_not_in_pool(mempool_manager, sb123e)
+    assert_sb_in_pool(mempool_manager, sb123e4)
+
+
+@pytest.mark.parametrize("amount", [0, 1])
+def test_run_for_cost(amount: int) -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, amount]]
+    solution = Program.to(conditions)
+    cost = run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(10000000))
+    assert cost == uint64(1800044)
+
+
+def test_run_for_cost_max_cost() -> None:
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
+    solution = Program.to(conditions)
+    with pytest.raises(ValueError, match="('cost exceeded', '2b')"):
+        run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(43))
+
+
+def test_dedup_info_nothing_to_do() -> None:
+    # No eligible coins, nothing to deduplicate, item gets considered normally
+    conditions = [
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+    ]
+    sb = spend_bundle_from_conditions(conditions, TEST_COIN)
+    mempool_item = mempool_item_from_spendbundle(sb)
+    eligible_coin_spends = EligibleCoinSpends()
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
+    assert unique_coin_spends == sb.coin_spends
+    assert cost_saving == 0
+    assert unique_additions == [Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)]
+    assert eligible_coin_spends == EligibleCoinSpends()
+
+
+def test_dedup_info_eligible_1st_time() -> None:
+    # Eligible coin encountered for the first time
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    sb = spend_bundle_from_conditions(conditions, TEST_COIN)
+    mempool_item = mempool_item_from_spendbundle(sb)
+    eligible_coin_spends = EligibleCoinSpends()
+    solution = SerializedProgram.from_program(Program.to(conditions))
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
+    assert unique_coin_spends == sb.coin_spends
+    assert cost_saving == 0
+    assert set(unique_additions) == {
+        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1),
+        Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 2),
+    }
+    assert eligible_coin_spends == EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=solution, cost=None)})
+
+
+def test_dedup_info_eligible_but_different_solution() -> None:
+    # Eligible coin but different solution from the one we encountered
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
+    conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2]]
+    sb = spend_bundle_from_conditions(conditions, TEST_COIN)
+    mempool_item = mempool_item_from_spendbundle(sb)
+    with pytest.raises(ValueError, match="Solution is different from what we're deduplicating on"):
+        eligible_coin_spends.get_deduplication_info(
+            bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+        )
+
+
+def test_dedup_info_eligible_2nd_time_and_another_1st_time() -> None:
+    # Eligible coin encountered a second time, and another for the first time
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    eligible_coin_spends = EligibleCoinSpends({TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=None)})
+    sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
+    sb = SpendBundle.aggregate([sb1, sb2])
+    mempool_item = mempool_item_from_spendbundle(sb)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
+    # Only the eligible one that we encountered more than once gets deduplicated
+    assert unique_coin_spends == sb2.coin_spends
+    saved_cost = uint64(3600044)
+    assert cost_saving == saved_cost
+    assert unique_additions == [Coin(TEST_COIN_ID2, IDENTITY_PUZZLE_HASH, 3)]
+    # The coin we encountered a second time has its cost and additions properly updated
+    # The coin we encountered for the first time gets cost None and an empty set of additions
+    expected_eligible_spends = EligibleCoinSpends(
+        {
+            TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost),
+            TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None),
+        }
+    )
+    assert eligible_coin_spends == expected_eligible_spends
+
+
+def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() -> None:
+    # Eligible coin encountered a third time, another for the second time and one non eligible
+    initial_conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
+    ]
+    initial_solution = SerializedProgram.from_program(Program.to(initial_conditions))
+    second_conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3]]
+    second_solution = SerializedProgram.from_program(Program.to(second_conditions))
+    saved_cost = uint64(3600044)
+    eligible_coin_spends = EligibleCoinSpends(
+        {
+            TEST_COIN_ID: DedupCoinSpend(solution=initial_solution, cost=saved_cost),
+            TEST_COIN_ID2: DedupCoinSpend(solution=second_solution, cost=None),
+        }
+    )
+    sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
+    sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
+    sb3_conditions = [
+        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 4],
+    ]
+    sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
+    sb = SpendBundle.aggregate([sb1, sb2, sb3])
+    mempool_item = mempool_item_from_spendbundle(sb)
+    unique_coin_spends, cost_saving, unique_additions = eligible_coin_spends.get_deduplication_info(
+        bundle_coin_spends=mempool_item.bundle_coin_spends, max_cost=mempool_item.npc_result.cost
+    )
+    assert unique_coin_spends == sb3.coin_spends
+    saved_cost2 = uint64(1800044)
+    assert cost_saving == saved_cost + saved_cost2
+    assert unique_additions == [Coin(TEST_COIN_ID3, IDENTITY_PUZZLE_HASH, 4)]
+    expected_eligible_spends = EligibleCoinSpends(
+        {
+            TEST_COIN_ID: DedupCoinSpend(initial_solution, saved_cost),
+            TEST_COIN_ID2: DedupCoinSpend(second_solution, saved_cost2),
+        }
+    )
+    assert eligible_coin_spends == expected_eligible_spends
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_height_step", [1, 2, -1])
+async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(new_height_step: int) -> None:
+    # This test makes sure all mempool items that spend a coin (in different ways)
+    # that shows up as spent in a block, get removed properly.
+    # NOTE: this test's parameter allows us to cover both the optimized and
+    # the reorg code paths
+    new_height = uint32(TEST_HEIGHT + new_height_step)
+    coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, 100)
+    coin_id = coin.name()
+    test_coin_records = {coin_id: CoinRecord(coin, uint32(0), uint32(0), False, uint64(0))}
+
+    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
+        return test_coin_records.get(coin_id)
+
+    mempool_manager = await instantiate_mempool_manager(get_coin_record)
+    # Create a bunch of mempool items that spend the coin in different ways
+    for i in range(3):
+        _, _, result = await generate_and_add_spendbundle(
+            mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i]], coin
+        )
+        assert result[1] == MempoolInclusionStatus.SUCCESS
+    assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 3
+    assert mempool_manager.mempool.size() == 3
+    assert len(list(mempool_manager.mempool.items_by_feerate())) == 3
+    # Setup a new peak where the incoming block has spent the coin
+    # Mark this coin as spent
+    test_coin_records = {coin_id: CoinRecord(coin, uint32(0), TEST_HEIGHT, False, uint64(0))}
+    block_record = create_test_block_record(height=new_height)
+    npc_result = NPCResult(None, make_test_conds(spend_ids=[coin_id]), uint64(0))
+    await mempool_manager.new_peak(block_record, npc_result)
+    # As the coin was a spend in all the mempool items we had, nothing should be left now
+    assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
+    assert mempool_manager.mempool.size() == 0
+    assert len(list(mempool_manager.mempool.items_by_feerate())) == 0
+
+
+@pytest.mark.asyncio
+async def test_bundle_coin_spends() -> None:
+    # This tests the construction of bundle_coin_spends map for mempool items
+    # We're creating sb123e with 4 coins, one of them being eligible
     mempool_manager, coins = await setup_mempool_with_coins(coin_amounts=list(range(1000000000, 1000000005)))
-    # Create a ~3.73 FPC item
-    mi1 = await send_to_mempool_returning_item(mempool_manager, coins[0], fee=11000000)
-    # Create a ~3.39 FPC item
-    mi2 = await send_to_mempool_returning_item(mempool_manager, coins[1], fee=10000000)
-    # Create a ~3.56 FPC item
-    mi3 = await send_to_mempool_returning_item(mempool_manager, coins[2], fee=10500000)
-    assert mi1.fee_per_cost > mi2.fee_per_cost
-    assert mi1.fee_per_cost > mi3.fee_per_cost
-    assert mi3.fee_per_cost > mi2.fee_per_cost
-    items = mempool_manager.mempool.spends_by_feerate()
-    assert list(items) == [mi1, mi3, mi2]
+    sb123 = SpendBundle.aggregate([make_test_spendbundle(coins[i]) for i in range(3)])
+    eligible_sb = make_test_spendbundle(coins[3], eligible_spend=True)
+    sb123e = SpendBundle.aggregate([sb123, eligible_sb])
+    await send_spendbundle(mempool_manager, sb123e)
+    mi123e = mempool_manager.get_mempool_item(sb123e.name())
+    assert mi123e is not None
+    for i in range(3):
+        assert mi123e.bundle_coin_spends[coins[i].name()] == BundleCoinSpend(
+            coin_spend=sb123.coin_spends[i],
+            eligible_for_dedup=False,
+            additions=[Coin(coins[i].name(), IDENTITY_PUZZLE_HASH, coins[i].amount)],
+        )
+    assert mi123e.bundle_coin_spends[coins[3].name()] == BundleCoinSpend(
+        coin_spend=eligible_sb.coin_spends[0],
+        eligible_for_dedup=True,
+        additions=[Coin(coins[3].name(), IDENTITY_PUZZLE_HASH, coins[3].amount)],
+    )
+
+
+@pytest.mark.asyncio
+async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsAndWallets, self_hostname: str) -> None:
+    def get_sb_names_by_coin_id(
+        full_node_api: FullNodeSimulator,
+        spent_coin_id: bytes32,
+    ) -> Set[bytes32]:
+        return set(
+            i.spend_bundle_name
+            for i in full_node_api.full_node.mempool_manager.mempool.get_items_by_coin_id(spent_coin_id)
+        )
+
+    async def send_to_mempool(
+        full_node: FullNodeSimulator, spend_bundle: SpendBundle, *, expecting_conflict: bool = False
+    ) -> None:
+        res = await full_node.send_transaction(wallet_protocol.SendTransaction(spend_bundle))
+        assert res is not None and ProtocolMessageTypes(res.type) == ProtocolMessageTypes.transaction_ack
+        res_parsed = wallet_protocol.TransactionAck.from_bytes(res.data)
+        if expecting_conflict:
+            assert res_parsed.status == MempoolInclusionStatus.PENDING.value
+            assert res_parsed.error == "MEMPOOL_CONFLICT"
+        else:
+            assert res_parsed.status == MempoolInclusionStatus.SUCCESS.value
+
+    async def farm_a_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode, ph: bytes32) -> None:
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
+
+    async def make_setup_and_coins(
+        full_node_api: FullNodeSimulator, wallet_node: WalletNode
+    ) -> Tuple[Wallet, list[WalletCoinRecord], bytes32]:
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
+        for _ in range(2):
+            await farm_a_block(full_node_api, wallet_node, ph)
+        other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
+        tx = await wallet.generate_signed_transaction(uint64(200), phs[0], primaries=other_recipients)
+        assert tx.spend_bundle is not None
+        await send_to_mempool(full_node_api, tx.spend_bundle)
+        await farm_a_block(full_node_api, wallet_node, ph)
+        coins = list(await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1))
+        # Two blocks farmed plus 3 transactions
+        assert len(coins) == 7
+        return (wallet, coins, ph)
+
+    [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
+    server = full_node_api.full_node.server
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(server._port)), None)
+    wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
+
+    # Make sure spending AB then BC would generate a conflict for the latter
+
+    tx_a = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[0].coin})
+    tx_b = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[1].coin})
+    tx_c = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[2].coin})
+    assert tx_a.spend_bundle is not None
+    assert tx_b.spend_bundle is not None
+    assert tx_c.spend_bundle is not None
+    ab_bundle = SpendBundle.aggregate([tx_a.spend_bundle, tx_b.spend_bundle])
+    await send_to_mempool(full_node_api, ab_bundle)
+    # BC should conflict here (on B)
+    bc_bundle = SpendBundle.aggregate([tx_b.spend_bundle, tx_c.spend_bundle])
+    await send_to_mempool(full_node_api, bc_bundle, expecting_conflict=True)
+    await farm_a_block(full_node_api, wallet_node, ph)
+
+    # Make sure DE and EF would aggregate on E when E is eligible for deduplication
+
+    # Create a coin with the identity puzzle hash
+    tx = await wallet.generate_signed_transaction(uint64(200), IDENTITY_PUZZLE_HASH, coins={coins[3].coin})
+    assert tx.spend_bundle is not None
+    await send_to_mempool(full_node_api, tx.spend_bundle)
+    await farm_a_block(full_node_api, wallet_node, ph)
+    # Grab the coin we created and make an eligible coin out of it
+    coins_with_identity_ph = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+        False, IDENTITY_PUZZLE_HASH
+    )
+    sb = spend_bundle_from_conditions(
+        [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 110]], coins_with_identity_ph[0].coin
+    )
+    await send_to_mempool(full_node_api, sb)
+    await farm_a_block(full_node_api, wallet_node, ph)
+    # Grab the eligible coin to spend as E in DE and EF transactions
+    e_coin = (await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, IDENTITY_PUZZLE_HASH))[
+        0
+    ].coin
+    e_coin_id = e_coin.name()
+    # Restrict spending E with an announcement to consume
+    message = b"Identical spend aggregation test"
+    e_announcement = Announcement(e_coin_id, message)
+    # Create transactions D and F that consume an announcement created by E
+    tx_d = await wallet.generate_signed_transaction(
+        uint64(100), ph, fee=uint64(0), coins={coins[4].coin}, coin_announcements_to_consume={e_announcement}
+    )
+    tx_f = await wallet.generate_signed_transaction(
+        uint64(150), ph, fee=uint64(0), coins={coins[5].coin}, coin_announcements_to_consume={e_announcement}
+    )
+    assert tx_d.spend_bundle is not None
+    assert tx_f.spend_bundle is not None
+    # Create transaction E now that spends e_coin to create another eligible
+    # coin as well as the announcement consumed by D and F
+    conditions: List[List[Any]] = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 42],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
+    ]
+    sb_e = spend_bundle_from_conditions(conditions, e_coin)
+    # Send DE and EF combinations to the mempool
+    sb_de = SpendBundle.aggregate([tx_d.spend_bundle, sb_e])
+    sb_de_name = sb_de.name()
+    await send_to_mempool(full_node_api, sb_de)
+    sb_ef = SpendBundle.aggregate([sb_e, tx_f.spend_bundle])
+    sb_ef_name = sb_ef.name()
+    await send_to_mempool(full_node_api, sb_ef)
+    # Send also a transaction EG that spends E differently from DE and EF,
+    # so that it doesn't get deduplicated on E with them
+    conditions = [
+        [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, e_coin.amount - 1],
+        [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, message],
+    ]
+    sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
+    g_coin = coins[6].coin
+    g_coin_id = g_coin.name()
+    tx_g = await wallet.generate_signed_transaction(
+        uint64(13), ph, coins={g_coin}, coin_announcements_to_consume={e_announcement}
+    )
+    assert tx_g.spend_bundle is not None
+    sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
+    sb_e2g_name = sb_e2g.name()
+    await send_to_mempool(full_node_api, sb_e2g)
+
+    # Make sure our coin IDs to spend bundles mappings are correct
+    assert get_sb_names_by_coin_id(full_node_api, coins[4].coin.name()) == {sb_de_name}
+    assert get_sb_names_by_coin_id(full_node_api, e_coin_id) == {sb_de_name, sb_ef_name, sb_e2g_name}
+    assert get_sb_names_by_coin_id(full_node_api, coins[5].coin.name()) == {sb_ef_name}
+    assert get_sb_names_by_coin_id(full_node_api, g_coin_id) == {sb_e2g_name}
+
+    await farm_a_block(full_node_api, wallet_node, ph)
+
+    # Make sure sb_de and sb_ef coins, including the deduplicated one, are removed
+    # from the coin IDs to spend bundles mappings with the creation of a new block
+    assert get_sb_names_by_coin_id(full_node_api, coins[4].coin.name()) == set()
+    assert get_sb_names_by_coin_id(full_node_api, e_coin_id) == set()
+    assert get_sb_names_by_coin_id(full_node_api, coins[5].coin.name()) == set()
+    assert get_sb_names_by_coin_id(full_node_api, g_coin_id) == set()
+
+    # Make sure coin G remains because E2G was removed as E got spent differently (by DE and EF)
+    coins_set = await wallet_node.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(1)
+    assert g_coin in (c.coin for c in coins_set)
+    # Only the newly created eligible coin is left now
+    eligible_coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
+        False, IDENTITY_PUZZLE_HASH
+    )
+    assert len(eligible_coins) == 1
+    assert eligible_coins[0].coin.amount == 42

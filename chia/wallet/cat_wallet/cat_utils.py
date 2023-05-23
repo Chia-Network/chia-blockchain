@@ -111,14 +111,11 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
     # figure out what the deltas are by running the inner puzzles & solutions
     deltas: List[int] = []
     for spend_info in spendable_cat_list:
-        error, conditions, cost = conditions_dict_for_solution(
-            spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST
-        )
+        conditions = conditions_dict_for_solution(spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST)
         total = spend_info.extra_delta * -1
-        if conditions:
-            for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
-                if _.vars[1] != b"\x8f":  # -113 in bytes
-                    total += Program.to(_.vars[1]).as_int()
+        for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
+            if _.vars[1] != b"\x8f":  # -113 in bytes
+                total += Program.to(_.vars[1]).as_int()
         deltas.append(spend_info.coin.amount - total)
 
     if sum(deltas) != 0:
