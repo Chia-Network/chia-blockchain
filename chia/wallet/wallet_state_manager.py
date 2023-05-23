@@ -745,18 +745,25 @@ class WalletStateManager:
 
     async def spend_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
         assert len(clawback_coins) > 0
-        txs: List[TransactionRecord] = []
+        coin_spends: List[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
         now: uint64 = uint64(int(time.time()))
+        derivation_record: Optional[DerivationRecord] = None
+        amount: uint64 = uint64(0)
         for coin, metadata in clawback_coins.items():
             try:
+                # Get incoming tx
+                incoming_tx = await self.tx_store.get_transaction_record(coin.name())
+                assert incoming_tx is not None, f"Cannot find incoming tx for clawback coin {coin.name().hex()}"
+                if incoming_tx.sent > 0:
+                    self.log.debug(f"Clawback coin {coin.name().hex()} is already in a pending spend bundle.")
+                    continue
+
                 recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
                 sender_puzhash: bytes32 = metadata.sender_puzzle_hash
                 is_recipient: bool = await metadata.is_recipient(self.puzzle_store)
                 if is_recipient:
-                    derivation_record: Optional[
-                        DerivationRecord
-                    ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
+                    derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(recipient_puzhash)
                 else:
                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
                 assert derivation_record is not None
@@ -764,6 +771,7 @@ class WalletStateManager:
                     await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(
                         recipient_puzhash if is_recipient else sender_puzhash
                     )
+                amount = uint64(amount + coin.amount)
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
@@ -773,65 +781,46 @@ class WalletStateManager:
                             [] if metadata.memos is None else metadata.memos,
                         )
                     ],
-                    coin_announcements=None if len(txs) > 0 or fee == 0 else {message},
+                    coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
                 )
                 to_puzhash: Optional[bytes32] = derivation_record.puzzle_hash
                 assert to_puzhash is not None
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
-                spend_bundle: SpendBundle = await self.main_wallet.sign_transaction([coin_spend])
-                # Add tx record for each clawback coin
-                tx_record = TransactionRecord(
-                    confirmed_at_height=uint32(0),
-                    created_at_time=now,
-                    to_puzzle_hash=to_puzhash,
-                    amount=uint64(coin.amount),
-                    fee_amount=uint64(fee),
-                    confirmed=False,
-                    sent=uint32(0),
-                    spend_bundle=spend_bundle,
-                    additions=spend_bundle.additions(),
-                    removals=spend_bundle.removals(),
-                    wallet_id=uint32(1),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(
-                        TransactionType.OUTGOING_CLAWBACK_CLAIM
-                        if is_recipient
-                        else TransactionType.OUTGOING_CLAWBACK_RETRIEVE
-                    ),
-                    name=spend_bundle.name(),
-                    memos=list(compute_memos(spend_bundle).items()),
-                )
-                txs.append(tx_record)
+                coin_spends.append(coin_spend)
+                # Update incoming tx to prevent double spend and mark it is pending
+                await self.tx_store.increment_sent(incoming_tx.name, "", MempoolInclusionStatus.PENDING, None)
             except Exception as e:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
-        fee_tx_id: Optional[bytes32] = None
-        if len(txs) == 0:
+        if len(coin_spends) == 0:
             return []
+        spend_bundle: SpendBundle = await self.main_wallet.sign_transaction(coin_spends)
         if fee > 0:
-            chia_tx = await self.main_wallet.create_tandem_xch_tx(fee, Announcement(txs[0].removals[0].name(), message))
-            fee_tx_id = chia_tx.name
+            chia_tx = await self.main_wallet.create_tandem_xch_tx(
+                fee, Announcement(coin_spends[0].coin.name(), message)
+            )
             assert chia_tx.spend_bundle is not None
-            txs.append(chia_tx)
-        # Aggregate txs
-        spend_bundles: List[SpendBundle] = []
-        refined_tx_list: List[TransactionRecord] = []
-        for tx in txs:
-            if tx.spend_bundle is not None:
-                spend_bundles.append(tx.spend_bundle)
-            refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
-        spend_bundle = SpendBundle.aggregate(spend_bundles)
-        # Add all spend bundles to the first tx
-        refined_tx_list[0] = dataclasses.replace(
-            refined_tx_list[0], spend_bundle=spend_bundle, name=spend_bundle.name()
+            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+        assert derivation_record is not None
+        tx_record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=now,
+            to_puzzle_hash=derivation_record.puzzle_hash,
+            amount=amount,
+            fee_amount=uint64(fee),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=uint32(1),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_CLAWBACK),
+            name=spend_bundle.name(),
+            memos=list(compute_memos(spend_bundle).items()),
         )
-        tx_ids: List[bytes32] = []
-        for tx in refined_tx_list:
-            await self.add_pending_transaction(tx)
-            if tx.name != fee_tx_id:
-                tx_ids.append(tx.name)
-
-        return tx_ids
+        await self.add_pending_transaction(tx_record)
+        return [tx_record.name]
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
@@ -1196,12 +1185,12 @@ class WalletStateManager:
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
             spend_bundle = SpendBundle([coin_spend], G2Element())
             tx_record = TransactionRecord(
-                confirmed_at_height=uint32(coin_state.created_height),
+                confirmed_at_height=uint32(0),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=True,
+                confirmed=False,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
                 additions=[coin_state.coin],
@@ -1214,7 +1203,8 @@ class WalletStateManager:
                     if is_recipient
                     else TransactionType.INCOMING_CLAWBACK_SEND
                 ),
-                name=spend_bundle.name(),
+                # We use coin ID as the TX ID to mapping with the coin table
+                name=coin_record.coin.name(),
                 memos=list(memos.items()),
             )
             await self.tx_store.add_transaction_record(tx_record)
@@ -1880,8 +1870,7 @@ class WalletStateManager:
                 TransactionType.OUTGOING_TX,
                 TransactionType.OUTGOING_TRADE,
                 TransactionType.INCOMING_TRADE,
-                TransactionType.OUTGOING_CLAWBACK_RETRIEVE,
-                TransactionType.OUTGOING_CLAWBACK_CLAIM,
+                TransactionType.OUTGOING_CLAWBACK,
                 TransactionType.INCOMING_CLAWBACK_SEND,
                 TransactionType.INCOMING_CLAWBACK_RECEIVE,
             ]:

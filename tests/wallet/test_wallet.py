@@ -231,7 +231,7 @@ class TestWalletSimulator:
         )
         tx2 = await wallet.generate_signed_transaction(
             uint64(500),
-            normal_puzhash,
+            await wallet_1.get_new_puzzlehash(),
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 10}],
         )
@@ -370,25 +370,10 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
         )
-        assert (
-            len(
-                (
-                    await api_0.get_transactions(
-                        dict(
-                            type_filter={
-                                "values": [
-                                    TransactionType.INCOMING_CLAWBACK_SEND.value,
-                                    TransactionType.OUTGOING_CLAWBACK_RETRIEVE.value,
-                                ],
-                                "mode": 1,
-                            },
-                            wallet_id=1,
-                        )
-                    )
-                )["transactions"]
-            )
-            == 2
-        )
+        txs = await api_0.get_transactions(dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND.value,TransactionType.OUTGOING_CLAWBACK.value],"mode": 1,},wallet_id=1))
+        assert len(txs["transactions"]) == 2
+        assert txs["transactions"][0]["confirmed"]
+        assert txs["transactions"][1]["confirmed"]
         await time_out_assert(10, wallet.get_confirmed_balance, 3999999999000)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 2000000001000)
         resp = await api_0.get_transactions(dict(wallet_id=1, reverse=True))
