@@ -34,8 +34,8 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
+OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clsp")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
@@ -459,7 +459,7 @@ class Offer:
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
                 assert arbitrage_ph is not None
-                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
+                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             # Some assets need to know about siblings so we need to collect all spends first to be able to use them
             coin_to_spend_dict: Dict[Coin, CoinSpend] = {}

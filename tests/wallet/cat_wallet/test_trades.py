@@ -35,12 +35,12 @@ buffer_blocks = 4
 class TestCATTrades:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "forwards_compat",
-        [True, False],
-    )
-    @pytest.mark.parametrize(
-        "reuse_puzhash",
-        [True, False],
+        "forwards_compat,reuse_puzhash",
+        [
+            (True, False),
+            (False, True),
+            (False, False),
+        ],
     )
     async def test_cat_trades(
         self, wallets_prefarm, forwards_compat: bool, reuse_puzhash: bool, softfork_height: uint32
@@ -161,12 +161,11 @@ class TestCATTrades:
             assert trade_make is not None
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
             fee=uint64(1),
-            reuse_puzhash=reuse_puzhash and not forwards_compat,
+            reuse_puzhash=reuse_puzhash,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -333,7 +332,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
-            reuse_puzhash=reuse_puzhash and not forwards_compat,
+            reuse_puzhash=reuse_puzhash,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -675,7 +674,6 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
 
         peer = wallet_node_taker.get_full_node_peer()
-        assert peer is not None
         with pytest.raises(ValueError, match="This offer is no longer valid"):
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
