@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Awaitable, Callable
+from types import TracebackType
+from typing import Optional, Type
 
 from chia.util.db_wrapper import DBWrapper2
 
@@ -21,9 +22,9 @@ class DBConnection:
 
     async def __aexit__(
         self,
-        exc_t: Callable[..., Awaitable[None]],
-        exc_v: Callable[..., Awaitable[None]],
-        exc_tb: Callable[..., Awaitable[None]],
+        __exc_type: Optional[Type[BaseException]],
+        __exc_value: Optional[BaseException],
+        __traceback: TracebackType,
     ) -> None:
         await self._db_wrapper.close()
         self.db_path.unlink()
