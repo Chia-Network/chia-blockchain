@@ -49,7 +49,7 @@ class LastState:
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
 
-    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
+    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]) -> None:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state

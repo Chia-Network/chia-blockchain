@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
@@ -28,6 +29,9 @@ NUM_PEERS = 5
 
 @contextmanager
 def enable_profiler(profile: bool, name: str) -> Iterator[None]:
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
+
     if not profile:
         yield
         return

@@ -84,12 +84,12 @@ def cli(
     check_ssl(Path(root_path))
 
 
-@cli.command("version", short_help="Show chia version")
+@cli.command("version", help="Show chia version")
 def version_cmd() -> None:
     print(__version__)
 
 
-@cli.command("run_daemon", short_help="Runs chia daemon")
+@cli.command("run_daemon", help="Runs chia daemon")
 @click.option(
     "--wait-for-unlock",
     help="If the keyring is passphrase-protected, the daemon will wait for an unlock command before accessing keys",

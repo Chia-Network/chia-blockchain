@@ -4,75 +4,75 @@
     TRANSFER_PROGRAM
     INNER_PUZZLE
     inner_solution
-   )
+  )
 
-   (include condition_codes.clib)
-   (include curry-and-treehash.clib)
-   (include utility_macros.clib)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include utility_macros.clib)
 
-   (defconstant NEW_OWNER_CONDITION -10)
-   (defconstant ANNOUNCEMENT_PREFIX 0xad4c)  ; first 2 bytes of (sha256 "Ownership Layer")
+  (defconstant NEW_OWNER_CONDITION -10)
+  (defconstant ANNOUNCEMENT_PREFIX 0xad4c)  ; first 2 bytes of (sha256 "Ownership Layer")
 
-   (defun-inline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM inner_puzzle_hash)
-      (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
-                                       inner_puzzle_hash
-                                       (sha256tree TRANSFER_PROGRAM)
-                                       (sha256 ONE new_owner)
-                                       (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
-      )
-   )
+  (defun-inline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM inner_puzzle_hash)
+    (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
+      inner_puzzle_hash
+      (sha256tree TRANSFER_PROGRAM)
+      (sha256 ONE new_owner)
+      (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
+    )
+  )
 
-   (defun construct_end_conditions (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args (new_owner new_tp conditions))
-     (c
-       (c
-         CREATE_COIN
-         (c
-           (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (if new_tp new_tp TRANSFER_PROGRAM) (f odd_args))
-           (r odd_args)
-          )
+  (defun construct_end_conditions (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args (new_owner new_tp conditions))
+    (c
+      (c
+        CREATE_COIN
+        (c
+          (nft_ownership_layer_puzzle_hash NFT_OWNERSHIP_LAYER_MOD_HASH new_owner (if new_tp new_tp TRANSFER_PROGRAM) (f odd_args))
+          (r odd_args)
         )
-        conditions
-     )
-   )
+      )
+      conditions
+    )
+  )
 
-   (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_args tp_output)
-     (if conditions
-       (if (= (f (f conditions)) CREATE_COIN)
-         (if (= (logand (f (r (r (f conditions))))) ONE)
-            (assert (not odd_args)
-              ; then
-              (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) (r (f conditions)) tp_output)
-            )
-            (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
-         )
-         (if (= (f (f conditions)) NEW_OWNER_CONDITION)
-            (assert (not tp_output)
-              (c
-                (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree (r (f conditions)))))
-                (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
-              )
-            )
-            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
-                (assert (not (and
-                          (= 34 (strlen (f (r (f conditions)))))
-                          (= (substr (f (r (f conditions))) 0 2) ANNOUNCEMENT_PREFIX)  ; lazy eval
-                        ))
+  (defun wrap_odd_create_coins (NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions conditions odd_args tp_output)
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+            (if (= (logand (f (r (r (f conditions))))) ONE)
+                (assert (not odd_args)
                   ; then
-                  (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
+                  (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) (r (f conditions)) tp_output)
                 )
                 (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
             )
-         )
-       )
-       ; odd_args is guaranteed to not be nil or else we'll have a path into atom error
-       (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
+            (if (= (f (f conditions)) NEW_OWNER_CONDITION)
+                (assert (not tp_output)
+                  (c
+                    (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree (r (f conditions)))))
+                    (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
+                  )
+                )
+                (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
+                    (assert (not (and
+                        (= 34 (strlen (f (r (f conditions)))))
+                        (= (substr (f (r (f conditions))) 0 2) ANNOUNCEMENT_PREFIX)  ; lazy eval
+                      ))
+                      ; then
+                      (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
+                    )
+                    (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
+                )
+            )
+        )
+        ; odd_args is guaranteed to not be nil or else we'll have a path into atom error
+        (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
           (if tp_output
               tp_output
               (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
           )
-       )
-     )
-   )
+        )
+    )
+  )
 
   (defun main (
       NFT_OWNERSHIP_LAYER_MOD_HASH

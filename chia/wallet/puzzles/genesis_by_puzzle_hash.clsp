@@ -2,23 +2,23 @@
 ;
 ; This checker allows new CATs to be created if their parent has a particular puzzle hash
 (mod (
-      GENESIS_PUZZLE_HASH
-      Truths
-      parent_is_cat
-      lineage_proof
-      delta
-      inner_conditions
-      (parent_parent_id parent_amount)
-    )
+    GENESIS_PUZZLE_HASH
+    Truths
+    parent_is_cat
+    lineage_proof
+    delta
+    inner_conditions
+    (parent_parent_id parent_amount)
+  )
 
-    (include cat_truths.clib)
+  (include cat_truths.clib)
 
-    ; Returns nil since we don't need to add any conditions
-    (if delta
-        (x)
-        (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths))
-            ()
-            (x)
-        )
-    )
+  ; Returns nil since we don't need to add any conditions
+  (if delta
+      (x)
+      (if (= (sha256 parent_parent_id GENESIS_PUZZLE_HASH parent_amount) (my_parent_cat_truth Truths))
+          ()
+          (x)
+      )
+  )
 )

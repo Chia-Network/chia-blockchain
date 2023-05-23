@@ -22,6 +22,8 @@ repos:
     rev: v4.3.0
     hooks:
     -   id: check-yaml
+    -   id: mixed-line-ending
+        args: ["--fix=lf"]
     -   id: end-of-file-fixer
         exclude: ".*?(.hex|.clsp|.clvm|.clib)"
     -   id: trailing-whitespace
@@ -37,32 +39,32 @@ repos:
         pass_filenames: false
 -   repo: local
     hooks:
+    -   id: chialispp
+        name: Pretty print chialisp files
+        entry: ./activated.py python tools/chialispp.py .
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: build mypy.ini
+        name: build mypy.ini
+        entry: ./activated.py python manage-mypy.py build-mypy-ini
+        language: system
+        pass_filenames: false
+-   repo: local
+    hooks:
     -   id: mypy
         name: mypy
         entry: ./activated.py mypy
         language: system
         pass_filenames: false
-# The following, commented hook is the usual way to add isort. However, it doesn't work in some environments.
-# See https://github.com/PyCQA/isort/issues/1874#issuecomment-1002212936
-# -----------------------------------------------------
-# - repo: https://github.com/pycqa/isort
-#   rev: 5.9.3
-#   hooks:
-#   - id: isort
-# -----------------------------------------------------
-#  The hook below is the workaround for the issue above.
 -   repo: local
     hooks:
     -   id: isort
         name: isort
-        entry: isort
-        require_serial: true
-        language: python
-        language_version: python3
-        types_or: [cython, pyi, python]
-        args: ['--filter-files']
-        minimum_pre_commit_version: '2.9.2'
-        additional_dependencies: [isort==5.10.1]
+        entry: ./activated.py isort .
+        language: system
+        pass_filenames: false
 -   repo: https://github.com/pycqa/flake8
     rev: 5.0.4
     hooks:

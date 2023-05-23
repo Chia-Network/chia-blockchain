@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
-from typing_extensions import TypedDict
-
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 if TYPE_CHECKING:
@@ -28,17 +25,12 @@ class WalletType(IntEnum):
     NFT = 10
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
+    VC = 13
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
-
-
-class AmountWithPuzzlehash(TypedDict):
-    amount: uint64
-    puzzlehash: bytes32
-    memos: List[bytes]
 
 
 @dataclass(frozen=True)
