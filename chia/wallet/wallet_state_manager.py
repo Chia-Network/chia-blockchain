@@ -218,7 +218,7 @@ class WalletStateManager:
             AssetType.CAT: CATWallet,
         }
 
-        wallet = None
+        wallet: Optional[WalletProtocol] = None
         for wallet_info in await self.get_all_wallet_info_entries():
             wallet_type = WalletType(wallet_info.type)
             if wallet_type == WalletType.STANDARD_WALLET:
