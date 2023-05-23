@@ -18,7 +18,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
 from chia.server.outbound_message import Message, make_msg
-from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -206,7 +205,7 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -234,7 +233,7 @@ class TestWalletSync:
             await full_node_api.full_node.add_block(all_blocks[-1])
 
         new_blocks = bt.get_consecutive_blocks(
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
+            blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
         )
         for i in range(base_num_blocks + 20, len(new_blocks)):
             await full_node_api.full_node.add_block(new_blocks[i])
@@ -582,24 +581,26 @@ class TestWalletSync:
         assert len(response.coins) == 0
 
     @pytest.mark.asyncio
-    async def test_get_wp_fork_point(self, default_10000_blocks):
+    async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
         wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
         wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
         wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
         wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
         wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
-        fork12 = get_wp_fork_point(test_constants, wp1, wp2)
-        fork13 = get_wp_fork_point(test_constants, wp3, wp1)
-        fork14 = get_wp_fork_point(test_constants, wp4, wp1)
-        fork23 = get_wp_fork_point(test_constants, wp3, wp2)
-        fork24 = get_wp_fork_point(test_constants, wp4, wp2)
-        fork34 = get_wp_fork_point(test_constants, wp3, wp4)
-        fork45 = get_wp_fork_point(test_constants, wp4, wp5)
-        fork16 = get_wp_fork_point(test_constants, wp1, wp6)
+        fork12 = get_wp_fork_point(blockchain_constants, wp1, wp2)
+        fork13 = get_wp_fork_point(blockchain_constants, wp3, wp1)
+        fork14 = get_wp_fork_point(blockchain_constants, wp4, wp1)
+        fork23 = get_wp_fork_point(blockchain_constants, wp3, wp2)
+        fork24 = get_wp_fork_point(blockchain_constants, wp4, wp2)
+        fork34 = get_wp_fork_point(blockchain_constants, wp3, wp4)
+        fork45 = get_wp_fork_point(blockchain_constants, wp4, wp5)
+        fork16 = get_wp_fork_point(blockchain_constants, wp1, wp6)
 
         # overlap between recent chain in wps, fork point is the tip of the shorter wp
         assert fork12 == wp1.recent_chain_data[-1].height
@@ -1291,14 +1292,16 @@ class TestWalletSync:
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
     @pytest.mark.asyncio
-    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname):
+    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
         full_nodes, wallets, bt = two_wallet_nodes
         wallet_node, wallet_server = wallets[0]
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         blocks = default_1000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
