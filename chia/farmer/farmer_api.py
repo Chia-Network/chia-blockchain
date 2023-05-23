@@ -542,7 +542,7 @@ class FarmerAPI:
         )
 
     @api_request(peer_required=True)
-    async def farming_info_v2(self, request: farmer_protocol.FarmingInfoV2, peer: WSChiaConnection):
+    async def farming_info_v2(self, request: farmer_protocol.FarmingInfoV2, peer: WSChiaConnection) -> None:
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -604,5 +604,5 @@ class FarmerAPI:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
 
     @api_request(peer_required=True)
-    async def harvesting_mode_update(self, message: HarvestingModeUpdate, peer: WSChiaConnection):
+    async def harvesting_mode_update(self, message: HarvestingModeUpdate, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].harvesting_mode_update(message)
