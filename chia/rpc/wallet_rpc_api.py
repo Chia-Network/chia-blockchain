@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, TypedDict, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -815,7 +815,10 @@ class WalletRpcApi:
         return {"wallet_balance": wallet_balance}
 
     async def get_wallet_balances(self, request: Dict) -> EndpointResult:
-        wallet_ids: List[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
+        try:
+            wallet_ids: List[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
+        except (TypeError, KeyError):
+            wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
         wallet_balances: Dict[uint32, Dict] = {}
         for wallet_id in wallet_ids:
             wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)

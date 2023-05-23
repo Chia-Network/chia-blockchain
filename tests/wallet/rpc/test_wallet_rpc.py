@@ -1762,3 +1762,33 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     await time_out_assert(20, get_confirmed_balance, 0, client, cat_wallet_id)
+
+
+@pytest.mark.asyncio
+async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_node: WalletNode = env.wallet_1.node
+
+    full_node_api: FullNodeSimulator = env.full_node.api
+
+    await generate_funds(full_node_api, env.wallet_1, 1)
+
+    await time_out_assert(20, client.get_synced)
+    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
+    await client.create_new_cat_and_wallet(uint64(100))
+
+    await time_out_assert(20, client.get_synced)
+    res = await client.create_new_cat_and_wallet(uint64(20))
+    assert res["success"]
+
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(20, client.get_synced)
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(20, client.get_synced)
+    bal = await client.get_wallet_balances()
+    assert len(bal) == 3
+    assert bal["1"]["confirmed_wallet_balance"] == 1999999999880
+    assert bal["2"]["confirmed_wallet_balance"] == 100
+    assert bal["3"]["confirmed_wallet_balance"] == 20
