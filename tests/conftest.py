@@ -162,6 +162,7 @@ def default_400_blocks(bt, soft_fork3):
         # pytest.skip("Test cache not available")
         return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}_softfork3.db", bt, seed=b"400")
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
 
 
@@ -173,6 +174,7 @@ def default_1000_blocks(bt, soft_fork3):
         # pytest.skip("Test cache not available")
         return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}_softfork3.db", bt, seed=b"1000")
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
 
 
@@ -190,6 +192,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, soft_fork3):
             empty_sub_slots=1,
         )
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(
             1000,
             f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
@@ -207,6 +210,7 @@ def default_1500_blocks(bt, soft_fork3):
         # pytest.skip("Test cache not available")
         return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}_softfork3.db", bt, seed=b"1500")
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
 
 
@@ -218,6 +222,7 @@ def default_10000_blocks(bt, soft_fork3):
         # pytest.skip("Test cache not available")
         return persistent_blocks(4000, f"test_blocks_4000_{saved_blocks_version}_softfork3.db", bt, seed=b"10000")
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
@@ -229,6 +234,7 @@ def default_20000_blocks(bt, soft_fork3):
         # pytest.skip("Test cache not available")
         return persistent_blocks(4000, f"test_blocks_4000_{saved_blocks_version}_softfork3.db", bt, seed=b"20000")
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
 
 
@@ -247,6 +253,7 @@ def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
             time_per_block=8,
         )
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(
             758,
             f"test_blocks_long_reorg_{saved_blocks_version}.db",
@@ -274,6 +281,7 @@ def default_2000_blocks_compact(bt, soft_fork3):
             seed=b"2000_compact",
         )
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(
             2000,
             f"test_blocks_2000_compact_{saved_blocks_version}.db",
@@ -303,6 +311,7 @@ def default_10000_blocks_compact(bt, soft_fork3):
             seed=b"1000_compact",
         )
     else:
+        pytest.skip("Test cache not available")
         return persistent_blocks(
             10000,
             f"test_blocks_10000_compact_{saved_blocks_version}.db",
