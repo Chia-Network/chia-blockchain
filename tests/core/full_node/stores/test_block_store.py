@@ -14,7 +14,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
@@ -35,7 +34,7 @@ async def test_block_store(tmp_dir, db_version, bt):
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
@@ -90,7 +89,7 @@ async def test_deadlock(tmp_dir, db_version, bt):
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
         block_records = []
         for block in blocks:
             await _validate_and_add_block(bc, block)
@@ -118,7 +117,7 @@ async def test_rollback(bt, tmp_dir):
         # Use a different file for the blockchain
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         # insert all blocks
         count = 0
@@ -162,7 +161,7 @@ async def test_count_compactified_blocks(bt, tmp_dir, db_version):
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = await block_store.count_compactified_blocks()
         assert count == 0
@@ -181,7 +180,7 @@ async def test_count_uncompactified_blocks(bt, tmp_dir, db_version):
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = await block_store.count_uncompactified_blocks()
         assert count == 0
@@ -213,7 +212,7 @@ async def test_replace_proof(bt, tmp_dir, db_version):
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
-        bc = await Blockchain.create(coin_store, block_store, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
         for block in blocks:
             await _validate_and_add_block(bc, block)
 
@@ -286,11 +285,12 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
         store = await BlockStore.create(db_wrapper)
         await BlockStore.create(db_wrapper_2)
 
+        print("starting test")
         hashes = []
         # Save/get block
         for block in blocks:
@@ -323,7 +323,7 @@ async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
-        bc = await Blockchain.create(coin_store_2, store_2, test_constants, tmp_dir, 2)
+        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
         await BlockStore.create(db_wrapper_2)
 
