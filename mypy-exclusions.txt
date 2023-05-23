@@ -155,7 +155,6 @@ tests.pools.test_pool_config
 tests.pools.test_pool_puzzles_lifecycle
 tests.pools.test_wallet_pool_store
 tests.simulation.test_simulation
-tests.tools.test_full_sync
 tests.tools.test_run_block
 tests.util.benchmark_cost
 tests.util.build_network_protocol_files
