@@ -126,7 +126,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
             wallet_node_0.wallet_state_manager,
             wallet,
-            uint64(cat_amt * 2),
+            uint64(cat_amt),
             dao_rules,
         )
         assert dao_wallet_0 is not None

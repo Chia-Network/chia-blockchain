@@ -129,9 +129,10 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
 
     dao_cat_launcher = create_cat_launcher_for_singleton_id(treasury_id)
     if dao_rules.mint_puzzle_hash is None:
-        mint_puzhash = get_p2_singleton_puzhash(treasury_id)
+        mint_puzhash = curry_cat_eve(get_p2_singleton_puzhash(treasury_id)).get_tree_hash()
     else:
         mint_puzhash = dao_rules.mint_puzzle_hash
+    assert mint_puzhash is not None
     puzzle = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD_HASH,
         dao_cat_launcher.get_tree_hash(),

@@ -172,6 +172,7 @@ class DAOWallet(WalletProtocol):
             uint64(0),
         )
         self.dao_rules = dao_rules
+        assert self.dao_rules.current_cat_issuance == amount_of_cats
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DAO.value, info_as_string
@@ -1229,13 +1230,9 @@ class DAOWallet(WalletProtocol):
 
         tail_solution = Program.to([launcher_cat_coin.parent_coin_info, launcher_cat_coin.amount])
         solution = Program.to([mint_amount, tail_puz, tail_solution])
-        # coin: Coin
-        # limitations_program_hash: bytes32
-        # inner_puzzle: Program
-        # inner_solution: Program
-        # limitations_solution: Program = dataclasses.field(default_factory=empty_program)
-        # lineage_proof: LineageProof = LineageProof()
-        eve_puz = curry_cat_eve(mint_puzhash.as_atom())
+        
+        eve_puz = curry_cat_eve(get_p2_singleton_puzhash(self.dao_info.treasury_id))  # TODO: do this properly
+        assert eve_puz.get_tree_hash() == mint_puzhash.as_atom()
         full_eve_puz = construct_cat_puzzle(CAT_MOD, tail_puz.get_tree_hash(), eve_puz)
         cat_eve_coin = Coin(launcher_cat_coin.name(), full_eve_puz.get_tree_hash(), launcher_cat_coin.amount)
         new_spendable_cat = SpendableCAT(
@@ -1246,11 +1243,12 @@ class DAOWallet(WalletProtocol):
         )
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
         chia_tx = await self.create_tandem_xch_tx(mint_amount, fee, exclude=[origin])
+        breakpoint()
         eve_spend_bundle = eve_spend_bundle.aggregate([
             chia_tx.spend_bundle, eve_spend_bundle, cat_spend_bundle, SpendBundle([launcher_cat_cs], AugSchemeMPL.aggregate([]))
         ])
 
-        breakpoint()
+        # breakpoint()
         next_coin = Coin(eve_coin.name(), eve_coin.puzzle_hash, eve_coin.amount)
         await self.add_parent(eve_coin.name(), next_proof)
         await self.wallet_state_manager.add_interested_coin_ids([next_coin.name()], [self.wallet_id])
