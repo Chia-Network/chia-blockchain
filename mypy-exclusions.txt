@@ -6,11 +6,9 @@ chia.cmds.wallet
 chia.cmds.wallet_funcs
 chia.daemon.server
 chia.data_layer.data_layer_wallet
-chia.farmer.farmer_api
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
-chia.plotters.chiapos
 chia.plotters.madmax
 chia.plotters.plotters
 chia.plotters.plotters_util
@@ -32,7 +30,6 @@ chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
 chia.server.start_harvester
-chia.simulator.block_tools
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services
@@ -40,11 +37,8 @@ chia.simulator.start_simulator
 chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
-chia.timelord.iters_from_block
-chia.timelord.timelord
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
-chia.timelord.timelord_state
 chia.types.blockchain_format.program
 chia.util.block_cache
 chia.util.chia_logging
@@ -54,12 +48,10 @@ chia.util.hash
 chia.util.json_util
 chia.util.keychain
 chia.util.keyring_wrapper
-chia.util.log_exceptions
 chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler
-chia.util.safe_cancel_task
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
@@ -143,7 +135,6 @@ tests.core.test_farmer_harvester_rpc
 tests.core.test_filter
 tests.core.test_full_node_rpc
 tests.core.test_merkle_set
-tests.core.test_setproctitle
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
@@ -152,11 +143,8 @@ tests.core.util.test_keychain
 tests.core.util.test_keyring_wrapper
 tests.core.util.test_lru_cache
 tests.core.util.test_significant_bits
-tests.farmer_harvester.test_farmer_harvester
 tests.generator.test_list_to_batches
 tests.generator.test_scan
-tests.plot_sync.test_plot_sync
-tests.plot_sync.test_sync_simulated
 tests.plotting.test_plot_manager
 tests.pools.test_pool_cmdline
 tests.pools.test_pool_config
@@ -166,7 +154,6 @@ tests.simulation.test_simulation
 tests.tools.test_full_sync
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.build_network_protocol_files
 tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
