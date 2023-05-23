@@ -1236,17 +1236,18 @@ class DAOWallet(WalletProtocol):
         solution = Program.to([
             inner_puz.get_tree_hash(),
             treasury_eve_coin.parent_coin_info,
-            mint_puzhash,
+            mint_puzhash,  # this should be the full CAT
             mint_amount,
         ])
         launcher_cat_cs = CoinSpend(launcher_cat_coin, cat_launcher, solution)
 
         tail_solution = Program.to([launcher_cat_coin.parent_coin_info, launcher_cat_coin.amount])
         solution = Program.to([mint_amount, tail_puz, tail_solution])
-        
+
         eve_puz = curry_cat_eve(get_p2_singleton_puzhash(self.dao_info.treasury_id))  # TODO: do this properly
-        assert eve_puz.get_tree_hash() == mint_puzhash.as_atom()
         full_eve_puz = construct_cat_puzzle(CAT_MOD, tail_puz.get_tree_hash(), eve_puz)
+        assert full_eve_puz.get_tree_hash() == mint_puzhash.as_atom()
+
         cat_eve_coin = Coin(launcher_cat_coin.name(), full_eve_puz.get_tree_hash(), launcher_cat_coin.amount)
         new_spendable_cat = SpendableCAT(
             cat_eve_coin,

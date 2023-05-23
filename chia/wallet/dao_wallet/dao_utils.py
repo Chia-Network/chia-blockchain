@@ -17,6 +17,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -129,7 +130,9 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
 
     dao_cat_launcher = create_cat_launcher_for_singleton_id(treasury_id)
     if dao_rules.mint_puzzle_hash is None:
-        mint_puzhash = curry_cat_eve(get_p2_singleton_puzhash(treasury_id)).get_tree_hash()
+        mint_puz = curry_cat_eve(get_p2_singleton_puzhash(treasury_id))
+        tail_puz = curry_cat_tail(treasury_id)
+        mint_puzhash = construct_cat_puzzle(CAT_MOD, tail_puz.get_tree_hash(), mint_puz).get_tree_hash()
     else:
         mint_puzhash = dao_rules.mint_puzzle_hash
     assert mint_puzhash is not None
