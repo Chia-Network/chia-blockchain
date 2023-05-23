@@ -77,6 +77,38 @@ async def make_empty_blockchain(constants: ConsensusConstants = test_constants):
 
 class TestGenesisBlock:
     @pytest.mark.asyncio
+    async def test_build_default_10000_blocks(self, default_10000_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_10000_blocks_compact(self, default_10000_blocks_compact):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_400_blocks(self, default_400_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_1000_blocks(self, default_1000_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_pre_genesis_empty_slots_1000_blocks(self, pre_genesis_empty_slots_1000_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_1500_blocks(self, default_1500_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_test_long_reorg_blocks(self, test_long_reorg_blocks):
+        pass
+
+    @pytest.mark.asyncio
+    async def test_build_default_2000_blocks_compact(self, default_2000_blocks_compact):
+        pass
+
+    @pytest.mark.asyncio
     async def test_block_tools_proofs_400(self, default_400_blocks):
         vdf, proof = get_vdf_info_and_proof(
             test_constants, ClassgroupElement.get_default_element(), test_constants.GENESIS_CHALLENGE, uint64(231)
