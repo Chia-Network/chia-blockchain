@@ -32,7 +32,7 @@ from chia.simulator.socket import find_available_listen_port
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.timelord.timelord import Timelord
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
@@ -70,7 +70,7 @@ async def setup_two_nodes(
     """
 
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        bt1 = await create_block_tools_async(constants=test_constants, keychain=keychain1)
+        bt1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
         node_iters = [
             setup_full_node(
                 consensus_constants,
@@ -84,7 +84,7 @@ async def setup_two_nodes(
                 consensus_constants,
                 "blockchain_test_2.db",
                 self_hostname,
-                await create_block_tools_async(constants=test_constants, keychain=keychain2),
+                await create_block_tools_async(constants=consensus_constants, keychain=keychain2),
                 simulator=False,
                 db_version=db_version,
             ),
@@ -116,7 +116,7 @@ async def setup_n_nodes(
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 self_hostname,
-                await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
+                await create_block_tools_async(constants=consensus_constants, keychain=keyring.get_keychain()),
                 simulator=False,
                 db_version=db_version,
             )
@@ -302,7 +302,7 @@ async def setup_farmer_multi_harvester(
     ]
     farmer_service = await farmer_node_iterators[0].__anext__()
     if start_services:
-        farmer_peer = PeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
+        farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
     else:
         farmer_peer = None
     harvester_node_iterators = []
@@ -390,9 +390,9 @@ async def setup_full_system_inner(
     Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer],
 ]:
     if b_tools is None:
-        b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
+        b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
-        b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
+        b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
     daemon_ws = None
     if connect_to_daemon:
         daemon_iter = setup_daemon(btools=b_tools)
@@ -432,7 +432,7 @@ async def setup_full_system_inner(
     harvester_iter = setup_harvester(
         shared_b_tools,
         shared_b_tools.root_path / "harvester",
-        PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+        UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
         consensus_constants,
     )
     vdf1_port = uint16(find_available_listen_port("vdf1"))

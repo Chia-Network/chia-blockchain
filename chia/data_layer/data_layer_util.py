@@ -623,3 +623,17 @@ class SyncStatus:
     generation: int
     target_root_hash: bytes32
     target_generation: int
+
+
+@dataclasses.dataclass(frozen=True)
+class PluginStatus:
+    uploaders: Dict[str, Dict[str, Any]]
+    downloaders: Dict[str, Dict[str, Any]]
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "plugin_status": {
+                "uploaders": self.uploaders,
+                "downloaders": self.downloaders,
+            }
+        }

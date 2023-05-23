@@ -1,0 +1,59 @@
+; See chia/types/condition_opcodes.py
+
+(
+  (defconstant AGG_SIG_UNSAFE 49)
+  (defconstant AGG_SIG_ME 50)
+
+  ; the conditions below reserve coin amounts and have to be accounted for in output totals
+
+  (defconstant CREATE_COIN 51)
+  (defconstant RESERVE_FEE 52)
+
+  ; the conditions below deal with announcements, for inter-coin communication
+
+  ; coin announcements
+  (defconstant CREATE_COIN_ANNOUNCEMENT 60)
+  (defconstant ASSERT_COIN_ANNOUNCEMENT 61)
+
+  ; puzzle announcements
+  (defconstant CREATE_PUZZLE_ANNOUNCEMENT 62)
+  (defconstant ASSERT_PUZZLE_ANNOUNCEMENT 63)
+
+  ; coin-id
+  (defconstant ASSERT_CONCURRENT_SPEND 64)
+  ; puzzle-hash
+  (defconstant ASSERT_CONCURRENT_PUZZLE 65)
+
+  ; the conditions below let coins inquire about themselves
+
+  (defconstant ASSERT_MY_COIN_ID 70)
+  (defconstant ASSERT_MY_PARENT_ID 71)
+  (defconstant ASSERT_MY_PUZZLEHASH 72)
+  (defconstant ASSERT_MY_AMOUNT 73)
+  (defconstant ASSERT_MY_BIRTH_SECONDS 74)
+  (defconstant ASSERT_MY_BIRTH_HEIGHT 75)
+  (defconstant ASSERT_EPHEMERAL 76)
+
+  ; the conditions below ensure that we're "far enough" in the future
+
+  ; wall-clock time
+  (defconstant ASSERT_SECONDS_RELATIVE 80)
+  (defconstant ASSERT_SECONDS_ABSOLUTE 81)
+
+  ; block index
+  (defconstant ASSERT_HEIGHT_RELATIVE 82)
+  (defconstant ASSERT_HEIGHT_ABSOLUTE 83)
+
+  ; the conditions below ensure that we're "not too far" in the future
+
+  ; wall-clock time
+  (defconstant ASSERT_BEFORE_SECONDS_RELATIVE 84)
+  (defconstant ASSERT_BEFORE_SECONDS_ABSOLUTE 85)
+
+  ; block index
+  (defconstant ASSERT_BEFORE_HEIGHT_RELATIVE 86)
+  (defconstant ASSERT_BEFORE_HEIGHT_ABSOLUTE 87)
+
+  ; A condition that is always true and always ignore all arguments
+  (defconstant REMARK 1)
+)

@@ -59,7 +59,7 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -109,7 +109,7 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -150,7 +150,6 @@ class TestDLWallet:
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
         if trusted:
             wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -168,10 +167,10 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+            dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
 
         async with wallet_node_1.wallet_state_manager.lock:
-            dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager, wallet_1)
+            dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -189,7 +188,6 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         peer = wallet_node_1.get_full_node_peer()
-        assert peer is not None
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
         await asyncio.sleep(0.5)
@@ -245,7 +243,7 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+            dl_wallet = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -348,10 +346,10 @@ class TestDLWallet:
         await time_out_assert(10, wallet_1.get_confirmed_balance, funds)
 
         async with wallet_node_0.wallet_state_manager.lock:
-            dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager, wallet_0)
+            dl_wallet_0 = await DataLayerWallet.create_new_dl_wallet(wallet_node_0.wallet_state_manager)
 
         async with wallet_node_1.wallet_state_manager.lock:
-            dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager, wallet_1)
+            dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager)
 
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
@@ -379,7 +377,6 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         peer = wallet_node_1.get_full_node_peer()
-        assert peer is not None
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
         current_record = await dl_wallet_1.get_latest_singleton(launcher_id)
@@ -528,13 +525,10 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     wsm_1 = wallet_node_1.wallet_state_manager
     wsm_2 = wallet_node_2.wallet_state_manager
 
-    wallet_1 = wsm_1.main_wallet
-    wallet_2 = wsm_2.main_wallet
-
     async with wsm_1.lock:
-        dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wsm_1, wallet_1)
+        dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wsm_1)
     async with wsm_2.lock:
-        dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2, wallet_2)
+        dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
 
     dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32))
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
@@ -551,10 +545,8 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     peer_1 = wallet_node_1.get_full_node_peer()
-    assert peer_1 is not None
     await dl_wallet_1.track_new_launcher_id(launcher_id_2, peer_1)
     peer_2 = wallet_node_2.get_full_node_peer()
-    assert peer_2 is not None
     await dl_wallet_2.track_new_launcher_id(launcher_id_1, peer_2)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))

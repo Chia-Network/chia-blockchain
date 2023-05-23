@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 from typing import List, Optional, Set
 from unittest.mock import MagicMock
@@ -11,14 +12,12 @@ from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
 from chia.server.outbound_message import Message, make_msg
-from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -28,10 +27,10 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
@@ -206,7 +205,7 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -234,7 +233,7 @@ class TestWalletSync:
             await full_node_api.full_node.add_block(all_blocks[-1])
 
         new_blocks = bt.get_consecutive_blocks(
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
+            blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
         )
         for i in range(base_num_blocks + 20, len(new_blocks)):
             await full_node_api.full_node.add_block(new_blocks[i])
@@ -508,11 +507,11 @@ class TestWalletSync:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        payees: List[AmountWithPuzzlehash] = []
+        payees: List[Payment] = []
         for i in range(10):
             payee_ph = await wallet.get_new_puzzlehash()
-            payees.append({"amount": uint64(i + 100), "puzzlehash": payee_ph, "memos": []})
-            payees.append({"amount": uint64(i + 200), "puzzlehash": payee_ph, "memos": []})
+            payees.append(Payment(payee_ph, uint64(i + 100)))
+            payees.append(Payment(payee_ph, uint64(i + 200)))
 
         tx: TransactionRecord = await wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
@@ -527,7 +526,7 @@ class TestWalletSync:
             RequestAdditions(
                 last_block.height,
                 None,
-                [payees[0]["puzzlehash"], payees[2]["puzzlehash"], std_hash(b"1")],
+                [payees[0].puzzle_hash, payees[2].puzzle_hash, std_hash(b"1")],
             )
         )
 
@@ -539,7 +538,7 @@ class TestWalletSync:
 
         # First two PHs are included
         for i in range(2):
-            assert response.proofs[i][0] in {payees[j]["puzzlehash"] for j in (0, 2)}
+            assert response.proofs[i][0] in {payees[j].puzzle_hash for j in (0, 2)}
             assert response.proofs[i][1] is not None
             assert response.proofs[i][2] is not None
 
@@ -582,24 +581,26 @@ class TestWalletSync:
         assert len(response.coins) == 0
 
     @pytest.mark.asyncio
-    async def test_get_wp_fork_point(self, default_10000_blocks):
+    async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
         wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
         wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
         wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
         wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
         wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
-        fork12 = get_wp_fork_point(test_constants, wp1, wp2)
-        fork13 = get_wp_fork_point(test_constants, wp3, wp1)
-        fork14 = get_wp_fork_point(test_constants, wp4, wp1)
-        fork23 = get_wp_fork_point(test_constants, wp3, wp2)
-        fork24 = get_wp_fork_point(test_constants, wp4, wp2)
-        fork34 = get_wp_fork_point(test_constants, wp3, wp4)
-        fork45 = get_wp_fork_point(test_constants, wp4, wp5)
-        fork16 = get_wp_fork_point(test_constants, wp1, wp6)
+        fork12 = get_wp_fork_point(blockchain_constants, wp1, wp2)
+        fork13 = get_wp_fork_point(blockchain_constants, wp3, wp1)
+        fork14 = get_wp_fork_point(blockchain_constants, wp4, wp1)
+        fork23 = get_wp_fork_point(blockchain_constants, wp3, wp2)
+        fork24 = get_wp_fork_point(blockchain_constants, wp4, wp2)
+        fork34 = get_wp_fork_point(blockchain_constants, wp3, wp4)
+        fork45 = get_wp_fork_point(blockchain_constants, wp4, wp5)
+        fork16 = get_wp_fork_point(blockchain_constants, wp1, wp6)
 
         # overlap between recent chain in wps, fork point is the tip of the shorter wp
         assert fork12 == wp1.recent_chain_data[-1].height
@@ -718,9 +719,9 @@ class TestWalletSync:
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Part 1: create a single dust coin
-        payees: List[AmountWithPuzzlehash] = []
+        payees: List[Payment] = []
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append({"amount": uint64(dust_value), "puzzlehash": payee_ph, "memos": []})
+        payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
         tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
@@ -769,7 +770,7 @@ class TestWalletSync:
 
         # Part 2: Create dust coins until the filter threshold has been reached.
         # Nothing should be filtered yet (unless spam_filter_after_n_txs is 0).
-        payees: List[AmountWithPuzzlehash] = []
+        payees = []
 
         # Determine how much dust to create, recalling that there already is one dust coin.
         new_dust = spam_filter_after_n_txs - 1
@@ -777,7 +778,7 @@ class TestWalletSync:
 
         while dust_remaining > 0:
             payee_ph = await dust_wallet.get_new_puzzlehash()
-            payees.append({"amount": uint64(dust_value), "puzzlehash": payee_ph, "memos": []})
+            payees.append(Payment(payee_ph, uint64(dust_value)))
 
             # After every 100 (at most) coins added, push the tx and advance the chain
             # This greatly speeds up the overall process
@@ -789,7 +790,7 @@ class TestWalletSync:
                 last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
                 assert last_block is not None
                 # reset payees
-                payees: List[AmountWithPuzzlehash] = []
+                payees = []
 
             dust_remaining -= 1
 
@@ -836,11 +837,11 @@ class TestWalletSync:
         # These should not get filtered.
         large_coins = 10
 
-        payees: List[AmountWithPuzzlehash] = []
+        payees = []
 
         for i in range(large_coins):
             payee_ph = await dust_wallet.get_new_puzzlehash()
-            payees.append({"amount": uint64(xch_spam_amount), "puzzlehash": payee_ph, "memos": []})
+            payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
 
         # construct and send tx
         tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
@@ -876,10 +877,10 @@ class TestWalletSync:
         assert num_coins == dust_coins + large_coins + large_dust_coins
 
         # Part 4: Create one more dust coin to test the threshold
-        payees: List[AmountWithPuzzlehash] = []
+        payees = []
 
         payee_ph = await dust_wallet.get_new_puzzlehash()
-        payees.append({"amount": uint64(dust_value), "puzzlehash": payee_ph, "memos": []})
+        payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
         tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
@@ -917,13 +918,13 @@ class TestWalletSync:
 
         # Part 5: Create 5 coins below the threshold and 5 at or above.
         # Those below the threshold should get filtered, and those above should not.
-        payees: List[AmountWithPuzzlehash] = []
+        payees = []
 
         for i in range(5):
             payee_ph = await dust_wallet.get_new_puzzlehash()
 
             # Create a large coin and add on the appropriate balance.
-            payees.append({"amount": uint64(xch_spam_amount + i), "puzzlehash": payee_ph, "memos": []})
+            payees.append(Payment(payee_ph, uint64(xch_spam_amount + i)))
             large_coins += 1
             large_coin_balance += xch_spam_amount + i
 
@@ -931,9 +932,9 @@ class TestWalletSync:
 
             # Make sure we are always creating coins with a positive value.
             if xch_spam_amount - dust_value - i > 0:
-                payees.append({"amount": uint64(xch_spam_amount - dust_value - i), "puzzlehash": payee_ph, "memos": []})
+                payees.append(Payment(payee_ph, uint64(xch_spam_amount - dust_value - i)))
             else:
-                payees.append({"amount": uint64(dust_value), "puzzlehash": payee_ph, "memos": []})
+                payees.append(Payment(payee_ph, uint64(dust_value)))
             # In cases where xch_spam_amount is sufficiently low,
             # the new dust should be considered a large coina and not be filtered.
             if xch_spam_amount <= dust_value:
@@ -974,7 +975,7 @@ class TestWalletSync:
         # Send 1 mojo from the dust wallet. The dust wallet should receive a change coin valued at "xch_spam_amount-1".
 
         payee_ph = await farm_wallet.get_new_puzzlehash()
-        payees: List[AmountWithPuzzlehash] = [{"amount": uint64(balance), "puzzlehash": payee_ph, "memos": []}]
+        payees = [Payment(payee_ph, uint64(balance))]
 
         # construct and send tx
         tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
@@ -1014,7 +1015,7 @@ class TestWalletSync:
 
         while coins_remaining > 0:
             payee_ph = await dust_wallet.get_new_puzzlehash()
-            payees.append({"amount": uint64(coin_value), "puzzlehash": payee_ph, "memos": []})
+            payees.append(Payment(payee_ph, uint64(coin_value)))
 
             # After every 100 (at most) coins added, push the tx and advance the chain
             # This greatly speeds up the overall process
@@ -1026,7 +1027,7 @@ class TestWalletSync:
                 last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
                 assert last_block is not None
                 # reset payees
-                payees: List[AmountWithPuzzlehash] = []
+                payees = []
 
             coins_remaining -= 1
 
@@ -1057,7 +1058,7 @@ class TestWalletSync:
 
         # Send a 1 mojo coin from the dust wallet to the farm wallet
         payee_ph = await farm_wallet.get_new_puzzlehash()
-        payees: List[AmountWithPuzzlehash] = [{"amount": uint64(1), "puzzlehash": payee_ph, "memos": []}]
+        payees = [Payment(payee_ph, uint64(1))]
 
         # construct and send tx
         tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
@@ -1185,11 +1186,17 @@ class TestWalletSync:
 
             return new_func
 
-        def flaky_fetch_puzzle_solution(node, func):
+        request_puzzle_solution_failure_tested = False
+
+        def flaky_request_puzzle_solution(func):
+            @functools.wraps(func)
             async def new_func(*args, **kwargs):
-                if node.puzzle_solution_flaky:
-                    node.puzzle_solution_flaky = False
-                    raise PeerRequestException()
+                nonlocal request_puzzle_solution_failure_tested
+                if not request_puzzle_solution_failure_tested:
+                    request_puzzle_solution_failure_tested = True
+                    # This can just return None if we have `none_response` enabled.
+                    reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
+                    return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
                 else:
                     return await func(*args, **kwargs)
 
@@ -1225,23 +1232,25 @@ class TestWalletSync:
 
             return new_func
 
+        full_node_api.request_puzzle_solution = flaky_request_puzzle_solution(full_node_api.request_puzzle_solution)
+
         for wallet_node, wallet_server in wallets:
+            wallet_node.coin_state_retry_seconds = 1
+            request_puzzle_solution_failure_tested = False
             wallet_node.coin_state_flaky = True
-            wallet_node.puzzle_solution_flaky = True
             wallet_node.fetch_children_flaky = True
             wallet_node.get_timestamp_flaky = True
             wallet_node.db_flaky = True
 
             wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
-            wallet_node.fetch_puzzle_solution = flaky_fetch_puzzle_solution(
-                wallet_node, wallet_node.fetch_puzzle_solution
-            )
             wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
             wallet_node.get_timestamp_for_height = flaky_get_timestamp(
                 wallet_node, wallet_node.get_timestamp_for_height
             )
-            wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash = flaky_info_for_puzhash(
-                wallet_node, wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash
+            wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash = (
+                flaky_info_for_puzhash(
+                    wallet_node, wallet_node.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash
+                )
             )
 
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -1251,52 +1260,48 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-            async def len_gt_0(func, *args):
-                return len((await func(*args))) > 0
+            async def retry_store_empty() -> bool:
+                return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
 
-            await time_out_assert(
-                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
-            await time_out_assert(
-                30, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
+            async def assert_coin_state_retry() -> None:
+                # Wait for retry coin states to show up
+                await time_out_assert(15, retry_store_empty, False)
+                # And become retried/removed
+                await time_out_assert(30, retry_store_empty, True)
+
+            await assert_coin_state_retry()
 
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
             tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
             await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
-            async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
-                tx = mempool.get_spendbundle(tx_id)
-                if tx is None:
-                    return False
-                return True
+            async def tx_in_mempool():
+                return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
-            await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name)
+            await time_out_assert(15, tx_in_mempool)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-            await time_out_assert(
-                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
-            await time_out_assert(
-                120, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
-            )
+            await assert_coin_state_retry()
+
             assert not wallet_node.coin_state_flaky
-            assert not wallet_node.puzzle_solution_flaky
+            assert request_puzzle_solution_failure_tested
             assert not wallet_node.fetch_children_flaky
             assert not wallet_node.get_timestamp_flaky
             assert not wallet_node.db_flaky
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
     @pytest.mark.asyncio
-    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname):
+    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
         full_nodes, wallets, bt = two_wallet_nodes
         wallet_node, wallet_server = wallets[0]
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         blocks = default_1000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -1367,6 +1372,9 @@ async def test_long_sync_untrusted_break(
     def check_sync_canceled() -> bool:
         return sync_canceled
 
+    def synced_to_trusted() -> bool:
+        return trusted_full_node_server.node_id in wallet_node.synced_peers
+
     def only_trusted_peer() -> bool:
         trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
         untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
@@ -1388,7 +1396,7 @@ async def test_long_sync_untrusted_break(
         # Connect to the trusted peer and make sure the running untrusted long sync gets interrupted via disconnect
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(trusted_full_node_server._port)), None)
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
-        assert trusted_full_node_server.node_id in wallet_node.synced_peers
+        assert time_out_assert(10, synced_to_trusted)
         assert untrusted_full_node_server.node_id not in wallet_node.synced_peers
         assert "Connected to a a synced trusted peer, disconnecting from all untrusted nodes." in caplog.text
 
