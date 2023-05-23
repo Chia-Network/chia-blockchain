@@ -83,6 +83,9 @@ jobs:
     steps:
     - uses: chia-network/actions/clean-workspace@main
 
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -133,6 +136,9 @@ jobs:
     steps:
     - uses: chia-network/actions/clean-workspace@main
 
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -161,6 +167,9 @@ jobs:
       - mypy
       - check
     steps:
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
