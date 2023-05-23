@@ -55,11 +55,13 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
 class FarmerAPI:
     farmer: Farmer
 
-    def __init__(self, farmer) -> None:
+    def __init__(self, farmer: Farmer) -> None:
         self.farmer = farmer
 
     @api_request(peer_required=True)
-    async def new_proof_of_space(self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection):
+    async def new_proof_of_space(
+        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
+    ) -> None:
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
@@ -144,7 +146,7 @@ class FarmerAPI:
                 if p2_singleton_puzzle_hash not in self.farmer.pool_state:
                     self.farmer.log.info(f"Did not find pool info for {p2_singleton_puzzle_hash}")
                     return
-                pool_state_dict: Dict = self.farmer.pool_state[p2_singleton_puzzle_hash]
+                pool_state_dict: Dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
                 pool_url = pool_state_dict["pool_config"].pool_url
                 if pool_url == "":
                     return
@@ -250,7 +252,7 @@ class FarmerAPI:
                             headers={"User-Agent": f"Chia Blockchain v.{__version__}"},
                         ) as resp:
                             if resp.ok:
-                                pool_response: Dict = json.loads(await resp.text())
+                                pool_response: Dict[str, Any] = json.loads(await resp.text())
                                 self.farmer.log.info(f"Pool response: {pool_response}")
                                 if "error_code" in pool_response:
                                     self.farmer.log.error(
@@ -290,7 +292,7 @@ class FarmerAPI:
                 return
 
     @api_request()
-    async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
+    async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
         """
         There are two cases: receiving signatures for sps, or receiving signatures for the block.
         """
@@ -445,7 +447,7 @@ class FarmerAPI:
     """
 
     @api_request()
-    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint):
+    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
         try:
             pool_difficulties: List[PoolDifficulty] = []
             for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
@@ -501,7 +503,7 @@ class FarmerAPI:
         self.farmer.state_changed("new_signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})
 
     @api_request()
-    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):
+    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> None:
         if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return None
@@ -520,7 +522,7 @@ class FarmerAPI:
         await self.farmer.server.send_to_specific([msg], node_id)
 
     @api_request()
-    async def farming_info(self, request: farmer_protocol.FarmingInfo):
+    async def farming_info(self, request: farmer_protocol.FarmingInfo) -> None:
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -536,33 +538,33 @@ class FarmerAPI:
         )
 
     @api_request(peer_required=True)
-    async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection):
+    async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection) -> None:
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
 
     @api_request(peer_required=True)
-    async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection):
+    async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection):
+    async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection):
+    async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection):
+    async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection):
+    async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection):
+    async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].process_duplicates(message)
 
     @api_request(peer_required=True)
-    async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection):
+    async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)

@@ -74,4 +74,5 @@ jobs:
 
     - env:
         CHIA_MANAGE_CLVM_CHECK_USE_CACHE: "false"
+        CHIA_MANAGE_MYPY_CHECK_EXCLUSIONS: "true"
       run: pre-commit run --all-files --verbose
