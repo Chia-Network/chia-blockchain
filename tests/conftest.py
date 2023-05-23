@@ -403,8 +403,8 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets_services():
-    async for _ in setup_simulators_and_wallets_service(2, 0, {}):
+async def two_nodes_sim_and_wallets_services(soft_fork3):
+    async for _ in setup_simulators_and_wallets_service(2, 0, {"SOFT_FORK3_HEIGHT": soft_fork3}):
         yield _
 
 
