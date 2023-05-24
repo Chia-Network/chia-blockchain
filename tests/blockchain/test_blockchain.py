@@ -3616,18 +3616,28 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         await _validate_and_add_block(b, block)
 
 
+@pytest.mark.parametrize("num_plot_filters_disallowed_to_pass", [1, 2])
+@pytest.mark.parametrize("bt_respects_soft_fork3", [True, False])
+@pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
 @pytest.mark.asyncio
-async def test_soft_fork3_activation(empty_blockchain, blockchain_constants):
+async def test_soft_fork3_activation(
+    blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, num_plot_filters_disallowed_to_pass
+):
     with TempKeyring() as keychain:
-        b = empty_blockchain
         bt = await create_block_tools_async(
-            constants=blockchain_constants.replace(SOFT_FORK3_HEIGHT=1000000, NUM_PLOT_FILTERS_DISALLOWED_TO_PASS=10),
+            constants=blockchain_constants.replace(
+                SOFT_FORK3_HEIGHT=(0 if bt_respects_soft_fork3 else 10000),
+                NUM_PLOT_FILTERS_DISALLOWED_TO_PASS=num_plot_filters_disallowed_to_pass,
+            ),
             keychain=keychain,
         )
-        prev_soft_fork3_height = empty_blockchain.constants.SOFT_FORK3_HEIGHT
+        blockchain_constants = bt.constants.replace(
+            **{
+                "SOFT_FORK3_HEIGHT": soft_fork3_height,
+            }
+        )
+        b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
-
-        found_pos_error = False
         for height, block in enumerate(blocks):
             await _validate_and_add_block_multi_error_or_pass(b, block, [Err.INVALID_POSPACE])
             peak = b.get_peak()
@@ -3637,10 +3647,17 @@ async def test_soft_fork3_activation(empty_blockchain, blockchain_constants):
 
         peak = b.get_peak()
         assert peak is not None
-        # BT builds the blocks ignoring soft fork 3 condition, with very high likelyhood it doesn't respect it.
-        # If soft fork 3 didn't activate yet, we should be able to add all 25 blocks.
-        # If it has activated, we should add less than 25.
-        if prev_soft_fork3_height == 0:
-            assert peak.height < 25
-        else:
+
+        if bt_respects_soft_fork3 or num_plot_filters_disallowed_to_pass == 1:
             assert peak.height == 24
+        else:
+            if soft_fork3_height == 0:
+                assert peak.height < 24
+            elif soft_fork3_height == 10:
+                assert peak.height < 24 and peak.height >= 9
+            else:
+                assert peak.height == 24
+
+        await db_wrapper.close()
+        b.shut_down()
+        db_path.unlink()
