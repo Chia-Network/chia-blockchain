@@ -832,6 +832,13 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     )
     assert len(all_transactions) == 5
     assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
+    # Test confirmed filter
+    all_transactions = await client.get_transactions(1, confirmed=True)
+    assert len(all_transactions) == 10
+    assert all(transaction.confirmed for transaction in all_transactions)
+    all_transactions = await client.get_transactions(1, confirmed=False)
+    assert len(all_transactions) == 2
+    assert all(not transaction.confirmed for transaction in all_transactions)
 
 
 @pytest.mark.asyncio

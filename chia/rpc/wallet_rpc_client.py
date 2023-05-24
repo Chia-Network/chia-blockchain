@@ -131,6 +131,7 @@ class WalletRpcClient(RpcClient):
         reverse: bool = False,
         to_address: Optional[str] = None,
         type_filter: Optional[TransactionTypeFilter] = None,
+        confirmed: Optional[bool] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -147,6 +148,9 @@ class WalletRpcClient(RpcClient):
 
         if type_filter is not None:
             request["type_filter"] = type_filter.to_json_dict()
+
+        if confirmed is not None:
+            request["confirmed"] = confirmed
 
         res = await self.fetch(
             "get_transactions",

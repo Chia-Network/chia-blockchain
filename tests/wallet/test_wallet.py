@@ -370,7 +370,15 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
         )
-        txs = await api_0.get_transactions(dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND.value,TransactionType.OUTGOING_CLAWBACK.value],"mode": 1,},wallet_id=1))
+        txs = await api_0.get_transactions(
+            dict(
+                type_filter={
+                    "values": [TransactionType.INCOMING_CLAWBACK_SEND.value, TransactionType.OUTGOING_CLAWBACK.value],
+                    "mode": 1,
+                },
+                wallet_id=1,
+            )
+        )
         assert len(txs["transactions"]) == 2
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]

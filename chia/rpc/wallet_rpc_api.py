@@ -898,6 +898,7 @@ class WalletRpcApi:
             reverse=reverse,
             to_puzzle_hash=to_puzzle_hash,
             type_filter=type_filter,
+            confirmed=request.get("confirmed", None),
         )
         txs = [
             (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
