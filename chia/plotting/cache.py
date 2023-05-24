@@ -33,7 +33,6 @@ class DiskCacheEntry(Streamable):
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     last_use: uint64
-    compression_level: uint8
 
 
 @streamable
@@ -50,7 +49,6 @@ class CacheEntry:
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     last_use: float
-    compression_level: uint8
 
     @classmethod
     def from_disk_prover(cls, prover: DiskProver) -> "CacheEntry":
@@ -74,10 +72,7 @@ class CacheEntry:
             local_sk.get_g1(), farmer_public_key, pool_contract_puzzle_hash is not None
         )
 
-        compression_level = prover.get_compresion_level()
-
-        return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time(),
-                   compression_level)
+        return cls(prover, farmer_public_key, pool_public_key, pool_contract_puzzle_hash, plot_public_key, time.time())
 
     def bump_last_use(self) -> None:
         self.last_use = time.time()
@@ -119,7 +114,6 @@ class Cache:
                     cache_entry.pool_contract_puzzle_hash,
                     cache_entry.plot_public_key,
                     uint64(int(cache_entry.last_use)),
-                    cache_entry.compression_level,
                 )
                 for path, cache_entry in self.items()
             }
@@ -152,7 +146,6 @@ class Cache:
                         cache_entry.pool_contract_puzzle_hash,
                         cache_entry.plot_public_key,
                         float(cache_entry.last_use),
-                        cache_entry.compression_level,
                     )
                     # TODO, drop the below entry dropping after few versions or whenever we force a cache recreation.
                     #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
