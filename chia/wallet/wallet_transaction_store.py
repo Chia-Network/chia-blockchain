@@ -287,10 +287,9 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
-        if confirmed is None:
-            confirmed_str = ""
-        else:
-            confirmed_str = "AND confirmed=" + str(int(confirmed))
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
 
         if type_filter is None:
             type_filter_str = ""
