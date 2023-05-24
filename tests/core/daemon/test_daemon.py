@@ -1131,8 +1131,8 @@ async def test_keyring_file_deleted(
             "parallel": False,
             "n": 1,
             "queue": "default",
-            "d": "/Volumes/CHIA",
-            "t": "/private/tmp",
+            "d": "unknown",
+            "t": "unknown",
             "t2": "",
             "f": "",
             "plotNFTContractAddr": "",
@@ -1157,7 +1157,7 @@ async def test_keyring_file_deleted(
             "parallel": False,
             "n": 1,
             "queue": "default",
-            "t": "/private/tmp",
+            "t": "unknown",
             "t2": "",
             "f": "",
             "plotNFTContractAddr": "",
@@ -1182,7 +1182,7 @@ async def test_keyring_file_deleted(
             "parallel": False,
             "n": 1,
             "queue": "default",
-            "d": "/Volumes/CHIA",
+            "d": "unknown",
             "t2": "",
             "f": "",
             "plotNFTContractAddr": "",
@@ -1207,8 +1207,8 @@ async def test_keyring_file_deleted(
             "parallel": False,
             "n": 1,
             "queue": "default",
-            "d": "/Volumes/CHIA",
-            "t": "/private/tmp",
+            "d": "unknown",
+            "t": "unknown",
             "t2": "",
             "f": "",
             "plotNFTContractAddr": "",
@@ -1233,19 +1233,157 @@ async def test_plotter_errors(
 ) -> None:
     ws, keychain = daemon_connection_and_temp_keychain
 
-    foo = keychain.keyring_wrapper.keyring.keyring_path
-    print(foo)
-
     payload = create_payload(
         case.route,
         case.request,
-        "CI_test",
+        "test_service_name",
         "daemon",
     )
     await ws.send_str(payload)
     response = await ws.receive()
 
     assert_response(response, case.response)
+
+
+@datacases(
+    RouteCase(
+        route="start_plotting",
+        description="bladebit - ramplot",
+        request={
+            "service": "chia_plotter",
+            "plotter": "bladebit",
+            "plot_type": "ramplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "root_path",
+            "t": "root_path",
+            "t2": "",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+            "c": "hello",
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="bladebit - diskplot",
+        request={
+            "service": "chia_plotter",
+            "plotter": "bladebit",
+            "plot_type": "diskplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "root_path",
+            "t": "root_path",
+            "t2": "testing",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+            "c": "hello",
+            "cache": "cache",
+            "f1_threads": 5,
+            "fp_threads": 6,
+            "c_threads": 4,
+            "p2_threads": 4,
+            "p3_threads": 4,
+            "alternate": True,
+            "no_t1_direct": True,
+            "no_t2_direct": True,
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="madmax",
+        request={
+            "service": "chia_plotter",
+            "plotter": "bladebit",
+            "plot_type": "diskplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "k": 25,
+            "r": 2,
+            "u": 128,
+            "e": False,
+            "parallel": False,
+            "n": 1,
+            "queue": "default",
+            "d": "root_path",
+            "t": "root_path",
+            "t2": "testing",
+            "f": "",
+            "plotNFTContractAddr": "",
+            "x": False,
+            "b": 512,
+            "overrideK": True,
+            "delay": 0,
+            "a": 3598820529,
+            "c": "hello",
+        },
+        response={
+            "success": True,
+        },
+    ),
+)
+@pytest.mark.asyncio
+async def test_plotter_options(
+    daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain],
+    get_b_tools: BlockTools,
+    case: RouteCase,
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # register for chia_plotter events
+    service_name = "chia_plotter"
+    data = {"service": service_name}
+    payload = create_payload("register_service", data, "chia_plotter", "daemon")
+    await ws.send_str(payload)
+    response = await ws.receive()
+    assert_response_success_only(response)
+
+    case.request["t"] = str(get_b_tools.root_path)
+    case.request["d"] = str(get_b_tools.root_path)
+
+    payload = create_payload(
+        case.route,
+        case.request,
+        "test_service_name",
+        "daemon",
+    )
+    await ws.send_str(payload)
+    response = await ws.receive()
+
+    assert_response_success_only(response)
 
 
 def assert_plot_queue_response(
@@ -1268,6 +1406,24 @@ def assert_plot_queue_response(
         assert plot_info["log_new"] == expected_log_entry
 
 
+def check_plot_queue_log(
+    response: aiohttp.http_websocket.WSMessage,
+    expected_command: str,
+    expected_message_state: str,
+    expected_plot_id: str,
+    expected_plot_state: str,
+    expected_log_entry: str,
+) -> bool:
+    assert_plot_queue_response(
+        response, expected_command, expected_message_state, expected_plot_id, expected_plot_state
+    )
+
+    message = json.loads(response.data.strip())
+    plot_info = message["data"]["queue"][0]
+
+    return plot_info["log_new"].startswith(expected_log_entry)
+
+
 @pytest.mark.asyncio
 async def test_plotter_roundtrip(
     daemon_connection_and_temp_keychain: Tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
@@ -1283,7 +1439,6 @@ async def test_plotter_roundtrip(
     assert_response_success_only(response)
 
     root_path = get_b_tools.root_path
-    print(root_path)
 
     plotting_request = {
         "service": "chia_plotter",
@@ -1291,29 +1446,27 @@ async def test_plotter_roundtrip(
         "k": 25,
         "r": 2,
         "u": 128,
-        "e": False,
+        "e": True,
         "parallel": False,
         "n": 1,
         "queue": "default",
-        "d": "/Volumes/CHIA",
-        "t": "/private/tmp",
+        "d": str(root_path),
+        "t": str(root_path),
         "t2": "",
         "f": "",
         "plotNFTContractAddr": "",
-        "x": False,
+        "x": True,
         "b": 512,
         "overrideK": True,
         "delay": 0,
         "a": 3598820529,
+        "p": "xxx",
     }
 
-    #
-    # Using CI_test as the origin, this causes the daemon to not really start the plotter
-    #
     payload = create_payload(
         "start_plotting",
         plotting_request,
-        "CI_test",
+        "test_service_name",
         "daemon",
     )
     await ws.send_str(payload)
@@ -1335,11 +1488,17 @@ async def test_plotter_roundtrip(
 
     # Write chiapos magic words to the log file to signal finished
     plot_log_path = plotter_log_path(root_path, plot_id)
-    plot_log_path.write_text("Renamed final file")
+    with open(plot_log_path, "a") as f:
+        f.write("Renamed final file")
+        f.flush()
 
     # 3) log_changed
-    response = await ws.receive()
-    assert_plot_queue_response(response, "state_changed", "log_changed", plot_id, "RUNNING", "Renamed final file")
+    final_log_entry = False
+    while not final_log_entry:
+        response = await ws.receive()
+        final_log_entry = check_plot_queue_log(
+            response, "state_changed", "log_changed", plot_id, "RUNNING", "Renamed final file"
+        )
 
     # 4) Finished
     response = await ws.receive()
@@ -1361,7 +1520,6 @@ async def test_plotter_stop_plotting(
     assert_response_success_only(response)
 
     root_path = get_b_tools.root_path
-    print(root_path)
 
     plotting_request = {
         "service": "chia_plotter",
@@ -1373,8 +1531,8 @@ async def test_plotter_stop_plotting(
         "parallel": False,
         "n": 1,
         "queue": "default",
-        "d": "/Volumes/CHIA",
-        "t": "/private/tmp",
+        "d": str(root_path),
+        "t": str(root_path),
         "t2": "",
         "f": "",
         "plotNFTContractAddr": "",
@@ -1383,15 +1541,13 @@ async def test_plotter_stop_plotting(
         "overrideK": True,
         "delay": 0,
         "a": 3598820529,
+        "c": "xxx",
     }
 
-    #
-    # Using CI_test as the origin, this causes the daemon to not really start the plotter
-    #
     payload = create_payload(
         "start_plotting",
         plotting_request,
-        "CI_test",
+        "test_service_name",
         "daemon",
     )
     await ws.send_str(payload)
