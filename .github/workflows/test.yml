@@ -168,6 +168,10 @@ jobs:
         run: |
           set -o pipefail
           diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+
+      - name: Add diff coverage report to workflow summary
+        if: always()
+        run: |
           cat coverage-reports/diff-cover.md >> $GITHUB_STEP_SUMMARY
 
       - name: Publish coverage reports
