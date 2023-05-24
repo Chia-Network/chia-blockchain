@@ -52,8 +52,8 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
-    _validate_and_add_block_multi_result,
     _validate_and_add_block_multi_error_or_pass,
+    _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
 from tests.util.blockchain import create_blockchain
