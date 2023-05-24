@@ -51,7 +51,7 @@ def persistent_blocks(
     file_path = block_path_dir.joinpath(db_name)
 
     ci = os.environ.get("CI")
-    if ci is not None and not file_path.exists() and not db_name.endswith("softfork3.db"):
+    if ci is not None and not file_path.exists():
         raise Exception(f"Running in CI and expected path not found: {file_path!r}")
 
     block_path_dir.mkdir(parents=True, exist_ok=True)
