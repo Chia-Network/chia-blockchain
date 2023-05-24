@@ -875,6 +875,24 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
             "user_passphrase_is_set": False,
         },
     ),
+    RouteCase(
+        route="get_status",
+        description="successful",
+        request={},
+        response={"success": True, "genesis_initialized": True},
+    ),
+    RouteCase(
+        route="get_plotters",
+        description="successful",
+        request={},
+        response={
+            "success": True,
+            "plotters": {
+                "chiapos": {"display_name": "Chia Proof of Space", "installed": True, "version": "1.0.11"},
+                "madmax": {"can_install": True, "display_name": "madMAx Plotter", "installed": False},
+            },
+        },
+    ),
 )
 @pytest.mark.asyncio
 async def test_misc_daemon_ws(
@@ -1326,7 +1344,7 @@ async def test_plotter_errors(
         description="madmax",
         request={
             "service": "chia_plotter",
-            "plotter": "bladebit",
+            "plotter": "madmax",
             "plot_type": "diskplot",
             "w": True,
             "m": True,
@@ -1349,6 +1367,7 @@ async def test_plotter_errors(
             "delay": 0,
             "a": 3598820529,
             "c": "hello",
+            "v": 128,
         },
         response={
             "success": True,
