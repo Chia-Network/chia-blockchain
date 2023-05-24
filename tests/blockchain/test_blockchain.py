@@ -53,6 +53,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
     _validate_and_add_block_multi_result,
+    _validate_and_add_block_multi_error_or_pass,
     _validate_and_add_block_no_error,
 )
 from tests.util.blockchain import create_blockchain
@@ -3613,3 +3614,33 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     for block in chain_b[40:]:
         await _validate_and_add_block(b, block)
+
+
+@pytest.mark.asyncio
+async def test_soft_fork3_activation(empty_blockchain, blockchain_constants):
+    with TempKeyring() as keychain:
+        b = empty_blockchain
+        bt = await create_block_tools_async(
+            constants=blockchain_constants.replace(SOFT_FORK3_HEIGHT=1000000, NUM_PLOT_FILTERS_DISALLOWED_TO_PASS=10),
+            keychain=keychain,
+        )
+        prev_soft_fork3_height = empty_blockchain.constants.SOFT_FORK3_HEIGHT
+        blocks = bt.get_consecutive_blocks(25)
+
+        found_pos_error = False
+        for height, block in enumerate(blocks):
+            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.INVALID_POSPACE])
+            peak = b.get_peak()
+            assert peak is not None
+            if peak.height != height:
+                break
+
+        peak = b.get_peak()
+        assert peak is not None
+        # BT builds the blocks ignoring soft fork 3 condition, with very high likelyhood it doesn't respect it.
+        # If soft fork 3 didn't activate yet, we should be able to add all 25 blocks.
+        # If it has activated, we should add less than 25.
+        if prev_soft_fork3_height == 0:
+            assert peak.height < 25
+        else:
+            assert peak.height == 24
