@@ -337,10 +337,10 @@ async def five_nodes(db_version, self_hostname, blockchain_constants):
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(blockchain_constants):
-    test_constants_modified = blockchain_constants.replace(
-        **{"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000}
+    constants = blockchain_constants
+    async_gen = setup_simulators_and_wallets(2, 1, {
+        "MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK3_HEIGHT": constants.SOFT_FORK3_HEIGHT}
     )
-    async_gen = setup_simulators_and_wallets(2, 1, test_constants_modified)
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -368,7 +368,7 @@ async def two_nodes_sim_and_wallets():
 
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services(blockchain_constants):
-    async for _ in setup_simulators_and_wallets_service(2, 0, blockchain_constants):
+    async for _ in setup_simulators_and_wallets_service(2, 0, {"SOFT_FORK3_HEIGHT": blockchain_constants.SOFT_FORK3_HEIGHT}):
         yield _
 
 
