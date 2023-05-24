@@ -17,7 +17,6 @@ chia.plotting.util
 chia.pools.pool_puzzles
 chia.pools.pool_wallet
 chia.pools.pool_wallet_info
-chia.rpc.harvester_rpc_api
 chia.rpc.harvester_rpc_client
 chia.rpc.rpc_client
 chia.rpc.util
