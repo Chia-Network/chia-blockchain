@@ -1418,9 +1418,6 @@ async def test_plotter_stop_plotting(
         "daemon",
     )
     await ws.send_str(payload)
-    response = await ws.receive()
-
-    assert_response(response, {"success": True})
 
     # 3) removing
     response = await ws.receive()
@@ -1429,3 +1426,7 @@ async def test_plotter_stop_plotting(
     # 4) Finished
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "FINISHED")
+
+    # 5) Finally, get the "ack" for the stop_plotting payload
+    response = await ws.receive()
+    assert_response(response, {"success": True})
