@@ -40,7 +40,7 @@ def get_new_singleton_record() -> SingletonCoinRecord:
         confirmed_at_height=uint32(0),
         spent_height=uint32(0),
         lineage_proof=lineage_proof,
-        custom_data="{'key': 'value'}",
+        custom_data={"key": b"value"},
         generation=uint32(0),
         timestamp=uint64(time.time()),
     )
