@@ -158,8 +158,8 @@ saved_blocks_version = "rc5"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks(bt, blockchain_constants):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+def default_400_blocks(bt):
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -169,7 +169,7 @@ def default_400_blocks(bt, blockchain_constants):
 
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -179,7 +179,7 @@ def default_1000_blocks(bt):
 
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -195,7 +195,7 @@ def pre_genesis_empty_slots_1000_blocks(bt):
 
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -205,7 +205,7 @@ def default_1500_blocks(bt):
 
 @pytest.fixture(scope="session")
 def default_10000_blocks(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -215,7 +215,7 @@ def default_10000_blocks(bt):
 
 @pytest.fixture(scope="session")
 def default_20000_blocks(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -225,7 +225,7 @@ def default_20000_blocks(bt):
 
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, default_1500_blocks):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -242,7 +242,7 @@ def test_long_reorg_blocks(bt, default_1500_blocks):
 
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -261,7 +261,7 @@ def default_2000_blocks_compact(bt):
 
 @pytest.fixture(scope="session")
 def default_10000_blocks_compact(bt):
-    if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
