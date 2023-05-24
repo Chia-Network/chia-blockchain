@@ -165,7 +165,7 @@ class PlotManager:
             self._refresh_thread = None
 
     def trigger_refresh(self) -> None:
-        self.log.debug("trigger_refresh")
+        log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
     def _refresh_task(self, sleep_interval_ms: int):
@@ -267,7 +267,7 @@ class PlotManager:
                     f"total_duration {total_result.duration:.2f} seconds"
                 )
             except Exception as e:
-                self.log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
+                log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
                 self.reset()
 
     def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
@@ -275,10 +275,10 @@ class PlotManager:
         result: PlotRefreshResult = PlotRefreshResult(processed=len(plot_paths))
         counter_lock = threading.Lock()
 
-        self.log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
+        log.debug(f"refresh_batch: {len(plot_paths)} files in directories {plot_directories}")
 
         if self.match_str is not None:
-            self.log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
+            log.info(f'Only loading plots that contain "{self.match_str}" in the file or directory name')
 
         def process_file(file_path: Path) -> Optional[PlotInfo]:
             if not self._refreshing_enabled:
@@ -301,7 +301,7 @@ class PlotManager:
             if entry is not None:
                 loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
-                    self.log.debug(f"Skip duplicated plot {str(file_path)}")
+                    log.debug(f"Skip duplicated plot {str(file_path)}")
                     return None
             try:
                 if not file_path.exists():
@@ -345,13 +345,13 @@ class PlotManager:
                 assert cache_entry is not None
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
-                    self.log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
+                    log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
 
                 if cache_entry.pool_public_key is not None and cache_entry.pool_public_key not in self.pool_public_keys:
-                    self.log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
+                    log.warning(f"Plot {file_path} has a pool public key that is not in the farmer's pool pk list.")
                     self.no_key_filenames.add(file_path)
                     if not self.open_no_key_filenames:
                         return None
@@ -368,7 +368,7 @@ class PlotManager:
                         self.plot_filename_paths[file_path.name] = paths
                     else:
                         paths[1].add(str(Path(cache_entry.prover.get_filename()).parent))
-                        self.log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
+                        log.warning(f"Have multiple copies of the plot {file_path.name} in {[paths[0], *paths[1]]}.")
                         return None
 
                 new_plot_info: PlotInfo = PlotInfo(
@@ -390,10 +390,10 @@ class PlotManager:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Failed to open file {file_path}. {e} {tb}")
+                log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            self.log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
+            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
 
             return new_plot_info
 
