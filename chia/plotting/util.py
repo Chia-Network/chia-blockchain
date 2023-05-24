@@ -35,7 +35,6 @@ class PlotInfo:
     plot_public_key: G1Element
     file_size: int
     time_modified: float
-    compression_level: Optional[uint8] = uint8(0)
 
 
 class PlotRefreshEvents(Enum):
