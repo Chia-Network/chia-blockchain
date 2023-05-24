@@ -142,13 +142,6 @@ jobs:
           echo ----
           echo ${{ needs.*.result }}
 
-      - uses: coverallsapp/github-action@v2
-        if: needs.*.result == fromJSON('["success", "success", "success"]')
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        with:
-          parallel-finished: true
-
       - name: Coverage report (chia/)
         if: always()
         run: |
