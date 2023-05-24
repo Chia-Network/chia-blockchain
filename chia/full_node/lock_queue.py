@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 import logging
+import queue
 from typing import Any, AsyncIterator, Callable, Generic, Optional, Set, TypeVar
 
 from typing_extensions import Protocol
@@ -53,7 +54,7 @@ class LockQueue(Generic[_T_Comparable]):
     Must be created while an asyncio loop is running.
     """
 
-    _queue: asyncio.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=asyncio.PriorityQueue)
+    _queue: queue.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=queue.PriorityQueue)
     _active: Optional[_Element[_T_Comparable]] = None
     _creation_counter: int = 0
     cancelled: Set[_Element[_T_Comparable]] = dataclasses.field(default_factory=set)
@@ -81,13 +82,13 @@ class LockQueue(Generic[_T_Comparable]):
             self._creation_counter += 1
         element = _Element(priority=priority, creation_order=self._creation_counter, task=task)
 
-        await self._queue.put(element)
+        self._queue.put_nowait(element)
 
         if queued_callback is not None:
             with log_exceptions(log=log, consume=True):
                 queued_callback()
 
-        await self._process()
+        self._process()
 
         try:
             try:
@@ -100,14 +101,14 @@ class LockQueue(Generic[_T_Comparable]):
             if self._active is element:
                 self._active = None
 
-            await self._process()
+            self._process()
 
-    async def _process(self) -> None:
+    def _process(self) -> None:
         if self._active is not None or self._queue.empty():
             return
 
         while True:
-            element = await self._queue.get()
+            element = self._queue.get_nowait()
             if element not in self.cancelled:
                 break
             self.cancelled.remove(element)
