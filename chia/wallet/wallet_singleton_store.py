@@ -91,8 +91,9 @@ class WalletSingletonStore:
                 "confirmed, confirmed_at_height, spent_height, lineage_proof, custom_data, "
                 "generation, timestamp"
             )
+            value_placeholders = ",".join(["?"] * len(columns.split(",")))
             await conn.execute(
-                f"INSERT or REPLACE INTO singletons ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT or REPLACE INTO singletons ({columns}) VALUES({value_placeholders})",
                 (
                     record.name(),
                     json.dumps(record.coin.to_json_dict()),
