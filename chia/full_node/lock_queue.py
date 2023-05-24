@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import contextlib
 import dataclasses
 import logging
-import queue
-from typing import Any, AsyncIterator, Callable, Generic, Optional, Set, TypeVar
-
-from typing_extensions import Protocol
+from enum import IntEnum
+from typing import AsyncIterator, Callable, Dict, Generic, Optional, Type, TypeVar, final
 
 from chia.util.log_exceptions import log_exceptions
 
@@ -18,32 +17,25 @@ class NestedLockUnsupportedError(Exception):
     pass
 
 
-class _Comparable(Protocol):
-    def __lt__(self, other: Any) -> bool:
-        ...
+_T_Priority = TypeVar("_T_Priority", bound=IntEnum)
 
 
-_T_Comparable = TypeVar("_T_Comparable", bound=_Comparable)
-
-
-@dataclasses.dataclass(frozen=True, order=True)
-class _Element(Generic[_T_Comparable]):
-    priority: _T_Comparable
-    # forces retention of insertion order for matching priority requests
-    creation_order: float
+@dataclasses.dataclass(frozen=True)
+class _Element:
     task: asyncio.Task[object] = dataclasses.field(compare=False)
     ready_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event, compare=False)
 
 
+@final
 @dataclasses.dataclass()
-class LockQueue(Generic[_T_Comparable]):
+class LockQueue(Generic[_T_Priority]):
     """
     The purpose of this class is to be able to control access to a lock, and give
     priority to certain requests.  Lower values are given access first.  To use it,
     create a lock and use the `.acquire()` context manager method:
 
     ```
-    my_lock = LockQueue[int]()
+    my_lock = await LockQueue.create(priority_type=int)
 
     async with my_lock.acquire(priority=0):
        ...
@@ -54,18 +46,26 @@ class LockQueue(Generic[_T_Comparable]):
     Must be created while an asyncio loop is running.
     """
 
-    _queue: queue.PriorityQueue[_Element[_T_Comparable]] = dataclasses.field(default_factory=queue.PriorityQueue)
-    _active: Optional[_Element[_T_Comparable]] = None
-    _creation_counter: int = 0
-    cancelled: Set[_Element[_T_Comparable]] = dataclasses.field(default_factory=set)
+    _deques: Dict[int, collections.deque[_Element]]
+    _priority_index_map: Dict[_T_Priority, int]
+    _priority_type: Type[_T_Priority]
+    _active: Optional[_Element] = None
 
     # TODO: can we catch all unhandled errors and mark ourselves broken?
     # TODO: add debug logging
 
+    @classmethod
+    async def create(cls, priority_type: Type[_T_Priority]) -> LockQueue[_T_Priority]:
+        return cls(
+            _deques={priority: collections.deque() for priority in priority_type},
+            _priority_index_map={priority: index for index, priority in enumerate(sorted(priority_type))},
+            _priority_type=priority_type,
+        )
+
     @contextlib.asynccontextmanager
     async def acquire(
         self,
-        priority: _T_Comparable,
+        priority: _T_Priority,
         queued_callback: Optional[Callable[[], object]] = None,
     ) -> AsyncIterator[None]:
         task = asyncio.current_task()
@@ -76,42 +76,37 @@ class LockQueue(Generic[_T_Comparable]):
         if self._active is not None and self._active.task is task:
             raise NestedLockUnsupportedError()
 
-        if self._queue.empty():
-            self._creation_counter = 0
-        else:
-            self._creation_counter += 1
-        element = _Element(priority=priority, creation_order=self._creation_counter, task=task)
+        element = _Element(task=task)
 
-        self._queue.put_nowait(element)
-
-        if queued_callback is not None:
-            with log_exceptions(log=log, consume=True):
-                queued_callback()
-
-        self._process()
-
+        deque = self._deques[self._priority_index_map[priority]]
+        deque.append(element)
         try:
-            try:
-                await element.ready_event.wait()
-            except:  # noqa: E722
-                self.cancelled.add(element)
-                raise
-            yield
-        finally:
-            if self._active is element:
-                self._active = None
+            if queued_callback is not None:
+                with log_exceptions(log=log, consume=True):
+                    queued_callback()
 
             self._process()
 
+            try:
+                await element.ready_event.wait()
+                yield
+            finally:
+                if self._active is element:
+                    self._active = None
+        finally:
+            deque.remove(element)
+            self._process()
+
     def _process(self) -> None:
-        if self._active is not None or self._queue.empty():
+        if self._active is not None:
             return
 
-        while True:
-            element = self._queue.get_nowait()
-            if element not in self.cancelled:
-                break
-            self.cancelled.remove(element)
+        for index in self._priority_index_map:
+            deque = self._deques[index]
+            if len(deque) == 0:
+                continue
 
-        self._active = element
-        element.ready_event.set()
+            element = deque[0]
+            self._active = element
+            element.ready_event.set()
+            return

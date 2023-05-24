@@ -36,7 +36,7 @@ class RequestNotCompleteError(Exception):
 class TestLockQueue:
     @pytest.mark.asyncio
     async def test_lock_queue(self):
-        queue = LockQueue[LockPriority]()
+        queue = await LockQueue.create(priority_type=LockPriority)
 
         async def slow_func():
             for i in range(100):
@@ -176,7 +176,7 @@ def test_comparisons_fail_for_incomplete_requests(
 
 @pytest.mark.asyncio
 async def test_reacquisition_fails() -> None:
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
     request = Request(id="again!", priority=LockPriority.low)
     event = asyncio.Event()
     event.set()
@@ -233,7 +233,7 @@ async def test_reacquisition_fails() -> None:
 )
 @pytest.mark.asyncio
 async def test_order(case: OrderCase):
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -257,7 +257,7 @@ def expected_acquisition_order(requests):
 
 @pytest.mark.asyncio
 async def test_sequential_acquisitions():
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -272,7 +272,7 @@ async def test_sequential_acquisitions():
 
 @pytest.mark.asyncio
 async def test_nested_acquisition_raises():
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     async with queue.acquire(priority=LockPriority.high):
         with pytest.raises(NestedLockUnsupportedError):
@@ -288,7 +288,7 @@ async def to_be_cancelled(queue: LockQueue, event: asyncio.Event) -> None:
 
 @pytest.mark.asyncio
 async def test_to_be_cancelled_fails_if_not_cancelled():
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
     event = asyncio.Event()
 
     with pytest.raises(AssertionError):
@@ -297,7 +297,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled():
 
 @pytest.mark.asyncio
 async def test_cancellation_while_waiting():
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -343,7 +343,7 @@ async def test_cancellation_while_waiting():
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.asyncio
 async def test_retains_request_order_for_matching_priority(seed: int):
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=seed, version=2)
@@ -435,7 +435,7 @@ async def create_acquire_tasks_in_controlled_order(requests: List[Request], queu
 
 @pytest.mark.asyncio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
-    queue = LockQueue[LockPriority]()
+    queue = await LockQueue.create(priority_type=LockPriority)
 
     other_task_allow_release_event = asyncio.Event()
 
