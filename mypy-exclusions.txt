@@ -28,7 +28,6 @@ chia.seeder.crawler_api
 chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
-chia.server.start_harvester
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services
