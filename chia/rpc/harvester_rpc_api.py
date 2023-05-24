@@ -87,18 +87,37 @@ class HarvesterRpcApi:
             "use_gpu_harvesting": harvester_config["use_gpu_harvesting"],
             "gpu_index": harvester_config["gpu_index"],
             "enforce_gpu_index": harvester_config["enforce_gpu_index"],
+            "disable_cpu_affinity": harvester_config["disable_cpu_affinity"],
+            "parallel_decompressers_count": harvester_config["parallel_decompressers_count"],
+            "decompresser_thread_count": harvester_config["decompresser_thread_count"],
         }
 
     async def update_harvesting_mode(self, request: Dict) -> EndpointResult:
         use_gpu_harvesting: Optional[bool] = None
         gpu_index: Optional[int] = None
         enforce_gpu_index: Optional[bool] = None
+        disable_cpu_affinity: Optional[bool] = None
+        parallel_decompressers_count: Optional[int] = None
+        decompresser_thread_count: Optional[int] = None
         if "use_gpu_harvesting" in request:
             use_gpu_harvesting = bool(request["use_gpu_harvesting"])
         if "gpu_index" in request:
             gpu_index = int(request["gpu_index"])
         if "enforce_gpu_index" in request:
             enforce_gpu_index = bool(request["enforce_gpu_index"])
+        if "disable_cpu_affinity" in request:
+            disable_cpu_affinity = bool(request["disable_cpu_affinity"])
+        if "parallel_decompressers_count" in request:
+            parallel_decompressers_count = int(request["parallel_decompressers_count"])
+        if "decompresser_thread_count" in request:
+            decompresser_thread_count = int(request["decompresser_thread_count"])
 
-        await self.service.update_harvesting_mode(use_gpu_harvesting, gpu_index, enforce_gpu_index)
+        await self.service.update_harvesting_mode(
+            use_gpu_harvesting=use_gpu_harvesting,
+            gpu_index=gpu_index,
+            enforce_gpu_index=enforce_gpu_index,
+            disable_cpu_affinity=disable_cpu_affinity,
+            parallel_decompressers_count=parallel_decompressers_count,
+            decompresser_thread_count=decompresser_thread_count,
+        )
         return {}
