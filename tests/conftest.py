@@ -87,7 +87,6 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-
 class Mode(Enum):
     PLAIN = 0
 
@@ -103,6 +102,7 @@ def blockchain_constants(request: SubRequest) -> ConsensusConstants:
 def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
     _shared_block_tools = create_block_tools(constants=blockchain_constants, keychain=get_keychain)
+    return _shared_block_tools
 
 
 # if you have a system that has an unusual hostname for localhost and you want
@@ -121,6 +121,7 @@ def self_hostname():
 #       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
+@pytest_asyncio.fixture(scope="function", params=[1, 2])
 async def empty_blockchain(request, blockchain_constants):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
@@ -305,10 +306,8 @@ async def five_nodes(db_version, self_hostname, blockchain_constants):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes(soft_fork3):
-    async_gen = setup_simulators_and_wallets(
-        2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK3_HEIGHT": soft_fork3}
-    )
+async def wallet_nodes():
+    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -335,8 +334,8 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets_services(soft_fork3):
-    async for _ in setup_simulators_and_wallets_service(2, 0, {"SOFT_FORK3_HEIGHT": soft_fork3}):
+async def two_nodes_sim_and_wallets_services():
+    async for _ in setup_simulators_and_wallets_service(2, 0, {}):
         yield _
 
 
