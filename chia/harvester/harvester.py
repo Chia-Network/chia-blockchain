@@ -217,15 +217,22 @@ class Harvester:
 
     async def update_harvesting_mode(
         self,
+        *,
         use_gpu_harvesting: Optional[bool] = None,
         gpu_index: Optional[int] = None,
         enforce_gpu_index: Optional[bool] = None,
+        disable_cpu_affinity: Optional[bool] = None,
+        parallel_decompressers_count: Optional[int] = None,
+        decompresser_thread_count: Optional[int] = None,
     ):
         update_harvesting_mode(
             self.root_path,
             use_gpu_harvesting=use_gpu_harvesting,
             gpu_index=gpu_index,
             enforce_gpu_index=enforce_gpu_index,
+            disable_cpu_affinity=disable_cpu_affinity,
+            parallel_decompressers_count=parallel_decompressers_count,
+            decompresser_thread_count=decompresser_thread_count,
         )
         return True
 
