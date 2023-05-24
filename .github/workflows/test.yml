@@ -138,9 +138,9 @@ jobs:
 
       - run: |
           echo ----
-          echo ${{ needs }}
+          echo ${{ format('{0}', needs) }}
           echo ----
-          echo ${{ needs.*.result }}
+          echo ${{ format('{0}', needs.*.result) }}
 
       - uses: coverallsapp/github-action@v2
         if: needs.*.result == fromJSON('["success", "success", "success"]')
