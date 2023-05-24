@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import sysconfig
 import tempfile
+from enum import Enum
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -15,8 +16,10 @@ import pytest_asyncio
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-# Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import CostLogger
+
+# Set spawn after stdlib imports, but before other imports
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
@@ -84,20 +87,22 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-@pytest.fixture(scope="session", params=[0, 4200000], ids=["soft_fork3_0", "soft_fork3_4200000"])
-def soft_fork3(request):
-    return request.param
+
+class Mode(Enum):
+    PLAIN = 0
+
+
+@pytest.fixture(scope="session", params=[Mode.PLAIN])
+def blockchain_constants(request: SubRequest) -> ConsensusConstants:
+    if request.param == Mode.PLAIN:
+        return test_constants
+    raise AssertionError("Invalid Blockchain mode in simulation")
 
 
 @pytest.fixture(scope="session", name="bt")
-def block_tools_fixture(get_keychain, soft_fork3) -> BlockTools:
+def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    updated_test_constants = test_constants.replace(
-        SOFT_FORK3_HEIGHT=soft_fork3,
-    )
-
-    _shared_block_tools = create_block_tools(constants=updated_test_constants, keychain=get_keychain)
-    return _shared_block_tools
+    _shared_block_tools = create_block_tools(constants=blockchain_constants, keychain=get_keychain)
 
 
 # if you have a system that has an unusual hostname for localhost and you want
@@ -116,19 +121,13 @@ def self_hostname():
 #       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request, soft_fork3):
+async def empty_blockchain(request, blockchain_constants):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
-    from chia.simulator.setup_nodes import test_constants
     from tests.util.blockchain import create_blockchain
 
-    updated_test_constants = test_constants.replace(
-        SOFT_FORK3_HEIGHT=soft_fork3,
-    )
-
-    bc1, db_wrapper, db_path = await create_blockchain(updated_test_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
     yield bc1
 
     await db_wrapper.close()
@@ -155,164 +154,97 @@ saved_blocks_version = "rc5"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks(bt, soft_fork3):
+def default_400_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}_softfork3.db", bt, seed=b"400")
-    else:
-        return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
+    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
-def default_1000_blocks(bt, soft_fork3):
+def default_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}_softfork3.db", bt, seed=b"1000")
-    else:
-        return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
+    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
-def pre_genesis_empty_slots_1000_blocks(bt, soft_fork3):
+def pre_genesis_empty_slots_1000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(
-            1000,
-            f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}_softfork3.db",
-            bt,
-            seed=b"empty_slots",
-            empty_sub_slots=1,
-        )
-    else:
-        return persistent_blocks(
-            1000,
-            f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
-            bt,
-            seed=b"empty_slots",
-            empty_sub_slots=1,
-        )
+    return persistent_blocks(
+        1000,
+        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
+        bt,
+        seed=b"empty_slots",
+        empty_sub_slots=1,
+    )
 
 
 @pytest.fixture(scope="session")
-def default_1500_blocks(bt, soft_fork3):
+def default_1500_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}_softfork3.db", bt, seed=b"1500")
-    else:
-        return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
+    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks(bt, soft_fork3):
+def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}_softfork3.db", bt, seed=b"10000")
-    else:
-        return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
+    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt, soft_fork3):
+def default_20000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}_softfork3.db", bt, seed=b"20000")
-    else:
-        return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
+    return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
 
 
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, default_1500_blocks, soft_fork3):
+def test_long_reorg_blocks(bt, default_1500_blocks):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(
-            758,
-            f"test_blocks_long_reorg_{saved_blocks_version}_softfork3.db",
-            bt,
-            block_list_input=default_1500_blocks[:320],
-            seed=b"reorg_blocks",
-            time_per_block=8,
-        )
-    else:
-        return persistent_blocks(
-            758,
-            f"test_blocks_long_reorg_{saved_blocks_version}.db",
-            bt,
-            block_list_input=default_1500_blocks[:320],
-            seed=b"reorg_blocks",
-            time_per_block=8,
-        )
+    return persistent_blocks(
+        758,
+        f"test_blocks_long_reorg_{saved_blocks_version}.db",
+        bt,
+        block_list_input=default_1500_blocks[:320],
+        seed=b"reorg_blocks",
+        time_per_block=8,
+    )
 
 
 @pytest.fixture(scope="session")
-def default_2000_blocks_compact(bt, soft_fork3):
+def default_2000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("No cache available")
-        return persistent_blocks(
-            2000,
-            f"test_blocks_2000_compact_{saved_blocks_version}_softfork3.db",
-            bt,
-            normalized_to_identity_cc_eos=True,
-            normalized_to_identity_icc_eos=True,
-            normalized_to_identity_cc_ip=True,
-            normalized_to_identity_cc_sp=True,
-            seed=b"2000_compact",
-        )
-    else:
-        return persistent_blocks(
-            2000,
-            f"test_blocks_2000_compact_{saved_blocks_version}.db",
-            bt,
-            normalized_to_identity_cc_eos=True,
-            normalized_to_identity_icc_eos=True,
-            normalized_to_identity_cc_ip=True,
-            normalized_to_identity_cc_sp=True,
-            seed=b"2000_compact",
-        )
+    return persistent_blocks(
+        2000,
+        f"test_blocks_2000_compact_{saved_blocks_version}.db",
+        bt,
+        normalized_to_identity_cc_eos=True,
+        normalized_to_identity_icc_eos=True,
+        normalized_to_identity_cc_ip=True,
+        normalized_to_identity_cc_sp=True,
+        seed=b"2000_compact",
+    )
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks_compact(bt, soft_fork3):
+def default_10000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
-    if soft_fork3 == 0:
-        pytest.skip("Test cache not available")
-        return persistent_blocks(
-            10000,
-            f"test_blocks_10000_compact_{saved_blocks_version}_softfork3.db",
-            bt,
-            normalized_to_identity_cc_eos=True,
-            normalized_to_identity_icc_eos=True,
-            normalized_to_identity_cc_ip=True,
-            normalized_to_identity_cc_sp=True,
-            seed=b"1000_compact",
-        )
-    else:
-        return persistent_blocks(
-            10000,
-            f"test_blocks_10000_compact_{saved_blocks_version}.db",
-            bt,
-            normalized_to_identity_cc_eos=True,
-            normalized_to_identity_icc_eos=True,
-            normalized_to_identity_cc_ip=True,
-            normalized_to_identity_cc_sp=True,
-            seed=b"1000_compact",
-        )
+    return persistent_blocks(
+        10000,
+        f"test_blocks_10000_compact_{saved_blocks_version}.db",
+        bt,
+        normalized_to_identity_cc_eos=True,
+        normalized_to_identity_icc_eos=True,
+        normalized_to_identity_cc_ip=True,
+        normalized_to_identity_cc_sp=True,
+        seed=b"1000_compact",
+    )
 
 
 @pytest.fixture(scope="function")
@@ -343,8 +275,8 @@ async def node_with_params(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname):
-    async for _ in setup_two_nodes(test_constants, db_version=db_version, self_hostname=self_hostname):
+async def two_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_two_nodes(blockchain_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
@@ -355,20 +287,20 @@ async def setup_two_nodes_fixture(db_version):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 3, db_version=db_version, self_hostname=self_hostname):
+async def three_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 3, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 4, db_version=db_version, self_hostname=self_hostname):
+async def four_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 4, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def five_nodes(db_version, self_hostname):
-    async for _ in setup_n_nodes(test_constants, 5, db_version=db_version, self_hostname=self_hostname):
+async def five_nodes(db_version, self_hostname, blockchain_constants):
+    async for _ in setup_n_nodes(blockchain_constants, 5, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
@@ -645,7 +577,7 @@ async def two_nodes_one_block():
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=True):
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
         yield _
 
 
@@ -653,7 +585,7 @@ async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[
 async def farmer_one_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -661,7 +593,7 @@ async def farmer_one_harvester_not_started(
 async def farmer_two_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -669,7 +601,7 @@ async def farmer_two_harvester_not_started(
 async def farmer_three_harvester_not_started(
     tmp_path: Path, bt: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, test_constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, bt.constants, start_services=False):
         yield _
 
 
@@ -843,13 +775,13 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, test_constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
         yield _
 
 

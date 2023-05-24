@@ -46,10 +46,10 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator,
 )
 from chia.full_node.signage_point import SignagePoint
-from chia.plotters.chiapos import Params
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    Params,
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
@@ -179,13 +179,13 @@ class BlockTools:
         self,
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
-        const_dict=None,
+        const_dict: Optional[Dict[str, int]] = None,
         keychain: Optional[Keychain] = None,
-        config_overrides: Optional[Dict] = None,
+        config_overrides: Optional[Dict[str, Any]] = None,
         automated_testing: bool = True,
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
-    ):
+    ) -> None:
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -257,7 +257,7 @@ class BlockTools:
         self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
-        def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
+        def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
             assert update_result.duration < 15
             if event == PlotRefreshEvents.started:
                 self.total_result = PlotRefreshResult()
@@ -283,7 +283,7 @@ class BlockTools:
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
-    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
+    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
         keychain_proxy: Optional[KeychainProxy]
         try:
             if self.local_keychain:
@@ -337,7 +337,7 @@ class BlockTools:
             if keychain_proxy is not None:
                 await keychain_proxy.close()  # close the keychain proxy
 
-    def change_config(self, new_config: Dict):
+    def change_config(self, new_config: Dict[str, Any]) -> None:
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = self.constants.replace_str_to_bytes(**overrides)
@@ -389,8 +389,8 @@ class BlockTools:
     async def new_plot(
         self,
         pool_contract_puzzle_hash: Optional[bytes32] = None,
-        path: Path = None,
-        tmp_dir: Path = None,
+        path: Optional[Path] = None,
+        tmp_dir: Optional[Path] = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
@@ -472,14 +472,14 @@ class BlockTools:
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
-    async def delete_plot(self, plot_id: bytes32):
+    async def delete_plot(self, plot_id: bytes32) -> None:
         assert plot_id in self.expected_plots
         self.expected_plots[plot_id].unlink()
         del self.expected_plots[plot_id]
         await self.refresh_plots()
 
     @property
-    def config(self) -> Dict:
+    def config(self) -> Dict[str, Any]:
         return copy.deepcopy(self._config)
 
     def get_daemon_ssl_context(self) -> ssl.SSLContext:
@@ -559,7 +559,7 @@ class BlockTools:
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: List[FullBlock] = None,
+        block_list_input: Optional[List[FullBlock]] = None,
         *,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
@@ -1686,8 +1686,8 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
-    overflow_cc_challenge: bytes32 = None,
-    overflow_rc_challenge: bytes32 = None,
+    overflow_cc_challenge: Optional[bytes32] = None,
+    overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
     block_time_residual: float = 0.0,
@@ -2034,7 +2034,7 @@ def create_test_unfinished_block(
     additions: Optional[List[Coin]] = None,
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
+    finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
 ) -> UnfinishedBlock:
     """
     Creates a new unfinished block using all the information available at the signage point. This will have to be
@@ -2177,9 +2177,9 @@ create_block_tools_count = 0
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict=None,
+    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
-    config_overrides: Optional[Dict] = None,
+    config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2194,9 +2194,9 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict] = None,
+    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
-    config_overrides: Optional[Dict] = None,
+    config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
