@@ -1411,7 +1411,6 @@ def assert_plot_queue_response(
     expected_message_state: str,
     expected_plot_id: str,
     expected_plot_state: str,
-    expected_log_entry: Optional[str] = None,
 ) -> None:
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
@@ -1420,9 +1419,6 @@ def assert_plot_queue_response(
     plot_info = message["data"]["queue"][0]
     assert plot_info["id"] == expected_plot_id
     assert plot_info["state"] == expected_plot_state
-
-    if expected_log_entry is not None:
-        assert plot_info["log_new"] == expected_log_entry
 
 
 def check_plot_queue_log(
