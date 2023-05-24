@@ -33,13 +33,10 @@ class CoinType(IntEnum):
     CLAWBACK = 1
 
 
-class RemarkDataType:
-    """
-    We use a relative random unique string here to represent a type of Remark announcement.
-    This will reduce the chance of collision with Remark announcements in other puzzles.
-    """
-
-    CLAWBACK = bytes.fromhex("C001")
+class RemarkDataType(IntEnum):
+    NORMAL = 0
+    CUSTODY = 1
+    CLAWBACK = 2
 
 
 @dataclass(frozen=True)

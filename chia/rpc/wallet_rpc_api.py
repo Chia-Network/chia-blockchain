@@ -900,29 +900,27 @@ class WalletRpcApi:
             type_filter=type_filter,
             confirmed=request.get("confirmed", None),
         )
-        txs = [
-            (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-            for tr in transactions
-        ]
+        tx_list = []
         # Format for clawback transactions
         clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
-        for tx in txs:
-            if tx["type"] in clawback_types and tx["spend_bundle"] is not None:
-                coin: Coin = Coin.from_json_dict(tx["additions"][0])
-                record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
-                    coin.name()
-                )
-                assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
-                assert (
-                    record.metadata is not None and record.metadata.blob is not None and len(record.metadata.blob) > 1
-                ), f"Cannot find metadata for clawback transaction {record.coin.name().hex()}"
-                clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-                tx["metadata"] = clawback_metadata.to_json_dict()
-                tx["metadata"]["coin_id"] = coin.name().hex()
-                tx["metadata"]["spent"] = record.spent
+        for tr in transactions:
+            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+            tx_list.append(tx)
+            if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
+                continue
+            coin: Coin = tr.additions[0]
+            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                coin.name()
+            )
+            assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
+            assert record.metadata is not None, f"None metadata for clawback transaction {record.coin.name().hex()}"
+            clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
+            tx["metadata"] = clawback_metadata.to_json_dict()
+            tx["metadata"]["coin_id"] = coin.name().hex()
+            tx["metadata"]["spent"] = record.spent
 
         return {
-            "transactions": txs,
+            "transactions": tx_list,
             "wallet_id": wallet_id,
         }
 
@@ -1064,6 +1062,8 @@ class WalletRpcApi:
         coin_records = await self.service.wallet_state_manager.coin_store.get_coin_records(
             coin_id_filter=HashFilter.include(coin_ids),
             coin_type=CoinType.CLAWBACK,
+            wallet_type=WalletType.STANDARD_WALLET,
+            spent_range=UInt32Range(stop=uint32(0)),
         )
 
         coins: Dict[Coin, ClawbackMetadata] = {}
@@ -1072,20 +1072,15 @@ class WalletRpcApi:
         )
         tx_id_list: List[bytes] = []
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
-            if coin_record.metadata is None:
-                log.warning(f"Skip merkle coin f{coin_id.hex()}, metadata cannot be None.")
-                continue
-            if coin_record.spent:
-                log.warning(f"Coin {coin_id.hex()} is already spent.")
-                continue
-            if coin_record.wallet_type != WalletType.STANDARD_WALLET:
-                log.warning("Only support standard XCH wallet.")
-                continue
-            metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
-            coins[coin_record.coin] = metadata
-            if len(coins) >= batch_size:
-                tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
-                coins = {}
+            try:
+                assert coin_record.metadata is not None, f"Coin record {coin_id.hex()} has no metadata"
+                metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
+                coins[coin_record.coin] = metadata
+                if len(coins) >= batch_size:
+                    tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
+                    coins = {}
+            except Exception as e:
+                log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
             tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
         return {

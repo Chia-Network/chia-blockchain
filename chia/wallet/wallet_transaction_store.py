@@ -121,11 +121,6 @@ class WalletTransactionStore:
             return None
         if current.confirmed_at_height == height:
             return
-        if current.type == TransactionType.OUTGOING_CLAWBACK:
-            # Update incoming CLAWBACK transaction to be confirmed
-            # Note: The incoming TX ID is the clawback coin ID
-            for coin in current.removals:
-                await self.set_confirmed(coin.name(), height)
         tx: TransactionRecord = dataclasses.replace(current, confirmed_at_height=height, confirmed=True)
         await self.add_transaction_record(tx)
 

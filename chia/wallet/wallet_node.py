@@ -583,7 +583,7 @@ class WalletNode:
                     assert peer is not None
                     await self.new_peak_wallet(new_peak, peer)
                     # Check if any coin needs auto spending
-                    if self.config.get("auto_claim", {}).get("enabled", True):
+                    if self.config.get("auto_claim", {}).get("enabled", False):
                         await self.wallet_state_manager.auto_claim_coins()
                 else:
                     self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)

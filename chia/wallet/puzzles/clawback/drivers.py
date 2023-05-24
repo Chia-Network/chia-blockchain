@@ -139,14 +139,14 @@ def match_clawback_puzzle(
             if (
                 condition.opcode == ConditionOpcode.REMARK
                 and len(condition.vars) == 2
-                and condition.vars[0] == RemarkDataType.CLAWBACK
+                and int.from_bytes(condition.vars[0], "big") == RemarkDataType.CLAWBACK
             ):
                 try:
                     metadata = ClawbackMetadata.from_bytes(VersionedBlob.from_bytes(condition.vars[1]).blob)
-                except Exception:  # pragma: no cover
+                except Exception:
                     # Invalid Clawback metadata
-                    log.error(f"Invalid Clawback metadata {condition.vars[1].hex()}")  # pragma: no cover
-                    return None  # pragma: no cover
+                    log.error(f"Invalid Clawback metadata {condition.vars[1].hex()}")
+                    return None
             if condition.opcode == ConditionOpcode.CREATE_COIN:
                 new_puzhash.add(bytes32.from_bytes(condition.vars[0]))
     # Check if the inner puzzle matches the coin puzzle hash

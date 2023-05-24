@@ -16,20 +16,25 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.errors import Err
 from chia.util.ints import uint64
+from chia.util.misc import VersionedBlob
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,
     create_clawback_merkle_tree,
     create_merkle_puzzle,
     create_merkle_solution,
     create_p2_puzzle_hash_puzzle,
+    match_clawback_puzzle,
 )
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.merkle_utils import check_merkle_proof
+from chia.wallet.util.wallet_types import RemarkDataType
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
@@ -99,7 +104,26 @@ class TestClawbackLifecycle:
             cb_puzzle = create_merkle_puzzle(timelock, sender_ph, recipient_ph)
             cb_puz_hash = cb_puzzle.get_tree_hash()
 
-            sender_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, cb_puz_hash, amount]])
+            sender_invalid_sol = solution_for_conditions(
+                [
+                    [ConditionOpcode.CREATE_COIN, cb_puz_hash, amount],
+                    [ConditionOpcode.REMARK.value, RemarkDataType.CLAWBACK, b"Test"],
+                ]
+            )
+            sender_sol = solution_for_conditions(
+                [
+                    [ConditionOpcode.CREATE_COIN, cb_puz_hash, amount],
+                    [
+                        ConditionOpcode.REMARK.value,
+                        RemarkDataType.CLAWBACK,
+                        bytes(
+                            VersionedBlob(
+                                ClawbackVersion.V1.value, bytes(ClawbackMetadata(timelock, sender_ph, recipient_ph))
+                            )
+                        ),
+                    ],
+                ]
+            )
             coin_spend = CoinSpend(starting_coin, sender_puz, sender_sol)
             sig = self.sign_coin_spend(coin_spend, sender_index)
             spend_bundle = SpendBundle([coin_spend], sig)
@@ -116,7 +140,14 @@ class TestClawbackLifecycle:
             # Fetch the clawback coin
             clawback_coin = (await sim_client.get_coin_records_by_puzzle_hash(cb_puz_hash))[0].coin
             assert clawback_coin.amount == amount
-
+            # Test match_clawback_puzzle
+            clawback_metadata = match_clawback_puzzle(uncurry_puzzle(sender_puz), sender_puz, sender_sol)
+            assert clawback_metadata is not None
+            assert clawback_metadata.time_lock == timelock
+            assert clawback_metadata.sender_puzzle_hash == sender_ph
+            assert clawback_metadata.recipient_puzzle_hash == recipient_ph
+            clawback_metadata = match_clawback_puzzle(uncurry_puzzle(sender_puz), sender_puz, sender_invalid_sol)
+            assert clawback_metadata is None
             # Fail an early claim spend
             recipient_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, recipient_ph, amount]])
             claim_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)

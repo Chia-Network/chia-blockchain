@@ -54,7 +54,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import VersionedBlob
+from chia.util.misc import UInt32Range, VersionedBlob
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
@@ -698,7 +698,7 @@ class WalletStateManager:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
         # Check if the coin is clawback
-        solution = Program.from_bytes(bytes(coin_spend.solution))
+        solution = coin_spend.solution.to_program()
         clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
         if clawback_metadata is not None:
             return await self.handle_clawback(clawback_metadata, coin_state, coin_spend, peer)
@@ -723,23 +723,28 @@ class WalletStateManager:
 
     async def auto_claim_coins(self) -> None:
         # Get unspent clawback coin
-        unspent_coins = await self.coin_store.get_all_unspent_coins(coin_type=CoinType.CLAWBACK)
         current_timestamp = self.blockchain.get_latest_timestamp()
         clawback_coins: Dict[Coin, ClawbackMetadata] = {}
         tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
         min_amount = uint64(self.config.get("auto_claim", {}).get("min_amount", 0))
-        for coin in unspent_coins:
-            if coin.metadata is None or coin.metadata.blob is None or len(coin.metadata.blob) <= 1:
-                self.log.error(f"Cannot auto claim clawback coin {coin.coin.name().hex()} since missing metadata.")
-                continue
-            metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
-            if coin.coin.amount >= min_amount and await metadata.is_recipient(self.puzzle_store):
-                coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
-                if current_timestamp - coin_timestamp >= metadata.time_lock:
-                    clawback_coins[coin.coin] = metadata
-                    if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                        await self.spend_clawback_coins(clawback_coins, tx_fee)
-                        clawback_coins = {}
+        unspent_coins = await self.coin_store.get_coin_records(
+            coin_type=CoinType.CLAWBACK,
+            wallet_type=WalletType.STANDARD_WALLET,
+            spent_range=UInt32Range(stop=uint32(0)),
+        )
+        for coin in unspent_coins.records:
+            try:
+                assert coin.metadata is not None, f"Missing metadata for clawback coin {coin.coin.name().hex()}"
+                metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
+                if coin.coin.amount >= min_amount and await metadata.is_recipient(self.puzzle_store):
+                    coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
+                    if current_timestamp - coin_timestamp >= metadata.time_lock:
+                        clawback_coins[coin.coin] = metadata
+                        if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
+                            await self.spend_clawback_coins(clawback_coins, tx_fee)
+                            clawback_coins = {}
+            except Exception as e:
+                self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
             await self.spend_clawback_coins(clawback_coins, tx_fee)
 
@@ -752,11 +757,14 @@ class WalletStateManager:
         amount: uint64 = uint64(0)
         for coin, metadata in clawback_coins.items():
             try:
+                self.log.info(f"Claiming clawback coin {coin.name().hex()}")
                 # Get incoming tx
                 incoming_tx = await self.tx_store.get_transaction_record(coin.name())
                 assert incoming_tx is not None, f"Cannot find incoming tx for clawback coin {coin.name().hex()}"
                 if incoming_tx.sent > 0:
-                    self.log.debug(f"Clawback coin {coin.name().hex()} is already in a pending spend bundle.")
+                    self.log.error(
+                        f"Clawback coin {coin.name().hex()} is already in a pending spend bundle. {incoming_tx}"
+                    )
                     continue
 
                 recipient_puzhash: bytes32 = metadata.recipient_puzzle_hash
@@ -768,9 +776,7 @@ class WalletStateManager:
                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
                 assert derivation_record is not None
                 if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
-                    await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(
-                        recipient_puzhash if is_recipient else sender_puzhash
-                    )
+                    await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(derivation_record.puzzle_hash)
                 amount = uint64(amount + coin.amount)
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
@@ -1185,7 +1191,7 @@ class WalletStateManager:
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
             spend_bundle = SpendBundle([coin_spend], G2Element())
             tx_record = TransactionRecord(
-                confirmed_at_height=uint32(0),
+                confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
@@ -1203,7 +1209,7 @@ class WalletStateManager:
                     if is_recipient
                     else TransactionType.INCOMING_CLAWBACK_SEND
                 ),
-                # We use coin ID as the TX ID to mapping with the coin table
+                # Use coin ID as the TX ID to mapping with the coin table
                 name=coin_record.coin.name(),
                 memos=list(memos.items()),
             )
@@ -1458,10 +1464,19 @@ class WalletStateManager:
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             rem_tx_records: List[TransactionRecord] = []
-                            for out_tx_record in all_unconfirmed:
-                                for rem_coin in out_tx_record.removals:
-                                    if rem_coin == coin_state.coin:
-                                        rem_tx_records.append(out_tx_record)
+                            for tx_record in all_unconfirmed:
+                                # For clawback incoming txs, we need to mark them as confirmed in the db
+                                if tx_record.type in {
+                                    uint32(TransactionType.INCOMING_CLAWBACK_SEND),
+                                    uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE),
+                                }:
+                                    for add_coin in tx_record.additions:
+                                        if add_coin == coin_state.coin:
+                                            rem_tx_records.append(tx_record)
+                                else:
+                                    for rem_coin in tx_record.removals:
+                                        if rem_coin == coin_state.coin:
+                                            rem_tx_records.append(tx_record)
 
                             for tx_record in rem_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
