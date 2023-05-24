@@ -41,6 +41,7 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
@@ -387,7 +388,8 @@ class DIDWallet:
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
             response = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            parent_innerpuz = get_inner_puzzle_from_singleton(response.puzzle_reveal.to_program())
+            uncurried_singleton = uncurry_puzzle(response.puzzle_reveal.to_program())
+            parent_innerpuz = get_inner_puzzle_from_singleton(uncurried_singleton)
             if parent_innerpuz:
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
@@ -506,7 +508,8 @@ class DIDWallet:
                 assert children_state.created_height
                 parent_spend = await fetch_coin_spend(uint32(children_state.created_height), parent_coin, peer)
                 assert parent_spend is not None
-                parent_innerpuz = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal.to_program())
+                uncurried_singleton = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
+                parent_innerpuz = get_inner_puzzle_from_singleton(uncurried_singleton)
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
                     parent_coin.parent_coin_info,
