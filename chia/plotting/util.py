@@ -159,6 +159,9 @@ def get_harvesting_mode(root_path: Path, config: Dict = None) -> Dict:
         "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting"),
         "gpu_index": config["harvester"].get("gpu_index"),
         "enforce_gpu_index": config["harvester"].get("enforce_gpu_index"),
+        "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity"),
+        "parallel_decompressers_count": config["harvester"].get("parallel_decompressers_count"),
+        "decompresser_thread_count": config["harvester"].get("decompresser_thread_count"),
     }
 
 
@@ -168,6 +171,9 @@ def update_harvesting_mode(
     use_gpu_harvesting: Optional[bool] = None,
     gpu_index: Optional[int] = None,
     enforce_gpu_index: Optional[bool] = None,
+    disable_cpu_affinity: Optional[bool] = None,
+    parallel_decompressers_count: Optional[int] = None,
+    decompresser_thread_count: Optional[int] = None,
 ):
     with lock_and_load_config(root_path, "config.yaml") as config:
         if use_gpu_harvesting is not None:
@@ -176,6 +182,12 @@ def update_harvesting_mode(
             config["harvester"]["gpu_index"] = gpu_index
         if enforce_gpu_index is not None:
             config["harvester"]["enforce_gpu_index"] = enforce_gpu_index
+        if disable_cpu_affinity is not None:
+            config["harvester"]["disable_cpu_affinity"] = disable_cpu_affinity
+        if parallel_decompressers_count is not None:
+            config["harvester"]["parallel_decompressers_count"] = parallel_decompressers_count
+        if decompresser_thread_count is not None:
+            config["harvester"]["decompresser_thread_count"] = decompresser_thread_count
         save_config(root_path, "config.yaml", config)
 
 
