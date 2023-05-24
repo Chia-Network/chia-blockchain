@@ -378,7 +378,6 @@ class PlotManager:
                     cache_entry.plot_public_key,
                     stat_info.st_size,
                     stat_info.st_mtime,
-                    cache_entry.compression_level,
                 )
 
                 cache_entry.bump_last_use()
