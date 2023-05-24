@@ -875,6 +875,7 @@ class WalletRpcApi:
             reverse=reverse,
             to_puzzle_hash=to_puzzle_hash,
             type_filter=type_filter,
+            confirmed=request.get("confirmed", None),
         )
         return {
             "transactions": [

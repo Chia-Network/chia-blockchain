@@ -263,6 +263,7 @@ class WalletTransactionStore:
         end,
         sort_key=None,
         reverse=False,
+        confirmed: Optional[bool] = None,
         to_puzzle_hash: Optional[bytes32] = None,
         type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
@@ -286,6 +287,11 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
+        if confirmed is None:
+            confirmed_str = ""
+        else:
+            confirmed_str = "AND confirmed=" + str(int(confirmed))
+
         if type_filter is None:
             type_filter_str = ""
         else:
@@ -297,7 +303,7 @@ class WalletTransactionStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT transaction_record FROM transaction_record WHERE wallet_id=?{puzz_hash_where}"
-                f" {type_filter_str} {query_str}, rowid"
+                f" {type_filter_str} {confirmed_str} {query_str}, rowid"
                 f" LIMIT {start}, {limit}",
                 (wallet_id,),
             )
