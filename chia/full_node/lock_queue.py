@@ -47,7 +47,6 @@ class LockQueue(Generic[_T_Priority]):
     """
 
     _deques: Dict[_T_Priority, collections.deque[_Element]]
-    _priority_type: Type[_T_Priority]
     _active: Optional[_Element] = None
 
     # TODO: can we catch all unhandled errors and mark ourselves broken?
@@ -57,7 +56,6 @@ class LockQueue(Generic[_T_Priority]):
     async def create(cls, priority_type: Type[_T_Priority]) -> LockQueue[_T_Priority]:
         return cls(
             _deques={priority: collections.deque() for priority in sorted(priority_type)},
-            _priority_type=priority_type,
         )
 
     @contextlib.asynccontextmanager
