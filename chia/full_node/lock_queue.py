@@ -46,8 +46,7 @@ class LockQueue(Generic[_T_Priority]):
     Must be created while an asyncio loop is running.
     """
 
-    _deques: Dict[int, collections.deque[_Element]]
-    _priority_index_map: Dict[_T_Priority, int]
+    _deques: Dict[_T_Priority, collections.deque[_Element]]
     _priority_type: Type[_T_Priority]
     _active: Optional[_Element] = None
 
@@ -57,8 +56,7 @@ class LockQueue(Generic[_T_Priority]):
     @classmethod
     async def create(cls, priority_type: Type[_T_Priority]) -> LockQueue[_T_Priority]:
         return cls(
-            _deques={priority: collections.deque() for priority in priority_type},
-            _priority_index_map={priority: index for index, priority in enumerate(sorted(priority_type))},
+            _deques={priority: collections.deque() for priority in sorted(priority_type)},
             _priority_type=priority_type,
         )
 
@@ -78,7 +76,7 @@ class LockQueue(Generic[_T_Priority]):
 
         element = _Element(task=task)
 
-        deque = self._deques[self._priority_index_map[priority]]
+        deque = self._deques[priority]
         deque.append(element)
         try:
             if queued_callback is not None:
@@ -101,8 +99,7 @@ class LockQueue(Generic[_T_Priority]):
         if self._active is not None:
             return
 
-        for index in self._priority_index_map:
-            deque = self._deques[index]
+        for deque in self._deques.values():
             if len(deque) == 0:
                 continue
 

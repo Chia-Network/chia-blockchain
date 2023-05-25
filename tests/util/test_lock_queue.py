@@ -21,9 +21,11 @@ log = logging.getLogger(__name__)
 
 class LockPriority(enum.IntEnum):
     # lower values are higher priority
-    low = 2
-    medium = 1
+    low = 3
+    # skipping 2 for testing
     high = 0
+    # out of order for testing
+    medium = 1
 
 
 lock_priorities = list(LockPriority)
