@@ -5,7 +5,6 @@ from typing import Optional
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
-from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
@@ -15,34 +14,20 @@ SINGLETON_LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_PUZZLE_HASH = SINGLETON_LAUNCHER_PUZZLE.get_tree_hash()
 
 
-def get_inner_puzzle_from_singleton(puzzle: UncurriedPuzzle) -> Optional[Program]:
+def get_inner_puzzle_from_singleton(puzzle: Program) -> Optional[Program]:
     """
     Extract the inner puzzle of a singleton
-    :param puzzle: Uncurried Singleton puzzle
+    :param puzzle: Singleton puzzle
     :return: Inner puzzle
     """
-    if puzzle is None:
+    r = puzzle.uncurry()
+    if r is None:
         return None
-
-    if not is_singleton(puzzle.mod):
+    inner_f, args = r
+    if not is_singleton(inner_f):
         return None
-    singleton_struct, inner_puzzle = list(puzzle.args.as_iter())
-    return Program(inner_puzzle)
-
-
-def get_singleton_id_from_singleton(puzzle: UncurriedPuzzle) -> Optional[bytes32]:
-    """
-    Extract the singleton_id from the full puzzle of a singleton
-    :param puzzle: Uncurried Singleton puzzle
-    :return: Singleton ID
-    """
-    if puzzle is None:
-        return None
-
-    if not is_singleton(puzzle.mod):
-        return None
-    singleton_struct, inner_puzzle = list(puzzle.args.as_iter())
-    return bytes32(singleton_struct.at("rf").as_atom())
+    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    return Program(INNER_PUZZLE)
 
 
 def is_singleton(inner_f: Program) -> bool:
