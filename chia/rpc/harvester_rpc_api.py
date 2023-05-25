@@ -90,6 +90,8 @@ class HarvesterRpcApi:
             "disable_cpu_affinity": harvester_config["disable_cpu_affinity"],
             "parallel_decompressers_count": harvester_config["parallel_decompressers_count"],
             "decompresser_thread_count": harvester_config["decompresser_thread_count"],
+            "recursive_plot_scan": harvester_config["recursive_plot_scan"],
+            "refresh_parameter_interval_seconds": harvester_config["plots_refresh_parameter"].get("interval_seconds"),
         }
 
     async def update_harvesting_mode(self, request: Dict) -> EndpointResult:
@@ -99,6 +101,8 @@ class HarvesterRpcApi:
         disable_cpu_affinity: Optional[bool] = None
         parallel_decompressers_count: Optional[int] = None
         decompresser_thread_count: Optional[int] = None
+        recursive_plot_scan: Optional[bool] = None
+        refresh_parameter_interval_seconds: Optional[int] = None
         if "use_gpu_harvesting" in request:
             use_gpu_harvesting = bool(request["use_gpu_harvesting"])
         if "gpu_index" in request:
@@ -111,6 +115,12 @@ class HarvesterRpcApi:
             parallel_decompressers_count = int(request["parallel_decompressers_count"])
         if "decompresser_thread_count" in request:
             decompresser_thread_count = int(request["decompresser_thread_count"])
+        if "recursive_plot_scan" in request:
+            recursive_plot_scan = bool(request["recursive_plot_scan"])
+        if "refresh_parameter_interval_seconds" in request:
+            refresh_parameter_interval_seconds = int(request["refresh_parameter_interval_seconds"])
+            if refresh_parameter_interval_seconds < 3:
+                raise ValueError(f"Plot refresh interval seconds({refresh_parameter_interval_seconds}) is too short")
 
         await self.service.update_harvesting_mode(
             use_gpu_harvesting=use_gpu_harvesting,
@@ -119,5 +129,7 @@ class HarvesterRpcApi:
             disable_cpu_affinity=disable_cpu_affinity,
             parallel_decompressers_count=parallel_decompressers_count,
             decompresser_thread_count=decompresser_thread_count,
+            recursive_plot_scan=recursive_plot_scan,
+            refresh_parameter_interval_seconds=refresh_parameter_interval_seconds,
         )
         return {}
