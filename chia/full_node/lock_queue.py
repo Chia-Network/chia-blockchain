@@ -6,7 +6,9 @@ import contextlib
 import dataclasses
 import logging
 from enum import IntEnum
-from typing import AsyncIterator, Callable, Dict, Generic, Optional, Type, TypeVar, final
+from typing import AsyncIterator, Callable, Dict, Generic, Optional, Type, TypeVar
+
+from typing_extensions import final
 
 from chia.util.log_exceptions import log_exceptions
 
