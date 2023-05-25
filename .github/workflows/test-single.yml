@@ -251,6 +251,7 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
           flag-name: ${{ env.JOB_FILE_NAME }}
+          parallel: true
           path-to-lcov: "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
 
       - name: Publish coverage data
