@@ -131,17 +131,21 @@ jobs:
       - uses: chia-network/actions/activate-venv@main
 
       - name: Coverage Processing
+        env:
+          DEBUG_A: ${{ toJSON(needs) }}
+          DEBUG_B: ${{ toJSON(needs.*.result) }}
+          DEBUG_C: ${{ needs.*.result == fromJSON('["success", "success", "success"]') }}
+          DEBUG_D: ${{ toJSON(needs.*.result) == toJSON(fromJSON('["success", "success", "success"]')) }}
+          DEBUG_E: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') }}
         run: |
           coverage combine --rcfile=.coveragerc --data-file=coverage-reports/.coverage coverage-data/
           coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - uses: coverallsapp/github-action@v2
-        if: needs.*.result == fromJSON('["success", "success", "success"]')
+        if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') }}
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          DEBUG_A: ${{ toJSON(needs) }}
-          DEBUG_B: ${{ toJSON(needs.*.result) }}
         with:
           parallel-finished: true
 
