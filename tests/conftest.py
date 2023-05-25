@@ -92,8 +92,13 @@ class Mode(Enum):
 
 
 @pytest.fixture(scope="session", params=[Mode.PLAIN])
-def blockchain_constants(request: SubRequest) -> ConsensusConstants:
-    if request.param == Mode.PLAIN:
+def consensus_mode(request):
+    return request.param
+
+
+@pytest.fixture(scope="session")
+def blockchain_constants(consensus_mode) -> ConsensusConstants:
+    if consensus_mode == Mode.PLAIN:
         return test_constants
     raise AssertionError("Invalid Blockchain mode in simulation")
 
@@ -609,7 +614,9 @@ async def farmer_three_harvester_not_started(
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
-async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
+async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
