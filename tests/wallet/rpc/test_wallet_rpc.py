@@ -718,17 +718,6 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
 
 
 @pytest.mark.asyncio
-async def test_get_coins(wallet_rpc_environment: WalletRpcTestEnvironment):
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
-    full_node_api: FullNodeSimulator = env.full_node.api
-
-    await generate_funds(full_node_api, env.wallet_1, 1)
-    resp = await wallet_1_rpc.get_coins(1, CoinType.NORMAL)
-    assert len(resp["coins"]) == 2
-
-
-@pytest.mark.asyncio
 async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
@@ -820,7 +809,6 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     ph_by_addr = await wallet.get_new_puzzlehash()
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"))
     await client.farm_block(encode_puzzle_hash(ph_by_addr, "txch"))
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1

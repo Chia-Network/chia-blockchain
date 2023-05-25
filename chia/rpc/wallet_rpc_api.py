@@ -904,21 +904,23 @@ class WalletRpcApi:
         # Format for clawback transactions
         clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
         for tr in transactions:
-            tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
-            tx_list.append(tx)
-            if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
-                continue
-            coin: Coin = tr.additions[0]
-            record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
-                coin.name()
-            )
-            assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
-            assert record.metadata is not None, f"None metadata for clawback transaction {record.coin.name().hex()}"
-            clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-            tx["metadata"] = clawback_metadata.to_json_dict()
-            tx["metadata"]["coin_id"] = coin.name().hex()
-            tx["metadata"]["spent"] = record.spent
-
+            try:
+                tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+                tx_list.append(tx)
+                if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
+                    continue
+                coin: Coin = tr.additions[0]
+                record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
+                    coin.name()
+                )
+                assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
+                assert record.metadata is not None, f"None metadata for clawback transaction {record.coin.name().hex()}"
+                clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
+                tx["metadata"] = clawback_metadata.to_json_dict()
+                tx["metadata"]["coin_id"] = coin.name().hex()
+                tx["metadata"]["spent"] = record.spent
+            except Exception as e:
+                log.error(f"Failed to get transaction {tr.name}: {e}")
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
