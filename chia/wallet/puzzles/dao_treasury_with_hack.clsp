@@ -59,7 +59,7 @@
 
   (defun stager (DAO_CAT_LAUNCHER_PUZHASH CURRENT_CAT_ISSUANCE MINT_PUZHASH ORACLE_SPEND_DELAY my_inner_puzhash singleton_struct)
     (c
-      (list CREATE_COIN my_inner_puzhash ONE)
+      (list CREATE_COIN my_inner_puzhash ONE (list (f (r singleton_struct))))
       (if singleton_struct  ; this is the eve spend
           (list
             (list ASSERT_MY_COIN_ID

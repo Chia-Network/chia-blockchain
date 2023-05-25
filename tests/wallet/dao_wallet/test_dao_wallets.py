@@ -137,6 +137,11 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     await full_node_api.process_transaction_records(records=[tx_record])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
+    # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    await asyncio.sleep(1)
     # Check the spend was successful
     treasury_id = dao_wallet_0.dao_info.treasury_id
     await time_out_assert(
@@ -167,7 +172,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
     cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
-    assert cat_wallet_0_bal == cat_amt * 2
+    assert cat_wallet_0_bal == cat_amt
 
     # Create the other user's wallet from the treasury id
     async with wallet_node_0.wallet_state_manager.lock:

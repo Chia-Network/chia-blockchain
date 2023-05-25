@@ -973,7 +973,7 @@ class DAOWallet(WalletProtocol):
         await wallet_state_manager.add_pending_transaction(regular_record)
         await wallet_state_manager.add_pending_transaction(treasury_record)
 
-        await wallet_state_manager.add_interested_coin_ids([eve_coin.name(), launcher_coin.name()])
+        await wallet_state_manager.add_interested_coin_ids([eve_coin.name(), launcher_coin.name()],)
         return full_spend
 
     async def generate_new_dao(
@@ -1126,7 +1126,6 @@ class DAOWallet(WalletProtocol):
         eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin, amount_of_cats_to_create, origin, fee)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb, eve_spend])
-
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -1145,7 +1144,6 @@ class DAOWallet(WalletProtocol):
             name=bytes32(token_bytes()),
             memos=[],
         )
-        breakpoint()
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
@@ -1257,12 +1255,9 @@ class DAOWallet(WalletProtocol):
         )
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
         chia_tx = await self.create_tandem_xch_tx(mint_amount, fee, exclude=[origin])
-        breakpoint()
         eve_spend_bundle = eve_spend_bundle.aggregate([
             chia_tx.spend_bundle, eve_spend_bundle, cat_spend_bundle, SpendBundle([launcher_cat_cs], AugSchemeMPL.aggregate([]))
         ])
-
-        # breakpoint()
         next_coin = Coin(treasury_eve_coin.name(), treasury_eve_coin.puzzle_hash, treasury_eve_coin.amount)
         await self.add_parent(treasury_eve_coin.name(), next_proof)
         await self.wallet_state_manager.add_interested_coin_ids([next_coin.name()], [self.wallet_id])
