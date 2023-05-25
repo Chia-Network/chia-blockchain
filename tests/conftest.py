@@ -28,6 +28,7 @@ from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
+    setup_full_system,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
@@ -845,3 +846,11 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
     print()
     print()
     print(cost_logger.log_cost_statistics())
+
+
+@pytest_asyncio.fixture(scope="function")
+async def simulation(consensus_mode, bt):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipping this run. This test only supports one running at a time.")
+    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
+        yield _
