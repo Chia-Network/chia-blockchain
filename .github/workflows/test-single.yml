@@ -122,7 +122,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.30.0
 
     steps:
       - name: Configure git
@@ -197,7 +197,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
           mkdir ${{ github.workspace }}/.chia
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
