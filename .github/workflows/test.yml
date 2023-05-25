@@ -136,16 +136,12 @@ jobs:
           coverage xml --rcfile=.coveragerc --data-file=coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
-      - run: |
-          echo ----
-          echo ${{ toJSON(needs) }}
-          echo ----
-          echo ${{ toJSON(needs.*.result) }}
-
       - uses: coverallsapp/github-action@v2
         if: needs.*.result == fromJSON('["success", "success", "success"]')
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          DEBUG_A: ${{ toJSON(needs) }}
+          DEBUG_B: ${{ toJSON(needs.*.result) }}
         with:
           parallel-finished: true
 
