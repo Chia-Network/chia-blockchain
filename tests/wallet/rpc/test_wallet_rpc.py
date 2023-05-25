@@ -768,7 +768,6 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
 
