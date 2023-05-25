@@ -9,20 +9,7 @@ import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Type, TypeVar
 
 import aiosqlite
 from blspy import G1Element, G2Element, PrivateKey
@@ -32,7 +19,11 @@ from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.data_layer.dl_wallet_store import DataLayerStore
-from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
+from chia.pools.pool_puzzles import (
+    SINGLETON_LAUNCHER_HASH,
+    get_most_recent_singleton_coin_from_coin_spend,
+    solution_to_pool_state,
+)
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
 from chia.rpc.rpc_server import StateChangedProtocol
@@ -289,17 +280,13 @@ class WalletStateManager:
     def get_public_key_unhardened(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk_unhardened(self.private_key, index).get_g1()
 
-    async def get_keys(self, puzzle_hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
+    async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
-            raise ValueError(f"No key for this puzzlehash {puzzle_hash})")
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
         if record.hardened:
-            private = master_sk_to_wallet_sk(self.private_key, record.index)
-            pubkey = private.get_g1()
-            return pubkey, private
-        private = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
-        pubkey = private.get_g1()
-        return pubkey, private
+            return master_sk_to_wallet_sk(self.private_key, record.index)
+        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
 
     def get_wallet(self, id: uint32, required_type: Type[TWalletType]) -> TWalletType:
         wallet = self.wallets[id]
@@ -1500,7 +1487,7 @@ class WalletStateManager:
                                     )
                                     if not success:
                                         break
-                                    new_singleton_coin: Optional[Coin] = pool_wallet.get_next_interesting_coin(cs)
+                                    new_singleton_coin = get_most_recent_singleton_coin_from_coin_spend(cs)
                                     if new_singleton_coin is None:
                                         # No more singleton (maybe destroyed?)
                                         break

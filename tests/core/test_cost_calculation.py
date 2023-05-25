@@ -77,7 +77,7 @@ class TestCostCalculation:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            program, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
 
         assert npc_result.error is None
@@ -90,7 +90,7 @@ class TestCostCalculation:
         assert spend_info.solution == coin_spend.solution
 
         clvm_cost = 404560
-        byte_cost = len(bytes(program.program)) * test_constants.COST_PER_BYTE
+        byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
         assert (
             npc_result.conds.cost
             == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + clvm_cost + byte_cost
@@ -101,7 +101,7 @@ class TestCostCalculation:
             npc_result.cost
             == ConditionCost.CREATE_COIN.value
             + ConditionCost.AGG_SIG.value
-            + len(bytes(program.program)) * test_constants.COST_PER_BYTE
+            + len(bytes(program.program)) * bt.constants.COST_PER_BYTE
             + clvm_cost
         )
 
@@ -142,11 +142,11 @@ class TestCostCalculation:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
+            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
         )
         assert npc_result.error is None
 

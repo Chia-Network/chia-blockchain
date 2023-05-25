@@ -10,8 +10,10 @@ from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.util.misc import VersionedBlob
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
-from chia.wallet.util.wallet_types import CoinType
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -60,3 +62,32 @@ async def test_deserialize_coin_metadata(simulator_and_wallet: SimulatorsAndWall
     assert manager.deserialize_coin_metadata(None, CoinType.CLAWBACK) is None
     assert manager.deserialize_coin_metadata(valid_data, CoinType.CLAWBACK) == clawback_data.to_json_dict()
     assert manager.deserialize_coin_metadata(valid_data, CoinType.NORMAL) == bytes(clawback_data)
+
+
+@pytest.mark.parametrize("hardened", [True, False])
+@pytest.mark.asyncio
+async def test_get_private_key(simulator_and_wallet: SimulatorsAndWallets, hardened: bool) -> None:
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
+    derivation_index = uint32(10000)
+    conversion_method = master_sk_to_wallet_sk if hardened else master_sk_to_wallet_sk_unhardened
+    expected_private_key = conversion_method(wallet_state_manager.private_key, derivation_index)
+    record = DerivationRecord(
+        derivation_index,
+        bytes32(b"0" * 32),
+        expected_private_key.get_g1(),
+        WalletType.STANDARD_WALLET,
+        uint32(1),
+        hardened,
+    )
+    await wallet_state_manager.puzzle_store.add_derivation_paths([record])
+    assert await wallet_state_manager.get_private_key(record.puzzle_hash) == expected_private_key
+
+
+@pytest.mark.asyncio
+async def test_get_private_key_failure(simulator_and_wallet: SimulatorsAndWallets) -> None:
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
+    invalid_puzzle_hash = bytes32(b"1" * 32)
+    with pytest.raises(ValueError, match=f"No key for puzzle hash: {invalid_puzzle_hash.hex()}"):
+        await wallet_state_manager.get_private_key(bytes32(b"1" * 32))
