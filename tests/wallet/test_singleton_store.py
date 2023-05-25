@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import time
 from secrets import token_bytes
+from typing import Any, Dict, Optional
 
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import create_singleton_puzzle
@@ -19,28 +19,27 @@ from tests.util.db_connection import DBConnection
 fake_singleton_id = bytes32(b"N" * 32)
 
 
-def get_new_singleton_record() -> SingletonCoinRecord:
+def get_new_singleton_record(custom_data: Optional[Dict[str, Any]] = None) -> SingletonCoinRecord:
     singleton_id: bytes32 = bytes32(token_bytes(32))
     inner_puz: Program = Program.to(1)
     parent_puz: Program = create_singleton_puzzle(inner_puz, singleton_id)
     parent_puz_hash: bytes32 = parent_puz.get_tree_hash()
     parent_coin: Coin = Coin(singleton_id, parent_puz_hash, uint64(1))
-    inner_sol: Program = Program.to([[51, inner_puz, 1]])
     lineage_proof: LineageProof = LineageProof(singleton_id, inner_puz.get_tree_hash(), uint64(1))
-    parent_sol: Program = Program.to([lineage_proof.to_program(), 1, inner_sol])
-    parent_coin_spend: CoinSpend = CoinSpend(parent_coin, parent_puz, parent_sol)
     child_coin: Coin = Coin(parent_coin.name(), parent_puz.get_tree_hash(), uint64(1))
+    if not custom_data:
+        custom_data = {"custom_field": b"value", "custom_field_2": 202}
     record = SingletonCoinRecord(
         coin=child_coin,
         singleton_id=singleton_id,
         wallet_id=uint32(2),
-        parent_coin_spend=parent_coin_spend,
+        inner_puzzle=inner_puz,
         inner_puzzle_hash=inner_puz.get_tree_hash(),
         confirmed=False,
         confirmed_at_height=uint32(0),
         spent_height=uint32(0),
         lineage_proof=lineage_proof,
-        custom_data={"key": b"value"},
+        custom_data=custom_data,
         generation=uint32(0),
         timestamp=uint64(time.time()),
     )
@@ -50,16 +49,13 @@ def get_new_singleton_record() -> SingletonCoinRecord:
 def get_next_singleton_record(record: SingletonCoinRecord) -> SingletonCoinRecord:
     inner_puz: Program = Program.to(1)
     parent_puz: Program = create_singleton_puzzle(inner_puz, record.singleton_id)
-    inner_sol: Program = Program.to([[51, inner_puz, 1]])
     next_lineage_proof: LineageProof = LineageProof(record.coin.parent_coin_info, inner_puz.get_tree_hash(), uint64(1))
-    parent_sol: Program = Program.to([record.lineage_proof.to_program(), 1, inner_sol])
-    parent_coin_spend: CoinSpend = CoinSpend(record.coin, parent_puz, parent_sol)
     child_coin: Coin = Coin(record.coin.name(), parent_puz.get_tree_hash(), uint64(1))
     next_record = SingletonCoinRecord(
         coin=child_coin,
         singleton_id=record.singleton_id,
         wallet_id=record.wallet_id,
-        parent_coin_spend=parent_coin_spend,
+        inner_puzzle=inner_puz,
         inner_puzzle_hash=inner_puz.get_tree_hash(),
         confirmed=False,
         confirmed_at_height=uint32(0),
@@ -260,3 +256,19 @@ async def test_set_confirmed() -> None:
         parent_record = await db.get_record_by_coin_id(record_2.name())
         assert isinstance(parent_record, SingletonCoinRecord)
         assert parent_record.spent_height == uint32(30)
+
+
+@pytest.mark.asyncio
+async def test_custom_data() -> None:
+    async with DBConnection(1, foreign_keys=True) as wrapper:
+        db = await WalletSingletonStore.create(wrapper)
+        custom_data = {"field_1": 100, "field_2": b"some text"}
+        record = get_new_singleton_record(custom_data)
+        await db.add_singleton_record(record)
+        res = await db.get_records_by_singleton_id(record.singleton_id)
+        assert res[0].custom_data == custom_data
+
+        # delete the singleton and check it's removed from custom data table
+        await db.delete_records_by_singleton_id(record.singleton_id)
+        custom_res = await db.get_custom_data_by_coin_id(record.name())
+        assert custom_res is None
