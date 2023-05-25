@@ -79,10 +79,11 @@ class LockQueue(Generic[_T_Priority]):
                 with log_exceptions(log=log, consume=True):
                     queued_callback()
 
-            self._process()
-
             try:
-                await element.ready_event.wait()
+                if self._active is None:
+                    self._active = element
+                else:
+                    await element.ready_event.wait()
                 yield
             finally:
                 # another element might be active if the wait is cancelled
@@ -90,17 +91,13 @@ class LockQueue(Generic[_T_Priority]):
                     self._active = None
         finally:
             deque.remove(element)
-            self._process()
 
-    def _process(self) -> None:
-        if self._active is not None:
-            return
+            if self._active is None:
+                for deque in self._deques.values():
+                    if len(deque) == 0:
+                        continue
 
-        for deque in self._deques.values():
-            if len(deque) == 0:
-                continue
-
-            element = deque[0]
-            self._active = element
-            element.ready_event.set()
-            return
+                    element = deque[0]
+                    self._active = element
+                    element.ready_event.set()
+                    break
