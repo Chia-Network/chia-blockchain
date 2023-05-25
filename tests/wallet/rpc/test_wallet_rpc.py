@@ -689,10 +689,18 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     resp = await wallet_1_rpc.spend_clawback_coins([clawback_coin_id_1], 100)
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 0
-    # Test coin puzzle hash doesn't match
+    # Test missing incoming tx
     coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_2)
     assert coin_record is not None
     fake_coin = Coin(coin_record.coin.parent_coin_info, wallet_2_puzhash, coin_record.coin.amount)
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
+        dataclasses.replace(coin_record, coin=fake_coin)
+    )
+    resp = await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
+    assert resp["transaction_ids"] == []
+    # Test coin puzzle hash doesn't match the puzzle
+    tx = (await wallet_1.wallet_state_manager.tx_store.get_farming_rewards())[0]
+    await wallet_1.wallet_state_manager.tx_store.add_transaction_record(dataclasses.replace(tx, name=fake_coin.name()))
     await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
         dataclasses.replace(coin_record, coin=fake_coin)
     )
@@ -826,6 +834,13 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     all_transactions = await client.get_transactions(1, confirmed=False)
     assert len(all_transactions) == 2
     assert all(not transaction.confirmed for transaction in all_transactions)
+
+    # Test bypass broken txs
+    await wallet.wallet_state_manager.tx_store.add_transaction_record(
+        dataclasses.replace(all_transactions[0], type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
+    )
+    all_transactions = await client.get_transactions(1, confirmed=False)
+    assert len(all_transactions) == 1
 
 
 @pytest.mark.asyncio

@@ -170,6 +170,7 @@ def generate_clawback_spend_bundle(
     time_lock: uint64 = metadata.time_lock
     puzzle: Program = create_merkle_puzzle(time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash)
     if puzzle.get_tree_hash() != coin.puzzle_hash:
+        print("Ping")
         raise ValueError(
             f"Cannot spend merkle coin {coin.name()}, "
             f"recreate puzzle hash {puzzle.get_tree_hash().hex()}, actual puzzle hash {coin.puzzle_hash.hex()}"
