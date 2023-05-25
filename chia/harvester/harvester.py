@@ -224,7 +224,18 @@ class Harvester:
         disable_cpu_affinity: Optional[bool] = None,
         parallel_decompressers_count: Optional[int] = None,
         decompresser_thread_count: Optional[int] = None,
+        recursive_plot_scan: Optional[bool] = None,
+        refresh_parameter_interval_seconds: Optional[int] = None,
     ):
+        refresh_parameter: Optional[PlotsRefreshParameter] = None
+        if refresh_parameter_interval_seconds is not None:
+            refresh_parameter = PlotsRefreshParameter(
+                interval_seconds=refresh_parameter_interval_seconds,
+                retry_invalid_seconds=self.plot_manager.refresh_parameter.retry_invalid_seconds,
+                batch_size=self.plot_manager.refresh_parameter.batch_size,
+                batch_sleep_milliseconds=self.plot_manager.refresh_parameter.batch_sleep_milliseconds,
+            )
+
         update_harvesting_mode(
             self.root_path,
             use_gpu_harvesting=use_gpu_harvesting,
@@ -233,6 +244,8 @@ class Harvester:
             disable_cpu_affinity=disable_cpu_affinity,
             parallel_decompressers_count=parallel_decompressers_count,
             decompresser_thread_count=decompresser_thread_count,
+            recursive_plot_scan=recursive_plot_scan,
+            refresh_parameter=refresh_parameter,
         )
         return True
 
