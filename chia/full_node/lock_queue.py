@@ -85,6 +85,7 @@ class LockQueue(Generic[_T_Priority]):
                 await element.ready_event.wait()
                 yield
             finally:
+                # another element might be active if the wait is cancelled
                 if self._active is element:
                     self._active = None
         finally:
