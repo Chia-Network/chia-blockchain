@@ -5,7 +5,6 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
-from packaging.version import Version
 from pathlib import Path
 from typing import Any, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
 
@@ -18,15 +17,12 @@ from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     HarvestingModeUpdate,
     Plot,
-    PlotV2,
     PlotSyncDone,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
-    PlotSyncStartV2,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -42,24 +38,6 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
     for plot_info in plot_infos:
         converted.append(
             Plot(
-                filename=plot_info.prover.get_filename(),
-                size=plot_info.prover.get_size(),
-                plot_id=plot_info.prover.get_id(),
-                pool_public_key=plot_info.pool_public_key,
-                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
-                plot_public_key=plot_info.plot_public_key,
-                file_size=uint64(plot_info.file_size),
-                time_modified=uint64(int(plot_info.time_modified)),
-            )
-        )
-    return converted
-
-
-def _convert_plot_info_list_v2(plot_infos: List[PlotInfo]) -> List[PlotV2]:
-    converted: List[PlotV2] = []
-    for plot_info in plot_infos:
-        converted.append(
-            PlotV2(
                 filename=plot_info.prover.get_filename(),
                 size=plot_info.prover.get_size(),
                 plot_id=plot_info.prover.get_id(),
@@ -294,34 +272,20 @@ class Sender:
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
 
-        if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
-            self._add_message(
-                ProtocolMessageTypes.plot_sync_start_v2,
-                PlotSyncStartV2,
-                initial,
-                self._last_sync_id,
-                uint32(int(count)),
-                self._harvesting_mode,
-            )
-        else:
-            self._add_message(
-                ProtocolMessageTypes.plot_sync_start, PlotSyncStart, initial, self._last_sync_id, uint32(int(count))
-            )
-            log.debug(
-                "harvesting_mode_update message has not been sent "
-                "because protocol version of peer farmer is "
-                + (str(self._connection.protocol_version) if self._connection is not None else "unknown")
-            )
+        self._add_message(
+            ProtocolMessageTypes.plot_sync_start,
+            PlotSyncStart,
+            initial,
+            self._last_sync_id,
+            uint32(int(count)),
+            self._harvesting_mode,
+        )
 
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
         log.debug(f"process_batch {self}: loaded {len(loaded)}, remaining {remaining}")
         if len(loaded) > 0 or remaining == 0:
-            if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
-                converted = _convert_plot_info_list_v2(loaded)
-                self._add_message(ProtocolMessageTypes.plot_sync_loaded_v2, PlotSyncPlotListV2, converted, remaining == 0)
-            else:
-                converted = _convert_plot_info_list(loaded)
-                self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
+            converted = _convert_plot_info_list(loaded)
+            self._add_message(ProtocolMessageTypes.plot_sync_loaded, PlotSyncPlotList, converted, remaining == 0)
 
     def sync_done(self, removed: List[Path], duration: float) -> None:
         log.debug(f"sync_done {self}: removed {len(removed)}, duration {duration}")
@@ -350,14 +314,7 @@ class Sender:
 
     def harvesting_mode_update(self, mode: HarvestingMode):
         log.debug(f"harvesting_mode_update: {mode}")
-        if self._connection is not None and self._connection.protocol_version >= Version('0.0.35'):
-            self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
-        else:
-            log.debug(
-                "harvesting_mode_update message has not been sent "
-                "because protocol version of peer farmer is "
-                + (str(self._connection.protocol_version) if self._connection is not None else "unknown")
-            )
+        self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
 
     def sync_active(self) -> bool:
         return self._sync_id != 0

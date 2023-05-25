@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from packaging.version import Version
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -12,8 +11,8 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.harvester.harvester import Harvester
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
-from chia.protocols.farmer_protocol import FarmingInfo, FarmingInfoV2
-from chia.protocols.harvester_protocol import Plot, PlotV2, PlotSyncResponse
+from chia.protocols.farmer_protocol import FarmingInfo
+from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -236,27 +235,16 @@ class HarvesterAPI:
 
         now = uint64(int(time.time()))
 
-        if peer.protocol_version >= Version('0.0.35'):
-            farming_info = FarmingInfoV2(
-                new_challenge.challenge_hash,
-                new_challenge.sp_hash,
-                now,
-                uint32(passed),
-                uint32(total_proofs_found),
-                uint32(total),
-                uint64(time_taken * 1_000_000) # nano seconds,
-            )
-            pass_msg = make_msg(ProtocolMessageTypes.farming_info_v2, farming_info)
-        else:
-            farming_info = FarmingInfo(
-                new_challenge.challenge_hash,
-                new_challenge.sp_hash,
-                now,
-                uint32(passed),
-                uint32(total_proofs_found),
-                uint32(total),
-            )
-            pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
+        farming_info = FarmingInfo(
+            new_challenge.challenge_hash,
+            new_challenge.sp_hash,
+            now,
+            uint32(passed),
+            uint32(total_proofs_found),
+            uint32(total),
+            uint64(time_taken * 1_000_000) # nano seconds,
+        )
+        pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
 
         self.harvester.log.info(
@@ -324,44 +312,27 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api_request(peer_required=True)
-    async def request_plots(self, _: harvester_protocol.RequestPlots, peer: WSChiaConnection) -> Message:
+    @api_request()
+    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
 
-        if peer.protocol_version >= Version('0.0.35'):
-            for plot in plots:
-                plots_response.append(
-                    PlotV2(
-                        plot["filename"],
-                        plot["size"],
-                        plot["plot_id"],
-                        plot["pool_public_key"],
-                        plot["pool_contract_puzzle_hash"],
-                        plot["plot_public_key"],
-                        plot["file_size"],
-                        plot["time_modified"],
-                        plot["compression_level"],
-                    )
+        for plot in plots:
+            plots_response.append(
+                Plot(
+                    plot["filename"],
+                    plot["size"],
+                    plot["plot_id"],
+                    plot["pool_public_key"],
+                    plot["pool_contract_puzzle_hash"],
+                    plot["plot_public_key"],
+                    plot["file_size"],
+                    plot["time_modified"],
+                    plot["compression_level"],
                 )
-            response = harvester_protocol.RespondPlotsV2(plots_response, failed_to_open_filenames, no_key_filenames)
-            return make_msg(ProtocolMessageTypes.respond_plots_v2, response)
-        else:
-            for plot in plots:
-                plots_response.append(
-                    Plot(
-                        plot["filename"],
-                        plot["size"],
-                        plot["plot_id"],
-                        plot["pool_public_key"],
-                        plot["pool_contract_puzzle_hash"],
-                        plot["plot_public_key"],
-                        plot["file_size"],
-                        plot["time_modified"],
-                    )
-                )
-            response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
-            return make_msg(ProtocolMessageTypes.respond_plots, response)
+            )
+        response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
+        return make_msg(ProtocolMessageTypes.respond_plots, response)
 
     @api_request()
     async def plot_sync_response(self, response: PlotSyncResponse) -> None:

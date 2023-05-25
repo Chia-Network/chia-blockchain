@@ -314,7 +314,7 @@ class PlotManager:
                 if not cache_hit:
                     prover = chiapos.DiskProver(str(file_path))
 
-                    self.log.debug(f"process_file {str(file_path)}")
+                    log.debug(f"process_file {str(file_path)}")
 
                     expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
