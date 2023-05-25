@@ -387,17 +387,22 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,
+        DAO_CAT_LAUNCHER_PUZHASH,  # this is the pre-curryed dao cat launcher
+        mint_puzhash,
         _DAO_PROPOSAL_VALIDATOR,
         proposal_timelock,
         soft_close_length,
+        current_cat_issuance,
         attendance_required,
         pass_percentage,
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args
     return DAORules(
+        mint_puzhash.as_atom(),
         uint64(int_from_bytes(proposal_timelock.as_atom())),
         uint64(int_from_bytes(soft_close_length.as_atom())),
+        uint64(int_from_bytes(current_cat_issuance.as_atom())),
         uint64(int_from_bytes(attendance_required.as_atom())),
         uint64(int_from_bytes(pass_percentage.as_atom())),
         uint64(int_from_bytes(self_destruct_length.as_atom())),
@@ -504,9 +509,12 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
     curried_args = uncurry_treasury(treasury_puzzle)
     (
         _DAO_TREASURY_MOD_HASH,
-        proposal_validator,
+        DAO_CAT_LAUNCHER_PUZHASH,  # this is the pre-curryed dao cat launcher
+        MINT_PUZHASH,
+        _DAO_PROPOSAL_VALIDATOR,
         proposal_timelock,
         soft_close_length,
+        current_cat_issuance,
         attendance_required,
         pass_percentage,
         self_destruct_length,

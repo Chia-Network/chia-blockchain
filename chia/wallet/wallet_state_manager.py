@@ -1928,6 +1928,8 @@ class WalletStateManager:
                 # prevent repeated wallet_ids from appearing in the coin cache
                 wallet_ids_to_add = list(set([w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]]))
                 self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
+                if wallet_ids != []:
+                    breakpoint()
             else:
                 self.interested_coin_cache[coin_id] = list(set(wallet_ids))
         for coin_id in coin_ids:

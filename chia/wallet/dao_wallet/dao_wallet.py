@@ -593,6 +593,7 @@ class DAOWallet(WalletProtocol):
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
+        breakpoint()
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
         if peer is None:
@@ -1009,15 +1010,7 @@ class DAOWallet(WalletProtocol):
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
-
-        if cat_tail_hash is None:
-            assert amount_of_cats_to_create is not None
-            different_coins = await self.standard_wallet.select_coins(
-                uint64(amount_of_cats_to_create), exclude=[origin]
-            )
-            cat_origin = different_coins.copy().pop()
-            assert origin.name() != cat_origin.name()
-            cat_tail_hash = generate_cat_tail(launcher_coin.name()).get_tree_hash()
+        cat_tail_hash = generate_cat_tail(launcher_coin.name()).get_tree_hash()
 
         assert cat_tail_hash is not None
 
@@ -1037,7 +1030,7 @@ class DAOWallet(WalletProtocol):
         await self.save_info(dao_info)
         new_cat_wallet = None
 
-        if amount_of_cats_to_create is not None and different_coins is not None:
+        if amount_of_cats_to_create is not None:
             tail_puz = curry_cat_tail(launcher_coin.name())
 
             new_cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
@@ -1054,6 +1047,13 @@ class DAOWallet(WalletProtocol):
 
         assert new_cat_wallet is not None
         cat_wallet_id = new_cat_wallet.wallet_info.id
+        # In the initial mint create the mint_puzzle_hash to be to ourselves so we don't get locked out of the CATs
+        if self.dao_rules.mint_puzzle_hash is None:
+            # TODO: do this properly
+            cats_new_innerpuzhash = await new_cat_wallet.get_new_inner_hash()
+            mint_puzzle = construct_cat_puzzle(CAT_MOD, tail_puz.get_tree_hash(), curry_cat_eve(get_p2_singleton_puzhash(cats_new_innerpuzhash)))
+            new_dao_rules = dataclasses.replace(self.dao_rules, mint_puzzle_hash=mint_puzzle.get_tree_hash())
+            self.dao_rules = new_dao_rules
 
         assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
 
@@ -1123,7 +1123,7 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_height,
         )
         await self.save_info(dao_info)
-        eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin, amount_of_cats_to_create, origin, fee)
+        eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin, amount_of_cats_to_create, mint_puzzle, origin, fee)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, launcher_sb, eve_spend])
         treasury_record = TransactionRecord(
@@ -1144,6 +1144,7 @@ class DAOWallet(WalletProtocol):
             name=bytes32(token_bytes()),
             memos=[],
         )
+        breakpoint()
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
@@ -1151,10 +1152,11 @@ class DAOWallet(WalletProtocol):
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
+        breakpoint()
         return full_spend
 
     async def generate_treasury_eve_spend(
-        self, inner_puz: Program, treasury_eve_coin: Coin, mint_amount: int, origin: Coin, fee: uint64 = uint64(0)
+        self, inner_puz: Program, treasury_eve_coin: Coin, mint_amount: int, mint_puzzle: Program, origin: Coin, fee: uint64 = uint64(0)
     ) -> SpendBundle:
         """
         Create the eve spend of the treasury
@@ -1242,15 +1244,15 @@ class DAOWallet(WalletProtocol):
         tail_solution = Program.to([launcher_cat_coin.parent_coin_info, launcher_cat_coin.amount])
         solution = Program.to([mint_amount, tail_puz, tail_solution])
 
-        eve_puz = curry_cat_eve(get_p2_singleton_puzhash(self.dao_info.treasury_id))  # TODO: do this properly
-        full_eve_puz = construct_cat_puzzle(CAT_MOD, tail_puz.get_tree_hash(), eve_puz)
+        # eve_puz = mint_puzzle  # TODO: do this properly
+        full_eve_puz = mint_puzzle  # TODO: do this properly
         assert full_eve_puz.get_tree_hash() == mint_puzhash.as_atom()
 
         cat_eve_coin = Coin(launcher_cat_coin.name(), full_eve_puz.get_tree_hash(), launcher_cat_coin.amount)
         new_spendable_cat = SpendableCAT(
             cat_eve_coin,
             tail_puz.get_tree_hash(),
-            eve_puz,
+            get_innerpuzzle_from_cat_puzzle(mint_puzzle),  # TODO: do this properly
             solution,
         )
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
