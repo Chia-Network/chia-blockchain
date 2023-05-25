@@ -35,15 +35,13 @@ class LockQueue(Generic[_T_Priority]):
     create a lock and use the `.acquire()` context manager method:
 
     ```
-    my_lock = await LockQueue.create(priority_type=int)
+    my_lock = LockQueue.create(priority_type=int)
 
     async with my_lock.acquire(priority=0):
        ...
     async with my_lock.acquire(priority=1):
        ...
     ```
-
-    Must be created while an asyncio loop is running.
     """
 
     _deques: Dict[_T_Priority, collections.deque[_Element]]
@@ -53,7 +51,7 @@ class LockQueue(Generic[_T_Priority]):
     # TODO: add debug logging
 
     @classmethod
-    async def create(cls, priority_type: Type[_T_Priority]) -> LockQueue[_T_Priority]:
+    def create(cls, priority_type: Type[_T_Priority]) -> LockQueue[_T_Priority]:
         return cls(
             _deques={priority: collections.deque() for priority in sorted(priority_type)},
         )
