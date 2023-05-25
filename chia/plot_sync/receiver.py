@@ -20,16 +20,14 @@ from chia.plot_sync.exceptions import (
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.protocols.harvester_protocol import (
     HarvestingModeUpdate,
-    PlotV2,
+    Plot,
     PlotSyncDone,
     PlotSyncError,
     PlotSyncIdentifier,
     PlotSyncPathList,
     PlotSyncPlotList,
-    PlotSyncPlotListV2,
     PlotSyncResponse,
     PlotSyncStart,
-    PlotSyncStartV2,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
@@ -81,7 +79,7 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: Dict[str, PlotV2]
+    _plots: Dict[str, Plot]
     _invalid: List[str]
     _keys_missing: List[str]
     _duplicates: List[str]
@@ -134,7 +132,7 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> Dict[str, PlotV2]:
+    def plots(self) -> Dict[str, Plot]:
         return self._plots
 
     def invalid(self) -> List[str]:
@@ -206,51 +204,13 @@ class Receiver:
         self._current_sync.delta.clear()
         self._current_sync.state = State.loaded
         self._current_sync.plots_total = data.plot_file_count
+        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
         self._current_sync.bump_next_message_id()
 
     async def sync_started(self, data: PlotSyncStart) -> None:
         await self._process(self._sync_started, ProtocolMessageTypes.plot_sync_start, data)
 
-    async def _sync_started_v2(self, data: PlotSyncStartV2) -> None:
-        await self._sync_started(PlotSyncStart(
-            data.identifier,
-            data.initial,
-            data.last_sync_id,
-            data.plot_file_count,
-        ))
-        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
-
-    async def sync_started_v2(self, data: PlotSyncStartV2) -> None:
-        await self._process(self._sync_started_v2, ProtocolMessageTypes.plot_sync_start_v2, data)
-
     async def _process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
-        self._validate_identifier(plot_infos.identifier)
-
-        for plot_info in plot_infos.data:
-            if plot_info.filename in self._plots or plot_info.filename in self._current_sync.delta.valid.additions:
-                raise PlotAlreadyAvailableError(State.loaded, plot_info.filename)
-            self._current_sync.delta.valid.additions[plot_info.filename] = PlotV2(
-                filename=plot_info.filename,
-                size=plot_info.size,
-                plot_id=plot_info.plot_id,
-                pool_public_key=plot_info.pool_public_key,
-                pool_contract_puzzle_hash=plot_info.pool_contract_puzzle_hash,
-                plot_public_key=plot_info.plot_public_key,
-                file_size=plot_info.file_size,
-                time_modified=plot_info.time_modified,
-                compression_level=None,
-            )
-            self._current_sync.bump_plots_processed()
-
-        # Let the callback receiver know about the sync progress updates
-        await self.trigger_callback()
-
-        if plot_infos.final:
-            self._current_sync.state = State.removed
-
-        self._current_sync.bump_next_message_id()
-
-    async def _process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
         self._validate_identifier(plot_infos.identifier)
 
         for plot_info in plot_infos.data:
@@ -269,9 +229,6 @@ class Receiver:
 
     async def process_loaded(self, plot_infos: PlotSyncPlotList) -> None:
         await self._process(self._process_loaded, ProtocolMessageTypes.plot_sync_loaded, plot_infos)
-
-    async def process_loaded_v2(self, plot_infos: PlotSyncPlotListV2) -> None:
-        await self._process(self._process_loaded_v2, ProtocolMessageTypes.plot_sync_loaded_v2, plot_infos)
 
     async def process_path_list(
         self,

@@ -83,19 +83,6 @@ class Plot(Streamable):
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
-
-
-@streamable
-@dataclass(frozen=True)
-class PlotV2(Streamable):
-    filename: str
-    size: uint8
-    plot_id: bytes32
-    pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
-    plot_public_key: G1Element
-    file_size: uint64
-    time_modified: uint64
     compression_level: Optional[uint8]
 
 
@@ -115,14 +102,6 @@ class RespondPlots(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class RespondPlotsV2(Streamable):
-    plots: List[PlotV2]
-    failed_to_open_filenames: List[str]
-    no_key_filenames: List[str]
-
-
-@streamable
-@dataclass(frozen=True)
 class PlotSyncIdentifier(Streamable):
     timestamp: uint64
     sync_id: uint64
@@ -132,21 +111,6 @@ class PlotSyncIdentifier(Streamable):
 @streamable
 @dataclass(frozen=True)
 class PlotSyncStart(Streamable):
-    identifier: PlotSyncIdentifier
-    initial: bool
-    last_sync_id: uint64
-    plot_file_count: uint32
-
-    def __str__(self) -> str:
-        return (
-            f"PlotSyncStart: identifier {self.identifier}, initial {self.initial}, "
-            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}"
-        )
-
-
-@streamable
-@dataclass(frozen=True)
-class PlotSyncStartV2(Streamable):
     identifier: PlotSyncIdentifier
     initial: bool
     last_sync_id: uint64
@@ -177,17 +141,6 @@ class PlotSyncPathList(Streamable):
 class PlotSyncPlotList(Streamable):
     identifier: PlotSyncIdentifier
     data: List[Plot]
-    final: bool
-
-    def __str__(self) -> str:
-        return f"PlotSyncPlotList: identifier {self.identifier}, count {len(self.data)}, final {self.final}"
-
-
-@streamable
-@dataclass(frozen=True)
-class PlotSyncPlotListV2(Streamable):
-    identifier: PlotSyncIdentifier
-    data: List[PlotV2]
     final: bool
 
     def __str__(self) -> str:

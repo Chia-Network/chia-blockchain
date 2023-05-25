@@ -45,7 +45,6 @@ class Harvester:
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
     _server: Optional[ChiaServer]
-    _support_gpu: bool = False
     _mode: HarvestingMode
 
     @property
@@ -84,8 +83,6 @@ class Harvester:
         self.constants = constants
         self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.parallel_read: bool = config.get("parallel_read", True)
-        # @TODO Do something to check whether GPU harvesting is available
-        self._support_gpu = True
 
         context_count = config.get("parallel_decompressers_count", 5)
         thread_count = config.get("decompresser_thread_count", 0)
