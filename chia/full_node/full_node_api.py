@@ -1509,7 +1509,7 @@ class FullNodeAPI:
         if len(hint_coin_ids) > 0:
             hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
                 include_spent_coins=True,
-                coin_ids=list(hint_coin_ids),
+                coin_ids=hint_coin_ids,
                 min_height=request.min_height,
                 max_items=len(hint_coin_ids),
             )
@@ -1553,7 +1553,7 @@ class FullNodeAPI:
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height, max_items=max_items
+            include_spent_coins=True, coin_ids=set(request.coin_ids), min_height=request.min_height, max_items=max_items
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
