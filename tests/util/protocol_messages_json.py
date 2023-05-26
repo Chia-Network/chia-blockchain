@@ -2047,7 +2047,6 @@ request_signatures_json: Dict[str, Any] = {
     "challenge_hash": "0xb5fa873020fa8b959d89bc2ffc5797501bf870ac8b30437cd6b4fcdea0812789",
     "sp_hash": "0xbccb7744192771f3a7abca2bce6ea03ed53f1f0d991c13bd2711ce32a2fb3777",
     "messages": ["0x3fc12545f50a9f0621371688f60b29eff05805dd51b42c90063f5e3c6698fc75"],
-    "filter_prefix_bits": 9,
 }
 
 respond_signatures_json: Dict[str, Any] = {
@@ -2062,7 +2061,6 @@ respond_signatures_json: Dict[str, Any] = {
             "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         ]
     ],
-    "filter_prefix_bits": 9,
 }
 
 plot_json: Dict[str, Any] = {

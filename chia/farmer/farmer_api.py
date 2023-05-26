@@ -121,7 +121,6 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
-                    sp.filter_prefix_bits,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -132,13 +131,13 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
+                self.farmer.sp_hash_to_filter_size[new_proof_of_space.sp_hash] = sp.filter_prefix_bits
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
-                    sp.filter_prefix_bits,
                 )
                 self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
@@ -205,7 +204,6 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
-                    sp.filter_prefix_bits,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -305,6 +303,10 @@ class FarmerAPI:
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return None
+        filter_prefix_bits = self.farmer.sp_hash_to_filter_size.get(response.sp_hash)
+        if filter_prefix_bits is None:
+            self.farmer.log.warning(f"Do not have filter size for sp hash {response.sp_hash}")
+            return None
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
         signage_point_index = sps[0].signage_point_index
@@ -330,7 +332,7 @@ class FarmerAPI:
             response.challenge_hash,
             response.sp_hash,
             height=None,
-            filter_prefix_bits=response.filter_prefix_bits,
+            filter_prefix_bits=filter_prefix_bits,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -520,19 +522,14 @@ class FarmerAPI:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return None
 
-        (
-            plot_identifier,
-            challenge_hash,
-            sp_hash,
-            node_id,
-            filter_prefix_bits,
-        ) = self.farmer.quality_str_to_identifiers[full_node_request.quality_string]
+        (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
+            full_node_request.quality_string
+        ]
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-            filter_prefix_bits,
         )
 
         msg = make_msg(ProtocolMessageTypes.request_signatures, request)

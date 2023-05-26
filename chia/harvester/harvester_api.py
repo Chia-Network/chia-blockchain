@@ -290,7 +290,6 @@ class HarvesterAPI:
             local_sk.get_g1(),
             farmer_public_key,
             message_signatures,
-            request.filter_prefix_bits,
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
