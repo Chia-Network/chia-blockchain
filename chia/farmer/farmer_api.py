@@ -137,6 +137,7 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
+                self.farmer.sp_hash_to_filter_size[new_proof_of_space.sp_hash] = sp.filter_prefix_bits
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
@@ -308,6 +309,10 @@ class FarmerAPI:
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return None
+        filter_prefix_bits = self.farmer.sp_hash_to_filter_size.get(response.sp_hash)
+        if filter_prefix_bits is None:
+            self.farmer.log.warning(f"Do not have filter size for sp hash {response.sp_hash}")
+            return None
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
         signage_point_index = sps[0].signage_point_index
@@ -327,13 +332,13 @@ class FarmerAPI:
         assert pospace is not None
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
-        # we skip plot filter validation here, we trust the harvester
         computed_quality_string = verify_and_get_quality_string(
             pospace,
             self.farmer.constants,
             response.challenge_hash,
             response.sp_hash,
             height=None,
+            filter_prefix_bits=filter_prefix_bits,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
