@@ -1,0 +1,13 @@
+(mod (
+  NEW_PUZZLE  ; this is the CAT inner_puzzle
+  my_amount
+  tail_reveal
+  tail_solution
+)
+  (include condition_codes.clib)
+  (list
+    (list CREATE_COIN NEW_PUZZLE my_amount (list NEW_PUZZLE))
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN 0 -113 tail_reveal tail_solution)  ; this is secure because anything but the real values won't work
+  )
+)

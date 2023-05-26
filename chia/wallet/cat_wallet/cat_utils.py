@@ -13,11 +13,10 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 NULL_SIGNATURE = G2Element()
-
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 
@@ -70,6 +69,11 @@ def construct_cat_puzzle(
     if mod_code_hash is None:
         mod_code_hash = mod_code.get_tree_hash()
     return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
+
+
+def construct_cat_puzzlehash_for_inner_puzzlehash(tail_hash: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
+    CAT_MOD.curry(CAT_MOD_HASH, tail_hash, inner_puzzle_hash).get_tree_hash_precalc(inner_puzzle_hash)
+    return
 
 
 def subtotals_for_deltas(deltas: List[int]) -> List[int]:
