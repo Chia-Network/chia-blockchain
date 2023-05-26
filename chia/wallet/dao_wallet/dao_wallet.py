@@ -1266,7 +1266,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
-        full_puz_hash = construct_cat_puzzlehash_for_inner_puzzlehash(CAT_MOD, cat_tail_hash, eve_puz_hash)
+        full_puz_hash = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
         xch_conditions = [
             [
                 51,
@@ -1360,7 +1360,7 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        breakpoint()
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1989,7 +1989,7 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        breakpoint()
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -2013,8 +2013,8 @@ class DAOWallet(WalletProtocol):
         return full_spend
 
     async def fetch_cat_genesis_id(self) -> bytes32:
-
-    return
+        print()
+        return
 
     async def fetch_proposed_puzzle_reveal(self, proposal_id: bytes32) -> Program:
         wallet_node: Any = self.wallet_state_manager.wallet_node
