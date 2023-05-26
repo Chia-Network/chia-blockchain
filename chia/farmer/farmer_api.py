@@ -121,6 +121,7 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [sp.challenge_chain_sp, sp.reward_chain_sp],
+                    sp.filter_prefix_bits,
                 )
 
                 if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
@@ -137,6 +138,7 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     peer.peer_node_id,
+                    sp.filter_prefix_bits,
                 )
                 self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
@@ -203,6 +205,7 @@ class FarmerAPI:
                     new_proof_of_space.challenge_hash,
                     new_proof_of_space.sp_hash,
                     [m_to_sign],
+                    sp.filter_prefix_bits,
                 )
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
@@ -321,13 +324,13 @@ class FarmerAPI:
         assert pospace is not None
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
-        # we skip plot filter validation here, we trust the harvester
         computed_quality_string = verify_and_get_quality_string(
             pospace,
             self.farmer.constants,
             response.challenge_hash,
             response.sp_hash,
             height=None,
+            filter_prefix_bits=response.filter_prefix_bits,
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -517,14 +520,19 @@ class FarmerAPI:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return None
 
-        (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
-            full_node_request.quality_string
-        ]
+        (
+            plot_identifier,
+            challenge_hash,
+            sp_hash,
+            node_id,
+            filter_prefix_bits,
+        ) = self.farmer.quality_str_to_identifiers[full_node_request.quality_string]
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
+            filter_prefix_bits,
         )
 
         msg = make_msg(ProtocolMessageTypes.request_signatures, request)

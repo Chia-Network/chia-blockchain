@@ -60,6 +60,7 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
+    filter_prefix_bits: uint8
 
 
 @streamable
@@ -71,6 +72,7 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
+    filter_prefix_bits: uint8
 
 
 @streamable
