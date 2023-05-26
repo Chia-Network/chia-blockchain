@@ -237,6 +237,7 @@ jobs:
           pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Process coverage data
+        if: always()
         run: |
           coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage-data
@@ -244,8 +245,17 @@ jobs:
           cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
           coverage report --rcfile=.coveragerc --show-missing
 
+      - uses: coverallsapp/github-action@v2
+        if: always()
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          flag-name: ${{ env.JOB_FILE_NAME }}
+          path-to-lcov: "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
+
       - name: Publish coverage data
         uses: actions/upload-artifact@v3
+        if: always()
         with:
           name: coverage-data
           path: coverage-data/*

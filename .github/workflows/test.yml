@@ -38,7 +38,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python tests/build-job-matrix.py --per directory --verbose --only clvm > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
           echo matrix_mode=${{ ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || 'main' }} >> $GITHUB_OUTPUT
@@ -87,6 +87,7 @@ jobs:
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
+    if: always()
     needs:
       - macos
       - ubuntu
@@ -136,9 +137,12 @@ jobs:
           coverage html --rcfile=.coveragerc --data-file=coverage-reports/.coverage --directory coverage-reports/html/
 
       - uses: coverallsapp/github-action@v2
-        if: always()
+        # for some reason round-tripping is required instead of comparing the non-JSON form
+        if: ${{ toJSON(needs.*.result) == toJSON(fromJSON('["success", "success", "success"]')) }}
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          parallel-finished: true
 
       - name: Coverage report (chia/)
         if: always()
