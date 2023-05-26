@@ -15,7 +15,7 @@ from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_full_system
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
@@ -56,12 +56,6 @@ async def extra_node(self_hostname):
             db_version=1,
         ):
             yield service._api
-
-
-@pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
-        yield _
 
 
 class TestSimulation:

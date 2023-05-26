@@ -25,7 +25,9 @@ from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import BlockTools, get_signage_point
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -1996,3 +1998,30 @@ class TestFullNodeProtocol:
 
         connected = await initiating_server.start_client(PeerInfo(self_hostname, uint16(listening_server._port)), None)
         assert connected == expect_success, custom_capabilities
+
+
+@pytest.mark.asyncio
+async def test_node_start_with_existing_blocks(db_version: int) -> None:
+    with TempKeyring(populate=True) as keychain:
+        block_tools = await create_block_tools_async(keychain=keychain)
+
+        blocks_per_cycle = 5
+        expected_height = 0
+
+        for cycle in range(2):
+            async for service in setup_full_node(
+                consensus_constants=block_tools.constants,
+                db_name="node_restart_test.db",
+                self_hostname=block_tools.config["self_hostname"],
+                local_bt=block_tools,
+                simulator=True,
+                db_version=db_version,
+                reuse_db=True,
+            ):
+                await service._api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+
+                expected_height += blocks_per_cycle
+                block_record = service._api.full_node._blockchain.get_peak()
+
+                assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
+                assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"

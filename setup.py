@@ -22,8 +22,8 @@ dependencies = [
     "bitstring==4.0.2",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
-    "concurrent-log-handler==0.9.23",  # Concurrently log and rotate logs
-    "cryptography==39.0.1",  # Python cryptography library for TLS - keyring conflict
+    "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
+    "cryptography==40.0.2",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
@@ -33,7 +33,7 @@ dependencies = [
     "dnspython==2.3.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.5.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.6.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.1",
     "psutil==5.9.4",
@@ -63,7 +63,7 @@ dev_dependencies = [
     "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.10.1",
+    "pyinstaller==5.11.0",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",

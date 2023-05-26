@@ -17,7 +17,6 @@ chia.plotting.util
 chia.pools.pool_puzzles
 chia.pools.pool_wallet
 chia.pools.pool_wallet_info
-chia.rpc.harvester_rpc_api
 chia.rpc.harvester_rpc_client
 chia.rpc.rpc_client
 chia.rpc.util
@@ -29,7 +28,6 @@ chia.seeder.crawler_api
 chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
-chia.server.start_harvester
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services
@@ -48,12 +46,10 @@ chia.util.hash
 chia.util.json_util
 chia.util.keychain
 chia.util.keyring_wrapper
-chia.util.log_exceptions
 chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler
-chia.util.safe_cancel_task
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
@@ -76,7 +72,6 @@ chia.wallet.puzzles.prefarm.spend_prefarm
 chia.wallet.puzzles.puzzle_utils
 chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
-chia.wallet.secret_key_store
 chia.wallet.trading.trade_store
 chia.wallet.transaction_record
 chia.wallet.util.debug_spend_bundle
@@ -125,7 +120,6 @@ tests.core.full_node.test_transactions
 tests.core.make_block_generator
 tests.core.mempool.test_mempool
 tests.core.mempool.test_mempool_performance
-tests.core.node_height
 tests.core.server.test_dos
 tests.core.server.test_rate_limits
 tests.core.ssl.test_ssl
@@ -133,11 +127,9 @@ tests.core.test_cost_calculation
 tests.core.test_crawler_rpc
 tests.core.test_daemon_rpc
 tests.core.test_db_conversion
-tests.core.test_farmer_harvester_rpc
 tests.core.test_filter
 tests.core.test_full_node_rpc
 tests.core.test_merkle_set
-tests.core.test_setproctitle
 tests.core.util.test_cached_bls
 tests.core.util.test_config
 tests.core.util.test_file_keyring_synchronization
@@ -154,10 +146,8 @@ tests.pools.test_pool_config
 tests.pools.test_pool_puzzles_lifecycle
 tests.pools.test_wallet_pool_store
 tests.simulation.test_simulation
-tests.tools.test_full_sync
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.build_network_protocol_files
 tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
