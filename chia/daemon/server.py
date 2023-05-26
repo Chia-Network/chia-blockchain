@@ -320,8 +320,8 @@ class WebSocketServer:
                     )
                     ret = await connection.close()
                     self.log.error(f"Close result: {ret}")
+
         if restart is True:
-            self.log.debug("Restarting ping task")
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
