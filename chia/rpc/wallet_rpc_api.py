@@ -140,6 +140,8 @@ class WalletRpcApi:
             "/get_coin_records": self.get_coin_records,
             "/get_farmed_amount": self.get_farmed_amount,
             "/create_signed_transaction": self.create_signed_transaction,
+            "/create_unsigned_transaction": self.create_unsigned_transaction,
+            "/blind_sign_transaction": self.blind_sign_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             "/select_coins": self.select_coins,
             "/get_spendable_coins": self.get_spendable_coins,
@@ -2922,6 +2924,46 @@ class WalletRpcApi:
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
         }
+
+    # TODO: required types dict
+    # TODO: optional arguments
+    def _verify_create_transaction_request(self, api_name, request, required_arguments: List[str]) -> None:
+        missing = []
+        for argument in required_arguments:
+            if argument not in request:
+                missing.append(argument)
+
+        if len(missing) > 0:
+            raise RuntimeError(f"Please specify the following argument(s) in your {api_name} request: {missing}")
+
+    async def create_unsigned_transaction(self, request) -> EndpointResult:
+        """Create and return an unsigned XCH transaction for the specified amount from the Main Wallet"""
+        required_arguments = ["key_fingerprint", "spend_amount", "receiver_puzzlehash"]
+        # optional_arguments = ["fee"]
+        self._verify_create_transaction_request("create_unsigned_transaction", request, required_arguments)
+        fingerprint = request["key_fingerprint"]
+        amount = uint64(request["spend_amount"])
+        puzzle_hash = bytes32.from_hexstr(request["receiver_puzzlehash"])  # Receiver address as 32 byte hex string
+
+        await self.log_in({"fingerprint": fingerprint})
+        wallet = self.service.wallet_state_manager.main_wallet
+        async with self.service.wallet_state_manager.lock:
+            spends = await wallet._generate_unsigned_transaction(amount, puzzle_hash)
+            return {"coin_spends": spends, "key_fingerprint": fingerprint}
+
+    async def blind_sign_transaction(self, request) -> EndpointResult:
+        """Sign a transaction in the"""
+        required_arguments = ["key_fingerprint", "coin_spends"]
+        # optional_arguments = ["fee"]
+        self._verify_create_transaction_request("blind_sign_transaction", request, required_arguments)
+        fingerprint = request["key_fingerprint"]
+        coin_spends: List[CoinSpend] = [CoinSpend.from_json_dict(spend) for spend in request["coin_spends"]]
+
+        await self.log_in({"fingerprint": fingerprint})
+        wallet = self.service.wallet_state_manager.main_wallet
+        async with self.service.wallet_state_manager.lock:
+            spend_bundle: SpendBundle = await wallet.sign_transaction(coin_spends)
+            return {"spend_bundle": spend_bundle}
 
     async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:
         if "wallet_id" in request:
