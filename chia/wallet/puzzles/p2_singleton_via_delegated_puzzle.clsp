@@ -32,7 +32,7 @@
   (defun for_parent_amounts (my_puzhash list_of_parent_amounts total)
     (if list_of_parent_amounts
         (cons_announcements_to_output
-          (sha256 (f (f list_of_parent_amounts)) my_puzhash (f (r (f list_of_parent_amounts))))  ; asserts that all the coins have the same puzzle as me
+          (calculate_coin_id (f (f list_of_parent_amounts)) my_puzhash (f (r (f list_of_parent_amounts))))  ; asserts that all the coins have the same puzzle as me
           (for_parent_amounts my_puzhash (r list_of_parent_amounts) (+ total (f (r (f list_of_parent_amounts)))))
         )
         (list
