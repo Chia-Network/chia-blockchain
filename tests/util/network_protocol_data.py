@@ -715,6 +715,7 @@ request_signatures = harvester_protocol.RequestSignatures(
     bytes32(bytes.fromhex("b5fa873020fa8b959d89bc2ffc5797501bf870ac8b30437cd6b4fcdea0812789")),
     bytes32(bytes.fromhex("bccb7744192771f3a7abca2bce6ea03ed53f1f0d991c13bd2711ce32a2fb3777")),
     [bytes32(bytes.fromhex("3fc12545f50a9f0621371688f60b29eff05805dd51b42c90063f5e3c6698fc75"))],
+    uint8(9),
 )
 
 respond_signatures = harvester_protocol.RespondSignatures(
@@ -732,6 +733,7 @@ respond_signatures = harvester_protocol.RespondSignatures(
         ),
     ),
     [(bytes32(bytes.fromhex("c32fd5310f5e8623697561930dca73cb9da5b3ddb903f52818724bb3bdd9349c")), g2_element)],
+    uint8(9),
 )
 
 plot = harvester_protocol.Plot(

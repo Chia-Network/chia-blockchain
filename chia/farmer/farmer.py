@@ -87,7 +87,7 @@ class Farmer:
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
-        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32, bytes32, bytes32]] = {}
+        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32, bytes32, bytes32, uint8]] = {}
 
         # number of responses to each signage point
         self.number_of_responses: Dict[bytes32, int] = {}
