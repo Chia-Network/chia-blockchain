@@ -18,19 +18,20 @@ class VersionedBlob(Streamable):
     blob: bytes
 
 
-def format_bytes(bytes: int) -> str:
-    if not isinstance(bytes, int) or bytes < 0:
+def format_bytes(bytes_value: int, effective: bool = False) -> str:
+    if not isinstance(bytes_value, int) or bytes_value < 0:
         return "Invalid"
 
     LABELS = ("MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
     BASE = 1024
-    value = bytes / BASE
+    value = bytes_value / BASE
     for label in LABELS:
         value /= BASE
         if value < BASE:
-            return f"{value:.3f} {label}"
+            return f"{value:.3f} {label}e" if effective else f"{value:.3f} {label}"
 
-    return f"{value:.3f} {LABELS[-1]}"
+    label = f"{LABELS[-1]}e" if effective else LABELS[-1]
+    return f"{value:.3f} {label}"
 
 
 def format_minutes(minutes: int) -> str:
