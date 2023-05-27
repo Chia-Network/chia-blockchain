@@ -150,7 +150,7 @@ async def summary(
                     plot_count_harvester = len(harvester_dict["plots"])
                     PlotStats.total_plot_size += total_plot_size_harvester
                     PlotStats.total_plots += plot_count_harvester
-                    effective_size = 0
+                    effective_size = float(0)
                     for plot in harvester_dict["plots"]:
                         effective_size += _expected_plot_size(int(plot["size"])) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
                     total_effective_size += effective_size
@@ -160,7 +160,7 @@ async def summary(
                     )
             return total_effective_size
 
-        total_farm_size_effective = 0
+        total_farm_size_effective = float(0)
 
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
