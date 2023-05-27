@@ -82,7 +82,7 @@ class HarvesterRpcApi:
             return {}
         raise ValueError(f"Did not remove plot directory {directory_name}")
 
-    async def get_harvesting_mode(self, request: Dict) -> EndpointResult:
+    async def get_harvesting_mode(self, _: Dict[str, Any]) -> EndpointResult:
         harvester_config = await self.service.get_harvesting_mode()
         return {
             "use_gpu_harvesting": harvester_config["use_gpu_harvesting"],
@@ -95,7 +95,7 @@ class HarvesterRpcApi:
             "refresh_parameter_interval_seconds": harvester_config["plots_refresh_parameter"].get("interval_seconds"),
         }
 
-    async def update_harvesting_mode(self, request: Dict) -> EndpointResult:
+    async def update_harvesting_mode(self, request: Dict[str, Any]) -> EndpointResult:
         use_gpu_harvesting: Optional[bool] = None
         gpu_index: Optional[int] = None
         enforce_gpu_index: Optional[bool] = None
@@ -103,7 +103,7 @@ class HarvesterRpcApi:
         parallel_decompressers_count: Optional[int] = None
         decompresser_thread_count: Optional[int] = None
         recursive_plot_scan: Optional[bool] = None
-        refresh_parameter_interval_seconds: Optional[int] = None
+        refresh_parameter_interval_seconds: Optional[uint32] = None
         if "use_gpu_harvesting" in request:
             use_gpu_harvesting = bool(request["use_gpu_harvesting"])
         if "gpu_index" in request:

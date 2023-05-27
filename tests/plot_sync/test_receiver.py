@@ -343,7 +343,7 @@ async def test_to_dict(counts_only: bool) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_flow() -> None:
-    receiver, sync_steps = plot_sync_setup()
+    receiver, sync_steps, _ = plot_sync_setup()
 
     for plot_info in sync_steps[State.loaded].args[0]:
         assert plot_info.filename not in receiver.plots()
@@ -385,7 +385,7 @@ async def test_sync_flow() -> None:
 
 @pytest.mark.asyncio
 async def test_invalid_ids() -> None:
-    receiver, sync_steps = plot_sync_setup()
+    receiver, sync_steps, _ = plot_sync_setup()
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]
@@ -394,13 +394,13 @@ async def test_invalid_ids() -> None:
             receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
-                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), HarvestingMode
+                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), HarvestingMode.CPU
             )
             await current_step.function(invalid_last_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_last_sync_id)
             # Test "last_sync_id == new_sync_id"
             invalid_sync_id_match_param = PlotSyncStart(
-                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), HarvestingMode
+                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), HarvestingMode.CPU
             )
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)
@@ -436,7 +436,7 @@ async def test_invalid_ids() -> None:
 )
 @pytest.mark.asyncio
 async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes) -> None:
-    receiver, sync_steps = plot_sync_setup()
+    receiver, sync_steps, _ = plot_sync_setup()
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]
