@@ -30,6 +30,7 @@ from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
@@ -209,7 +210,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvesting_mode(self) -> Dict:
+    async def get_harvesting_mode(self) -> Dict[str, Any]:
         return get_harvesting_mode(self.root_path)
 
     async def update_harvesting_mode(
@@ -222,8 +223,8 @@ class Harvester:
         parallel_decompressers_count: Optional[int] = None,
         decompresser_thread_count: Optional[int] = None,
         recursive_plot_scan: Optional[bool] = None,
-        refresh_parameter_interval_seconds: Optional[int] = None,
-    ):
+        refresh_parameter_interval_seconds: Optional[uint32] = None,
+    ) -> bool:
         refresh_parameter: Optional[PlotsRefreshParameter] = None
         if refresh_parameter_interval_seconds is not None:
             refresh_parameter = PlotsRefreshParameter(

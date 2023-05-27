@@ -312,7 +312,7 @@ class Sender:
         # Do this at the end since `_sync_id` is used as sync active indicator.
         self._sync_id = uint64(0)
 
-    def harvesting_mode_update(self, mode: HarvestingMode):
+    def harvesting_mode_update(self, mode: HarvestingMode) -> None:
         log.debug(f"harvesting_mode_update: {mode}")
         self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
 

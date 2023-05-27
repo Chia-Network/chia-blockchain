@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.harvester.harvester import Harvester
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.util.ints import uint32
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -118,7 +119,7 @@ class HarvesterRpcApi:
         if "recursive_plot_scan" in request:
             recursive_plot_scan = bool(request["recursive_plot_scan"])
         if "refresh_parameter_interval_seconds" in request:
-            refresh_parameter_interval_seconds = int(request["refresh_parameter_interval_seconds"])
+            refresh_parameter_interval_seconds = uint32(request["refresh_parameter_interval_seconds"])
             if refresh_parameter_interval_seconds < 3:
                 raise ValueError(f"Plot refresh interval seconds({refresh_parameter_interval_seconds}) is too short")
 

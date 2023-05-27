@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Coroutine
 
 from typing_extensions import Protocol
 
@@ -103,7 +103,7 @@ class Receiver:
         self._update_callback = update_callback
         self._harvesting_mode = None
 
-    async def trigger_callback(self, delta: Optional[Delta] = None, other_update: Optional[bool] = False) -> None:
+    async def trigger_callback(self, delta: Optional[Delta] = None, other_update: bool = False) -> None:
         try:
             await self._update_callback(self._connection.peer_node_id, delta, other_update)
         except Exception as e:
