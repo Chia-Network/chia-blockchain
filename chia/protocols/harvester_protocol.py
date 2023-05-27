@@ -7,7 +7,7 @@ from blspy import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int8, int16, uint8, uint32, uint64
+from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 """
