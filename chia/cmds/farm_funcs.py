@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -14,10 +15,13 @@ from chia.util.network import is_localhost
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
-async def get_harvesters_summary(farmer_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
+async def get_harvesters(farmer_rpc_port: Optional[int], count_only: bool = True) -> Optional[Dict[str, Any]]:
     async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
         if farmer_client is not None:
-            return await farmer_client.get_harvesters_summary()
+            if count_only:
+                return await farmer_client.get_harvesters_summary()
+            else:
+                return await farmer_client.get_harvesters()
     return None
 
 
@@ -89,7 +93,7 @@ async def summary(
     harvester_rpc_port: Optional[int],
     farmer_rpc_port: Optional[int],
 ) -> None:
-    harvesters_summary = await get_harvesters_summary(farmer_rpc_port)
+    harvesters_summary = await get_harvesters(farmer_rpc_port, count_only=False)
     blockchain_state = await get_blockchain_state(rpc_port)
     farmer_running = False if harvesters_summary is None else True  # harvesters uses farmer rpc too
 
@@ -135,36 +139,49 @@ async def summary(
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
-        def process_harvesters(harvester_peers_in: Dict[str, Dict[str, Any]]) -> None:
+        def process_harvesters(harvester_peers_in: Dict[str, Dict[str, Any]]) -> float:
+            total_effective_size = float(0)
             for harvester_peer_id, harvester_dict in harvester_peers_in.items():
                 syncing = harvester_dict["syncing"]
                 if syncing is not None and syncing["initial"]:
                     print(f"   Loading plots: {syncing['plot_files_processed']} / {syncing['plot_files_total']}")
                 else:
                     total_plot_size_harvester = harvester_dict["total_plot_size"]
-                    plot_count_harvester = harvester_dict["plots"]
+                    plot_count_harvester = len(harvester_dict["plots"])
                     PlotStats.total_plot_size += total_plot_size_harvester
                     PlotStats.total_plots += plot_count_harvester
-                    print(f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)}")
+                    effective_size = 0
+                    for plot in harvester_dict["plots"]:
+                        effective_size += _expected_plot_size(int(plot["size"])) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    total_effective_size += effective_size
+                    print(
+                        f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)} raw, "
+                        f"{format_bytes(int(effective_size), True)} (effective)"
+                    )
+            return total_effective_size
+
+        total_farm_size_effective = 0
 
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
-            process_harvesters(harvesters_local)
+            total_farm_size_effective += process_harvesters(harvesters_local)
         for harvester_ip, harvester_peers in harvesters_remote.items():
             print(f"Remote Harvester{'s' if len(harvester_peers) > 1 else ''} for IP: {harvester_ip}")
-            process_harvesters(harvester_peers)
+            total_farm_size_effective += process_harvesters(harvester_peers)
 
         print(f"Plot count for all harvesters: {PlotStats.total_plots}")
 
-        print("Total size of plots: ", end="")
-        print(format_bytes(PlotStats.total_plot_size))
+        print(
+            f"Total size of plots: {format_bytes(PlotStats.total_plot_size)}, "
+            f"{format_bytes(int(total_farm_size_effective), True)} (effective)"
+        )
     else:
         print("Plot count: Unknown")
         print("Total size of plots: Unknown")
 
     if blockchain_state is not None:
         print("Estimated network space: ", end="")
-        print(format_bytes(blockchain_state["space"]))
+        print(format_bytes(blockchain_state["space"], True))
     else:
         print("Estimated network space: Unknown")
 
