@@ -182,4 +182,5 @@ class PlotSyncResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class HarvestingModeUpdate(Streamable):
+    identifier: PlotSyncIdentifier
     harvesting_mode: int8

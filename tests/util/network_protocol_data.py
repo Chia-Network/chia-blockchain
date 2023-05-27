@@ -117,6 +117,7 @@ farming_info = farmer_protocol.FarmingInfo(
     uint32(1390832181),
     uint32(908923578),
     uint32(2259819406),
+    uint64(3942498),
 )
 
 signed_values = farmer_protocol.SignedValues(
