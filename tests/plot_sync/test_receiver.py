@@ -15,6 +15,7 @@ from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
+    HarvestingModeUpdate,
     Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
@@ -22,7 +23,6 @@ from chia.protocols.harvester_protocol import (
     PlotSyncPlotList,
     PlotSyncResponse,
     PlotSyncStart,
-    HarvestingModeUpdate,
 )
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
