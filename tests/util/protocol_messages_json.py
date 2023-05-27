@@ -48,6 +48,7 @@ farming_info_json: Dict[str, Any] = {
     "passed": 1390832181,
     "proofs": 908923578,
     "total_plots": 2259819406,
+    "lookup_time": 3942498,
 }
 
 signed_values_json: Dict[str, Any] = {
@@ -2070,6 +2071,7 @@ plot_json: Dict[str, Any] = {
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "file_size": 3368414292564311420,
     "time_modified": 2573238947935295522,
+    "compression_level": 0,
 }
 
 request_plots_json: Dict[str, Any] = {}
@@ -2085,10 +2087,16 @@ respond_plots_json: Dict[str, Any] = {
             "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "file_size": 3368414292564311420,
             "time_modified": 2573238947935295522,
+            "compression_level": 0,
         }
     ],
     "failed_to_open_filenames": ["str"],
     "no_key_filenames": ["str"],
+}
+
+harvesting_mode_update_json: Dict[str, Any] = {
+    "identifier": {"timestamp": 1685202597, "sync_id": 1, "message_id": 0},
+    "harvesting_mode": 1,
 }
 
 request_peers_introducer_json: Dict[str, Any] = {}
