@@ -207,7 +207,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterState
 
     sync_steps: List[SyncStepData] = [
         SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list)),
-                     HarvestingMode.CPU),
+                     uint8(HarvestingMode.CPU)),
         SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
         SyncStepData(State.removed, receiver.process_removed, PlotSyncPathList, path_list[0:10], True),
         SyncStepData(State.invalid, receiver.process_invalid, PlotSyncPathList, path_list[20:30], True),
@@ -217,7 +217,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterState
     ]
 
     harvester_state_sync_steps: List[HarvesterStateSyncData] = [
-        HarvesterStateSyncData(receiver.harvesting_mode_update, HarvestingModeUpdate, HarvestingMode.GPU),
+        HarvesterStateSyncData(receiver.harvesting_mode_update, HarvestingModeUpdate, uint8(HarvestingMode.GPU)),
     ]
 
     return receiver, sync_steps, harvester_state_sync_steps
@@ -331,7 +331,7 @@ async def test_to_dict(counts_only: bool) -> None:
             False,
             receiver.last_sync().sync_id,
             uint32(1),
-            HarvestingMode.CPU,
+            uint8(HarvestingMode.CPU),
         )
     )
     assert receiver.to_dict()["syncing"] == {
@@ -394,13 +394,13 @@ async def test_invalid_ids() -> None:
             receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
-                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), HarvestingMode.CPU
+                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_last_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_last_sync_id)
             # Test "last_sync_id == new_sync_id"
             invalid_sync_id_match_param = PlotSyncStart(
-                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), HarvestingMode.CPU
+                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)
