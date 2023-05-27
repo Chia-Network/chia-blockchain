@@ -127,6 +127,8 @@ async def summary(
         total_plot_size = 0
         total_plots = 0
 
+    total_farm_size_effective = float(0)
+
     if harvesters_summary is not None:
         harvesters_local: Dict[str, Dict[str, Any]] = {}
         harvesters_remote: Dict[str, Dict[str, Any]] = {}
@@ -160,8 +162,6 @@ async def summary(
                     )
             return total_effective_size
 
-        total_farm_size_effective = float(0)
-
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
             total_farm_size_effective += process_harvesters(harvesters_local)
@@ -181,13 +181,13 @@ async def summary(
 
     if blockchain_state is not None:
         print("Estimated network space: ", end="")
-        print(format_bytes(blockchain_state["space"], True))
+        print(format_bytes(blockchain_state["space"]))
     else:
         print("Estimated network space: Unknown")
 
     minutes = -1
     if blockchain_state is not None and harvesters_summary is not None:
-        proportion = PlotStats.total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        proportion = total_farm_size_effective / blockchain_state["space"] if blockchain_state["space"] else -1
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
 
     if harvesters_summary is not None and PlotStats.total_plots == 0:
