@@ -20,10 +20,10 @@ from chia.plotting.util import (
     PlotRefreshResult,
     PlotsRefreshParameter,
     add_plot_directory,
+    get_harvesting_mode,
     get_plot_directories,
     remove_plot,
     remove_plot_directory,
-    get_harvesting_mode,
     update_harvesting_mode,
 )
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
