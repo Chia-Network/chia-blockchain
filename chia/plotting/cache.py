@@ -153,7 +153,7 @@ class Cache:
                     #                - https://github.com/Chia-Network/chiapos/pull/337
                     k = new_entry.prover.get_size()
                     if k not in estimated_c2_sizes:
-                        estimated_c2_sizes[k] = ceil(2 ** k / 100_000_000) * ceil(k / 8)
+                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
                     memo_size = len(new_entry.prover.get_memo())
                     prover_size = len(cache_entry.prover_data)
                     # Estimated C2 size + memo size + 2000 (static data + path)

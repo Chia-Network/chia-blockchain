@@ -253,7 +253,7 @@ class Environment:
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert plot_info.prover.get_size() == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
-                assert plot_info.prover.get_compresion_level() == receiver.plots()[str(path)].compression_level;
+                assert plot_info.prover.get_compresion_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
                 assert plot_info.pool_contract_puzzle_hash == receiver.plots()[str(path)].pool_contract_puzzle_hash
                 assert plot_info.plot_public_key == receiver.plots()[str(path)].plot_public_key
