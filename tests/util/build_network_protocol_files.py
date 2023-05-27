@@ -106,6 +106,7 @@ def visit_harvester_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(plot, "plot")
     visitor(request_plots, "request_plots")
     visitor(respond_plots, "respond_plots")
+    visitor(harvesting_mode_update, "harvesting_mode_update")
 
 
 def visit_introducer_protocol(visitor: Callable[[Any, str], None]) -> None:
