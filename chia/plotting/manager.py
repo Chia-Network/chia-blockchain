@@ -14,7 +14,14 @@ from chiapos import DiskProver, decompressor_context_queue
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
 from chia.util.misc import to_batches
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames, HarvestingMode
+from chia.plotting.util import (
+    HarvestingMode,
+    PlotInfo,
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+)
 
 log = logging.getLogger(__name__)
 

@@ -7,7 +7,6 @@ from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from typing_extensions import Protocol
 
-from chia.plotting.util import HarvestingMode
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,
@@ -18,6 +17,7 @@ from chia.plot_sync.exceptions import (
     SyncIdsMatchError,
 )
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
+from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
     HarvestingModeUpdate,
     Plot,
