@@ -14,7 +14,7 @@ from chiapos import DiskProver
 from chia.plotting.util import parse_plot_info
 from chia.types.blockchain_format.proof_of_space import generate_plot_public_key
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint16, uint64
+from chia.util.ints import uint16, uint64
 from chia.util.misc import VersionedBlob
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk

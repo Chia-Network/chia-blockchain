@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Coroutine
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from typing_extensions import Protocol
 
