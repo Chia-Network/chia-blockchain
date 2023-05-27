@@ -71,9 +71,7 @@ class HarvesterStateSyncData:
     payload_type: Any
     args: Any
 
-    def __init__(
-        self, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
-    ) -> None:
+    def __init__(self, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any) -> None:
         self.function = function
         self.payload_type = payload_type
         self.args = args
@@ -206,8 +204,15 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterState
     receiver._total_plot_size = sum(plot.file_size for plot in receiver._plots.values())
 
     sync_steps: List[SyncStepData] = [
-        SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list)),
-                     uint8(HarvestingMode.CPU)),
+        SyncStepData(
+            State.idle,
+            receiver.sync_started,
+            PlotSyncStart,
+            False,
+            uint64(0),
+            uint32(len(plot_info_list)),
+            uint8(HarvestingMode.CPU),
+        ),
         SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
         SyncStepData(State.removed, receiver.process_removed, PlotSyncPathList, path_list[0:10], True),
         SyncStepData(State.invalid, receiver.process_invalid, PlotSyncPathList, path_list[20:30], True),
@@ -309,9 +314,13 @@ async def test_to_dict(counts_only: bool) -> None:
     plot_sync_dict_3 = receiver.to_dict(counts_only)
     assert get_list_or_len(plot_sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
     assert (
-        get_list_or_len(plot_sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]
+        get_list_or_len(plot_sync_steps[State.invalid].args[0], counts_only)
+        == plot_sync_dict_3["failed_to_open_filenames"]
     )
-    assert get_list_or_len(plot_sync_steps[State.keys_missing].args[0], counts_only) == plot_sync_dict_3["no_key_filenames"]
+    assert (
+        get_list_or_len(plot_sync_steps[State.keys_missing].args[0], counts_only)
+        == plot_sync_dict_3["no_key_filenames"]
+    )
     assert get_list_or_len(plot_sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
