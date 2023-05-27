@@ -548,7 +548,7 @@ def show_plotters_version(root_path: Path):
     if "chiapos" in info and "version" in info["chiapos"]:
         print(f"chiapos: {info['chiapos']['version']}")
     if "bladebit" in info and "version" in info["bladebit"]:
-        if info['bladebit']['cuda_support']:
+        if info["bladebit"]["cuda_support"]:
             print(f"bladebit: {info['bladebit']['version']} (CUDA ready)")
         else:
             print(f"bladebit: {info['bladebit']['version']}")

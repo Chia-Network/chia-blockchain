@@ -727,7 +727,7 @@ class WebSocketServer:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
         no_cpu_affinity = request.get("no_cpu_affinity", False)
-        compress = request.get("compress", None) # Compression level
+        compress = request.get("compress", None)  # Compression level
 
         if w is True:
             command_args.append("--warmstart")
