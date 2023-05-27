@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
 
 from typing_extensions import Protocol
 
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,
@@ -84,6 +85,7 @@ class Receiver:
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
+    _total_effective_plot_size: float
     _update_callback: ReceiverUpdateCallback
     _harvesting_mode: Optional[HarvestingMode]
 
@@ -100,6 +102,7 @@ class Receiver:
         self._keys_missing = []
         self._duplicates = []
         self._total_plot_size = 0
+        self._total_effective_plot_size = float(0)
         self._update_callback = update_callback
         self._harvesting_mode = None
 
@@ -118,6 +121,7 @@ class Receiver:
         self._keys_missing.clear()
         self._duplicates.clear()
         self._total_plot_size = 0
+        self._total_effective_plot_size = float(0)
         self._harvesting_mode = None
 
     def connection(self) -> WSChiaConnection:
@@ -146,6 +150,9 @@ class Receiver:
 
     def total_plot_size(self) -> int:
         return self._total_plot_size
+
+    def total_effective_plot_size(self) -> float:
+        return self._total_effective_plot_size
 
     def harvesting_mode(self) -> Optional[HarvestingMode]:
         return self._harvesting_mode
@@ -338,6 +345,9 @@ class Receiver:
         self._keys_missing = self._current_sync.delta.keys_missing.additions.copy()
         self._duplicates = self._current_sync.delta.duplicates.additions.copy()
         self._total_plot_size = sum(plot.file_size for plot in self._plots.values())
+        self._total_effective_plot_size = sum(
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR * _expected_plot_size(plot.size) for plot in self._plots.values()
+        )
         # Save current sync as last sync and create a new current sync
         self._last_sync = self._current_sync
         self._current_sync = Sync()
@@ -373,6 +383,7 @@ class Receiver:
             "no_key_filenames": get_list_or_len(self._keys_missing, counts_only),
             "duplicates": get_list_or_len(self._duplicates, counts_only),
             "total_plot_size": self._total_plot_size,
+            "total_effective_plot_size": int(self._total_effective_plot_size),
             "syncing": syncing,
             "last_sync_time": self._last_sync.time_done,
             "harvesting_mode": self._harvesting_mode,
