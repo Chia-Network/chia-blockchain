@@ -263,7 +263,6 @@ def create_example_plots(count: int) -> List[PlotInfo]:
         file_name: str
         plot_id: bytes32
         size: int
-        compression_level: uint8
 
         def get_filename(self) -> str:
             return self.file_name
@@ -275,7 +274,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
             return self.size
 
         def get_compresion_level(self) -> uint8:
-            return self.compression_level
+            return uint8(0)
 
     return [
         PlotInfo(
