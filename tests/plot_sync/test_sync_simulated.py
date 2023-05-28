@@ -279,7 +279,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), x % 255, uint8(x % 8)),
+            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), 25 + x % 26, uint8(x % 8)),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),
