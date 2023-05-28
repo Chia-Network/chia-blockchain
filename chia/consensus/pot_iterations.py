@@ -62,6 +62,6 @@ def calculate_iterations_quality(
         int(difficulty)
         * int(difficulty_constant_factor)
         * int.from_bytes(sp_quality_string, "big", signed=False)
-        // (int(pow(2, 256)) * expected_plot_size(size))
+        // (int(pow(2, 256)) * int(expected_plot_size(size)))
     )
     return max(iters, uint64(1))
