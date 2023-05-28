@@ -205,7 +205,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterState
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
     receiver._total_effective_plot_size = sum(
-        UI_ACTUAL_SPACE_CONSTANT_FACTOR * expected_plot_size(plot.size) for plot in receiver.plots().values()
+        UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values()
     )
 
     sync_steps: List[SyncStepData] = [
@@ -282,7 +282,7 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_1["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * expected_plot_size(plot.size) for plot in receiver.plots().values())
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
@@ -333,7 +333,7 @@ async def test_to_dict(counts_only: bool) -> None:
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
     assert plot_sync_dict_3["total_effective_plot_size"] == int(
-        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * expected_plot_size(plot.size) for plot in receiver.plots().values())
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
