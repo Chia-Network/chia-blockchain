@@ -323,7 +323,12 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("--no-cpu-affinity")
     if args.verbose:
         call_args.append("--verbose")
-    if "compress" in args and args.compress is not None and str(args.compress).isdigit():
+    if (
+        "compress" in args
+        and args.compress is not None
+        and str(args.compress).isdigit()
+        and int(version_or_exception[0]) >= 3
+    ):
         call_args.append("--compress")
         call_args.append(str(args.compress))
 
