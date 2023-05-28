@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from typing import Optional, Set, Tuple
+from typing import Optional, Tuple
 
 from blspy import AugSchemeMPL
 
@@ -495,27 +495,22 @@ def validate_unfinished_header_block(
     if height >= constants.SOFT_FORK3_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = prev_b
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
-        passed_previous_sp: bool = False
-        seen_signage_points: Set[bytes32] = {cc_sp_hash}
+        curr_sp = cc_sp_hash
+        sp_count = 0
 
-        while (
-            curr_optional_block_record is not None
-            and len(seen_signage_points) < constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS
-        ):
+        while curr_optional_block_record is not None and sp_count < constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
             if passes_plot_filter(
                 constants,
                 plot_id,
                 curr_optional_block_record.pos_ss_cc_challenge_hash,
                 curr_optional_block_record.cc_sp_hash,
             ):
-                passed_previous_sp = True
-                break
+                return None, ValidationError(Err.INVALID_POSPACE)
 
-            seen_signage_points.add(curr_optional_block_record.cc_sp_hash)
+            if curr_optional_block_record.cc_sp_hash != curr_sp:
+                sp_count += 1
+                curr_sp = curr_optional_block_record.cc_sp_hash
             curr_optional_block_record = blocks.try_block_record(curr_optional_block_record.prev_hash)
-
-        if passed_previous_sp:
-            return None, ValidationError(Err.INVALID_POSPACE)
 
     # 6. check signage point index
     # no need to check negative values as this is uint 8

@@ -13,7 +13,7 @@ import tempfile
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
@@ -539,10 +539,11 @@ class BlockTools:
         return WalletTool(self.constants, self.pool_master_sk)
 
     def plot_id_passes_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
-        seen_signage_points: Set[bytes32] = {cc_sp_hash}
+        curr_sp_hash = cc_sp_hash
+        sp_count = 0
         for block in reversed(blocks):
-            if len(seen_signage_points) >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
-                break
+            if sp_count >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
+                return False
 
             challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
             if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -552,7 +553,9 @@ class BlockTools:
                 cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
             if passes_plot_filter(self.constants, plot_id, challenge, cc_sp_hash):
                 return True
-            seen_signage_points.add(cc_sp_hash)
+            if curr_sp_hash != cc_sp_hash:
+                sp_count += 1
+                curr_sp_hash = cc_sp_hash
 
         return False
 
@@ -714,7 +717,7 @@ class BlockTools:
                         assert latest_block.header_hash in blocks
                         plot_id = get_plot_id(proof_of_space)
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
-                            if self.plot_id_passes_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                            if self.plot_id_passes_previous_filters(plot_id, cc_sp_output_hash, block_list) is True:
                                 continue
                         additions = None
                         removals = None

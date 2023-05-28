@@ -102,7 +102,7 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == Mode.PLAIN:
         return test_constants
-    if request.param == Mode.SOFT_FORK3:
+    if consensus_mode == Mode.SOFT_FORK3:
         return test_constants.replace(**{"SOFT_FORK3_HEIGHT": 0})
     raise AssertionError("Invalid Blockchain mode in simulation")
 
