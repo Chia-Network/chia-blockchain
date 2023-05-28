@@ -23,33 +23,6 @@ from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint32, uint64
 
 
-def count_sub_epochs(blockchain, last_hash) -> int:
-    curr = blockchain._sub_blocks[last_hash]
-    count = 0
-    while True:
-        if curr.height == 0:
-            break
-        # next sub block
-        curr = blockchain._sub_blocks[curr.prev_hash]
-        # if end of sub-epoch
-        if curr.sub_epoch_summary_included is not None:
-            count += 1
-    return count
-
-
-def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[BlockRecord, int]:
-    curr = sub_blocks[last_hash]
-    blocks = 1
-    while curr.height != 0:
-        # next sub block
-        curr = sub_blocks[curr.prev_hash]
-        # if end of sub-epoch
-        if curr.sub_epoch_summary_included is not None:
-            return curr, blocks
-        blocks += 1
-    assert False
-
-
 async def load_blocks_dont_validate(
     blocks, constants: ConsensusConstants
 ) -> Tuple[
