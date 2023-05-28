@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 import chiapos
 from blspy import G1Element
 
-from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
 from chia.plotting.util import (
     HarvestingMode,
@@ -323,7 +323,7 @@ class PlotManager:
 
                     log.debug(f"process_file {str(file_path)}")
 
-                    expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
+                    expected_size = expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.

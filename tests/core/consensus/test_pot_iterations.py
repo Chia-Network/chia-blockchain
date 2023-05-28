@@ -3,7 +3,7 @@ from __future__ import annotations
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.consensus.pos_quality import _expected_plot_size
+from chia.consensus.pos_quality import expected_plot_size
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
@@ -90,7 +90,7 @@ class TestPotIterations:
             uint8(35): 100,
             uint8(36): 100,
         }
-        farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
+        farmer_space = {k: expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
