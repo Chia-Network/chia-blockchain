@@ -111,7 +111,7 @@ class WalletSingletonStore:
             await conn.execute(
                 f"INSERT or REPLACE INTO singletons ({columns}) VALUES({value_placeholders})",
                 (
-                    record.name(),
+                    record.coin_id(),
                     record.coin.parent_coin_info,
                     record.coin.puzzle_hash,
                     record.coin.amount,
@@ -130,7 +130,7 @@ class WalletSingletonStore:
 
             if record.custom_data:
                 custom_data_columns = "coin_id, field_name, value"
-                coin_id = record.name()
+                coin_id = record.coin_id()
                 for key, val in record.custom_data.items():
                     await conn.execute(
                         f"INSERT or REPLACE INTO singleton_data ({custom_data_columns}) VALUES(?, ?, ?)",

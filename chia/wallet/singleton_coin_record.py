@@ -29,5 +29,5 @@ class SingletonCoinRecord:
     generation: uint32
     timestamp: uint64
 
-    def name(self) -> bytes32:
+    def coin_id(self) -> bytes32:
         return self.coin.name()

@@ -78,7 +78,7 @@ async def test_singleton_store() -> None:
         await db.add_singleton_record(record)
 
         # fetch record by coin_id
-        rec = await db.get_record_by_coin_id(record.name())
+        rec = await db.get_record_by_coin_id(record.coin_id())
         assert rec == record
 
         # fetch non-existent coin
@@ -88,8 +88,8 @@ async def test_singleton_store() -> None:
         # make record confirmed
         confirmed_height = uint32(10)
         timestamp = uint64(time.time())
-        await db.set_confirmed(record.name(), confirmed_height, timestamp)
-        rec = await db.get_record_by_coin_id(record.name())
+        await db.set_confirmed(record.coin_id(), confirmed_height, timestamp)
+        rec = await db.get_record_by_coin_id(record.coin_id())
         assert isinstance(rec, SingletonCoinRecord)
         assert rec.confirmed
         assert rec.confirmed_at_height == confirmed_height
@@ -118,16 +118,16 @@ async def test_singleton_store() -> None:
         assert unconfirmed[0] == recs[0]
 
         # confirm the new record
-        await db.set_confirmed(next_record.name(), uint32(20), uint64(time.time()))
+        await db.set_confirmed(next_record.coin_id(), uint32(20), uint64(time.time()))
         recs = await db.get_records_by_singleton_id(record.singleton_id)
         assert recs[0].confirmed
         assert recs[1].spent_height == recs[0].confirmed_at_height == uint32(20)
 
         # Delete the last record
-        await db.delete_record_by_coin_id(next_record.name())
+        await db.delete_record_by_coin_id(next_record.coin_id())
         recs = await db.get_records_by_singleton_id(singleton_id)
         assert len(recs) == 1
-        assert recs[0].name() == record.name()
+        assert recs[0].coin_id() == record.coin_id()
 
         # Delete all records by id
         await db.delete_records_by_singleton_id(singleton_id)
@@ -169,12 +169,12 @@ async def test_get_record_by_coin_id() -> None:
         await db.add_singleton_record(record)
 
         # fetch record by coin_id
-        rec = await db.get_record_by_coin_id(record.name())
+        rec = await db.get_record_by_coin_id(record.coin_id())
         assert rec == record
 
         # clear the database
         await db._clear_database()
-        rec = await db.get_record_by_coin_id(record.name())
+        rec = await db.get_record_by_coin_id(record.coin_id())
         assert rec is None
 
 
@@ -195,7 +195,7 @@ async def test_get_latest_singleton() -> None:
         assert latest is None
 
         # confirm record 1 and check it is returned in only_confirmed
-        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        await db.set_confirmed(record_1.coin_id(), uint32(10), uint64(time.time()))
         latest = await db.get_latest_singleton(record_1.singleton_id, only_confirmed=True)
         assert isinstance(latest, SingletonCoinRecord)
         assert latest.singleton_id == record_1.singleton_id
@@ -211,17 +211,17 @@ async def test_set_spent() -> None:
         record_2 = get_new_singleton_record()
 
         # set record_1 confirmed and spent
-        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        await db.set_confirmed(record_1.coin_id(), uint32(10), uint64(time.time()))
         latest = await db.get_latest_singleton(record_1.singleton_id, only_confirmed=True)
         assert isinstance(latest, SingletonCoinRecord)
-        await db.set_spent(latest.name(), uint32(20), uint64(time.time()))
-        last_record = await db.get_record_by_coin_id(latest.name())
+        await db.set_spent(latest.coin_id(), uint32(20), uint64(time.time()))
+        last_record = await db.get_record_by_coin_id(latest.coin_id())
         assert isinstance(last_record, SingletonCoinRecord)
         assert last_record.spent_height == uint32(20)
 
         # Try to set spent for non-existing record
-        await db.set_spent(record_2.name(), uint32(20), uint64(time.time()))
-        res = await db.get_record_by_coin_id(record_2.name())
+        await db.set_spent(record_2.coin_id(), uint32(20), uint64(time.time()))
+        res = await db.get_record_by_coin_id(record_2.coin_id())
         assert res is None
 
 
@@ -235,7 +235,7 @@ async def test_set_confirmed() -> None:
         record_2 = get_new_singleton_record()
 
         # set record_1 confirmed (it has no parent)
-        await db.set_confirmed(record_1.name(), uint32(10), uint64(time.time()))
+        await db.set_confirmed(record_1.coin_id(), uint32(10), uint64(time.time()))
         res = await db.get_record_by_coin_id(record_1.coin.parent_coin_info)  # this is probably redundant
         assert res is None
 
@@ -244,21 +244,21 @@ async def test_set_confirmed() -> None:
         assert latest.confirmed
 
         # set confirmed for non-existent record_2
-        await db.set_confirmed(record_2.name(), uint32(10), uint64(time.time()))
-        res = await db.get_record_by_coin_id(record_2.name())
+        await db.set_confirmed(record_2.coin_id(), uint32(10), uint64(time.time()))
+        res = await db.get_record_by_coin_id(record_2.coin_id())
         assert res is None
 
         # add record_2 and set confirmed
         await db.add_singleton_record(record_2)
-        await db.set_confirmed(record_2.name(), uint32(20), uint64(time.time()))
+        await db.set_confirmed(record_2.coin_id(), uint32(20), uint64(time.time()))
 
         # get next record and add it
         next_record_2 = get_next_singleton_record(record_2)
         await db.add_singleton_record(next_record_2)
-        await db.set_confirmed(next_record_2.name(), uint32(30), uint64(time.time()))
+        await db.set_confirmed(next_record_2.coin_id(), uint32(30), uint64(time.time()))
 
         # check parent has been set to spent
-        parent_record = await db.get_record_by_coin_id(record_2.name())
+        parent_record = await db.get_record_by_coin_id(record_2.coin_id())
         assert isinstance(parent_record, SingletonCoinRecord)
         assert parent_record.spent_height == uint32(30)
 
@@ -275,5 +275,5 @@ async def test_custom_data() -> None:
 
         # delete the singleton and check it's removed from custom data table
         await db.delete_records_by_singleton_id(record.singleton_id)
-        custom_res = await db.get_custom_data_by_coin_id(record.name())
+        custom_res = await db.get_custom_data_by_coin_id(record.coin_id())
         assert custom_res is None
