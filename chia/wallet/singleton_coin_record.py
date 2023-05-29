@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -25,7 +25,7 @@ class SingletonCoinRecord:
     confirmed_at_height: uint32
     spent_height: uint32
     lineage_proof: LineageProof
-    custom_data: Optional[Dict[str, Any]]
+    custom_data: Optional[Dict[str, bytes]]
     generation: uint32
     timestamp: uint64
 
