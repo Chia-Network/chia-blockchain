@@ -1006,7 +1006,8 @@ class DAOWallet(WalletProtocol):
             )
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
-            cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
+            cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
+            cat_tail_hash = cat_tail.get_tree_hash()
 
         assert cat_tail_hash is not None
 
@@ -1049,7 +1050,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
         assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
-
+        await new_cat_wallet.set_tail_program(bytes(cat_tail).hex())
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
@@ -1585,7 +1586,12 @@ class DAOWallet(WalletProtocol):
         return spend_bundle
 
     async def create_proposal_close_spend(
-        self, proposal_id: bytes32, fee: uint64 = uint64(0), push: bool = True, self_destruct: bool = False
+        self,
+        proposal_id: bytes32,
+        genesis_id: bytes32 = Optional[None],  # must be included if this is a mint proposal
+        fee: uint64 = uint64(0),
+        push: bool = True,
+        self_destruct: bool = False
     ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
@@ -1787,11 +1793,18 @@ class DAOWallet(WalletProtocol):
                 for cond in CONDITIONS.as_iter():
                     if cond.first().as_int() == 51:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
+                            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+                            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
                             mint_amount = cond.rest().rest().first().as_int()
                             new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
-                            genesis_id = await self.fetch_cat_genesis_id()
-                            tail_reconstruction = generate_cat_tail(genesis_id, self.dao_info.treasury_id)
+
+                            if genesis_id is None:
+                                tail_reconstruction = cat_wallet.cat_info.tail_program
+                            else:
+                                tail_reconstruction = generate_cat_tail(genesis_id, self.dao_info.treasury_id)
+                            assert tail_reconstruction is not None
+                            assert tail_reconstruction.get_tree_hash() == cat_tail_hash
                             assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
                                 self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
@@ -1800,8 +1813,7 @@ class DAOWallet(WalletProtocol):
                             # parent_parent
                             # new_puzzle_hash  ; the full CAT puzzle
                             # amount
-                            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-                            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+
                             full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puzzle)
 
                             solution = Program.to(
@@ -2012,9 +2024,9 @@ class DAOWallet(WalletProtocol):
             await self.wallet_state_manager.add_pending_transaction(record)
         return full_spend
 
-    async def fetch_cat_genesis_id(self) -> bytes32:
-        print()
-        return
+    # async def fetch_cat_genesis_id(self) -> bytes32:
+    #     print()
+    #     return
 
     async def fetch_proposed_puzzle_reveal(self, proposal_id: bytes32) -> Program:
         wallet_node: Any = self.wallet_state_manager.wallet_node
