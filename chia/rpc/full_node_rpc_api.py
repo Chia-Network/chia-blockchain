@@ -128,6 +128,7 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
+                    "average_block_time": 0,
                     "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
@@ -166,17 +167,47 @@ class FullNodeRpcApi:
         else:
             sync_progress_height = uint32(0)
 
+        average_block_time = uint32(0)
+        space = {"space": uint128(0)}
+
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             # Average over the last day
-            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
-            assert header_hash is not None
-            older_block_hex = header_hash.hex()
+            older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
+            assert older_header_hash is not None
+            older_block_hex = older_header_hash.hex()
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
-        else:
-            space = {"space": uint128(0)}
+
+            try:
+                newer_block: Optional[BlockRecord] = (
+                    await self.get_block_record({"header_hash": peak.header_hash.hex()})
+                )["block_record"]
+                while newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
+                    newer_block = (await self.get_block_record({"header_hash": newer_block.prev_hash.hex()}))[
+                        "block_record"
+                    ]
+            except ValueError:
+                newer_block = None
+
+            if newer_block is not None:
+                older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
+                try:
+                    older_block: Optional[BlockRecord] = (
+                        await self.get_block_record({"header_hash": older_header_hash.hex()})
+                    )["block_record"]
+                    while older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
+                        older_block = (await self.get_block_record({"header_hash": older_block.prev_hash.hex()}))[
+                            "block_record"
+                        ]
+                except ValueError:
+                    older_block = None
+
+                if older_block is not None:
+                    average_block_time = uint32(
+                        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+                    )
 
         if self.service.mempool_manager is not None:
             mempool_size = self.service.mempool_manager.mempool.size()
@@ -212,6 +243,7 @@ class FullNodeRpcApi:
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
+                "average_block_time": average_block_time,
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
                 "mempool_fees": mempool_fees,
