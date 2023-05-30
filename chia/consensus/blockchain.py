@@ -132,7 +132,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self.lock_queue = LockQueue()
+        self.lock_queue = LockQueue.create(priority_type=BlockchainLockPriority)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()
