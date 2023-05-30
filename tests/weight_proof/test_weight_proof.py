@@ -545,9 +545,13 @@ def test_calculate_prefix_bits_calmp_zero(height: uint32, expected: int):
     "height,expected",
     [
         (0, 9),
+        (5495999, 9),
         (5496000, 8),
+        (10541999, 8),
         (10542000, 7),
+        (15591999, 7),
         (15592000, 6),
+        (20642999, 6),
         (20643000, 5),
     ],
 )
