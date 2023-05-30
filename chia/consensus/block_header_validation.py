@@ -496,7 +496,7 @@ def validate_unfinished_header_block(
         curr_optional_block_record: Optional[BlockRecord] = prev_b
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         curr_sp = cc_sp_hash
-        sp_count = 0
+        sp_count = 1
 
         while curr_optional_block_record is not None and sp_count < constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
             if passes_plot_filter(

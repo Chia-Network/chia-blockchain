@@ -540,7 +540,7 @@ class BlockTools:
 
     def plot_id_passes_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
         curr_sp_hash = cc_sp_hash
-        sp_count = 0
+        sp_count = 1
         for block in reversed(blocks):
             if sp_count >= self.constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
                 return False
