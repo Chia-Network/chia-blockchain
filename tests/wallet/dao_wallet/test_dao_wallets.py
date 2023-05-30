@@ -951,7 +951,7 @@ async def test_dao_proposal_partial_vote(
     #     [proposal_amount],
     #     [None],
     # )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 

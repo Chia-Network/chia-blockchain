@@ -1588,7 +1588,7 @@ class DAOWallet(WalletProtocol):
     async def create_proposal_close_spend(
         self,
         proposal_id: bytes32,
-        genesis_id: bytes32 = Optional[None],  # must be included if this is a mint proposal
+        genesis_id: Optional[bytes32] = None,  # must be included if this is a mint proposal
         fee: uint64 = uint64(0),
         push: bool = True,
         self_destruct: bool = False
@@ -1793,6 +1793,7 @@ class DAOWallet(WalletProtocol):
                 for cond in CONDITIONS.as_iter():
                     if cond.first().as_int() == 51:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
+
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
                             mint_amount = cond.rest().rest().first().as_int()
@@ -1800,7 +1801,7 @@ class DAOWallet(WalletProtocol):
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
 
                             if genesis_id is None:
-                                tail_reconstruction = cat_wallet.cat_info.tail_program
+                                tail_reconstruction = cat_wallet.cat_info.my_tail
                             else:
                                 tail_reconstruction = generate_cat_tail(genesis_id, self.dao_info.treasury_id)
                             assert tail_reconstruction is not None
@@ -1825,13 +1826,13 @@ class DAOWallet(WalletProtocol):
                                 ]
                             )
                             coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), eve_puzzle, mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), eve_puzzle.get_tree_hash(), mint_amount)
                             # my_amount
                             # tail_reveal
                             # tail_solution
 
                             # tail_solution is (singleton_inner_puzhash parent_parent_id parent_amount)
-                            tail_solution = Program.tp([treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
+                            tail_solution = Program.to([treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(
                                 eve_coin,
@@ -1839,7 +1840,12 @@ class DAOWallet(WalletProtocol):
                                 eve_puzzle,
                                 solution,
                             )
-                            cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
+                            if cat_spend_bundle is None:
+                                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
+                            else:
+                                cat_spend_bundle = cat_spend_bundle.aggregate(
+                                    [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats([new_spendable_cat])]
+                                )
 
                 for condition_statement in CONDITIONS.as_iter():
                     if condition_statement.first().as_int() == 51:
