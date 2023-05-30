@@ -1473,8 +1473,9 @@ class DAOWallet(WalletProtocol):
                 break
         if proposal_info is None:
             raise ValueError("Unable to find a proposal with that ID.")
-        if proposal_info.timer_coin is None:
-            # TODO: we should also check the current_inner puzzle is the finished state puzzle
+        if (proposal_info.timer_coin is None) and (
+            proposal_info.current_innerpuz == get_finished_state_puzzle(proposal_info.proposal_id)
+        ):
             raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
         # TODO: we may well want to add in options for more specificity later, but for now this will do
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
