@@ -102,7 +102,7 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == Mode.PLAIN:
         return test_constants
-    if request.param == Mode.HARD_FORK_2_0:
+    if consensus_mode == Mode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=5, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
         )
