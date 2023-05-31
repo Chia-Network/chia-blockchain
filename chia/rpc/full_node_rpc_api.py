@@ -694,14 +694,8 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
-        if error is not None:
-            raise ValueError(f"Error: {error}")
-
-        assert puzzle is not None
-        assert solution is not None
-
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
+        spend_info = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
+        return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
 
     async def get_additions_and_removals(self, request: Dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:

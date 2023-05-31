@@ -1252,7 +1252,7 @@ def notification_cmd():
     show_default=True,
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
-@click.option("-m", "--fee", help="The fee for the transaction", type=str)
+@click.option("-m", "--fee", help="The fee for the transaction, in XCH", type=str)
 def _send_notification(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1355,7 +1355,7 @@ def vcs_cmd():  # pragma: no cover
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
 @click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
-@click.option("-m", "--fee", help="Blockchain fee for mint transaction", type=str, required=False)
+@click.option("-m", "--fee", help="Blockchain fee for mint transaction, in XCH", type=str, required=False)
 def _mint_vc(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1429,7 +1429,7 @@ def _get_vcs(
     required=False,
 )
 @click.option("-p", "--new-proof-hash", help="The new proof hash to update the VC to", type=str, required=True)
-@click.option("-m", "--fee", help="Blockchain fee for update transaction", type=str, required=False)
+@click.option("-m", "--fee", help="Blockchain fee for update transaction, in XCH", type=str, required=False)
 @click.option(
     "--reuse-puzhash/--generate-new-puzhash",
     help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",
@@ -1528,7 +1528,7 @@ def _get_proofs_for_root(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-p", "--parent-coin-id", help="The ID of the parent coin of the VC", type=str, required=True)
-@click.option("-m", "--fee", help="Blockchain fee for revocation transaction", type=str, required=False)
+@click.option("-m", "--fee", help="Blockchain fee for revocation transaction, in XCH", type=str, required=False)
 @click.option(
     "--reuse-puzhash/--generate-new-puzhash",
     help="Send the VC back to the same puzzle hash it came from (ignored if --new-puzhash is specified)",

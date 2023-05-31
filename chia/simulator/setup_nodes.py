@@ -70,7 +70,7 @@ async def setup_two_nodes(
     """
 
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        bt1 = await create_block_tools_async(constants=test_constants, keychain=keychain1)
+        bt1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
         node_iters = [
             setup_full_node(
                 consensus_constants,
@@ -84,7 +84,7 @@ async def setup_two_nodes(
                 consensus_constants,
                 "blockchain_test_2.db",
                 self_hostname,
-                await create_block_tools_async(constants=test_constants, keychain=keychain2),
+                await create_block_tools_async(constants=consensus_constants, keychain=keychain2),
                 simulator=False,
                 db_version=db_version,
             ),
@@ -116,7 +116,7 @@ async def setup_n_nodes(
                 consensus_constants,
                 f"blockchain_test_{i}.db",
                 self_hostname,
-                await create_block_tools_async(constants=test_constants, keychain=keyring.get_keychain()),
+                await create_block_tools_async(constants=consensus_constants, keychain=keyring.get_keychain()),
                 simulator=False,
                 db_version=db_version,
             )
@@ -390,9 +390,9 @@ async def setup_full_system_inner(
     Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord], object, object, Any, ChiaServer],
 ]:
     if b_tools is None:
-        b_tools = await create_block_tools_async(constants=test_constants, keychain=keychain1)
+        b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
-        b_tools_1 = await create_block_tools_async(constants=test_constants, keychain=keychain2)
+        b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
     daemon_ws = None
     if connect_to_daemon:
         daemon_iter = setup_daemon(btools=b_tools)
