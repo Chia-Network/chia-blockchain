@@ -109,3 +109,9 @@ def test_invalid_batch_sizes() -> None:
     with pytest.raises(ValueError):
         for _ in to_batches([], -1):
             assert False
+
+
+def test_invalid_input_type() -> None:
+    with pytest.raises(ValueError, match="Unsupported type"):
+        for _ in to_batches(dict(), 1):
+            assert False
