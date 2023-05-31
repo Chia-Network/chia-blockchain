@@ -294,27 +294,29 @@ class WebSocketServer:
     async def ping_task(self) -> None:
         try:
             while True:
-                await asyncio.sleep(30)
+                try:
+                    await asyncio.sleep(30)
 
-                for service_name, connections in self.connections.items():
-                    if service_name == service_plotter:
-                        continue
+                    for service_name, connections in self.connections.items():
+                        if service_name == service_plotter:
+                            continue
 
-                    for connection in connections:
-                        try:
-                            self.log.debug(f"About to ping: {service_name}")
-                            await connection.ping()
-                        except asyncio.CancelledError:
-                            raise
-                        except Exception:
-                            self.log.exception(f"Ping error to {service_name}, closing connection:")
-                            self.remove_connection(connection)
-                            await connection.close()
+                        for connection in connections:
+                            try:
+                                self.log.debug(f"About to ping: {service_name}")
+                                await connection.ping()
+                            except asyncio.CancelledError:
+                                raise
+                            except Exception:
+                                self.log.exception(f"Ping error to {service_name}, closing connection:")
+                                self.remove_connection(connection)
+                                await connection.close()
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    self.log.exception(f"Unexpected exception in {type(self).__name__}.ping_task(), continuing:")
         except asyncio.CancelledError:
             self.log.debug("Ping task received Cancel")
-        except Exception:
-            self.log.exception(f"Unexpected exception in {type(self).__name__}.ping_task():")
-            raise
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
