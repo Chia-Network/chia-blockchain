@@ -16,18 +16,16 @@ def compute_spend_hints_and_additions(cs: CoinSpend) -> Tuple[Dict[bytes32, byte
     hint_dict: Dict[bytes32, bytes32] = {}  # {coin_id: hint}
     coin_dict: Dict[bytes32, Coin] = {}  # {coin_id: Coin}
     for condition in result_program.as_iter():
-        if (
-            condition.at("f").atom == ConditionOpcode.CREATE_COIN  # It's a create coin
-            and condition.at("rrr") != Program.to(None)  # There's more than two arguments
-            and condition.at("rrrf").atom is None  # The 3rd argument is a cons
-        ):
-            potential_hint: bytes = condition.at("rrrff").atom
-            if len(potential_hint) == 32:
-                coin: Coin = Coin(
-                    cs.coin.name(), bytes32(condition.at("rf").atom), uint64(condition.at("rrf").as_int())
-                )
-                coin_id: bytes32 = coin.name()
-                hint_dict[coin_id] = bytes32(potential_hint)
-                coin_dict[coin_id] = coin
+        if condition.at("f").atom == ConditionOpcode.CREATE_COIN:  # It's a create coin:
+            coin: Coin = Coin(cs.coin.name(), bytes32(condition.at("rf").atom), uint64(condition.at("rrf").as_int()))
+            coin_id: bytes32 = coin.name()
+            coin_dict[coin_id] = coin
+            if (
+                condition.at("rrr") != Program.to(None)  # There's more than two arguments
+                and condition.at("rrrf").atom is None  # The 3rd argument is a cons
+            ):
+                potential_hint: bytes = condition.at("rrrff").atom
+                if len(potential_hint) == 32:
+                    hint_dict[coin_id] = bytes32(potential_hint)
 
     return hint_dict, coin_dict
