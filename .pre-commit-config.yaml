@@ -46,6 +46,13 @@ repos:
         pass_filenames: false
 -   repo: local
     hooks:
+    -   id: build mypy.ini
+        name: build mypy.ini
+        entry: ./activated.py python manage-mypy.py build-mypy-ini
+        language: system
+        pass_filenames: false
+-   repo: local
+    hooks:
     -   id: mypy
         name: mypy
         entry: ./activated.py mypy
