@@ -756,6 +756,8 @@ class DIDWallet:
         self,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
+        coin_announcements_to_assert: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_assert: Optional[Set[Announcement]] = None,
         new_innerpuzzle: Optional[Program] = None,
     ):
         assert self.did_info.current_inner is not None
@@ -774,6 +776,12 @@ class DIDWallet:
             primaries=[Payment(new_innerpuzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
+            coin_announcements_to_assert={a.name() for a in coin_announcements_to_assert}
+            if coin_announcements_to_assert is not None
+            else None,
+            puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_assert}
+            if puzzle_announcements_to_assert is not None
+            else None,
         )
         # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, p2_solution])
@@ -1167,7 +1175,7 @@ class DIDWallet:
         if puzzle_args is not None:
             p2_puzzle, _, _, _, _ = puzzle_args
             puzzle_hash = p2_puzzle.get_tree_hash()
-            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            private = await self.wallet_state_manager.get_private_key(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
             if is_hex:
@@ -1185,7 +1193,7 @@ class DIDWallet:
             if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                private = await self.wallet_state_manager.get_private_key(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),

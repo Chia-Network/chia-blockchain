@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from secrets import token_bytes
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import (
-    AmountFilter,
-    CoinRecordOrder,
-    GetCoinRecords,
-    GetCoinRecordsResult,
-    HashFilter,
-    WalletCoinStore,
-)
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
@@ -100,6 +94,28 @@ record_9 = WalletCoinRecord(
     CoinType.CLAWBACK,
     VersionedBlob(uint16(1), b"TEST"),
 )
+
+
+def get_dummy_record(wallet_id: int) -> WalletCoinRecord:
+    return WalletCoinRecord(
+        Coin(token_bytes(32), token_bytes(32), uint64(12312)),
+        uint32(0),
+        uint32(0),
+        False,
+        False,
+        WalletType.STANDARD_WALLET,
+        wallet_id,
+    )
+
+
+@dataclass
+class DummyWalletCoinRecords:
+    records_per_wallet: Dict[int, List[WalletCoinRecord]] = field(default_factory=dict)
+
+    def generate(self, wallet_id: int, count: int) -> None:
+        records = self.records_per_wallet.setdefault(wallet_id, [])
+        for _ in range(count):
+            records.append(get_dummy_record(wallet_id))
 
 
 @pytest.mark.parametrize(
@@ -808,6 +824,7 @@ async def test_get_coin_records_total_count_cache_reset() -> None:
             store.set_spent(coin_4.name(), 10),
             store.delete_coin_record(record_4.name()),
             store.rollback_to_block(1000),
+            store.delete_wallet(uint32(record_1.wallet_id)),
         ]:
             await test_cache()
             await trigger
@@ -955,3 +972,24 @@ async def test_get_coin_records_between() -> None:
         records = await store.get_coin_records_between(1, 0, 4, coin_type=CoinType.CLAWBACK)
         assert len(records) == 1
         assert records[0] == record_8
+
+
+@pytest.mark.asyncio
+async def test_delete_wallet() -> None:
+    dummy_records = DummyWalletCoinRecords()
+    for i in range(5):
+        dummy_records.generate(i, i * 5)
+    async with DBConnection(1) as wrapper:
+        store = await WalletCoinStore.create(wrapper)
+        # Add the records per wallet and verify them
+        for wallet_id, records in dummy_records.records_per_wallet.items():
+            for coin_record in records:
+                await store.add_coin_record(coin_record)
+            assert set((await store.get_coin_records(wallet_id=wallet_id)).records) == set(records)
+        # Remove one wallet after the other and verify before and after each
+        for wallet_id, records in dummy_records.records_per_wallet.items():
+            # Assert the existence again here to make sure the previous removals did not affect other wallet_ids
+            assert set((await store.get_coin_records(wallet_id=wallet_id)).records) == set(records)
+            # Remove the wallet_id and make sure its removed fully
+            await store.delete_wallet(wallet_id)
+            assert (await store.get_coin_records(wallet_id=wallet_id)).records == []

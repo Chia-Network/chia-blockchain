@@ -77,8 +77,6 @@ async def async_main(service_config: Dict[str, Any]) -> int:
         # activate softforks immediately on testnet
         if "SOFT_FORK2_HEIGHT" not in overrides:
             overrides["SOFT_FORK2_HEIGHT"] = 0
-        if "SOFT_FORK_HEIGHT" not in overrides:
-            overrides["SOFT_FORK_HEIGHT"] = 0
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)

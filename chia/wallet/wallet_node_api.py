@@ -6,7 +6,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import PeerPeak, WalletNode
 
 
 class WalletNodeAPI:
@@ -45,7 +45,7 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        self.wallet_node.node_peaks[peer.peer_node_id] = PeerPeak(peak.height, peak.header_hash)
         # For trusted peers check if there are untrusted peers, if so make sure to disconnect them if the trusted node
         # is synced.
         if self.wallet_node.is_trusted(peer):

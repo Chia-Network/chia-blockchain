@@ -66,10 +66,10 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
-    last_change_height_cs,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
+    sort_coin_states,
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
@@ -106,6 +106,12 @@ class Balance(Streamable):
     pending_coin_removal_count: uint32 = uint32(0)
 
 
+@dataclasses.dataclass(frozen=True)
+class PeerPeak:
+    height: uint32
+    hash: bytes32
+
+
 @dataclasses.dataclass
 class WalletNode:
     config: Dict[str, Any]
@@ -132,7 +138,7 @@ class WalletNode:
     # in Untrusted mode wallet might get the state update before receiving the block
     race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
     race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
-    node_peaks: Dict[bytes32, Tuple[uint32, bytes32]] = dataclasses.field(default_factory=dict)
+    node_peaks: Dict[bytes32, PeerPeak] = dataclasses.field(default_factory=dict)
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
@@ -280,6 +286,8 @@ class WalletNode:
             "coin_of_interest_to_trade_record",
             "notifications",
             "retry_store",
+            "vc_records",
+            "vc_proofs",
         ]
 
         async with manage_connection(db_path) as conn:
@@ -377,9 +385,6 @@ class WalletNode:
             self,
         )
 
-        if self.wallet_peers is None:
-            self.initialize_wallet_peers()
-
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
@@ -403,6 +408,10 @@ class WalletNode:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
             if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
                 await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
+
+        if self.wallet_peers is None:
+            self.initialize_wallet_peers()
+
         return True
 
     def _close(self) -> None:
@@ -661,7 +670,7 @@ class WalletNode:
         if self._wallet_state_manager is None:
             return None
 
-        if Version(peer.protocol_version) < Version("0.0.33"):
+        if peer.protocol_version < Version("0.0.33"):
             self.log.info("Disconnecting, full node running old software")
             await peer.close()
 
@@ -840,7 +849,7 @@ class WalletNode:
         # Ensure the list is sorted
 
         before = len(items_input)
-        items = await self.wallet_state_manager.filter_spam(list(sorted(items_input, key=last_change_height_cs)))
+        items = await self.wallet_state_manager.filter_spam(sort_coin_states(items_input))
         num_filtered = before - len(items)
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
@@ -1152,12 +1161,12 @@ class WalletNode:
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
                 ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
                 coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
-                peer_new_peak_height, peer_new_peak_hash = self.node_peaks[peer.peer_node_id]
+                peer_new_peak = self.node_peaks[peer.peer_node_id]
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
                     peer,
-                    height=peer_new_peak_height,
-                    header_hash=peer_new_peak_hash,
+                    height=peer_new_peak.height,
+                    header_hash=peer_new_peak.hash,
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)

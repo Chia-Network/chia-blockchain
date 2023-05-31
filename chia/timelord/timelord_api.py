@@ -6,7 +6,9 @@ from typing import Optional
 
 from chia.protocols import timelord_protocol
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
+from chia.timelord.iters_from_block import iters_from_block
+from chia.timelord.timelord import Timelord
+from chia.timelord.types import Chain, IterationType
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint64
 
