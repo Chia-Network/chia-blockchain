@@ -307,8 +307,10 @@ class WebSocketServer:
                                 await connection.ping()
                             except asyncio.CancelledError:
                                 raise
-                            except Exception:
-                                self.log.exception(f"Ping error to {service_name}, closing connection:")
+                            except Exception as e:
+                                self.log.warning(f"Ping timeout to {service_name}, closing connection")
+                                if not isinstance(e, asyncio.TimeoutError):
+                                    self.log.exception(f"Unexpected exception from ping to {service_name}:")
                                 self.remove_connection(connection)
                                 await connection.close()
                 except asyncio.CancelledError:
