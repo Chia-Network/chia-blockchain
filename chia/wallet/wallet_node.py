@@ -267,7 +267,7 @@ class WalletNode:
         if auto_claim_config.batch_size < 1:
             auto_claim_config = dataclasses.replace(auto_claim_config, batch_size=uint16(50))
         auto_claim_config_json = auto_claim_config.to_json_dict()
-        if self.config["auto_claim"] != auto_claim_config_json:
+        if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
             # Update in memory config
             self.config["auto_claim"] = auto_claim_config_json
             # Update config file

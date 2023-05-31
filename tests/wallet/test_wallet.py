@@ -304,6 +304,7 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
         api_0 = WalletRpcApi(wallet_node)
+        api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
             wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -387,6 +388,17 @@ class TestWalletSimulator:
         resp = await api_0.get_transactions(dict(wallet_id=1, reverse=True))
         xch_tx = resp["transactions"][0]
         assert list(xch_tx["memos"].values())[0] == b"Test".hex()
+        txs = await api_1.get_transactions(
+            dict(
+                type_filter={
+                    "values": [TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.OUTGOING_CLAWBACK.value],
+                    "mode": 1,
+                },
+                wallet_id=1,
+            )
+        )
+        assert len(txs["transactions"]) == 1
+        assert txs["transactions"][0]["confirmed"]
 
     @pytest.mark.parametrize(
         "trusted",
