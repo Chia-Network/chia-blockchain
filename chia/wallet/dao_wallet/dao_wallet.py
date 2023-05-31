@@ -1267,7 +1267,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
-        full_puz_hash = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
+        full_puz_hash = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash).get_tree_hash()
         xch_conditions = [
             [
                 51,
@@ -1826,7 +1826,7 @@ class DAOWallet(WalletProtocol):
                                 ]
                             )
                             coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), eve_puzzle.get_tree_hash(), mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
                             # my_amount
                             # tail_reveal
                             # tail_solution
@@ -2007,7 +2007,6 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
