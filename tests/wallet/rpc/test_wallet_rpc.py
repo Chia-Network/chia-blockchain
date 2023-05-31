@@ -1975,9 +1975,7 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(20, client.get_synced)
     res = await client.create_new_cat_and_wallet(uint64(20))
     assert res["success"]
-
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, client.get_synced)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)
     await time_out_assert(20, client.get_synced)
     bal = await client.get_wallet_balances()
