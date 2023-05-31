@@ -131,6 +131,7 @@ class WalletRpcApi:
             "/create_new_wallet": self.create_new_wallet,
             # Wallet
             "/get_wallet_balance": self.get_wallet_balance,
+            "/get_wallet_balances": self.get_wallet_balances,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
             "/get_transaction_count": self.get_transaction_count,
@@ -800,8 +801,7 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-    async def get_wallet_balance(self, request: Dict) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
+    async def _get_wallet_balance(self, wallet_id: uint32) -> Dict:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
         wallet_balance = balance.to_json_dict()
@@ -812,7 +812,22 @@ class WalletRpcApi:
         if wallet.type() == WalletType.CAT:
             assert isinstance(wallet, CATWallet)
             wallet_balance["asset_id"] = wallet.get_asset_id()
+        return wallet_balance
+
+    async def get_wallet_balance(self, request: Dict) -> EndpointResult:
+        wallet_id = uint32(int(request["wallet_id"]))
+        wallet_balance = await self._get_wallet_balance(wallet_id)
         return {"wallet_balance": wallet_balance}
+
+    async def get_wallet_balances(self, request: Dict) -> EndpointResult:
+        try:
+            wallet_ids: List[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
+        except (TypeError, KeyError):
+            wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
+        wallet_balances: Dict[uint32, Dict] = {}
+        for wallet_id in wallet_ids:
+            wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)
+        return {"wallet_balances": wallet_balances}
 
     async def get_transaction(self, request: Dict) -> EndpointResult:
         transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
