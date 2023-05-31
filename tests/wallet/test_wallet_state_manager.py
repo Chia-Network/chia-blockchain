@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from secrets import token_bytes
 from typing import AsyncIterator
 
 import pytest
 
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
+from chia.util.misc import VersionedBlob
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -48,6 +51,17 @@ async def test_set_sync_mode_exception(simulator_and_wallet: SimulatorsAndWallet
     _, [(wallet_node, _)], _ = simulator_and_wallet
     async with assert_sync_mode(wallet_node.wallet_state_manager, uint32(1)):
         raise Exception
+
+
+@pytest.mark.asyncio
+async def test_deserialize_coin_metadata(simulator_and_wallet: SimulatorsAndWallets) -> None:
+    _, [(wallet_node, _)], _ = simulator_and_wallet
+    manager = wallet_node.wallet_state_manager
+    clawback_data = ClawbackMetadata(uint64(500), bytes32(token_bytes()), bytes32(token_bytes()))
+    valid_data = VersionedBlob(ClawbackVersion.V1.value, bytes(clawback_data))
+    assert manager.deserialize_coin_metadata(None, CoinType.CLAWBACK) is None
+    assert manager.deserialize_coin_metadata(valid_data, CoinType.CLAWBACK) == clawback_data.to_json_dict()
+    assert manager.deserialize_coin_metadata(valid_data, CoinType.NORMAL) == bytes(clawback_data)
 
 
 @pytest.mark.parametrize("hardened", [True, False])
