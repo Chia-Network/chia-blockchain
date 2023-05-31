@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
-from typing_extensions import final
+from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
@@ -56,6 +56,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -106,8 +107,6 @@ class Mirror:
 @final
 class DataLayerWallet:
     if TYPE_CHECKING:
-        from chia.wallet.wallet_protocol import WalletProtocol
-
         _protocol_check: ClassVar[WalletProtocol] = cast("DataLayerWallet", None)
 
     wallet_state_manager: WalletStateManager
@@ -627,13 +626,15 @@ class DataLayerWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         ignore_max_send_amount: bool = False,  # ignored
-        # This wallet only
-        launcher_id: Optional[bytes32] = None,
-        new_root_hash: Optional[bytes32] = None,
-        sign: bool = True,  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
-        add_pending_singleton: bool = True,
-        announce_new_state: bool = False,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
+        launcher_id: Optional[bytes32] = kwargs.get("launcher_id", None)
+        new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
+        sign: bool = kwargs.get(
+            "sign", True
+        )  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
+        add_pending_singleton: bool = kwargs.get("add_pending_singleton", True)
+        announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
         if len(coins) == 0:
             if launcher_id is None:
