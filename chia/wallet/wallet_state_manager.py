@@ -401,9 +401,10 @@ class WalletStateManager:
                 self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
             if len(derivation_paths) > 0:
-                await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
-                    [record.puzzle_hash for record in derivation_paths]
-                )
+                if wallet_id == self.main_wallet.id():
+                    await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
+                        [record.puzzle_hash for record in derivation_paths]
+                    )
                 self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
         # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
         if mark_existing_as_used and unused > 0 and new_paths:
@@ -670,7 +671,14 @@ class WalletStateManager:
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
-            return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
+            return await self.handle_cat(
+                cat_curried_args,
+                parent_coin_state,
+                coin_state,
+                coin_spend,
+                peer,
+                fork_height,
+            )
 
         # Check if the coin is a NFT
         #                                                        hint
@@ -855,6 +863,8 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        peer: WSChiaConnection,
+        fork_height: Optional[uint32],
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a CAT
@@ -896,6 +906,11 @@ class WalletStateManager:
                     CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
                     None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
                     parent_coin_state.coin.puzzle_hash,
+                )
+                await self.interested_store.add_unacknowledged_coin_state(
+                    asset_id,
+                    coin_state,
+                    fork_height,
                 )
                 self.state_changed("added_stray_cat")
                 return None
@@ -1864,6 +1879,7 @@ class WalletStateManager:
         """
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
+        await self.interested_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
