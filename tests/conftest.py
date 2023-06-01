@@ -678,17 +678,19 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
+async def wallets_prefarm(two_wallet_nodes_services, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
     farm_blocks = 3
     buffer = 1
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
+    full_nodes, wallets, bt = two_wallet_nodes_services
+    full_node_api = full_nodes[0]._api
     full_node_server = full_node_api.server
-    wallet_node_0, wallet_server_0 = wallets[0]
-    wallet_node_1, wallet_server_1 = wallets[1]
+    wallet_service_0 = wallets[0]
+    wallet_service_1 = wallets[1]
+    wallet_node_0 = wallet_service_0._node
+    wallet_node_1 = wallet_service_1._node
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
@@ -699,8 +701,21 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    wallet_node_0._test_client_args = (
+        bt.config["self_hostname"],
+        wallet_service_0.rpc_server.listen_port,
+        wallet_service_0.root_path,
+        wallet_service_0.config,
+    )
+    wallet_node_1._test_client_args = (
+        bt.config["self_hostname"],
+        wallet_service_1.rpc_server.listen_port,
+        wallet_service_1.root_path,
+        wallet_service_1.config,
+    )
+
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
