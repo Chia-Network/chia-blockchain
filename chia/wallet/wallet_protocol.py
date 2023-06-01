@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypedDict
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from typing_extensions import NotRequired, Protocol
+from typing_extensions import NotRequired, Protocol, TypedDict
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
