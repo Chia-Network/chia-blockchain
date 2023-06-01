@@ -951,7 +951,7 @@ async def test_dao_proposal_partial_vote(
     #     [proposal_amount],
     #     [None],
     # )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -1013,11 +1013,27 @@ async def test_dao_proposal_partial_vote(
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
 
-    # await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
-    # breakpoint()
+    await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
+
+    # Can we spend the newly minted CATs?
+    old_balance = await cat_wallet_0.get_spendable_balance()
+    ph_0 = await cat_wallet_0.get_new_inner_hash()
+    cat_tx = await cat_wallet_1.generate_signed_transactions([balance + new_mint_amount], [ph_0])
+    cat_sb = cat_tx[0].spend_bundle
+    await wallet_1.wallet_state_manager.add_pending_transaction(cat_tx[0])
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
+    await full_node_api.process_transaction_records(records=cat_tx)
+
+    if not trusted:
+        await asyncio.sleep(1)
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    await time_out_assert(20, cat_wallet_1.get_spendable_balance, 0)
+    await time_out_assert(20, cat_wallet_0.get_spendable_balance, old_balance + balance + new_mint_amount)
 
 
 @pytest.mark.parametrize(

@@ -179,6 +179,7 @@ class DAOCATWallet:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         parent_coin = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
         parent_spend = await fetch_coin_spend(height, parent_coin.coin, peer)
+
         uncurried = parent_spend.puzzle_reveal.uncurry()
         cat_inner = uncurried[1].at("rrf")
         lockup_puz, lockup_args = cat_inner.uncurry()
@@ -191,21 +192,25 @@ class DAOCATWallet:
             inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrf")
             active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrf").as_iter()]
 
-        # TODO: Move this section to dao_utils once we've got the close spend sorted
-        solution = parent_spend.solution.to_program().first()
-        if solution.first() == Program.to(0):
-            # No vote is being added so inner puz stays the same
-            # TODO: If the proposal is closed/coins are freed then what do we do here?
-            pass
+        if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
+            # shortcut
+            lockup_puz = cat_inner
         else:
-            new_vote = solution.at("rrrf")
-            active_votes_list.insert(0, bytes32(new_vote.as_atom()))
+            # TODO: Move this section to dao_utils once we've got the close spend sorted
+            solution = parent_spend.solution.to_program().first()
+            if solution.first() == Program.to(0):
+                # No vote is being added so inner puz stays the same
+                # TODO: If the proposal is closed/coins are freed then what do we do here?
+                pass
+            else:
+                new_vote = solution.at("rrrf")
+                active_votes_list.insert(0, bytes32(new_vote.as_atom()))
 
-        lockup_puz = get_lockup_puzzle(
-            self.dao_cat_info.limitations_program_hash,
-            active_votes_list,
-            inner_puzzle,
-        )
+            lockup_puz = get_lockup_puzzle(
+                self.dao_cat_info.limitations_program_hash,
+                active_votes_list,
+                inner_puzzle,
+            )
 
         new_cat_puzhash = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz

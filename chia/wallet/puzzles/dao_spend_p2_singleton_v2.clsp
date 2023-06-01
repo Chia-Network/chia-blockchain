@@ -44,7 +44,7 @@
             (loop_through_list
               SPEND_AMOUNT
               P2_SINGLETON_PUZHASH
-              (sha256 (f (f p2_singleton_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_list))))
+              (calculate_coin_id (f (f p2_singleton_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_list))))
               (r p2_singleton_list)
               (+ total (f (r (f p2_singleton_list))))
             )
