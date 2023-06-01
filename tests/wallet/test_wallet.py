@@ -391,7 +391,10 @@ class TestWalletSimulator:
         txs = await api_1.get_transactions(
             dict(
                 type_filter={
-                    "values": [TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.OUTGOING_CLAWBACK.value],
+                    "values": [
+                        TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
+                        TransactionType.OUTGOING_CLAWBACK.value,
+                    ],
                     "mode": 1,
                 },
                 wallet_id=1,
