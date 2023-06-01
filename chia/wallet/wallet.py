@@ -30,9 +30,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_absolute_seconds_exceeds_condition,
     make_assert_coin_announcement,
-    make_assert_my_coin_id_condition,
     make_assert_puzzle_announcement,
     make_create_coin_announcement,
     make_create_coin_condition,
@@ -223,8 +221,6 @@ class Wallet:
     def make_solution(
         self,
         primaries: List[Payment],
-        min_time=0,
-        me=None,
         coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
@@ -237,10 +233,6 @@ class Wallet:
         if len(primaries) > 0:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
-        if min_time > 0:
-            condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
-        if me:
-            condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
         if coin_announcements:
