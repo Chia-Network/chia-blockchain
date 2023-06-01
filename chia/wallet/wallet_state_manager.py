@@ -1183,7 +1183,7 @@ class WalletStateManager:
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False,
+                confirmed=True,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
                 additions=[coin_state.coin],
@@ -1452,18 +1452,9 @@ class WalletStateManager:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             rem_tx_records: List[TransactionRecord] = []
                             for tx_record in all_unconfirmed:
-                                # For clawback incoming txs, we need to mark them as confirmed in the db
-                                if tx_record.type in {
-                                    uint32(TransactionType.INCOMING_CLAWBACK_SEND),
-                                    uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE),
-                                }:
-                                    for add_coin in tx_record.additions:
-                                        if add_coin == coin_state.coin:
-                                            rem_tx_records.append(tx_record)
-                                else:
-                                    for rem_coin in tx_record.removals:
-                                        if rem_coin == coin_state.coin:
-                                            rem_tx_records.append(tx_record)
+                                for rem_coin in tx_record.removals:
+                                    if rem_coin == coin_state.coin:
+                                        rem_tx_records.append(tx_record)
 
                             for tx_record in rem_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
