@@ -499,7 +499,7 @@ class Timelord:
                             self.iters_to_submit[chain].append(next_sp)
                     self.iteration_to_proof_type[next_sp] = IterationType.SIGNAGE_POINT
                     next_iters_count += 1
-                    if next_iters_count == 3:
+                    if next_iters_count == 10:
                         break
 
                 # Break so we alternate between checking SP and IP
