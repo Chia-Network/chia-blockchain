@@ -1,4 +1,4 @@
-name: 🚨 Snyk Python Scan
+name: 🚨 Snyk Code Scan
 on:
   push:
     paths-ignore:
@@ -78,3 +78,20 @@ jobs:
       with:
         command: monitor
         args: --skip-unresolved
+
+    - name: Install the GUI
+      shell: sh install-gui.sh
+
+    - name: Change into the chia-blockchain-gui repo
+      shell: cd chia-blockchain-gui
+
+    - name: Run Snyk to check for vulnerabilities
+      if: steps.check_secrets.outputs.HAS_SNYK_SECRET
+      uses: snyk/actions/python@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: monitor
+        args: |
+          --all-projects
+          --dev
