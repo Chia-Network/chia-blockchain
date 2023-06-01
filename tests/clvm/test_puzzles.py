@@ -10,6 +10,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -101,7 +102,7 @@ def default_payments_and_conditions(
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
-    conditions = Program.to([make_create_coin_condition(ph, amount, []) for ph, amount in payments])
+    conditions = Program.to([make_create_coin_condition(ph, uint64(amount), []) for ph, amount in payments])
     return payments, conditions
 
 
