@@ -16,7 +16,6 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
-from chia.pools.pool_state import PoolState
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
@@ -113,7 +112,7 @@ class Farmer:
         self.harvester_handshake_task: Optional[asyncio.Task[None]] = None
 
         # From p2_singleton_puzzle_hash to pool state dict
-        self.pool_state: Dict[bytes32, PoolState] = {}
+        self.pool_state: Dict[bytes32, Dict[str, Any]] = {}
 
         # From p2_singleton to auth PrivateKey
         self.authentication_keys: Dict[bytes32, PrivateKey] = {}
@@ -446,25 +445,21 @@ class Farmer:
                 add_auth_key(self._root_path, pool_config, authentication_sk.get_g1())
 
                 if p2_singleton_puzzle_hash not in self.pool_state:
-                    self.pool_state[p2_singleton_puzzle_hash] = PoolState(
-                        p2_singleton_puzzle_hash=p2_singleton_puzzle_hash.hex(),
-                        points_found_since_start=uint64(0),
-                        points_found_24h=[],
-                        points_acknowledged_since_start=uint64(0),
-                        points_acknowledged_24h=[],
-                        next_farmer_update=0,
-                        next_pool_info_update=0,
-                        current_points=uint64(0),
-                        current_difficulty=None,
-                        pool_errors_24h=[],
-                        authentication_token_timeout=None,
-                        pool_config=pool_config,
-                        plot_count=0,
-                    )
+                    self.pool_state[p2_singleton_puzzle_hash] = {
+                        "points_found_since_start": 0,
+                        "points_found_24h": [],
+                        "points_acknowledged_since_start": 0,
+                        "points_acknowledged_24h": [],
+                        "next_farmer_update": 0,
+                        "next_pool_info_update": 0,
+                        "current_points": 0,
+                        "current_difficulty": None,
+                        "pool_errors_24h": [],
+                        "authentication_token_timeout": None,
+                    }
                     self.log.info(f"Added pool: {pool_config}")
-                else:
-                    self.pool_state[p2_singleton_puzzle_hash]["pool_config"] = pool_config
                 pool_state = self.pool_state[p2_singleton_puzzle_hash]
+                pool_state["pool_config"] = pool_config
 
                 # Skip state update when self pooling
                 if pool_config.pool_url == "":
@@ -476,21 +471,21 @@ class Farmer:
                     continue
 
                 # TODO: Improve error handling below, inform about unexpected failures
-                if time.time() >= pool_state.next_pool_info_update:
-                    pool_state.next_pool_info_update = time.time() + UPDATE_POOL_INFO_INTERVAL
+                if time.time() >= pool_state["next_pool_info_update"]:
+                    pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
-                        pool_state.authentication_token_timeout = pool_info["authentication_token_timeout"]
+                        pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
-                        if pool_state.current_difficulty is None:
-                            pool_state.current_difficulty = pool_info["minimum_difficulty"]
+                        if pool_state["current_difficulty"] is None:
+                            pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
                     else:
-                        pool_state.next_pool_info_update = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
+                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
-                if time.time() >= pool_state.next_farmer_update:
-                    pool_state.next_farmer_update = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
-                    authentication_token_timeout = pool_state.authentication_token_timeout
+                if time.time() >= pool_state["next_farmer_update"]:
+                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
+                    authentication_token_timeout = pool_state["authentication_token_timeout"]
 
                     async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
@@ -503,8 +498,8 @@ class Farmer:
                             if "error_code" not in response:
                                 farmer_response = GetFarmerResponse.from_json_dict(response)
                                 if farmer_response is not None:
-                                    pool_state.current_difficulty = farmer_response.current_difficulty
-                                    pool_state.current_points = farmer_response.current_points
+                                    pool_state["current_difficulty"] = farmer_response.current_difficulty
+                                    pool_state["current_points"] = farmer_response.current_points
                             else:
                                 try:
                                     error_code_response = PoolErrorCode(response["error_code"])
@@ -605,8 +600,8 @@ class Farmer:
             save_config(self._root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> None:
-        for p2_singleton_puzzle_hash, pool_state in self.pool_state.items():
-            if launcher_id == pool_state["pool_config"].launcher_id:
+        for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
+            if launcher_id == pool_state_dict["pool_config"].launcher_id:
                 with lock_and_load_config(self._root_path, "config.yaml") as config:
                     new_list = []
                     pool_list = config["pool"].get("pool_list", [])
@@ -619,7 +614,7 @@ class Farmer:
                     config["pool"]["pool_list"] = new_list
                     save_config(self._root_path, "config.yaml", config)
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
-                pool_state.next_farmer_update = 0
+                pool_state_dict["next_farmer_update"] = 0
                 return
 
         self.log.warning(f"Launcher id: {launcher_id} not found")

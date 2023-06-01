@@ -281,10 +281,11 @@ class FarmerRpcApi:
 
     async def get_pool_state(self, request: Dict[str, Any]) -> EndpointResult:
         pools_list = []
-        for p2_singleton_puzzle_hash, pool_state in self.service.pool_state.items():
-            pool_state_dict = pool_state.copy()
-            pool_state_dict["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
-            pools_list.append(pool_state_dict)
+        for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
+            pool_state = pool_dict.copy()
+            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
+            pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
+            pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
     async def set_payout_instructions(self, request: Dict[str, Any]) -> EndpointResult:
