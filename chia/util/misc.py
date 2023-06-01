@@ -141,8 +141,6 @@ class Batch(Generic[T]):
 
 
 def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
-    if not isinstance(to_split, (list, set)):
-        raise ValueError(f"to_batches: Unsupported type {type(to_split)}")
     if batch_size <= 0:
         raise ValueError("to_batches: batch_size must be greater than 0.")
     total_size = len(to_split)
@@ -153,7 +151,7 @@ def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
         for batch_start in range(0, total_size, batch_size):
             batch_end = min(batch_start + batch_size, total_size)
             yield Batch(total_size - batch_end, to_split[batch_start:batch_end])
-    else:
+    elif isinstance(to_split, set):
         processed = 0
         entries = []
         for entry in to_split:
@@ -165,3 +163,5 @@ def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
         if len(entries) > 0:
             processed += len(entries)
             yield Batch(total_size - processed, entries)
+    else:
+        raise ValueError(f"to_batches: Unsupported type {type(to_split)}")

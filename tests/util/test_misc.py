@@ -77,8 +77,8 @@ def test_validate_directory_writable(tmp_path) -> None:
 def test_empty_lists() -> None:
     # An empty list should return an empty iterator and skip the loop's body.
     empty: List[int] = []
-    for _ in to_batches(empty, 1):
-        assert False
+    with pytest.raises(StopIteration):
+        next(to_batches(empty, 1))
 
 
 @pytest.mark.parametrize("collection_type", [list, set])
@@ -104,14 +104,12 @@ def test_valid(collection_type: type) -> None:
 
 def test_invalid_batch_sizes() -> None:
     with pytest.raises(ValueError):
-        for _ in to_batches([], 0):
-            assert False
+        next(to_batches([], 0))
+
     with pytest.raises(ValueError):
-        for _ in to_batches([], -1):
-            assert False
+        next(to_batches([], -1))
 
 
 def test_invalid_input_type() -> None:
     with pytest.raises(ValueError, match="Unsupported type"):
-        for _ in to_batches(dict(), 1):
-            assert False
+        next(to_batches(dict({1: 2}), 1))
