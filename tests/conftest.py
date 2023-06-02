@@ -152,7 +152,7 @@ def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3886635, 4200000, 5496000])
+@pytest.fixture(scope="function", params=[1000000, 3886635, 4410000, 5496000])
 def softfork_height(request) -> int:
     return request.param
 
