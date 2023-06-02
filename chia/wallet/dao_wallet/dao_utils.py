@@ -472,7 +472,9 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
 
 
 def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
-    return create_singleton_puzzle(DAO_FINISHED_STATE, proposal_id)
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
+    finished_inner_puz: Program = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
+    return create_singleton_puzzle(finished_inner_puz, proposal_id)
 
 
 def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:

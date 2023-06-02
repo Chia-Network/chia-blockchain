@@ -2078,7 +2078,6 @@ class DAOWallet(WalletProtocol):
             if proposal_info.closed:
                 inner_solution = Program.to(
                     [
-                        get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(),
                         proposal_info.current_coin.amount,
                     ]
                 )

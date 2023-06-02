@@ -18,32 +18,53 @@ SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH: bytes32 = SINGLETON_LAUNCHER.get_tree_hash()
-DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
+DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clsp")
 DAO_LOCKUP_MOD_HASH: bytes32 = DAO_LOCKUP_MOD.get_tree_hash()
-DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
+DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clsp")
 DAO_PROPOSAL_TIMER_MOD_HASH: bytes32 = DAO_PROPOSAL_TIMER_MOD.get_tree_hash()
-DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
+DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
 DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
-DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clvm")
+DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
 DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clvm")
+DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clsp")
 DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
-SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton.clvm")
+SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
-DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clvm")
+DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clvm")
+DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clsp")
 DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clvm")
+DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clsp")
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
-P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clvm")
+P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")
 P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
-DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clvm")
+DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clsp")
 DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
-DAO_UPDATE_MOD: Program = load_clvm("dao_update_proposal.clvm")
+DAO_UPDATE_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
+
+
+def test_finished_state() -> None:
+    proposal_id: Program = Program.to("proposal_id").get_tree_hash()
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+    finished_inner_puz = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
+    finished_full_puz = SINGLETON_MOD.curry(singleton_struct, finished_inner_puz)
+    inner_sol = Program.to([1])
+
+    conds = finished_inner_puz.run(inner_sol).as_python()
+    assert conds[0][1] == finished_full_puz.get_tree_hash()
+    assert conds[2][1] == finished_inner_puz.get_tree_hash()
+
+    lineage = Program.to([proposal_id, finished_inner_puz.get_tree_hash(), 1])
+    full_sol = Program.to([lineage, 1, inner_sol])
+
+    conds = conditions_dict_for_solution(finished_full_puz, full_sol, INFINITE_COST)
+    assert conds[ConditionOpcode.ASSERT_MY_PUZZLEHASH][0].vars[0] == finished_full_puz.get_tree_hash()
+    assert conds[ConditionOpcode.CREATE_COIN][0].vars[0] == finished_full_puz.get_tree_hash()
 
 
 def test_proposal() -> None:
@@ -89,7 +110,6 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        "s",
         acs_ph,
     )
 
@@ -112,7 +132,7 @@ def test_proposal() -> None:
     )
 
     # Run the proposal and check its conditions
-    conditions = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)[1]
+    conditions = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
 
     # Puzzle Announcement of vote_coin_ids
     assert conditions[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0] == vote_coin_id
@@ -133,7 +153,6 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes + vote_amount,
         current_total_votes + vote_amount,
-        "s",
         acs_ph,
     )
     assert conditions[ConditionOpcode.CREATE_COIN][0].vars[0] == next_proposal.get_tree_hash()
@@ -153,7 +172,6 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        "s",
         acs_ph,
     )
     vote_amount = 10
@@ -176,10 +194,16 @@ def test_proposal() -> None:
         ]
     )
     # Run the proposal and check its conditions
-    conditions = conditions_dict_for_solution(launch_proposal, solution, INFINITE_COST)[1]
+    conditions = conditions_dict_for_solution(launch_proposal, solution, INFINITE_COST)
     # check that the timer is created
     timer_puz = DAO_PROPOSAL_TIMER_MOD.curry(
-        DAO_PROPOSAL_MOD_HASH, DAO_PROPOSAL_TIMER_MOD_HASH, CAT_MOD_HASH, CAT_TAIL_HASH, singleton_struct, treasury_id
+        DAO_PROPOSAL_MOD_HASH,
+        DAO_PROPOSAL_TIMER_MOD_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        CAT_MOD_HASH,
+        CAT_TAIL_HASH,
+        singleton_struct,
+        treasury_id,
     )
     timer_puzhash = timer_puz.get_tree_hash()
     assert conditions[ConditionOpcode.CREATE_COIN][1].vars[0] == timer_puzhash
@@ -200,7 +224,6 @@ def test_proposal() -> None:
         treasury_id,
         current_yes_votes,
         current_total_votes,
-        "s",
         acs_ph,
     )
     attendance_required = 200
@@ -222,7 +245,7 @@ def test_proposal() -> None:
         ]
     )
 
-    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)[1]
+    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
 
     # make a matching treasury puzzle for the APA
     treasury_inner: Program = DAO_TREASURY_MOD.curry(
@@ -258,7 +281,6 @@ def test_proposal() -> None:
         treasury_id,
         20,  # failing number of yes votes
         current_total_votes,
-        "s",
         acs_ph,
     )
     solution = Program.to(
@@ -276,10 +298,13 @@ def test_proposal() -> None:
             0,
         ]
     )
-    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)[1]
+    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
     apa_msg = int_to_bytes(0)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == timer_apa
+
+    finished_puz = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
+    assert conds[ConditionOpcode.CREATE_COIN][0].vars[0] == finished_puz.get_tree_hash()
 
     # self destruct a proposal
     attendance_required = 200
@@ -298,9 +323,9 @@ def test_proposal() -> None:
             1,
         ]
     )
-    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)[1]
-    # apa_msg = Program.to([proposal_pass_percentage, self_destruct_time]).get_tree_hash()
+    conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(treasury_puzhash + apa_msg)
+    assert conds[ConditionOpcode.CREATE_COIN][0].vars[0] == finished_puz.get_tree_hash()
 
 
 def test_proposal_timer() -> None:

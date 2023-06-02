@@ -27,7 +27,14 @@
   (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
-  (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
+  (defconstant dao_finished_state 0x7f3cc356732907933a8f9b1ccf16f71735d07340eb38c847aa402e97d75eb40b)
+
+  (defun calculate_finished_state (singleton_struct dao_finished_state)
+    (puzzle-hash-of-curried-function dao_finished_state
+      (sha256 ONE dao_finished_state)
+      (sha256tree singleton_struct)
+    )
+  )
 
   ; take two lists and merge them into one
   (defun merge_list (list_a list_b)
@@ -241,7 +248,10 @@
                 (sha256
                   (calculate_singleton_puzzle_hash
                     (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
-                    dao_finished_state
+                    (calculate_finished_state
+                      (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
+                      dao_finished_state
+                    )
                   )
                   'f'
                 )
