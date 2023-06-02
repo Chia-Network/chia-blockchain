@@ -767,8 +767,6 @@ class WalletStateManager:
                     ],
                     coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
                 )
-                to_puzhash: Optional[bytes32] = derivation_record.puzzle_hash
-                assert to_puzhash is not None
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
                 # Update incoming tx to prevent double spend and mark it is pending
