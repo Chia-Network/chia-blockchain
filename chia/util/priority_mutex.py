@@ -36,18 +36,19 @@ class _Element(Generic[_T_Comparable]):
 
 
 @dataclasses.dataclass()
-class LockQueue(Generic[_T_Comparable]):
+class PriorityMutex(Generic[_T_Comparable]):
     """
     The purpose of this class is to be able to control access to a lock, and give
     priority to certain requests.  Lower values are given access first.  To use it,
-    create a lock and use the `.acquire()` context manager method:
+    create a lock and use the `.acquire()` context manager method.  In actual uses,
+    a dedicated priority enumeration is likely to be more clear.
 
     ```
-    my_lock = LockQueue[int]()
+    my_mutex = PriorityMutex[int]()
 
-    async with my_lock.acquire(priority=0):
+    async with my_mutex.acquire(priority=0):
        ...
-    async with my_lock.acquire(priority=1):
+    async with my_mutex.acquire(priority=1):
        ...
     ```
 

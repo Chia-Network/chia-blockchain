@@ -12,8 +12,8 @@ from typing import Callable, List, Optional
 import anyio
 import pytest
 
-from chia.full_node.lock_queue import LockQueue, NestedLockUnsupportedError
 from chia.simulator.time_out_assert import adjusted_timeout
+from chia.util.priority_mutex import NestedLockUnsupportedError, PriorityMutex
 from tests.util.misc import Marks, datacases
 
 log = logging.getLogger(__name__)
@@ -33,10 +33,10 @@ class RequestNotCompleteError(Exception):
     pass
 
 
-class TestLockQueue:
+class TestPriorityMutex:
     @pytest.mark.asyncio
-    async def test_lock_queue(self):
-        queue = LockQueue[LockPriority]()
+    async def test_priority_mutex(self):
+        queue = PriorityMutex[LockPriority]()
 
         async def slow_func():
             for i in range(100):
@@ -111,7 +111,7 @@ class Request:
 
     async def acquire(
         self,
-        queue: LockQueue[LockPriority],
+        queue: PriorityMutex[LockPriority],
         queued_callback: Callable[[], object],
         wait_for: asyncio.Event,
     ) -> None:
@@ -176,7 +176,7 @@ def test_comparisons_fail_for_incomplete_requests(
 
 @pytest.mark.asyncio
 async def test_reacquisition_fails() -> None:
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
     request = Request(id="again!", priority=LockPriority.low)
     event = asyncio.Event()
     event.set()
@@ -233,7 +233,7 @@ async def test_reacquisition_fails() -> None:
 )
 @pytest.mark.asyncio
 async def test_order(case: OrderCase):
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -257,7 +257,7 @@ def expected_acquisition_order(requests):
 
 @pytest.mark.asyncio
 async def test_sequential_acquisitions():
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -272,7 +272,7 @@ async def test_sequential_acquisitions():
 
 @pytest.mark.asyncio
 async def test_nested_acquisition_raises():
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     async with queue.acquire(priority=LockPriority.high):
         with pytest.raises(NestedLockUnsupportedError):
@@ -281,14 +281,14 @@ async def test_nested_acquisition_raises():
                 assert False  # pragma: no cover
 
 
-async def to_be_cancelled(queue: LockQueue, event: asyncio.Event) -> None:
+async def to_be_cancelled(queue: PriorityMutex, event: asyncio.Event) -> None:
     async with queue.acquire(priority=LockPriority.high, queued_callback=event.set):
         assert False
 
 
 @pytest.mark.asyncio
 async def test_to_be_cancelled_fails_if_not_cancelled():
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
     event = asyncio.Event()
 
     with pytest.raises(AssertionError):
@@ -297,7 +297,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled():
 
 @pytest.mark.asyncio
 async def test_cancellation_while_waiting():
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -343,7 +343,7 @@ async def test_cancellation_while_waiting():
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.asyncio
 async def test_retains_request_order_for_matching_priority(seed: int):
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
     random_instance.seed(a=seed, version=2)
@@ -417,7 +417,7 @@ def test_sane_all_in_order(case: SaneCase) -> None:
     assert sane(requests=case.requests) == case.good
 
 
-async def create_acquire_tasks_in_controlled_order(requests: List[Request], queue: LockQueue[LockPriority]):
+async def create_acquire_tasks_in_controlled_order(requests: List[Request], queue: PriorityMutex[LockPriority]):
     tasks: List[asyncio.Task] = []
     release_event = asyncio.Event()
 
@@ -435,7 +435,7 @@ async def create_acquire_tasks_in_controlled_order(requests: List[Request], queu
 
 @pytest.mark.asyncio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
-    queue = LockQueue[LockPriority]()
+    queue = PriorityMutex[LockPriority]()
 
     other_task_allow_release_event = asyncio.Event()
 

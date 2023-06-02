@@ -158,9 +158,9 @@ tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils
-tests.util.test_lock_queue
 tests.util.test_misc
 tests.util.test_network
+tests.util.test_priority_mutex
 tests.wallet.cat_wallet.test_cat_lifecycle
 tests.wallet.cat_wallet.test_cat_wallet
 tests.wallet.cat_wallet.test_offer_lifecycle
