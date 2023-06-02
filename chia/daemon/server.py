@@ -297,7 +297,7 @@ class WebSocketServer:
         for service_name, connections in self.connections.items():
             if service_name == service_plotter:
                 continue
-            for connection in connections:
+            for connection in connections.copy():
                 try:
                     self.log.debug(f"About to ping: {service_name}")
                     await connection.ping()

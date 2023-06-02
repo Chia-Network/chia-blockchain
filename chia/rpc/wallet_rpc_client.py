@@ -20,6 +20,7 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.wallet_coin_store import GetCoinRecords
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,6 +114,9 @@ class WalletRpcClient(RpcClient):
     # Wallet APIs
     async def get_wallet_balance(self, wallet_id: int) -> Dict:
         return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))["wallet_balance"]
+
+    async def get_wallet_balances(self, wallet_ids: Optional[List[int]] = None) -> Dict:
+        return (await self.fetch("get_wallet_balances", {"wallet_ids": wallet_ids}))["wallet_balances"]
 
     async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
         res = await self.fetch(
@@ -354,6 +358,9 @@ class WalletRpcClient(RpcClient):
         }
         response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
+
+    async def get_coin_records(self, request: GetCoinRecords) -> Dict[str, Any]:
+        return await self.fetch("get_coin_records", request.to_json_dict())
 
     async def get_spendable_coins(
         self,
@@ -955,7 +962,7 @@ class WalletRpcClient(RpcClient):
         return response
 
     async def list_nfts(self, wallet_id):
-        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "num": 100_000}
         response = await self.fetch("nft_get_nfts", request)
         return response
 

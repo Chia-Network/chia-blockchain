@@ -13,6 +13,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, U
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
@@ -110,8 +111,8 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: str = field(default_factory=str)
-    protocol_version: str = field(default_factory=str)
+    version: Version = field(default_factory=lambda: Version("0"))
+    protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
         default_factory=create_default_last_message_time_dict,
@@ -218,8 +219,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = inbound_handshake.software_version
-            self.protocol_version = inbound_handshake.protocol_version
+            self.version = Version(inbound_handshake.software_version)
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -672,7 +673,7 @@ class WSChiaConnection:
 
     # Used by the Chia Seeder.
     def get_version(self) -> str:
-        return self.version
+        return str(self.version)
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

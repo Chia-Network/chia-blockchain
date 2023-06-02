@@ -19,31 +19,6 @@ def make_assert_aggsig_condition(pubkey) -> Program:
     return condition
 
 
-def make_assert_my_coin_id_condition(coin_name) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_MY_COIN_ID, coin_name])
-    return condition
-
-
-def make_assert_absolute_height_exceeds_condition(block_index) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, block_index])
-    return condition
-
-
-def make_assert_relative_height_exceeds_condition(block_index) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_HEIGHT_RELATIVE, block_index])
-    return condition
-
-
-def make_assert_absolute_seconds_exceeds_condition(time) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, time])
-    return condition
-
-
-def make_assert_relative_seconds_exceeds_condition(time) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_SECONDS_RELATIVE, time])
-    return condition
-
-
 def make_reserve_fee_condition(fee) -> Program:
     condition: Program = Program.to([ConditionOpcode.RESERVE_FEE, fee])
     return condition
@@ -66,19 +41,4 @@ def make_create_coin_announcement(message) -> Program:
 
 def make_create_puzzle_announcement(message) -> Program:
     condition: Program = Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, message])
-    return condition
-
-
-def make_assert_my_parent_id(parent_id) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_MY_PARENT_ID, parent_id])
-    return condition
-
-
-def make_assert_my_puzzlehash(puzzlehash) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_MY_PUZZLEHASH, puzzlehash])
-    return condition
-
-
-def make_assert_my_amount(amount) -> Program:
-    condition: Program = Program.to([ConditionOpcode.ASSERT_MY_AMOUNT, amount])
     return condition
