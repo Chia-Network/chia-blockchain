@@ -55,15 +55,13 @@ def parse_sexp_to_conditions(sexp: Program) -> List[ConditionWithArgs]:
     return [parse_sexp_to_condition(s) for s in sexp.as_iter()]
 
 
-def pkm_pairs(
-    conditions: SpendBundleConditions, additional_data: bytes, *, soft_fork: bool
-) -> Tuple[List[bytes48], List[bytes]]:
+def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
     ret: Tuple[List[bytes48], List[bytes]] = ([], [])
 
     for pk, msg in conditions.agg_sig_unsafe:
         ret[0].append(bytes48(pk))
         ret[1].append(msg)
-        if soft_fork and msg.endswith(additional_data):
+        if msg.endswith(additional_data):
             raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
