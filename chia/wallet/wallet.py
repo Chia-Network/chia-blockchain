@@ -426,9 +426,6 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                assert (
-                    puzzle.get_tree_hash() == coin.puzzle_hash
-                ), "Decorated puzzle doesn't match the coin puzzle hash, please check your puzzle_decorators config."
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,

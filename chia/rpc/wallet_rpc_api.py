@@ -929,9 +929,7 @@ class WalletRpcApi:
                     coin.name()
                 )
                 assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
-                assert record.metadata is not None, f"None metadata for clawback transaction {record.coin.name().hex()}"
-                clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-                tx["metadata"] = clawback_metadata.to_json_dict()
+                tx["metadata"] = record.parsed_metadata().to_json_dict()
                 tx["metadata"]["coin_id"] = coin.name().hex()
                 tx["metadata"]["spent"] = record.spent
             except Exception as e:
@@ -1090,9 +1088,7 @@ class WalletRpcApi:
         tx_id_list: List[bytes] = []
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
             try:
-                assert coin_record.metadata is not None, f"Coin record {coin_id.hex()} has no metadata"
-                metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
-                coins[coin_record.coin] = metadata
+                coins[coin_record.coin] = coin_record.parsed_metadata()
                 if len(coins) >= batch_size:
                     tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
                     coins = {}
