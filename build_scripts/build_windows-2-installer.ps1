@@ -31,6 +31,11 @@ Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
 
 Write-Output "   ---"
+Write-Output "Copy licenses directory to chia-blockchain-gui\"
+Write-Output "   ---"
+Copy-Item "dist\licenses" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
+
+Write-Output "   ---"
 Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru

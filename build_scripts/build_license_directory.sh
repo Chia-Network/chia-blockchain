@@ -5,7 +5,7 @@ pwd
 npm install -g license-checker
 
 cd ../chia-blockchain-gui || 'exit" or "cd' ... || return
-npm install .
+#npm install . - We do not want this to update
 
 pwd
 ls -lah

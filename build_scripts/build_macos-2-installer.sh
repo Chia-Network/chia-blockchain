@@ -41,7 +41,7 @@ bash ./build_license_directory.sh
 
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
-
+cp -r dist/licenses ../chia-blockchain-gui/packages/gui
 # sets the version for chia-blockchain in package.json
 brew install jq
 cp package.json package.json.orig
