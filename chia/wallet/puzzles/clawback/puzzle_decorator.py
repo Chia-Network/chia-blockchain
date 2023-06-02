@@ -30,14 +30,14 @@ class ClawbackPuzzleDecorator:
         # We don't wrap anything for the Clawback
         return inner_puzzle
 
-    def decorate_target_puzhash(
+    def decorate_target_puzzle_hash(
         self,
         inner_puzzle: Program,
-        target_puzhash: bytes32,
+        target_puzzle_hash: bytes32,
     ) -> Tuple[Program, bytes32]:
         return (
             self.decorate(inner_puzzle),
-            create_merkle_puzzle(self.time_lock, inner_puzzle.get_tree_hash(), target_puzhash).get_tree_hash(),
+            create_merkle_puzzle(self.time_lock, inner_puzzle.get_tree_hash(), target_puzzle_hash).get_tree_hash(),
         )
 
     def solve(
@@ -61,7 +61,7 @@ class ClawbackPuzzleDecorator:
         return self.decorate(inner_puzzle), inner_solution
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzhash: bytes32, memos: List[bytes]
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]
     ) -> Tuple[Program, List[bytes]]:
-        memos.insert(0, target_puzhash)
+        memos.insert(0, target_puzzle_hash)
         return self.decorate(inner_puzzle), memos

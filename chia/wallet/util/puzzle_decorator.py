@@ -20,11 +20,13 @@ class PuzzleDecoratorProtocol(Protocol):
     def decorate(self, inner_puzzle: Program) -> Program:
         ...
 
-    def decorate_target_puzhash(self, inner_puzzle: Program, target_puzhash: bytes32) -> Tuple[Program, bytes32]:
+    def decorate_target_puzzle_hash(
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32
+    ) -> Tuple[Program, bytes32]:
         ...
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzhash: bytes32, memos: List[bytes]
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]
     ) -> Tuple[Program, List[bytes]]:
         ...
 
@@ -67,16 +69,16 @@ class PuzzleDecoratorManager:
             inner_puzzle = decorator.decorate(inner_puzzle)
         return inner_puzzle
 
-    def decorate_target_puzhash(self, inner_puzzle: Program, target_puzhash: bytes32) -> bytes32:
+    def decorate_target_puzzle_hash(self, inner_puzzle: Program, target_puzzle_hash: bytes32) -> bytes32:
         """
         Decorate a target puzzle hash
-        :param target_puzhash: Target puzzle hash
+        :param target_puzzle_hash: Target puzzle hash
         :param inner_puzzle: Inner puzzle
         :return: Decorated target puzzle hash
         """
         for decorator in self.decorator_list:
-            inner_puzzle, target_puzhash = decorator.decorate_target_puzhash(inner_puzzle, target_puzhash)
-        return target_puzhash
+            inner_puzzle, target_puzzle_hash = decorator.decorate_target_puzzle_hash(inner_puzzle, target_puzzle_hash)
+        return target_puzzle_hash
 
     def solve(self, inner_puzzle: Program, primaries: List[Payment], inner_solution: Program) -> Program:
         """
@@ -90,14 +92,14 @@ class PuzzleDecoratorManager:
             inner_puzzle, inner_solution = decorator.solve(inner_puzzle, primaries, inner_solution)
         return inner_solution
 
-    def decorate_memos(self, inner_puzzle: Program, target_puzhash: bytes32, memos: List[bytes]) -> List[bytes]:
+    def decorate_memos(self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]) -> List[bytes]:
         """
         Decorate a memo list
         :param inner_puzzle: Inner puzzle
-        :param target_puzhash: Target puzzle hash
+        :param target_puzzle_hash: Target puzzle hash
         :param memos: memo list
         :return: Decorated memo
         """
         for decorator in self.decorator_list:
-            inner_puzzle, memos = decorator.decorate_memos(inner_puzzle, target_puzhash, memos)
+            inner_puzzle, memos = decorator.decorate_memos(inner_puzzle, target_puzzle_hash, memos)
         return memos

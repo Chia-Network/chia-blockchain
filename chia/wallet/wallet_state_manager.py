@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import multiprocessing.context
 import time
@@ -762,7 +761,7 @@ class WalletStateManager:
                         Payment(
                             derivation_record.puzzle_hash,
                             uint64(coin.amount),
-                            [] if metadata.memos is None else metadata.memos,
+                            incoming_tx.memos[0][1],  # Forward memo of the first coin
                         )
                     ],
                     coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
@@ -1148,8 +1147,6 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
-            # Add memo
-            metadata = dataclasses.replace(metadata, memos=memos.get(coin_state.coin.name(), None))
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
