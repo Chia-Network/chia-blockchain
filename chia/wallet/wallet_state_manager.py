@@ -699,15 +699,6 @@ class WalletStateManager:
 
         return None
 
-    def deserialize_coin_metadata(self, metadata: Optional[VersionedBlob], coin_type: CoinType) -> Any:
-        if metadata is None:
-            return None
-
-        if coin_type == CoinType.CLAWBACK:
-            return ClawbackMetadata.from_bytes(metadata.blob).to_json_dict()
-        else:
-            return metadata.blob
-
     async def auto_claim_coins(self) -> None:
         # Get unspent clawback coin
         current_timestamp = self.blockchain.get_latest_timestamp()
