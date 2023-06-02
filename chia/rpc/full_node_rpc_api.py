@@ -707,7 +707,7 @@ class FullNodeRpcApi:
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        async with self.service.blockchain.lock_queue.acquire(priority=BlockchainLockPriority.low):
+        async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainLockPriority.low):
             if self.service.blockchain.height_to_hash(block.height) != header_hash:
                 raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)

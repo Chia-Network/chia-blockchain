@@ -145,7 +145,7 @@ class FullNodeSimulator(FullNodeAPI):
         While reorgs are preferred, this is also an option
         Note: This does not broadcast the changes, and all wallets will need to be wiped.
         """
-        async with self.full_node.blockchain.lock_queue.acquire(priority=BlockchainLockPriority.high):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainLockPriority.high):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
                 raise ValueError("We can't revert without any blocks.")
@@ -180,7 +180,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
-        async with self.full_node.blockchain.lock_queue.acquire(priority=BlockchainLockPriority.high):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainLockPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -229,7 +229,7 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
-        async with self.full_node.blockchain.lock_queue.acquire(priority=BlockchainLockPriority.high):
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainLockPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:

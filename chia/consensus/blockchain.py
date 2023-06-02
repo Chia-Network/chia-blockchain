@@ -30,7 +30,6 @@ from chia.consensus.multiprocess_validation import (
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.lock_queue import LockQueue
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -51,6 +50,7 @@ from chia.util.generator_tools import get_block_header, tx_removals_and_addition
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class Blockchain(BlockchainInterface):
     _shut_down: bool
 
     # Lock to prevent simultaneous reads and writes
-    lock_queue: LockQueue[BlockchainLockPriority]
+    priority_mutex: PriorityMutex[BlockchainLockPriority]
     compact_proof_lock: asyncio.Lock
 
     @staticmethod
@@ -132,7 +132,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self.lock_queue = LockQueue.create(priority_type=BlockchainLockPriority)
+        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainLockPriority)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()

@@ -740,7 +740,7 @@ class FullNodeAPI:
             block_generator: Optional[BlockGenerator] = None
             additions: Optional[List[Coin]] = []
             removals: Optional[List[Coin]] = []
-            async with self.full_node.blockchain.lock_queue.acquire(priority=BlockchainLockPriority.high):
+            async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainLockPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
                     # Finds the last transaction block before this one
