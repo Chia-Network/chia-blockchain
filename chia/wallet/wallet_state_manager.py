@@ -761,7 +761,9 @@ class WalletStateManager:
                         Payment(
                             derivation_record.puzzle_hash,
                             uint64(coin.amount),
-                            incoming_tx.memos[0][1],  # Forward memo of the first coin
+                            []
+                            if len(incoming_tx.memos) == 0
+                            else incoming_tx.memos[0][1],  # Forward memo of the first coin
                         )
                     ],
                     coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
