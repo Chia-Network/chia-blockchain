@@ -2430,7 +2430,8 @@ class WalletRpcApi:
             # cats_new_innerpuzhash: bytes32,
             proposed_puzzle = await dao_wallet.generate_mint_proposal_innerpuz(amount_of_cats, mint_address)
         else:
-            return {"success": False, "error": "Unknown proposal type."}
+            type = request["proposal_type"]
+            return {"success": False, "error": f"Unknown proposal type {type}."}
 
         if "vote_amount" in request:
             vote_amount = uint64(request["vote_amount"])

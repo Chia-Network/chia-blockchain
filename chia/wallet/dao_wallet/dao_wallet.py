@@ -337,6 +337,7 @@ class DAOWallet(WalletProtocol):
             proposal_validator,
             proposal_timelock,
             soft_close_length,
+            current_cat_issuance,
             attendance_required,
             pass_percentage,
             self_destruct_length,
@@ -1418,6 +1419,7 @@ class DAOWallet(WalletProtocol):
         #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
         # innerpuz_reveal  ; this is only added during the first vote
         # soft_close_length  ; revealed by the treasury
+        # current_cat_issuance
         # self_destruct_time ; revealed by the treasury
         # oracle_spend_delay  ; used to recreate the treasury
         # self_destruct_flag ; if not 0, do the self-destruct spend
@@ -1446,6 +1448,7 @@ class DAOWallet(WalletProtocol):
                 previous_votes,
                 lockup_inner_puzhashes,
                 proposed_puzzle_reveal,
+                0,
                 0,
                 0,
                 0,
@@ -1507,6 +1510,7 @@ class DAOWallet(WalletProtocol):
         #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
         # innerpuz_reveal  ; this is only added during the first vote
         # soft_close_length  ; revealed by the treasury
+        # current_cat_issuance
         # self_destruct_time ; revealed by the treasury
         # oracle_spend_delay  ; used to recreate the treasury
         # self_destruct_flag ; if not 0, do the self-destruct spend
@@ -1538,6 +1542,7 @@ class DAOWallet(WalletProtocol):
                 vote_coins,
                 previous_votes,
                 lockup_inner_puzhashes,
+                0,
                 0,
                 0,
                 0,
@@ -1616,6 +1621,7 @@ class DAOWallet(WalletProtocol):
             proposal_validator,
             proposal_timelock,
             soft_close_length,
+            current_cat_issuance,
             attendance_required,
             pass_percentage,
             self_destruct_length,
@@ -1641,6 +1647,7 @@ class DAOWallet(WalletProtocol):
         #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
         # innerpuz_reveal  ; this is only added during the first vote
         # soft_close_length  ; revealed by the treasury
+        # current_cat_issuance
         # self_destruct_time ; revealed by the treasury
         # oracle_spend_delay  ; used to recreate the treasury
         # self_destruct_flag ; if not 0, do the self-destruct spend
@@ -1653,6 +1660,7 @@ class DAOWallet(WalletProtocol):
                 attendance_required,
                 0,
                 soft_close_length,
+                current_cat_issuance,
                 self_destruct_length,
                 oracle_spend_delay,
                 1 if self_destruct else 0,

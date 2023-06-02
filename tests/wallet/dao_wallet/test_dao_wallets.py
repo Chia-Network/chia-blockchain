@@ -114,6 +114,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -276,6 +277,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -425,6 +427,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -606,6 +609,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     new_dao_rules = DAORules(
         proposal_timelock=uint64(5),
         soft_close_length=uint64(4),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(200000),  # 100%
         pass_percentage=uint64(10000),  # 100%
         self_destruct_length=uint64(8),
@@ -844,6 +848,7 @@ async def test_dao_proposal_partial_vote(
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -1088,6 +1093,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
     dao_rules = DAORules(
         proposal_timelock=uint64(10),
         soft_close_length=uint64(5),
+        current_cat_issuance=cat_amt,
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
@@ -1371,6 +1377,7 @@ async def test_dao_rpc_client(
         dao_rules = DAORules(
             proposal_timelock=uint64(8),
             soft_close_length=uint64(4),
+            current_cat_issuance=cat_amt,
             attendance_required=uint64(1000),  # 10%
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),
@@ -1596,6 +1603,7 @@ async def test_dao_cat_exits(
         dao_rules = DAORules(
             proposal_timelock=uint64(8),
             soft_close_length=uint64(4),
+            current_cat_issuance=cat_amt,
             attendance_required=uint64(1000),  # 10%
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),

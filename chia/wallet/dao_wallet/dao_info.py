@@ -48,6 +48,7 @@ class DAORules(Streamable):
     proposal_timelock: uint64
     soft_close_length: uint64
     attendance_required: uint64
+    current_cat_issuance: uint64
     pass_percentage: uint64
     self_destruct_length: uint64
     oracle_spend_delay: uint64

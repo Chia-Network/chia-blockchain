@@ -31,7 +31,7 @@ DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
 DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
 DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury_with_hack.clsp")
+DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clsp")
 DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
 SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
@@ -115,6 +115,7 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
     # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
     # PROPOSAL_LENGTH
     # PROPOSAL_SOFTCLOSE_LENGTH
+    # CURRENT_CAT_ISSUANCE
     # ATTENDANCE_REQUIRED
     # PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
     # PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
@@ -124,6 +125,7 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         proposal_validator,
         dao_rules.proposal_timelock,
         dao_rules.soft_close_length,
+        dao_rules.current_cat_issuance,
         dao_rules.attendance_required,
         dao_rules.pass_percentage,
         dao_rules.self_destruct_length,
@@ -172,6 +174,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         proposal_validator,
         proposal_timelock,
         soft_close_length,
+        current_cat_issuance,
         attendance_required,
         pass_percentage,
         self_destruct_length,
@@ -370,6 +373,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         _DAO_PROPOSAL_VALIDATOR,
         proposal_timelock,
         soft_close_length,
+        current_cat_issuance,
         attendance_required,
         pass_percentage,
         self_destruct_length,
@@ -378,6 +382,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
     return DAORules(
         uint64(int_from_bytes(proposal_timelock.as_atom())),
         uint64(int_from_bytes(soft_close_length.as_atom())),
+        uint64(current_cat_issuance.as_int()),
         uint64(int_from_bytes(attendance_required.as_atom())),
         uint64(int_from_bytes(pass_percentage.as_atom())),
         uint64(int_from_bytes(self_destruct_length.as_atom())),
@@ -487,6 +492,7 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         proposal_validator,
         proposal_timelock,
         soft_close_length,
+        current_cat_issuance,
         attendance_required,
         pass_percentage,
         self_destruct_length,
