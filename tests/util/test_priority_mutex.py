@@ -35,18 +35,18 @@ class RequestNotCompleteError(Exception):
 
 class TestPriorityMutex:
     @pytest.mark.asyncio
-    async def test_priority_mutex(self):
+    async def test_priority_mutex(self) -> None:
         queue = PriorityMutex[LockPriority]()
 
-        async def slow_func():
+        async def slow_func() -> None:
             for i in range(100):
                 await asyncio.sleep(0.01)
 
-        async def kind_of_slow_func():
+        async def kind_of_slow_func() -> None:
             for i in range(100):
                 await asyncio.sleep(0.001)
 
-        async def do_high():
+        async def do_high() -> None:
             for i in range(10):
                 log.warning("Starting high")
                 t1 = time.time()
@@ -54,7 +54,7 @@ class TestPriorityMutex:
                     log.warning(f"Spend {time.time() - t1} waiting for high")
                     await slow_func()
 
-        async def do_low(i: int):
+        async def do_low(i: int) -> None:
             log.warning(f"Starting low {i}")
             t1 = time.time()
             async with queue.acquire(priority=LockPriority.low):
@@ -232,7 +232,7 @@ async def test_reacquisition_fails() -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_order(case: OrderCase):
+async def test_order(case: OrderCase) -> None:
     queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
@@ -247,7 +247,7 @@ async def test_order(case: OrderCase):
     assert sane(requests=case.requests)
 
 
-def expected_acquisition_order(requests):
+def expected_acquisition_order(requests: List[Request]) -> List[Request]:
     first_request, *other_requests = requests
     return [
         first_request,
@@ -256,7 +256,7 @@ def expected_acquisition_order(requests):
 
 
 @pytest.mark.asyncio
-async def test_sequential_acquisitions():
+async def test_sequential_acquisitions() -> None:
     queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
@@ -271,7 +271,7 @@ async def test_sequential_acquisitions():
 
 
 @pytest.mark.asyncio
-async def test_nested_acquisition_raises():
+async def test_nested_acquisition_raises() -> None:
     queue = PriorityMutex[LockPriority]()
 
     async with queue.acquire(priority=LockPriority.high):
@@ -281,13 +281,13 @@ async def test_nested_acquisition_raises():
                 assert False  # pragma: no cover
 
 
-async def to_be_cancelled(queue: PriorityMutex, event: asyncio.Event) -> None:
+async def to_be_cancelled(queue: PriorityMutex[LockPriority], event: asyncio.Event) -> None:
     async with queue.acquire(priority=LockPriority.high, queued_callback=event.set):
         assert False
 
 
 @pytest.mark.asyncio
-async def test_to_be_cancelled_fails_if_not_cancelled():
+async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
     queue = PriorityMutex[LockPriority]()
     event = asyncio.Event()
 
@@ -296,7 +296,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled():
 
 
 @pytest.mark.asyncio
-async def test_cancellation_while_waiting():
+async def test_cancellation_while_waiting() -> None:
     queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
@@ -342,7 +342,7 @@ async def test_cancellation_while_waiting():
 # testing many repeatable randomization cases
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.asyncio
-async def test_retains_request_order_for_matching_priority(seed: int):
+async def test_retains_request_order_for_matching_priority(seed: int) -> None:
     queue = PriorityMutex[LockPriority]()
 
     random_instance = random.Random()
@@ -417,8 +417,11 @@ def test_sane_all_in_order(case: SaneCase) -> None:
     assert sane(requests=case.requests) == case.good
 
 
-async def create_acquire_tasks_in_controlled_order(requests: List[Request], queue: PriorityMutex[LockPriority]):
-    tasks: List[asyncio.Task] = []
+async def create_acquire_tasks_in_controlled_order(
+    requests: List[Request],
+    queue: PriorityMutex[LockPriority],
+) -> List[asyncio.Task[None]]:
+    tasks: List[asyncio.Task[None]] = []
     release_event = asyncio.Event()
 
     for request in requests:
