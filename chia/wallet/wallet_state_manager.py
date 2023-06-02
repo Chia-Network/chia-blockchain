@@ -45,7 +45,7 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import UInt32Range, VersionedBlob
+from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
@@ -709,11 +709,12 @@ class WalletStateManager:
             coin_type=CoinType.CLAWBACK,
             wallet_type=WalletType.STANDARD_WALLET,
             spent_range=UInt32Range(stop=uint32(0)),
+            amount_range=UInt64Range(start=uint64(min_amount)),
         )
         for coin in unspent_coins.records:
             try:
                 metadata: ClawbackMetadata = coin.parsed_metadata()
-                if coin.coin.amount >= min_amount and await metadata.is_recipient(self.puzzle_store):
+                if await metadata.is_recipient(self.puzzle_store):
                     coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
                         clawback_coins[coin.coin] = metadata
