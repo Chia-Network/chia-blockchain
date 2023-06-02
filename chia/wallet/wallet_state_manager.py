@@ -712,8 +712,7 @@ class WalletStateManager:
         )
         for coin in unspent_coins.records:
             try:
-                assert coin.metadata is not None, f"Missing metadata for clawback coin {coin.coin.name().hex()}"
-                metadata = ClawbackMetadata.from_bytes(coin.metadata.blob)
+                metadata: ClawbackMetadata = coin.parsed_metadata()
                 if coin.coin.amount >= min_amount and await metadata.is_recipient(self.puzzle_store):
                     coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
