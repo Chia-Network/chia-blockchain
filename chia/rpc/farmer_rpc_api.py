@@ -189,6 +189,23 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "failed_partial":
+            payloads.append(
+                create_payload_dict(
+                    "failed_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
         elif change == "proof":
             payloads.append(
                 create_payload_dict(
