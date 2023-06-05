@@ -278,7 +278,7 @@ def default_10000_blocks_compact(bt):
     if bt.constants.SOFT_FORK3_HEIGHT == 0:
         return persistent_blocks(
             10000,
-            f"test_blocks_4000_compact_{saved_blocks_version}_softfork3.db"
+            f"test_blocks_4000_compact_{saved_blocks_version}_softfork3.db",
             bt,
             normalized_to_identity_cc_eos=True,
             normalized_to_identity_icc_eos=True,
