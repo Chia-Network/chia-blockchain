@@ -62,11 +62,21 @@ class ConsensusConstants:
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
-    # soft fork initiated in 1.7.0 release
-    SOFT_FORK_HEIGHT: uint32
 
     # soft fork initiated in 1.8.0 release
     SOFT_FORK2_HEIGHT: uint32
+
+    # soft fork initiated in 2.0 release
+    SOFT_FORK3_HEIGHT: uint32
+
+    # the hard fork planned with the 2.0 release
+    # this is the block with the first plot filter adjustment
+    HARD_FORK_HEIGHT: uint32
+
+    # the plot filter adjustment heights
+    PLOT_FILTER_128_HEIGHT: uint32
+    PLOT_FILTER_64_HEIGHT: uint32
+    PLOT_FILTER_32_HEIGHT: uint32
 
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)

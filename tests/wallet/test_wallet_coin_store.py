@@ -9,16 +9,10 @@ import pytest
 from chia.types.blockchain_format.coin import Coin
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import (
-    AmountFilter,
-    CoinRecordOrder,
-    GetCoinRecords,
-    GetCoinRecordsResult,
-    HashFilter,
-    WalletCoinStore,
-)
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))

@@ -57,12 +57,12 @@ def create_tr_for_offer(offer: Offer) -> Tuple[TradeRecord, Offer]:
 class TestCATTrades:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "forwards_compat",
-        [True, False],
-    )
-    @pytest.mark.parametrize(
-        "reuse_puzhash",
-        [True, False],
+        "forwards_compat,reuse_puzhash",
+        [
+            (True, False),
+            (False, True),
+            (False, False),
+        ],
     )
     async def test_cat_trades(
         self, wallets_prefarm, forwards_compat: bool, reuse_puzhash: bool, softfork_height: uint32
@@ -188,7 +188,7 @@ class TestCATTrades:
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
             fee=uint64(1),
-            reuse_puzhash=reuse_puzhash and not forwards_compat,
+            reuse_puzhash=reuse_puzhash,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -358,7 +358,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
-            reuse_puzhash=reuse_puzhash and not forwards_compat,
+            reuse_puzhash=reuse_puzhash,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -879,7 +879,7 @@ class TestCATTrades:
         bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
         offer = dataclasses.replace(offer, _bundle=bundle)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
-        wallet_node_taker.wallet_tx_resend_timeout_secs = 1  # don't wait for resend
+        wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()

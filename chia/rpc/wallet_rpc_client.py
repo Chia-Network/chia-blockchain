@@ -17,8 +17,10 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.wallet_coin_store import GetCoinRecords
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,6 +115,9 @@ class WalletRpcClient(RpcClient):
     async def get_wallet_balance(self, wallet_id: int) -> Dict:
         return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))["wallet_balance"]
 
+    async def get_wallet_balances(self, wallet_ids: Optional[List[int]] = None) -> Dict:
+        return (await self.fetch("get_wallet_balances", {"wallet_ids": wallet_ids}))["wallet_balances"]
+
     async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
         res = await self.fetch(
             "get_transaction",
@@ -128,6 +133,7 @@ class WalletRpcClient(RpcClient):
         sort_key: SortKey = None,
         reverse: bool = False,
         to_address: Optional[str] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -141,6 +147,9 @@ class WalletRpcClient(RpcClient):
 
         if to_address is not None:
             request["to_address"] = to_address
+
+        if type_filter is not None:
+            request["type_filter"] = type_filter.to_json_dict()
 
         res = await self.fetch(
             "get_transactions",
@@ -349,6 +358,9 @@ class WalletRpcClient(RpcClient):
         }
         response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
+
+    async def get_coin_records(self, request: GetCoinRecords) -> Dict[str, Any]:
+        return await self.fetch("get_coin_records", request.to_json_dict())
 
     async def get_spendable_coins(
         self,
@@ -950,7 +962,7 @@ class WalletRpcClient(RpcClient):
         return response
 
     async def list_nfts(self, wallet_id):
-        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "num": 100_000}
         response = await self.fetch("nft_get_nfts", request)
         return response
 
