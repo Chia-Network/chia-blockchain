@@ -165,25 +165,37 @@ saved_blocks_version = "rc5"
 
 @pytest.fixture(scope="session")
 def default_400_blocks(bt):
+    version = ""
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
+    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}{version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt):
+    version = ""
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
+    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}{version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt):
+    version = ""
+    if bt.constants.SOFT_FORK3_HEIGHT == 0:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         1000,
-        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
+        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}{version}.db",
         bt,
         seed=b"empty_slots",
         empty_sub_slots=1,
