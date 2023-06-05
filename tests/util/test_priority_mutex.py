@@ -79,7 +79,8 @@ class TestPriorityMutex:
             for t in l_tasks:
                 if not t.done():
                     l_finished = False
-            if l_finished and winner is None:
+            if l_finished and winner is None:  # pragma: no cover
+                # ignoring coverage since this executing is a test failure case
                 winner = "l"
             if l_finished and h.done():
                 break
