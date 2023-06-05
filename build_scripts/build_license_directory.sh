@@ -60,5 +60,5 @@ for i in "${license_path_array[@]}"; do
 done
 
 pwd
-
+ls -lah licenses
 deactivate
