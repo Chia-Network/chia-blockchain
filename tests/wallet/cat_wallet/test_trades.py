@@ -879,7 +879,7 @@ class TestCATTrades:
         bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
         offer = dataclasses.replace(offer, _bundle=bundle)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
-        wallet_node_taker.wallet_tx_resend_timeout_secs = 1  # don't wait for resend
+        wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()
         await wallet_node_taker._resend_queue()
