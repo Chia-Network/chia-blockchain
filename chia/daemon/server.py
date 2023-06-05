@@ -85,13 +85,11 @@ if getattr(sys, "frozen", False):
 
     def executable_for_service(service_name: str) -> str:
         application_path = os.path.dirname(sys.executable)
+        executable = name_map[service_name]
         if sys.platform == "win32" or sys.platform == "cygwin":
-            executable = name_map[service_name]
-            path = f"{application_path}/{executable}.exe"
-            return path
+            return f"{application_path}/{executable}.exe"
         else:
-            path = f"{application_path}/{name_map[service_name]}"
-            return path
+            return f"{application_path}/{executable}"
 
 else:
     application_path = os.path.dirname(__file__)
@@ -721,28 +719,44 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         plot_type = request["plot_type"]
-        assert plot_type == "ramplot" or plot_type == "diskplot"
+        assert plot_type == "ramplot" or plot_type == "diskplot" or plot_type == "cudaplot"
 
         command_args: List[str] = []
 
-        if plot_type == "ramplot":
-            w = request.get("w", False)  # Warm start
-            m = request.get("m", False)  # Disable NUMA
-            no_cpu_affinity = request.get("no_cpu_affinity", False)
+        # Common options among diskplot, ramplot, cudaplot
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        compress = request.get("compress", None)  # Compression level
 
-            if w is True:
-                command_args.append("--warmstart")
-            if m is True:
-                command_args.append("--nonuma")
-            if no_cpu_affinity is True:
-                command_args.append("--no-cpu-affinity")
+        if w is True:
+            command_args.append("--warmstart")
+        if m is True:
+            command_args.append("--nonuma")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+        if compress is not None and str(compress).isdigit():
+            command_args.append("--compress")
+            command_args.append(str(compress))
+
+        # ramplot don't accept any more options
+        if plot_type == "ramplot":
+            return command_args
+
+        # Options only applicable for cudaplot
+        if plot_type == "cudaplot":
+            device_index = request.get("device", None)
+            no_direct_downloads = request.get("no_direct_downloads", False)
+
+            if device_index is not None and str(device_index).isdigit():
+                command_args.append("--device")
+                command_args.append(str(device_index))
+            if no_direct_downloads:
+                command_args.append("--no-direct-downloads")
 
             return command_args
 
         # if plot_type == "diskplot"
-        w = request.get("w", False)  # Warm start
-        m = request.get("m", False)  # Disable NUMA
-        no_cpu_affinity = request.get("no_cpu_affinity", False)
         # memo = request["memo"]
         t1 = request["t"]  # Temp directory
         t2 = request.get("t2")  # Temp2 directory
@@ -756,13 +770,6 @@ class WebSocketServer:
         alternate = request.get("alternate", False)
         no_t1_direct = request.get("no_t1_direct", False)
         no_t2_direct = request.get("no_t2_direct", False)
-
-        if w is True:
-            command_args.append("--warmstart")
-        if m is True:
-            command_args.append("--nonuma")
-        if no_cpu_affinity is True:
-            command_args.append("--no-cpu-affinity")
 
         command_args.append("-t")
         command_args.append(t1)
@@ -833,7 +840,7 @@ class WebSocketServer:
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type == "diskplot" or plot_type == "ramplot"
+            assert plot_type == "diskplot" or plot_type == "ramplot" or plot_type == "cudaplot"
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))

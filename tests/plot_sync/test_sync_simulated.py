@@ -29,7 +29,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.generator_tools import list_to_batches
-from chia.util.ints import int16, uint64
+from chia.util.ints import int16, uint8, uint64
 from tests.plot_sync.util import start_harvester_service
 
 log = logging.getLogger(__name__)
@@ -273,9 +273,12 @@ def create_example_plots(count: int) -> List[PlotInfo]:
         def get_size(self) -> int:
             return self.size
 
+        def get_compresion_level(self) -> uint8:
+            return uint8(0)
+
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), x % 255),
+            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), 25 + x % 26),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),

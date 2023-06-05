@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -84,6 +84,11 @@ class Params:
     stripe_size: int = 65536
 
 
+class HarvestingMode(IntEnum):
+    CPU = 1
+    GPU = 2
+
+
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
@@ -144,6 +149,59 @@ def remove_plot(path: Path):
     # Remove absolute and relative paths
     if path.exists():
         path.unlink()
+
+
+def get_harvesting_mode(root_path: Path, config: Dict = None) -> Dict:
+    if config is None:
+        config = load_config(root_path, "config.yaml")
+
+    plots_refresh_parameter = config["harvester"].get("plots_refresh_parameter")
+    if plots_refresh_parameter is None:
+        plots_refresh_parameter = PlotsRefreshParameter().to_json_dict()
+
+    return {
+        "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting"),
+        "gpu_index": config["harvester"].get("gpu_index"),
+        "enforce_gpu_index": config["harvester"].get("enforce_gpu_index"),
+        "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity"),
+        "parallel_decompressers_count": config["harvester"].get("parallel_decompressers_count"),
+        "decompresser_thread_count": config["harvester"].get("decompresser_thread_count"),
+        "recursive_plot_scan": config["harvester"].get("recursive_plot_scan"),
+        "plots_refresh_parameter": plots_refresh_parameter,
+    }
+
+
+def update_harvesting_mode(
+    root_path: Path,
+    *,
+    use_gpu_harvesting: Optional[bool] = None,
+    gpu_index: Optional[int] = None,
+    enforce_gpu_index: Optional[bool] = None,
+    disable_cpu_affinity: Optional[bool] = None,
+    parallel_decompressers_count: Optional[int] = None,
+    decompresser_thread_count: Optional[int] = None,
+    recursive_plot_scan: Optional[bool] = None,
+    refresh_parameter: Optional[PlotsRefreshParameter] = None,
+):
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        if use_gpu_harvesting is not None:
+            config["harvester"]["use_gpu_harvesting"] = use_gpu_harvesting
+        if gpu_index is not None:
+            config["harvester"]["gpu_index"] = gpu_index
+        if enforce_gpu_index is not None:
+            config["harvester"]["enforce_gpu_index"] = enforce_gpu_index
+        if disable_cpu_affinity is not None:
+            config["harvester"]["disable_cpu_affinity"] = disable_cpu_affinity
+        if parallel_decompressers_count is not None:
+            config["harvester"]["parallel_decompressers_count"] = parallel_decompressers_count
+        if decompresser_thread_count is not None:
+            config["harvester"]["decompresser_thread_count"] = decompresser_thread_count
+        if recursive_plot_scan is not None:
+            config["harvester"]["recursive_plot_scan"] = recursive_plot_scan
+        if refresh_parameter is not None:
+            config["harvester"]["plots_refresh_parameter"] = refresh_parameter.to_json_dict()
+
+        save_config(root_path, "config.yaml", config)
 
 
 def get_filenames(directory: Path, recursive: bool) -> List[Path]:

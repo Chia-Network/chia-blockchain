@@ -123,6 +123,7 @@ def test_missing_messages() -> None:
 
     harvester_msgs = {
         "HarvesterHandshake",
+        "HarvestingModeUpdate",
         "NewProofOfSpace",
         "NewSignagePointHarvester",
         "Plot",

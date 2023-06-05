@@ -52,6 +52,26 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
     return have_enough_memory, warning_string
 
 
+def is_cudaplot_available(plotters_root_path: Path) -> bool:
+    bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
+    if not bladebit_executable_path.exists():
+        return False
+    cuda_available = False
+    try:
+        proc = run_command(
+            [os.fspath(bladebit_executable_path), "cudacheck"],
+            "Failed to call bladebit with cudacheck command",
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        cuda_available = proc.returncode == 0
+    except Exception as e:
+        print(f"Failed to determine whether bladebit supports cuda: {e}")
+    finally:
+        return cuda_available
+
+
 def get_bladebit_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / BLADEBIT_PLOTTER_DIR
 
@@ -60,37 +80,52 @@ def get_bladebit_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "bladebit"
 
 
-def get_bladebit_exec_venv_path() -> Optional[Path]:
+def get_bladebit_exec_path(with_cuda: Optional[bool] = None):
+    if with_cuda:
+        return "bladebit_cuda.exe" if sys.platform in ["win32", "cygwin"] else "bladebit_cuda"
+    return "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+
+
+def get_bladebit_exec_venv_path(with_cuda: Optional[bool] = None) -> Optional[Path]:
     venv_bin_path = get_venv_bin()
     if not venv_bin_path:
         return None
-    if sys.platform in ["win32", "cygwin"]:
-        return venv_bin_path / "bladebit.exe"
-    else:
-        return venv_bin_path / "bladebit"
+    bladebit_exec = get_bladebit_exec_path(with_cuda)
+    return venv_bin_path / bladebit_exec
 
 
-def get_bladebit_exec_src_path(plotters_root_path: Path) -> Path:
+def get_bladebit_exec_src_path(plotters_root_path: Path, with_cuda: Optional[bool] = None) -> Path:
     bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
     build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
-    bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+    bladebit_exec = get_bladebit_exec_path(with_cuda)
     return bladebit_src_dir / build_dir / bladebit_exec
 
 
-def get_bladebit_exec_package_path() -> Path:
+def get_bladebit_exec_package_path(with_cuda: Optional[bool] = None) -> Path:
     bladebit_package_dir = get_bladebit_package_path()
-    bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+    bladebit_exec = get_bladebit_exec_path(with_cuda)
     return bladebit_package_dir / bladebit_exec
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    bladebit_exec_venv_path = get_bladebit_exec_venv_path()
+    # Search for bladebit executable which supports CUDA at the first priority
+    bladebit_exec_venv_path = get_bladebit_exec_venv_path(with_cuda=True)
     if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
         return bladebit_exec_venv_path
-    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path)
+    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path, with_cuda=True)
     if bladebit_exec_src_path.exists():
         return bladebit_exec_src_path
-    return get_bladebit_exec_package_path()
+    bladebit_exec_package_path = get_bladebit_exec_package_path(with_cuda=True)
+    if bladebit_exec_package_path.exists():
+        return bladebit_exec_package_path
+
+    bladebit_exec_venv_path = get_bladebit_exec_venv_path(with_cuda=False)
+    if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
+        return bladebit_exec_venv_path
+    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path, with_cuda=False)
+    if bladebit_exec_src_path.exists():
+        return bladebit_exec_src_path
+    return get_bladebit_exec_package_path(with_cuda=False)
 
 
 def get_bladebit_version(plotters_root_path: Path):
@@ -122,6 +157,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     info: Dict[str, Any] = {"display_name": "BladeBit Plotter"}
     installed: bool = False
     supported: bool = is_bladebit_supported()
+    cuda_available = is_cudaplot_available(plotters_root_path)
 
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
@@ -147,8 +183,32 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
         if memory_warning is not None:
             info["bladebit_memory_warning"] = memory_warning
 
+    info["cuda_support"] = cuda_available
+
     return info
 
+
+# @TODO Set valid progress logs
+progress_bladebit_cuda = {
+    "Finished F1 sort": 0.01,
+    "Finished forward propagating table 2": 0.06,
+    "Finished forward propagating table 3": 0.12,
+    "Finished forward propagating table 4": 0.2,
+    "Finished forward propagating table 5": 0.28,
+    "Finished forward propagating table 6": 0.36,
+    "Finished forward propagating table 7": 0.42,
+    "Finished prunning table 6": 0.43,
+    "Finished prunning table 5": 0.48,
+    "Finished prunning table 4": 0.51,
+    "Finished prunning table 3": 0.55,
+    "Finished prunning table 2": 0.58,
+    "Finished compressing tables 1 and 2": 0.66,
+    "Finished compressing tables 2 and 3": 0.73,
+    "Finished compressing tables 3 and 4": 0.79,
+    "Finished compressing tables 4 and 5": 0.85,
+    "Finished compressing tables 5 and 6": 0.92,
+    "Finished compressing tables 6 and 7": 0.98,
+}
 
 progress_bladebit_ram = {
     "Finished F1 sort": 0.01,
@@ -170,7 +230,6 @@ progress_bladebit_ram = {
     "Finished compressing tables 5 and 6": 0.92,
     "Finished compressing tables 6 and 7": 0.98,
 }
-
 
 progress_bladebit_disk = {
     # "Running Phase 1": 0.01,
@@ -231,7 +290,10 @@ def plot_bladebit(args, chia_root_path, root_path):
             args.connect_to_daemon,
         )
     )
-    plot_type = "ramplot" if args.plot_type == "ramplot" else "diskplot"
+    if args.plot_type == "ramplot" or args.plot_type == "cudaplot":
+        plot_type = args.plot_type
+    else:
+        plot_type = "diskplot"
     call_args = [
         os.fspath(bladebit_executable_path),
         "--threads",
@@ -261,6 +323,14 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("--no-cpu-affinity")
     if args.verbose:
         call_args.append("--verbose")
+    if (
+        "compress" in args
+        and args.compress is not None
+        and str(args.compress).isdigit()
+        and int(version_or_exception[0]) >= 3
+    ):
+        call_args.append("--compress")
+        call_args.append(str(args.compress))
 
     call_args.append(plot_type)
 
@@ -297,11 +367,21 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("--no-t1-direct")
     if "no_t2_direct" in args and args.no_t2_direct:
         call_args.append("--no-t2-direct")
+    if "device" in args and str(args.device).isdigit():
+        call_args.append("--device")
+        call_args.append(args.device)
+    if "no_direct_downloads" in args and args.no_direct_downloads:
+        call_args.append("--no-direct-downloads")
 
     call_args.append(args.finaldir)
 
     try:
-        progress = progress_bladebit_ram if plot_type == "ramplot" else progress_bladebit_disk
+        if plot_type == "cudaplot":
+            progress = progress_bladebit_cuda
+        elif plot_type == "ramplot":
+            progress = progress_bladebit_ram
+        else:
+            progress = progress_bladebit_disk
         asyncio.run(run_plotter(chia_root_path, args.plotter, call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")

@@ -110,7 +110,9 @@ class FarmerRpcApi:
             pass
         elif change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
+            missing_signage_points = change_data["missing_signage_points"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
+            data["missing_signage_points"] = missing_signage_points
             payloads.append(
                 create_payload_dict(
                     "new_signage_point",
@@ -185,6 +187,23 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "failed_partial":
+            payloads.append(
+                create_payload_dict(
+                    "failed_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
                 )
             )
         elif change == "proof":
@@ -283,7 +302,6 @@ class FarmerRpcApi:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
-            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
             pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}

@@ -83,6 +83,7 @@ class Plot(Streamable):
     plot_public_key: G1Element
     file_size: uint64
     time_modified: uint64
+    compression_level: Optional[uint8]
 
 
 @streamable
@@ -114,11 +115,13 @@ class PlotSyncStart(Streamable):
     initial: bool
     last_sync_id: uint64
     plot_file_count: uint32
+    harvesting_mode: uint8
 
     def __str__(self) -> str:
         return (
             f"PlotSyncStart: identifier {self.identifier}, initial {self.initial}, "
-            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}"
+            f"last_sync_id {self.last_sync_id}, plot_file_count {self.plot_file_count}, "
+            f"harvesting_mode {self.harvesting_mode}"
         )
 
 
@@ -174,3 +177,10 @@ class PlotSyncResponse(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"
+
+
+@streamable
+@dataclass(frozen=True)
+class HarvestingModeUpdate(Streamable):
+    identifier: PlotSyncIdentifier
+    harvesting_mode: uint8

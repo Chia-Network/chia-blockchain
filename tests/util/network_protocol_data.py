@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from blspy import G1Element, G2Element
 
+from chia.plotting.util import HarvestingMode
 from chia.protocols import (
     farmer_protocol,
     full_node_protocol,
@@ -117,6 +118,7 @@ farming_info = farmer_protocol.FarmingInfo(
     uint32(1390832181),
     uint32(908923578),
     uint32(2259819406),
+    uint64(3942498),
 )
 
 signed_values = farmer_protocol.SignedValues(
@@ -749,6 +751,7 @@ plot = harvester_protocol.Plot(
     ),
     uint64(3368414292564311420),
     uint64(2573238947935295522),
+    uint8(0),
 )
 
 request_plots = harvester_protocol.RequestPlots()
@@ -757,6 +760,11 @@ respond_plots = harvester_protocol.RespondPlots(
     [plot],
     ["str"],
     ["str"],
+)
+
+harvesting_mode_update = harvester_protocol.HarvestingModeUpdate(
+    harvester_protocol.PlotSyncIdentifier(uint64(1685202597), uint64(1), uint64(0)),
+    uint8(HarvestingMode.CPU),
 )
 
 ### INTRODUCER PROTOCOL

@@ -60,6 +60,7 @@ class FarmingInfo(Streamable):
     passed: uint32
     proofs: uint32
     total_plots: uint32
+    lookup_time: uint64
 
 
 @streamable

@@ -97,6 +97,7 @@ class ProtocolMessageTypes(Enum):
     plot_sync_duplicates = 83
     plot_sync_done = 84
     plot_sync_response = 85
+    harvesting_mode_update = 92
 
     # More wallet protocol
     coin_state_update = 69

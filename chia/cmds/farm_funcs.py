@@ -121,6 +121,7 @@ async def summary(
 
     class PlotStats:
         total_plot_size = 0
+        total_effective_plot_size = 0
         total_plots = 0
 
     if harvesters_summary is not None:
@@ -142,10 +143,15 @@ async def summary(
                     print(f"   Loading plots: {syncing['plot_files_processed']} / {syncing['plot_files_total']}")
                 else:
                     total_plot_size_harvester = harvester_dict["total_plot_size"]
+                    total_effective_plot_size_harvester = harvester_dict["total_effective_plot_size"]
                     plot_count_harvester = harvester_dict["plots"]
                     PlotStats.total_plot_size += total_plot_size_harvester
+                    PlotStats.total_effective_plot_size += total_effective_plot_size_harvester
                     PlotStats.total_plots += plot_count_harvester
-                    print(f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)}")
+                    print(
+                        f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)} raw, "
+                        f"{format_bytes(total_effective_plot_size_harvester, True)} (effective)"
+                    )
 
         if len(harvesters_local) > 0:
             print(f"Local Harvester{'s' if len(harvesters_local) > 1 else ''}")
@@ -156,8 +162,10 @@ async def summary(
 
         print(f"Plot count for all harvesters: {PlotStats.total_plots}")
 
-        print("Total size of plots: ", end="")
-        print(format_bytes(PlotStats.total_plot_size))
+        print(
+            f"Total size of plots: {format_bytes(PlotStats.total_plot_size)}, "
+            f"{format_bytes(PlotStats.total_effective_plot_size, True)} (effective)"
+        )
     else:
         print("Plot count: Unknown")
         print("Total size of plots: Unknown")
@@ -170,7 +178,9 @@ async def summary(
 
     minutes = -1
     if blockchain_state is not None and harvesters_summary is not None:
-        proportion = PlotStats.total_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        proportion = (
+            PlotStats.total_effective_plot_size / blockchain_state["space"] if blockchain_state["space"] else -1
+        )
         minutes = int((await get_average_block_time(rpc_port) / 60) / proportion) if proportion else -1
 
     if harvesters_summary is not None and PlotStats.total_plots == 0:

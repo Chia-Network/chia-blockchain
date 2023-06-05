@@ -13,8 +13,9 @@ from typing_extensions import Protocol
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import PlotInfo
+from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
+    HarvestingModeUpdate,
     Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
@@ -27,7 +28,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.generator_tools import list_to_batches
-from chia.util.ints import int16, uint32, uint64
+from chia.util.ints import int8, int16, uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(int(plot_info.time_modified)),
+                compression_level=plot_info.prover.get_compresion_level(),
             )
         )
     return converted
@@ -98,8 +100,9 @@ class Sender:
     _stop_requested = False
     _task: Optional[asyncio.Task[None]]
     _response: Optional[ExpectedResponse]
+    _harvesting_mode: HarvestingMode
 
-    def __init__(self, plot_manager: PlotManager) -> None:
+    def __init__(self, plot_manager: PlotManager, harvesting_mode: HarvestingMode) -> None:
         self._plot_manager = plot_manager
         self._connection = None
         self._sync_id = uint64(0)
@@ -109,6 +112,7 @@ class Sender:
         self._stop_requested = False
         self._task = None
         self._response = None
+        self._harvesting_mode = harvesting_mode
 
     def __str__(self) -> str:
         return f"sync_id {self._sync_id}, next_message_id {self._next_message_id}, messages {len(self._messages)}"
@@ -267,8 +271,14 @@ class Sender:
             sync_id = sync_id + 1
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
+
         self._add_message(
-            ProtocolMessageTypes.plot_sync_start, PlotSyncStart, initial, self._last_sync_id, uint32(int(count))
+            ProtocolMessageTypes.plot_sync_start,
+            PlotSyncStart,
+            initial,
+            self._last_sync_id,
+            uint32(int(count)),
+            self._harvesting_mode,
         )
 
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:
@@ -301,6 +311,10 @@ class Sender:
         self._messages.clear()
         # Do this at the end since `_sync_id` is used as sync active indicator.
         self._sync_id = uint64(0)
+
+    def harvesting_mode_update(self, mode: HarvestingMode) -> None:
+        log.debug(f"harvesting_mode_update: {mode}")
+        self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
 
     def sync_active(self) -> bool:
         return self._sync_id != 0
