@@ -758,7 +758,9 @@ class Farmer:
             return None
 
         skipped_sps = uint32(floor(actual_sp_interval_seconds / expected_sp_interval_seconds))
-        return timestamp, skipped_sps if skipped_sps > 0 else None
+        if skipped_sps <= 0:
+            return None
+        return timestamp, skipped_sps
 
     async def _periodically_update_pool_state_task(self) -> None:
         time_slept = 0
