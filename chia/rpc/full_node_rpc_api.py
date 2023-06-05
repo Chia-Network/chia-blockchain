@@ -195,8 +195,10 @@ class FullNodeRpcApi:
                 older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
                 try:
                     older_block: Optional[BlockRecord] = (
-                        await self.get_block_record({"header_hash": older_header_hash.hex()})
-                    )["block_record"]
+                        (await self.get_block_record({"header_hash": older_header_hash.hex()}))["block_record"]
+                        if older_header_hash is not None
+                        else None
+                    )
                     while older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
                         older_block = (await self.get_block_record({"header_hash": older_block.prev_hash.hex()}))[
                             "block_record"
@@ -204,7 +206,7 @@ class FullNodeRpcApi:
                 except ValueError:
                     older_block = None
 
-                if older_block is not None:
+                if older_block is not None and newer_block.timestamp is not None and older_block.timestamp is not None:
                     average_block_time = uint32(
                         (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
                     )
