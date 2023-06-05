@@ -387,7 +387,7 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 2,
-        "last_time_farmed": result["last_time_farmed"], # time cannot be predicted so skipping test here
+        "last_time_farmed": result["last_time_farmed"],  # time cannot be predicted so skipping test here
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
