@@ -32,9 +32,9 @@ class _Element:
 @dataclasses.dataclass()
 class PriorityMutex(Generic[_T_Priority]):
     """
-    The purpose of this class is to be able to control access to a lock, and give
+    The purpose of this class is to be able to control access to a mutex, and give
     priority to certain requests.  Lower values are given access first.  To use it,
-    create a lock and use the `.acquire()` context manager method.  In actual uses,
+    create a mutex and use the `.acquire()` context manager method.  In actual uses,
     a dedicated priority enumeration is likely to be more clear.
 
     ```

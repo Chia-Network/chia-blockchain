@@ -79,7 +79,7 @@ class StateChangeSummary:
     new_rewards: List[Coin]
 
 
-class BlockchainLockPriority(enum.IntEnum):
+class BlockchainMutexPriority(enum.IntEnum):
     # lower values are higher priority
     low = 1
     high = 0
@@ -110,7 +110,7 @@ class Blockchain(BlockchainInterface):
     _shut_down: bool
 
     # Lock to prevent simultaneous reads and writes
-    priority_mutex: PriorityMutex[BlockchainLockPriority]
+    priority_mutex: PriorityMutex[BlockchainMutexPriority]
     compact_proof_lock: asyncio.Lock
 
     @staticmethod
@@ -132,7 +132,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainLockPriority)
+        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()

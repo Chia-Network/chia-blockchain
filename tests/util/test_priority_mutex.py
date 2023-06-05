@@ -19,7 +19,7 @@ from tests.util.misc import Marks, datacases
 log = logging.getLogger(__name__)
 
 
-class LockPriority(enum.IntEnum):
+class MutexPriority(enum.IntEnum):
     # lower values are higher priority
     low = 3
     # skipping 2 for testing
@@ -28,7 +28,7 @@ class LockPriority(enum.IntEnum):
     medium = 1
 
 
-lock_priorities = list(LockPriority)
+mutex_priorities = list(MutexPriority)
 
 
 class RequestNotCompleteError(Exception):
@@ -38,7 +38,7 @@ class RequestNotCompleteError(Exception):
 class TestPriorityMutex:
     @pytest.mark.asyncio
     async def test_priority_mutex(self) -> None:
-        mutex = PriorityMutex.create(priority_type=LockPriority)
+        mutex = PriorityMutex.create(priority_type=MutexPriority)
 
         async def slow_func() -> None:
             for i in range(100):
@@ -52,14 +52,14 @@ class TestPriorityMutex:
             for i in range(10):
                 log.warning("Starting high")
                 t1 = time.time()
-                async with mutex.acquire(priority=LockPriority.high):
+                async with mutex.acquire(priority=MutexPriority.high):
                     log.warning(f"Spend {time.time() - t1} waiting for high")
                     await slow_func()
 
         async def do_low(i: int) -> None:
             log.warning(f"Starting low {i}")
             t1 = time.time()
-            async with mutex.acquire(priority=LockPriority.low):
+            async with mutex.acquire(priority=MutexPriority.low):
                 log.warning(f"Spend {time.time() - t1} waiting for low {i}")
                 await kind_of_slow_func()
 
@@ -97,7 +97,7 @@ counter = itertools.count()
 class Request:
     # TODO: is the ID unneeded?
     id: str
-    priority: LockPriority
+    priority: MutexPriority
     acquisition_order: Optional[int] = None
     release_order: Optional[int] = None
     order_counter: Callable[[], int] = counter.__next__
@@ -113,7 +113,7 @@ class Request:
 
     async def acquire(
         self,
-        mutex: PriorityMutex[LockPriority],
+        mutex: PriorityMutex[MutexPriority],
         queued_callback: Callable[[], object],
         wait_for: asyncio.Event,
     ) -> None:
@@ -154,18 +154,18 @@ class ComparisonCase:
 @datacases(
     ComparisonCase(
         id="self incomplete",
-        self=Request(id="self", priority=LockPriority.low),
-        other=Request(id="other", priority=LockPriority.low, acquisition_order=0, release_order=0),
+        self=Request(id="self", priority=MutexPriority.low),
+        other=Request(id="other", priority=MutexPriority.low, acquisition_order=0, release_order=0),
     ),
     ComparisonCase(
         id="other incomplete",
-        self=Request(id="self", priority=LockPriority.low, acquisition_order=0, release_order=0),
-        other=Request(id="other", priority=LockPriority.low),
+        self=Request(id="self", priority=MutexPriority.low, acquisition_order=0, release_order=0),
+        other=Request(id="other", priority=MutexPriority.low),
     ),
     ComparisonCase(
         id="both incomplete",
-        self=Request(id="self", priority=LockPriority.low),
-        other=Request(id="other", priority=LockPriority.low),
+        self=Request(id="self", priority=MutexPriority.low),
+        other=Request(id="other", priority=MutexPriority.low),
     ),
 )
 @pytest.mark.parametrize(argnames="method", argvalues=[Request.__lt__, Request.before])
@@ -178,8 +178,8 @@ def test_comparisons_fail_for_incomplete_requests(
 
 @pytest.mark.asyncio
 async def test_reacquisition_fails() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
-    request = Request(id="again!", priority=LockPriority.low)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    request = Request(id="again!", priority=MutexPriority.low)
     event = asyncio.Event()
     event.set()
 
@@ -195,39 +195,39 @@ async def test_reacquisition_fails() -> None:
         # request high to low
         OrderCase(
             requests=[
-                Request(id="high", priority=LockPriority.high),
-                Request(id="medium", priority=LockPriority.medium),
-                Request(id="low", priority=LockPriority.low),
+                Request(id="high", priority=MutexPriority.high),
+                Request(id="medium", priority=MutexPriority.medium),
+                Request(id="low", priority=MutexPriority.low),
             ],
             expected_acquisitions=["high", "medium", "low"],
         ),
         # request low to high
         OrderCase(
             requests=[
-                Request(id="low", priority=LockPriority.low),
-                Request(id="medium", priority=LockPriority.medium),
-                Request(id="high", priority=LockPriority.high),
+                Request(id="low", priority=MutexPriority.low),
+                Request(id="medium", priority=MutexPriority.medium),
+                Request(id="high", priority=MutexPriority.high),
             ],
             expected_acquisitions=["low", "high", "medium"],
         ),
         # request in mixed order
         OrderCase(
             requests=[
-                Request(id="medium", priority=LockPriority.medium),
-                Request(id="low", priority=LockPriority.low),
-                Request(id="high", priority=LockPriority.high),
+                Request(id="medium", priority=MutexPriority.medium),
+                Request(id="low", priority=MutexPriority.low),
+                Request(id="high", priority=MutexPriority.high),
             ],
             expected_acquisitions=["medium", "high", "low"],
         ),
         # request with multiple of each
         OrderCase(
             requests=[
-                Request(id="medium a", priority=LockPriority.medium),
-                Request(id="low a", priority=LockPriority.low),
-                Request(id="high a", priority=LockPriority.high),
-                Request(id="medium b", priority=LockPriority.medium),
-                Request(id="low b", priority=LockPriority.low),
-                Request(id="high b", priority=LockPriority.high),
+                Request(id="medium a", priority=MutexPriority.medium),
+                Request(id="low a", priority=MutexPriority.low),
+                Request(id="high a", priority=MutexPriority.high),
+                Request(id="medium b", priority=MutexPriority.medium),
+                Request(id="low b", priority=MutexPriority.low),
+                Request(id="high b", priority=MutexPriority.high),
             ],
             expected_acquisitions=["medium a", "high a", "high b", "medium b", "low a", "low b"],
         ),
@@ -235,7 +235,7 @@ async def test_reacquisition_fails() -> None:
 )
 @pytest.mark.asyncio
 async def test_order(case: OrderCase) -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -253,20 +253,20 @@ def expected_acquisition_order(requests: List[Request]) -> List[Request]:
     first_request, *other_requests = requests
     return [
         first_request,
-        *(request for priority in sorted(LockPriority) for request in other_requests if request.priority == priority),
+        *(request for priority in sorted(MutexPriority) for request in other_requests if request.priority == priority),
     ]
 
 
 @pytest.mark.asyncio
 async def test_sequential_acquisitions() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
 
     for _ in range(1000):
         with anyio.fail_after(delay=adjusted_timeout(timeout=10)):
-            async with mutex.acquire(priority=random_instance.choice(lock_priorities)):
+            async with mutex.acquire(priority=random_instance.choice(mutex_priorities)):
                 pass
 
     # just testing that we can get through a bunch of miscellaneous acquisitions
@@ -274,23 +274,23 @@ async def test_sequential_acquisitions() -> None:
 
 @pytest.mark.asyncio
 async def test_nested_acquisition_raises() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
-    async with mutex.acquire(priority=LockPriority.high):
+    async with mutex.acquire(priority=MutexPriority.high):
         with pytest.raises(NestedLockUnsupportedError):
-            async with mutex.acquire(priority=LockPriority.high):
+            async with mutex.acquire(priority=MutexPriority.high):
                 # No coverage required since we're testing that this is not reached
                 assert False  # pragma: no cover
 
 
-async def to_be_cancelled(mutex: PriorityMutex[LockPriority], event: asyncio.Event) -> None:
-    async with mutex.acquire(priority=LockPriority.high, queued_callback=event.set):
+async def to_be_cancelled(mutex: PriorityMutex[MutexPriority], event: asyncio.Event) -> None:
+    async with mutex.acquire(priority=MutexPriority.high, queued_callback=event.set):
         assert False
 
 
 @pytest.mark.asyncio
 async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
     event = asyncio.Event()
 
     with pytest.raises(AssertionError):
@@ -299,7 +299,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
 
 @pytest.mark.asyncio
 async def test_cancellation_while_waiting() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -308,7 +308,7 @@ async def test_cancellation_while_waiting() -> None:
     blocker_acquired_event = asyncio.Event()
 
     async def block() -> None:
-        async with mutex.acquire(priority=LockPriority.high):
+        async with mutex.acquire(priority=MutexPriority.high):
             blocker_acquired_event.set()
             await blocker_continue_event.wait()
 
@@ -317,7 +317,7 @@ async def test_cancellation_while_waiting() -> None:
     queued_after_queued_event = asyncio.Event()
 
     async def queued_after() -> None:
-        async with mutex.acquire(priority=LockPriority.high, queued_callback=queued_after_queued_event.set):
+        async with mutex.acquire(priority=MutexPriority.high, queued_callback=queued_after_queued_event.set):
             pass
 
     block_task = asyncio.create_task(block())
@@ -345,12 +345,12 @@ async def test_cancellation_while_waiting() -> None:
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.asyncio
 async def test_retains_request_order_for_matching_priority(seed: int) -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
     random_instance = random.Random()
     random_instance.seed(a=seed, version=2)
 
-    all_requests = [Request(id=str(index), priority=random_instance.choice(lock_priorities)) for index in range(1000)]
+    all_requests = [Request(id=str(index), priority=random_instance.choice(mutex_priorities)) for index in range(1000)]
 
     tasks = await create_acquire_tasks_in_controlled_order(all_requests, mutex)
     await asyncio.gather(*tasks)
@@ -382,36 +382,36 @@ class SaneCase:
         id="all in order",
         good=True,
         requests=[
-            Request(id="0", priority=LockPriority.high, acquisition_order=0, release_order=1, completed=True),
-            Request(id="1", priority=LockPriority.high, acquisition_order=2, release_order=3, completed=True),
-            Request(id="2", priority=LockPriority.high, acquisition_order=4, release_order=5, completed=True),
+            Request(id="0", priority=MutexPriority.high, acquisition_order=0, release_order=1, completed=True),
+            Request(id="1", priority=MutexPriority.high, acquisition_order=2, release_order=3, completed=True),
+            Request(id="2", priority=MutexPriority.high, acquisition_order=4, release_order=5, completed=True),
         ],
     ),
     SaneCase(
         id="incomplete",
         good=False,
         requests=[
-            Request(id="0", priority=LockPriority.high, acquisition_order=0, release_order=1, completed=True),
-            Request(id="1", priority=LockPriority.high, acquisition_order=2, release_order=3, completed=True),
-            Request(id="2", priority=LockPriority.high, acquisition_order=4, release_order=None, completed=False),
+            Request(id="0", priority=MutexPriority.high, acquisition_order=0, release_order=1, completed=True),
+            Request(id="1", priority=MutexPriority.high, acquisition_order=2, release_order=3, completed=True),
+            Request(id="2", priority=MutexPriority.high, acquisition_order=4, release_order=None, completed=False),
         ],
     ),
     SaneCase(
         id="overlapping",
         good=False,
         requests=[
-            Request(id="0", priority=LockPriority.high, acquisition_order=0, release_order=2, completed=True),
-            Request(id="1", priority=LockPriority.high, acquisition_order=1, release_order=3, completed=True),
-            Request(id="2", priority=LockPriority.high, acquisition_order=4, release_order=5, completed=True),
+            Request(id="0", priority=MutexPriority.high, acquisition_order=0, release_order=2, completed=True),
+            Request(id="1", priority=MutexPriority.high, acquisition_order=1, release_order=3, completed=True),
+            Request(id="2", priority=MutexPriority.high, acquisition_order=4, release_order=5, completed=True),
         ],
     ),
     SaneCase(
         id="out of order",
         good=True,
         requests=[
-            Request(id="1", priority=LockPriority.high, acquisition_order=2, release_order=3, completed=True),
-            Request(id="0", priority=LockPriority.high, acquisition_order=0, release_order=1, completed=True),
-            Request(id="2", priority=LockPriority.high, acquisition_order=4, release_order=5, completed=True),
+            Request(id="1", priority=MutexPriority.high, acquisition_order=2, release_order=3, completed=True),
+            Request(id="0", priority=MutexPriority.high, acquisition_order=0, release_order=1, completed=True),
+            Request(id="2", priority=MutexPriority.high, acquisition_order=4, release_order=5, completed=True),
         ],
     ),
 )
@@ -421,7 +421,7 @@ def test_sane_all_in_order(case: SaneCase) -> None:
 
 async def create_acquire_tasks_in_controlled_order(
     requests: List[Request],
-    mutex: PriorityMutex[LockPriority],
+    mutex: PriorityMutex[MutexPriority],
 ) -> List[asyncio.Task[None]]:
     tasks: List[asyncio.Task[None]] = []
     release_event = asyncio.Event()
@@ -440,20 +440,20 @@ async def create_acquire_tasks_in_controlled_order(
 
 @pytest.mark.asyncio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
-    mutex = PriorityMutex.create(priority_type=LockPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
 
     other_task_allow_release_event = asyncio.Event()
 
     async def other_task_function(queued_event: asyncio.Event) -> None:
-        async with mutex.acquire(priority=LockPriority.high, queued_callback=queued_event.set):
+        async with mutex.acquire(priority=MutexPriority.high, queued_callback=queued_event.set):
             await other_task_allow_release_event.wait()
 
-    async with mutex.acquire(priority=LockPriority.high):
+    async with mutex.acquire(priority=MutexPriority.high):
         other_task_queued_event = asyncio.Event()
         other_task = asyncio.create_task(other_task_function(other_task_queued_event))
         await other_task_queued_event.wait()
 
-    async with mutex.acquire(priority=LockPriority.high, queued_callback=other_task_allow_release_event.set):
+    async with mutex.acquire(priority=MutexPriority.high, queued_callback=other_task_allow_release_event.set):
         pass
 
     await other_task
