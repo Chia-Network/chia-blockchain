@@ -30,9 +30,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_absolute_seconds_exceeds_condition,
     make_assert_coin_announcement,
-    make_assert_my_coin_id_condition,
     make_assert_puzzle_announcement,
     make_create_coin_announcement,
     make_create_coin_condition,
@@ -180,20 +178,11 @@ class Wallet:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
-        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
-        if maybe is None:
-            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
-            self.log.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Get puzzle for pubkey
-        public_key, secret_key = maybe
-
+        secret_key = await self.wallet_state_manager.get_private_key(puzzle_hash)
         # HACK
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         self.secret_key_store.save_secret_key(synthetic_secret_key)
-
-        return public_key
+        return secret_key.get_g1()
 
     async def hack_populate_secret_keys_for_coin_spends(self, coin_spends: List[CoinSpend]) -> None:
         """
@@ -232,8 +221,6 @@ class Wallet:
     def make_solution(
         self,
         primaries: List[Payment],
-        min_time=0,
-        me=None,
         coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
@@ -246,10 +233,6 @@ class Wallet:
         if len(primaries) > 0:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
-        if min_time > 0:
-            condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
-        if me:
-            condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
         if coin_announcements:
@@ -466,7 +449,7 @@ class Wallet:
     ) -> Tuple[G1Element, G2Element]:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
-        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+        private = await self.wallet_state_manager.get_private_key(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
         if is_hex:
@@ -603,7 +586,7 @@ class Wallet:
     ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
-        balance = await self.get_confirmed_balance()
+        balance = await self.get_spendable_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
