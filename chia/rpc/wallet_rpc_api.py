@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -3247,10 +3248,18 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                 )
-        await dl_wallet.track_new_launcher_id(
-            bytes32.from_hexstr(request["launcher_id"]),
-            self.service.get_full_node_peer(),
-        )
+        peer_list = self.service.get_full_node_peers_in_order()
+        peer_length = len(peer_list)
+        for i, peer in enumerate(peer_list):
+            try:
+                await dl_wallet.track_new_launcher_id(
+                    bytes32.from_hexstr(request["launcher_id"]),
+                    peer,
+                )
+            except LauncherCoinNotFoundError as e:
+                if i == peer_length - 1:
+                    raise e  # raise the error if we've tried all peers
+                continue  # try some other peers, maybe someone has it
         return {}
 
     async def dl_stop_tracking(self, request) -> Dict:
