@@ -458,3 +458,15 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
         pass
 
     await other_task
+
+
+@pytest.mark.asyncio
+async def test_no_task_fails_as_expected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Note that this case is not expected to be possible in reality"""
+    mutex = PriorityMutex.create(priority_type=MutexPriority)
+
+    with pytest.raises(Exception, match="unable to check current task, got: None"):
+        with monkeypatch.context() as monkeypatch_context:
+            monkeypatch_context.setattr(asyncio, "current_task", lambda: None)
+            async with mutex.acquire(priority=MutexPriority.high):
+                pass
