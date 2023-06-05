@@ -23,6 +23,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -678,7 +679,7 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm(two_wallet_nodes_services, self_hostname, trusted):
+async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
@@ -701,13 +702,13 @@ async def wallets_prefarm(two_wallet_nodes_services, self_hostname, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    wallet_node_0._test_client_args = (
+    wallet_0_rpc_client = await WalletRpcClient.create(
         bt.config["self_hostname"],
         wallet_service_0.rpc_server.listen_port,
         wallet_service_0.root_path,
         wallet_service_0.config,
     )
-    wallet_node_1._test_client_args = (
+    wallet_1_rpc_client = await WalletRpcClient.create(
         bt.config["self_hostname"],
         wallet_service_1.rpc_server.listen_port,
         wallet_service_1.root_path,
@@ -728,7 +729,17 @@ async def wallets_prefarm(two_wallet_nodes_services, self_hostname, trusted):
     assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
     assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
 
-    return (wallet_node_0, wallet_0_rewards), (wallet_node_1, wallet_1_rewards), full_node_api
+    return (
+        (wallet_node_0, wallet_0_rewards),
+        (wallet_node_1, wallet_1_rewards),
+        (wallet_0_rpc_client, wallet_1_rpc_client),
+        full_node_api,
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallets_prefarm(wallets_prefarm_services):
+    return wallets_prefarm_services[0], wallets_prefarm_services[1], wallets_prefarm_services[3]
 
 
 @pytest_asyncio.fixture(scope="function")
