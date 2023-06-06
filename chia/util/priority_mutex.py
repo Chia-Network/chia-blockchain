@@ -6,11 +6,9 @@ import contextlib
 import dataclasses
 import logging
 from enum import IntEnum
-from typing import AsyncIterator, Callable, Dict, Generic, Optional, Type, TypeVar
+from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
 
 from typing_extensions import final
-
-from chia.util.log_exceptions import log_exceptions
 
 log = logging.getLogger(__name__)
 
@@ -63,7 +61,6 @@ class PriorityMutex(Generic[_T_Priority]):
     async def acquire(
         self,
         priority: _T_Priority,
-        queued_callback: Optional[Callable[[], object]] = None,
     ) -> AsyncIterator[None]:
         task = asyncio.current_task()
         if task is None:
@@ -76,10 +73,6 @@ class PriorityMutex(Generic[_T_Priority]):
         deque = self._deques[priority]
         deque.append(element)
         try:
-            if queued_callback is not None:
-                with log_exceptions(log=log, consume=True):
-                    queued_callback()
-
             try:
                 if self._active is None:
                     self._active = element
