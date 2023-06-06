@@ -48,9 +48,6 @@ class PriorityMutex(Generic[_T_Priority]):
     _deques: Dict[_T_Priority, collections.deque[_Element]]
     _active: Optional[_Element] = None
 
-    # TODO: can we catch all unhandled errors and mark ourselves broken?
-    # TODO: add debug logging
-
     @classmethod
     def create(cls, priority_type: Type[_T_Priority]) -> PriorityMutex[_T_Priority]:
         return cls(
