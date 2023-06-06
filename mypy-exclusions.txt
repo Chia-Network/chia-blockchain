@@ -69,7 +69,6 @@ chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
 chia.wallet.puzzles.p2_puzzle_hash
 chia.wallet.puzzles.prefarm.spend_prefarm
-chia.wallet.puzzles.puzzle_utils
 chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
 chia.wallet.trading.trade_store
@@ -138,7 +137,6 @@ tests.core.util.test_keychain
 tests.core.util.test_keyring_wrapper
 tests.core.util.test_lru_cache
 tests.core.util.test_significant_bits
-tests.generator.test_list_to_batches
 tests.generator.test_scan
 tests.plotting.test_plot_manager
 tests.pools.test_pool_cmdline

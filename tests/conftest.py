@@ -733,13 +733,14 @@ async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, tru
         (wallet_node_0, wallet_0_rewards),
         (wallet_node_1, wallet_1_rewards),
         (wallet_0_rpc_client, wallet_1_rpc_client),
+        (wallet_service_0, wallet_service_1),
         full_node_api,
     )
 
 
 @pytest_asyncio.fixture(scope="function")
 async def wallets_prefarm(wallets_prefarm_services):
-    return wallets_prefarm_services[0], wallets_prefarm_services[1], wallets_prefarm_services[3]
+    return wallets_prefarm_services[0], wallets_prefarm_services[1], wallets_prefarm_services[4]
 
 
 @pytest_asyncio.fixture(scope="function")
