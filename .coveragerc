@@ -6,7 +6,7 @@ source_pkgs=
   tests
 omit=
   tests/**/config.py
-concurrency=multiprocessing
+concurrency=multiprocessing, thread
 parallel=True
 
 [report]
