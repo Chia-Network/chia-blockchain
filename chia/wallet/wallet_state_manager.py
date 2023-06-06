@@ -8,7 +8,20 @@ import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 import aiosqlite
 from blspy import G1Element, PrivateKey
@@ -17,6 +30,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import OuterDriver as DLOuterDriver
 from chia.data_layer.dl_wallet_store import DataLayerStore
 from chia.pools.pool_puzzles import (
     SINGLETON_LAUNCHER_HASH,
@@ -42,10 +56,28 @@ from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
+from chia.wallet.action_manager.action_aliases import (
+    AssertAnnouncement,
+    DirectPayment,
+    Fee,
+    MakeAnnouncement,
+    OfferedAmount,
+    RequestPayment,
+)
+from chia.wallet.action_manager.action_manager import WalletActionManager
+from chia.wallet.action_manager.protocols import (
+    ActionAlias,
+    InnerDriver,
+    OuterDriver,
+    PuzzleDescription,
+    SolutionDescription,
+    SpendDescription,
+)
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
+from chia.wallet.cat_wallet.cat_wallet import OuterDriver as CATOuterDriver
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH, RequireDLInclusion
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     _derive_path,
@@ -63,8 +95,12 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_public_key,
+)
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -83,6 +119,8 @@ from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
+from chia.wallet.wallet import InnerDriver as StdInnerDriver
+from chia.wallet.wallet import OuterDriver as StdOuterDriver
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -133,6 +171,7 @@ class WalletStateManager:
     wallets: Dict[uint32, WalletProtocol]
     private_key: PrivateKey
 
+    action_manager: WalletActionManager
     trade_manager: TradeManager
     notification_manager: NotificationManager
     blockchain: WalletBlockchain
@@ -147,6 +186,9 @@ class WalletStateManager:
     dl_store: DataLayerStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
+    outer_wallets: List[Type[OuterDriver]]
+    inner_wallets: List[Type[InnerDriver]]
+    action_aliases: Dict[str, Type[ActionAlias]]
     initial_num_public_keys: int
 
     @staticmethod
@@ -192,6 +234,7 @@ class WalletStateManager:
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
         self.vc_store = await VCStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
+        self.action_manager = WalletActionManager(self)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
@@ -215,9 +258,20 @@ class WalletStateManager:
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
+        self.action_aliases = {
+            DirectPayment.name(): DirectPayment,
+            OfferedAmount.name(): OfferedAmount,
+            Fee.name(): Fee,
+            MakeAnnouncement.name(): MakeAnnouncement,
+            AssertAnnouncement.name(): AssertAnnouncement,
+            RequestPayment.name(): RequestPayment,
+            RequireDLInclusion.name(): RequireDLInclusion,
+        }
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
+        self.outer_wallets = [StdOuterDriver, DLOuterDriver, CATOuterDriver]
+        self.inner_wallets = [StdInnerDriver]
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():
@@ -1795,3 +1849,76 @@ class WalletStateManager:
             vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
 
         return vc_wallet
+
+    async def get_coin_infos_for_spec(
+        self, coin_spec: Solver, previous_actions: List[SpendDescription]
+    ) -> List[SpendDescription]:
+        if "asset_id" in coin_spec:
+            wallet_instance: Optional[WalletProtocol] = await self.get_wallet_for_asset_id(coin_spec["asset_id"].hex())
+            if wallet_instance is None:
+                raise ValueError(f"No wallet for asset ID {coin_spec['asset_id'].hex()}")
+            outer_wallet = wallet_instance.__class__
+        elif "asset_types" in coin_spec:
+            outer_wallet = (await self.get_wallet_for_type_spec(coin_spec["asset_types"])).get_wallet_class()
+        else:
+            outer_wallet = Wallet
+
+        # This is a little bit of a hack due to the fact that these methods don't exist in wallet protocol because of a
+        # circular import issue where these methods return SpendDescription(s) which cointain OuterDriver(s) which have
+        # a get_wallet_class method which returns Type[WalletProtocol]. I'm sure there's a way to hint this, but I'm
+        # not sure what it is at this point at least not without a bigger refactor to the way the wallet and action
+        # manager protocol files are arranged. - Quex
+        assert hasattr(outer_wallet, "select_coins_from_spend_descriptions") and hasattr(
+            outer_wallet, "select_new_coins"
+        )
+
+        coin_infos: List[SpendDescription]
+        remaining_spec: Optional[Solver]
+        coin_infos, remaining_spec = await outer_wallet.select_coins_from_spend_descriptions(
+            self, coin_spec, previous_actions
+        )
+        if remaining_spec is not None:
+            coin_infos.extend(
+                await outer_wallet.select_new_coins(
+                    self,
+                    remaining_spec,
+                    exclude=[*(ci.coin for ci in coin_infos), *(cs.coin for cs in previous_actions)],
+                )
+            )
+
+        return coin_infos
+
+    async def get_wallet_for_type_spec(self, asset_types: List[Solver]) -> Type[OuterDriver]:
+        matches: List[Type[OuterDriver]] = []
+        for wallet in self.outer_wallets:
+            match = wallet.match_asset_types(asset_types)
+            if match:
+                matches.append(wallet)
+
+        if len(matches) > 1:
+            # QUESTION: Is there a use case for this?  Should we be returning options?
+            raise ValueError("Multiple wallets can handle the specified asset types")
+        elif len(matches) == 0:
+            raise ValueError("No matching wallet found for specified asset types")
+
+        return matches[0]
+
+    async def get_inner_descriptions_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> Tuple[PuzzleDescription, SolutionDescription]:
+        # TODO: right now we only support one inner wallet
+        return (
+            PuzzleDescription(
+                StdInnerDriver(
+                    calculate_synthetic_public_key(
+                        await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(puzzle_hash),
+                        DEFAULT_HIDDEN_PUZZLE_HASH,
+                    )
+                ),
+                Solver({}),
+            ),
+            SolutionDescription(
+                [],
+                Solver({}),
+            ),
+        )

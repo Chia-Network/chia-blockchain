@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -11,8 +12,11 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint64
+from chia.wallet.action_manager.protocols import WalletAction
+from chia.wallet.action_manager.wallet_actions import Condition
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 from chia.wallet.util.address_type import AddressType
@@ -315,3 +319,61 @@ def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom
     return new_did_id
+
+
+_T_UpdateMetadata = TypeVar("_T_UpdateMetadata", bound="UpdateMetadata")
+
+
+@dataclass(frozen=True)
+class UpdateMetadata:
+    metadata_solution: Program
+    metadata_updater: Program = field(default_factory=lambda: NFT_METADATA_UPDATER)
+
+    @staticmethod
+    def name() -> str:
+        return "update_metadata"
+
+    @classmethod
+    def from_solver(cls: Type[_T_UpdateMetadata], solver: Solver) -> _T_UpdateMetadata:
+        args: List[Program] = []
+        if "new_metadata" in solver:
+            args.append(solver["new_metadata"])
+        elif "metadata_solution" in solver:
+            args.append(solver["metadata_solution"])
+        if "metadata_updater" in solver:
+            args.append(solver["metadata_updater"])
+        if len(args) < 1:
+            raise ValueError(f"Malformatted update metadata action {solver}")
+        # Pylint apparently isn't smart enough to know that this will always have enough args if it gets here
+        # pylint: disable=no-value-for-parameter
+        return cls(*args)
+        # pylint: enable=no-value-for-parameter
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "new_metadata": disassemble(self.metadata_solution),
+                "metadata_updater": disassemble(self.metadata_updater),
+            }
+        )
+
+    def de_alias(self) -> WalletAction:
+        return Condition(Program.to([-24, self.metadata_updater, self.metadata_solution]))
+
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls: Type[_T_UpdateMetadata], action: WalletAction) -> _T_UpdateMetadata:
+        if not isinstance(action, Condition):
+            raise ValueError("Can only parse a UpdateMetadata from Condition")
+
+        if action.condition.first() != Program.to(-24):
+            raise ValueError("Tried to parse a condition that was not a metadata update")
+
+        return cls(action.condition.at("rrf"), action.condition.at("rf"))
+
+    def augment(self, environment: Solver) -> WalletAction:
+        return self

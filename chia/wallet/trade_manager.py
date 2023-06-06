@@ -13,10 +13,22 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.action_manager.action_aliases import RequestPayment
+from chia.wallet.action_manager.action_manager import nonce_coin_list
+from chia.wallet.action_manager.offer_action_backcompat import (
+    generate_summary_complement,
+    new_summary_to_old,
+    offer_to_spend,
+    old_request_to_new,
+    old_solver_to_new,
+    request_payment_to_legacy_encoding,
+    spend_to_offer,
+)
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -742,49 +754,96 @@ class TradeManager:
     ) -> Tuple[TradeRecord, List[TransactionRecord]]:
         if solver is None:
             solver = Solver({})
-        take_offer_dict: Dict[Union[bytes32, int], int] = {}
-        arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
 
-        for asset_id, amount in arbitrage.items():
-            if asset_id is None:
-                wallet = self.wallet_state_manager.main_wallet
-                key: Union[bytes32, int] = int(wallet.id())
-            else:
-                # ATTENTION: new wallets
-                wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
-                if wallet is None and amount < 0:
-                    raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
-                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
-                    key = asset_id
+        deconstructed_spend: Optional[Solver] = self.check_for_new_offer_type(offer)
+        if deconstructed_spend is not None:
+            modified_solver = await old_solver_to_new(self.wallet_state_manager, solver)
+            complement_summary: Solver = await generate_summary_complement(
+                self.wallet_state_manager,
+                deconstructed_spend,
+                modified_solver,
+                fee,
+            )
+            unsigned_complement_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
+                complement_summary
+            )
+            complement_spend: SpendBundle = self.wallet_state_manager.action_manager.sign_spend(
+                unsigned_complement_spend
+            )
+            full_spend: SpendBundle = SpendBundle.aggregate(
+                [
+                    complement_spend,
+                    offer_to_spend(offer),
+                ]
+            )
+            solved_spend_bundle: SpendBundle = self.wallet_state_manager.action_manager.solve_spend(
+                full_spend, modified_solver
+            )
+            offer_no_payments: Offer = Offer.from_spend_bundle(solved_spend_bundle)
+            # The new action manager has already encoded the requested payment info in a way it itself can understand
+            # We must add the legacy style dummy spends into the bundle so that the trade manager can understand it
+            payment_spends: List[CoinSpend] = [
+                request_payment_to_legacy_encoding(
+                    RequestPayment.from_solver(action),
+                    add_nonce=nonce_coin_list([cs.coin for cs in complement_spend.coin_spends]),
+                )
+                for total_action in [
+                    *deconstructed_spend["actions"],
+                    *complement_summary["actions"],
+                    *deconstructed_spend["bundle_actions"],
+                    *complement_summary["bundle_actions"],
+                ]
+                for action in (total_action["do"] if "do" in total_action else [total_action])
+                if action["type"] == RequestPayment.name()
+            ]
+            complete_offer = Offer.from_spend_bundle(
+                SpendBundle(
+                    [*offer_no_payments.coin_spends(), *payment_spends],
+                    offer_no_payments.aggregated_signature(),
+                )
+            )
+        else:
+            take_offer_dict: Dict[Union[bytes32, int], int] = {}
+            arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
+
+            for asset_id, amount in arbitrage.items():
+                if asset_id is None:
+                    wallet = self.wallet_state_manager.main_wallet
+                    key: Union[bytes32, int] = int(wallet.id())
                 else:
-                    key = int(wallet.id())
-            take_offer_dict[key] = amount
+                    # ATTENTION: new wallets
+                    wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                    if wallet is None and amount < 0:
+                        raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
+                    elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
+                        key = asset_id
+                    else:
+                        key = int(wallet.id())
+                take_offer_dict[key] = amount
 
-        # First we validate that all of the coins in this offer exist
-        valid: bool = await self.check_offer_validity(offer, peer)
-        if not valid:
-            raise ValueError("This offer is no longer valid")
-        result = await self._create_offer_for_ids(
-            take_offer_dict,
-            offer.driver_dict,
-            solver,
-            fee=fee,
-            min_coin_amount=min_coin_amount,
-            max_coin_amount=max_coin_amount,
-            old=offer.old,
-            reuse_puzhash=reuse_puzhash,
-        )
-        if not result[0] or result[1] is None:
-            raise ValueError(result[2])
+            # First we validate that all of the coins in this offer exist
+            valid: bool = await self.check_offer_validity(offer, peer)
+            if not valid:
+                raise ValueError("This offer is no longer valid")
+            result = await self._create_offer_for_ids(
+                take_offer_dict,
+                offer.driver_dict,
+                solver,
+                fee=fee,
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                old=offer.old,
+                reuse_puzhash=reuse_puzhash,
+            )
+            if not result[0] or result[1] is None:
+                raise ValueError(result[2])
 
-        success, take_offer, error = result
+            complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, result[1]]), solver)
 
-        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
-
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
         trade_record: TradeRecord = TradeRecord(
@@ -857,6 +916,32 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
+                for info in driver_dict.values():
+                    # We've already validated that there's a DL singleton in the offer, now lets check if there's
+                    # anything that's NOT a DL singleton, which signals to us this is a pay-for-inclusion offer
+                    if (
+                        not (
+                            info.check_type(
+                                [
+                                    AssetType.SINGLETON.value,
+                                    AssetType.METADATA.value,
+                                ]
+                            )
+                            and info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                        )
+                        or None in offer_dict
+                    ):
+                        unsigned_spend: SpendBundle = await self.wallet_state_manager.action_manager.build_spend(
+                            await old_request_to_new(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
+                        )
+                        # TODO: We do the conversion from spend <-> offer twice because we need to make sure
+                        # that we're signing the proper thing. During an optimization pass, we should figure out
+                        # how to avoid this.
+                        signed_spend: SpendBundle = self.wallet_state_manager.action_manager.sign_spend(
+                            offer_to_spend(spend_to_offer(self.wallet_state_manager, unsigned_spend))
+                        )
+                        return spend_to_offer(self.wallet_state_manager, signed_spend)
+
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee, old
                 )
@@ -893,6 +978,11 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
+                deconstructed_spend: Optional[Solver] = self.check_for_new_offer_type(offer)
+                if deconstructed_spend is not None:
+                    old_summary: Dict[str, Any] = new_summary_to_old(deconstructed_spend)
+                    return old_summary
+
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
@@ -912,3 +1002,31 @@ class TradeManager:
                 return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
 
         return offer
+
+    def check_for_new_offer_type(self, offer: Offer) -> Optional[Solver]:
+        for puzzle_info in offer.driver_dict.values():
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                    ]
+                )
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                for asset_id in [*offer.requested_payments.keys(), *offer.get_offered_coins().keys()]:
+                    if asset_id is None or not (
+                        offer.driver_dict[asset_id].check_type(
+                            [
+                                AssetType.SINGLETON.value,
+                                AssetType.METADATA.value,
+                            ]
+                        )
+                        and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                    ):
+                        offer_as_spend: SpendBundle = offer_to_spend(offer)
+                        deconstructed_spend: Solver = self.wallet_state_manager.action_manager.deconstruct_spend(
+                            offer_as_spend
+                        )
+                        return deconstructed_spend
+        return None

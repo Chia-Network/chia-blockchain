@@ -1,4 +1,5 @@
 {
+    "add_wrapped_announcement": "d225e7bf6d9b788bbb0d086294896ebafc46b810eefe510462a737bb07e739fe",
     "block_program_zero": "f0a38c8efe58895ae527c65c37f700a4238504691b83990e5dd91bd8b3c30eae",
     "calculate_synthetic_public_key": "624c5d5704d0decadfc0503e71bbffb6cdfe45025bce7cf3e6864d1eafe8f65e",
     "cat_v2": "37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a",
@@ -6,6 +7,8 @@
     "covenant_layer": "b982796850336aabf9ab17c3f21e299f0c633444117ab5e9ebeafadf1860d9fc",
     "create_nft_launcher_from_did": "7a32d2d9571d3436791c0ad3d7fcfdb9c43ace2b0f0ff13f98d29f0cc093f445",
     "credential_restriction": "2fdfc1f058cfd65e7ec4e253bfeb394da163ecd0036f508df8629b0a2b8fde96",
+    "curry": "a53c4404d7c952ac1da24b376e1984bee9655a1767d997537c4a817f5558ec01",
+    "curry_dl_graftroot": "1a082c108cf49455733deaff079fdad894a2255f439c3953dc2b0ae26e7a2e82",
     "decompress_coin_spend_entry": "9d98ed08770d31be4bd1bde4705dab388db5e7e9c349f5a76fc3c347aa3a0b79",
     "decompress_coin_spend_entry_with_prefix": "92aa4bc8060a8836355a1884075141b4791ce1b67ae6092bb166b2845954bc89",
     "decompress_puzzle": "fe94c58f1117afe315e0450daca1c62460ec1a1c439cd4018d79967a5d7d1370",

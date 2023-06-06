@@ -607,7 +607,8 @@ class Offer:
                         [NotarizedPayment.from_condition_and_nonce(condition, nonce) for condition in payment_args_list]
                     )
 
-                requested_payments[asset_id] = notarized_payments
+                requested_payments.setdefault(asset_id, [])
+                requested_payments[asset_id].extend(notarized_payments)
             else:
                 leftover_coin_spends.append(coin_spend)
 

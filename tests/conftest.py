@@ -679,11 +679,14 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted):
+async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted, request):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
-    farm_blocks = 3
+    try:
+        farm_blocks = request.param
+    except AttributeError:
+        farm_blocks = 3
     buffer = 1
     full_nodes, wallets, bt = two_wallet_nodes_services
     full_node_api = full_nodes[0]._api

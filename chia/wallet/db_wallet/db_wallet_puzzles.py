@@ -1,22 +1,33 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Tuple, Union
+from dataclasses import dataclass
+from typing import Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
+from chia.wallet.action_manager.protocols import WalletAction
+from chia.wallet.action_manager.wallet_actions import Graftroot
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
+from chia.wallet.puzzle_drivers import Solver, cast_to_int
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
-ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
+ACS_MU: Program = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
+SINGLETON_TOP_LAYER_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
+SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
+NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clsp")
+CURRY_DL_GRAFTROOT = load_clvm_maybe_recompile("curry_dl_graftroot.clsp")
 P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
 
 
@@ -102,3 +113,190 @@ def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[b
             launcher_id = bytes32(memos[0])
             return launcher_id, [url for url in memos[1:]]
     raise ValueError("The provided puzzle and solution do not create a mirror coin")
+
+
+_T_RequireDLInclusion = TypeVar("_T_RequireDLInclusion", bound="RequireDLInclusion")
+
+
+@dataclass(frozen=True)
+class RequireDLInclusion:
+    """
+    This class is a wallet action that forces a coin to rely on an announcement from one or more data layer singletons.
+    A singleton making the announcement must have a markle root in which a list of 32 byte values can be proven.
+    """
+
+    launcher_ids: List[bytes32]
+    values_to_prove: List[List[bytes32]]
+
+    @staticmethod
+    def name() -> str:
+        return "require_dl_inclusion"
+
+    @classmethod
+    def from_solver(cls: Type[_T_RequireDLInclusion], solver: Solver) -> _T_RequireDLInclusion:
+        return cls(
+            [bytes32(launcher_id) for launcher_id in solver["launcher_ids"]],
+            [[bytes32(value) for value in values] for values in solver["values_to_prove"]],
+        )
+
+    def __post_init__(self) -> None:
+        if len(self.launcher_ids) != len(self.values_to_prove):
+            raise ValueError("Length mismatch between launcher ids and values to prove")
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "launcher_ids": ["0x" + launcher_id.hex() for launcher_id in self.launcher_ids],
+                "values_to_prove": [["0x" + value.hex() for value in values] for values in self.values_to_prove],
+            }
+        )
+
+    def de_alias(self) -> Graftroot:
+        return Graftroot(
+            self.construct_puzzle_wrapper(),
+            Program.to(
+                [
+                    4,
+                    Program.to(None),
+                    [
+                        4,
+                        Program.to(None),
+                        [
+                            4,
+                            Program.to(None),
+                            [
+                                4,
+                                Program.to(None),
+                                [4, 2, None],
+                            ],
+                        ],
+                    ],
+                ]
+            ),
+            Program.to(None),
+        )
+
+    def construct_puzzle_wrapper(self) -> Program:
+        return CURRY_DL_GRAFTROOT.curry(
+            GRAFTROOT_DL_OFFERS,
+            [launcher_to_struct(launcher) for launcher in self.launcher_ids],
+            [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(self.launcher_ids),
+            self.values_to_prove,
+        )
+
+    @staticmethod
+    def action_name() -> str:
+        return str(Graftroot.name())
+
+    @classmethod
+    def from_action(cls: Type[_T_RequireDLInclusion], action: WalletAction) -> _T_RequireDLInclusion:
+        if not isinstance(action, Graftroot):
+            raise ValueError("Can only parse a RequireDLInclusion from Graftroot")
+
+        curry_mod, curried_args = action.puzzle_wrapper.uncurry()
+        if curry_mod != CURRY_DL_GRAFTROOT or curried_args.first() != GRAFTROOT_DL_OFFERS:
+            raise ValueError("The parsed graftroot is not a DL requirement")
+
+        return cls(
+            [bytes32(struct.at("rf").as_python()) for struct in curried_args.at("rf").as_iter()],
+            [
+                [bytes32(value.as_python()) for value in values.as_iter()]
+                for values in curried_args.at("rrrf").as_iter()
+            ],
+        )
+
+    def augment(self, environment: Solver) -> Graftroot:
+        if "dl_inclusion_proofs" in environment:
+            all_spends: List[CoinSpend] = [
+                CoinSpend(
+                    Coin(
+                        spend["coin"]["parent_coin_info"],
+                        spend["coin"]["puzzle_hash"],
+                        cast_to_int(spend["coin"]["amount"]),
+                    ),
+                    spend["puzzle_reveal"],
+                    spend["solution"],
+                )
+                for spend in environment["spends"]
+            ]
+            # Build a mapping of launcher IDs to their spend information
+            singleton_to_innerpuzhashs_and_roots: Dict[bytes32, List[Tuple[bytes32, bytes32]]] = {}
+            for spend in all_spends:
+                matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+                if matched:
+                    innerpuz, root, id = curried_args
+                    singleton_to_innerpuzhashs_and_roots.setdefault(bytes32(id.as_python()), [])
+                    singleton_to_innerpuzhashs_and_roots[bytes32(id.as_python())].append(
+                        (
+                            innerpuz.get_tree_hash(),
+                            bytes32(root.as_python()),
+                        )
+                    )
+            # Now find all of the info that we need for the solution
+            all_proofs = []
+            all_roots = []
+            for launcher_id, values in zip(self.launcher_ids, self.values_to_prove):
+                acceptable_roots: List[bytes32] = [r for _, r in singleton_to_innerpuzhashs_and_roots[launcher_id]]
+                proved_root: Optional[bytes32] = None
+                proofs_of_inclusion: List[Program] = []
+                while proved_root is None:
+                    for value in values:
+                        for proof in environment["dl_inclusion_proofs"]:
+                            _proof = (proof.first().as_int(), proof.rest().as_python())
+                            calculated_root = _simplify_merkle_proof(value, _proof)
+                            if calculated_root in acceptable_roots:
+                                if proved_root is None:
+                                    proved_root = calculated_root
+                                elif calculated_root != proved_root:
+                                    continue
+                                proofs_of_inclusion.append(proof)
+                                break
+                        else:
+                            if proved_root is None:
+                                return self.de_alias()  # The inclusion proofs were not good enough so don't do anything
+                            else:
+                                acceptable_roots.remove(proved_root)
+                                proved_root = None
+                                proofs_of_inclusion = []
+                                break
+
+                all_proofs.append(proofs_of_inclusion)
+                all_roots.append(proved_root)
+
+            potential_inner_puzzles: List[bytes32] = [
+                innerpuz
+                for launcher_id, expected_root in zip(self.launcher_ids, all_roots)
+                for innerpuz, root in singleton_to_innerpuzhashs_and_roots[launcher_id]
+                if root == expected_root
+            ]
+            # This is a hack to fix an edge case where you do a metadata update to the same root then announce it
+            # If it causes issues, we should probably inspect the conditions
+            if len(potential_inner_puzzles) > len(self.launcher_ids):
+                potential_inner_puzzles = [potential_inner_puzzles[-1]]
+            return Graftroot(
+                self.construct_puzzle_wrapper(),
+                # (list proofs_of_inclusion new_metadatas new_metadata_updaters new_inner_puzs inner_solution)
+                Program.to(
+                    [
+                        4,
+                        (1, all_proofs),
+                        [
+                            4,
+                            (1, [Program.to([root]) for root in all_roots]),
+                            [
+                                4,
+                                (1, [ACS_MU_PH] * len(self.launcher_ids)),
+                                [
+                                    4,
+                                    (1, potential_inner_puzzles),
+                                    [4, 2, None],
+                                ],
+                            ],
+                        ],
+                    ]
+                ),
+                Program.to(None),
+            )
+
+        return self.de_alias()
