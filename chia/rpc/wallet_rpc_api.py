@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
@@ -250,26 +251,7 @@ class WalletRpcApi:
             # Metrics is the only current consumer for this event
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if change in {
-            "offer_cancelled",
-            "offer_added",
-            "wallet_created",
-            "did_coin_added",
-            "nft_coin_added",
-            "nft_coin_removed",
-            "nft_coin_updated",
-            "nft_coin_did_set",
-            "new_block",
-            "coin_removed",
-            "coin_added",
-            "new_derivation_index",
-            "added_stray_cat",
-            "pending_transaction",
-            "tx_update",
-            "wallet_removed",
-            "new_on_chain_notification",
-        }:
-            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
+        payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
@@ -929,9 +911,7 @@ class WalletRpcApi:
                     coin.name()
                 )
                 assert record is not None, f"Cannot find coin record for clawback transaction {tx['name']}"
-                assert record.metadata is not None, f"None metadata for clawback transaction {record.coin.name().hex()}"
-                clawback_metadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-                tx["metadata"] = clawback_metadata.to_json_dict()
+                tx["metadata"] = record.parsed_metadata().to_json_dict()
                 tx["metadata"]["coin_id"] = coin.name().hex()
                 tx["metadata"]["spent"] = record.spent
             except Exception as e:
@@ -1090,9 +1070,7 @@ class WalletRpcApi:
         tx_id_list: List[bytes] = []
         for coin_id, coin_record in coin_records.coin_id_to_record.items():
             try:
-                assert coin_record.metadata is not None, f"Coin record {coin_id.hex()} has no metadata"
-                metadata = ClawbackMetadata.from_bytes(coin_record.metadata.blob)
-                coins[coin_record.coin] = metadata
+                coins[coin_record.coin] = coin_record.parsed_metadata()
                 if len(coins) >= batch_size:
                     tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee)))
                     coins = {}
@@ -3265,10 +3243,18 @@ class WalletRpcApi:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
                 )
-        await dl_wallet.track_new_launcher_id(
-            bytes32.from_hexstr(request["launcher_id"]),
-            self.service.get_full_node_peer(),
-        )
+        peer_list = self.service.get_full_node_peers_in_order()
+        peer_length = len(peer_list)
+        for i, peer in enumerate(peer_list):
+            try:
+                await dl_wallet.track_new_launcher_id(
+                    bytes32.from_hexstr(request["launcher_id"]),
+                    peer,
+                )
+            except LauncherCoinNotFoundError as e:
+                if i == peer_length - 1:
+                    raise e  # raise the error if we've tried all peers
+                continue  # try some other peers, maybe someone has it
         return {}
 
     async def dl_stop_tracking(self, request) -> Dict:

@@ -393,13 +393,15 @@ class Wallet:
                 origin_id = coin.name()
                 public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
                 inner_puzzle = puzzle_for_pk(public_key)
-                decorated_target_puzhash = decorator_manager.decorate_target_puzhash(inner_puzzle, newpuzzlehash)
+                decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
+                    inner_puzzle, newpuzzlehash
+                )
                 target_primary: List[Payment] = []
                 if memos is None:
                     memos = []
                 memos = decorator_manager.decorate_memos(inner_puzzle, newpuzzlehash, memos)
                 if (primaries_input is None and amount > 0) or primaries_input is not None:
-                    primaries.append(Payment(decorated_target_puzhash, amount, memos))
+                    primaries.append(Payment(decorated_target_puzzle_hash, amount, memos))
                     target_primary.append(Payment(newpuzzlehash, amount, memos))
 
                 if change > 0:

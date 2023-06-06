@@ -11,7 +11,7 @@ from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
-from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -198,7 +198,7 @@ class DataLayerWallet:
         )
 
         if len(coin_states) == 0:
-            raise ValueError(f"Launcher ID {launcher_id} is not a valid coin")
+            raise LauncherCoinNotFoundError(f"Launcher ID {launcher_id} is not a valid coin")
         if coin_states[0].coin.puzzle_hash != SINGLETON_LAUNCHER.get_tree_hash():
             raise ValueError(f"Coin with ID {launcher_id} is not a singleton launcher")
         if coin_states[0].created_height is None:
