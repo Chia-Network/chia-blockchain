@@ -583,16 +583,19 @@ class TestWalletSync:
     @pytest.mark.asyncio
     async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
         blocks = default_10000_blocks
+        delta = 0
+        if blockchain_constants.SOFT_FORK3_HEIGHT == 0:
+            delta = 6000
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
         wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
-        wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
-        wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
-        wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
-        wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
-        wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
+        wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000 - delta)]].header_hash)
+        wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030 - delta)]].header_hash)
+        wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500 - delta)]].header_hash)
+        wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700 - delta)]].header_hash)
+        wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700 - delta)]].header_hash)
+        wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010 - delta)]].header_hash)
         fork12 = get_wp_fork_point(blockchain_constants, wp1, wp2)
         fork13 = get_wp_fork_point(blockchain_constants, wp3, wp1)
         fork14 = get_wp_fork_point(blockchain_constants, wp4, wp1)
