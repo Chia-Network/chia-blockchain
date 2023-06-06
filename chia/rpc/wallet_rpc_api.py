@@ -246,26 +246,7 @@ class WalletRpcApi:
             # Metrics is the only current consumer for this event
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if change in {
-            "offer_cancelled",
-            "offer_added",
-            "wallet_created",
-            "did_coin_added",
-            "nft_coin_added",
-            "nft_coin_removed",
-            "nft_coin_updated",
-            "nft_coin_did_set",
-            "new_block",
-            "coin_removed",
-            "coin_added",
-            "new_derivation_index",
-            "added_stray_cat",
-            "pending_transaction",
-            "tx_update",
-            "wallet_removed",
-            "new_on_chain_notification",
-        }:
-            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
+        payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
@@ -890,6 +871,7 @@ class WalletRpcApi:
             reverse=reverse,
             to_puzzle_hash=to_puzzle_hash,
             type_filter=type_filter,
+            confirmed=request.get("confirmed", None),
         )
         return {
             "transactions": [

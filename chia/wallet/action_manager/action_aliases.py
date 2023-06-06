@@ -131,7 +131,7 @@ class OfferedAmount:
         )
 
     def de_alias(self) -> Condition:
-        return Condition(Program.to(make_create_coin_condition(OFFER_MOD_HASH, self.amount, [])))
+        return Condition(Program.to(make_create_coin_condition(OFFER_MOD_HASH, uint64(self.amount), [])))
 
     @staticmethod
     def action_name() -> str:
@@ -175,7 +175,7 @@ class Fee:
         )
 
     def de_alias(self) -> Condition:
-        return Condition(Program.to(make_reserve_fee_condition(self.amount)))
+        return Condition(Program.to(make_reserve_fee_condition(uint64(self.amount))))
 
     @staticmethod
     def action_name() -> str:
