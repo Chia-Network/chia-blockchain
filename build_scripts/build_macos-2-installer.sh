@@ -38,7 +38,7 @@ cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
-
+cp -r dist/licenses ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 cp -r dist/licenses ../chia-blockchain-gui/packages/gui

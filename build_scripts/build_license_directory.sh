@@ -34,8 +34,6 @@ mv licenses/ ../build_scripts/dist
 cd ../build_scripts || 'exit" or "cd' || return
 ls -lah dist/
 
-python3 -m venv ../venv
-. ../venv/bin/activate
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
 
@@ -61,4 +59,3 @@ done
 
 pwd
 ls -lah licenses
-deactivate
