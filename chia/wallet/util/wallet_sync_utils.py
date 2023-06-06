@@ -34,7 +34,7 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinInfo, CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.ints import uint32
@@ -318,6 +318,16 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
+def last_change_height_coin_info(coin_info: CoinInfo) -> uint32:
+    if coin_info.spent_block is not None:
+        return coin_info.spent_height
+    if coin_info.created_block is not None:
+        return coin_info.created_height
+
+    # Reorgs should be processed at the beginning
+    return uint32(0)
+
+
 def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
     return sorted(
         coin_states,
@@ -325,6 +335,17 @@ def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
             last_change_height_cs(coin_state),
             0 if coin_state.created_height is None else coin_state.created_height,
             0 if coin_state.spent_height is None else coin_state.spent_height,
+        ),
+    )
+
+
+def sort_coin_infos(coin_infos: Set[CoinInfo]) -> List[CoinInfo]:
+    return sorted(
+        coin_infos,
+        key=lambda coin_info: (
+            last_change_height_coin_info(coin_info),
+            0 if coin_info.created_block is None else coin_info.created_height,
+            0 if coin_info.spent_block is None else coin_info.spent_height,
         ),
     )
 

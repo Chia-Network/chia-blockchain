@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
+from chia_rs import CoinState
 from clvm.casts import int_from_bytes
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.block import BlockIdentifierTimed
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 
@@ -81,3 +84,61 @@ def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BL
 class SpendInfo(Streamable):
     puzzle: SerializedProgram
     solution: SerializedProgram
+
+
+# TODO, Implement this in rust, like CoinState?
+@streamable
+@dataclass(frozen=True)
+class CoinInfo(Streamable):
+    coin: Coin
+    created_block: Optional[BlockIdentifierTimed]
+    spent_block: Optional[BlockIdentifierTimed]
+    spend_info: Optional[SpendInfo]
+
+    @property
+    def puzzle(self) -> SerializedProgram:
+        if self.spend_info is None:
+            raise ValueError("spend_info not available")
+        return self.spend_info.puzzle
+
+    @property
+    def solution(self) -> SerializedProgram:
+        if self.spend_info is None:
+            raise ValueError("spend_info not available")
+        return self.spend_info.solution
+
+    @property
+    def created_height(self) -> uint32:
+        if self.created_block is None:
+            raise ValueError("created_block not available")
+        return self.created_block.height
+
+    @property
+    def created_timestamp(self) -> uint64:
+        if self.created_block is None:
+            raise ValueError("created_block not available")
+        return self.created_block.timestamp
+
+    @property
+    def spent_height(self) -> uint32:
+        if self.spent_block is None:
+            raise ValueError("spent_block not available")
+        return self.spent_block.height
+
+    @property
+    def spent_timestamp(self) -> uint64:
+        if self.spent_block is None:
+            raise ValueError("spent_block not available")
+        return self.spent_block.timestamp
+
+    # TODO: Refactor call sites to avoid the need for this.
+    def to_coin_state(self) -> CoinState:
+        return CoinState(
+            self.coin,
+            None if self.spent_block is None else self.spent_height,
+            None if self.created_block is None else self.created_height,
+        )
+
+    # TODO: Refactor call sites to avoid the need for this.
+    def to_coin_spend(self) -> CoinSpend:
+        return CoinSpend(self.coin, self.puzzle, self.solution)
