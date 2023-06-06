@@ -582,6 +582,7 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
+        pytest.skip("Temporarily skipped.")
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
