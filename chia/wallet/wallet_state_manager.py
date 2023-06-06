@@ -1439,10 +1439,10 @@ class WalletStateManager:
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                             rem_tx_records: List[TransactionRecord] = []
-                            for tx_record in all_unconfirmed:
-                                for rem_coin in tx_record.removals:
+                            for out_tx_record in all_unconfirmed:
+                                for rem_coin in out_tx_record.removals:
                                     if rem_coin == coin_state.coin:
-                                        rem_tx_records.append(tx_record)
+                                        rem_tx_records.append(out_tx_record)
 
                             for tx_record in rem_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))

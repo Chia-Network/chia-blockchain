@@ -567,18 +567,17 @@ class WalletRpcApi:
 
     async def set_auto_claim(self, request) -> EndpointResult:
         """
-        Set auto claim merkle coins config
+        Set auto claim merkle coins configuration in the config.yaml
+        enable: Enable the auto claim feature or not
+        tx_fee: The transaction fee for each batch of the claim
+        min_amount: The minimum amount of coins that are allowed to be auto claimed
+        batch_size: The number of coins in each claim batch
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
         return self.service.set_auto_claim(AutoClaimSettings.from_json_dict(request))
 
     async def get_auto_claim(self, request) -> EndpointResult:
-        """
-        Get auto claim merkle coins config
-        :param request: None
-        :return:
-        """
         auto_claim_settings = AutoClaimSettings.from_json_dict(
             self.service.wallet_state_manager.config.get("auto_claim", {})
         )
