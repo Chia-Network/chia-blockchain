@@ -100,7 +100,6 @@ class WSChiaConnection:
     inbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     incoming_message_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     outbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
-    active: bool = False  # once handshake is successful this will be changed to True
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
