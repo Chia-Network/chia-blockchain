@@ -208,7 +208,7 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
-        "exclude_coin_ids": list(coins_to_exclude),
+        "excluded_coin_ids": list(coins_to_exclude),
         "reuse_puzhash": True if reuse else None,
     }
     import asyncio

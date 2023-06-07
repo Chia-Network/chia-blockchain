@@ -309,8 +309,8 @@ class Wallet:
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
-        exclude_coins: Optional[Set[Coin]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
         """
@@ -343,17 +343,17 @@ class Wallet:
                 raise ValueError(
                     f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
                 )
-            exclude_coins_list: Optional[List[Coin]] = None
-            if exclude_coins is not None:
-                exclude_coins_list = list(exclude_coins)
+            excluded_coins_list: Optional[List[Coin]] = None
+            if excluded_coins is not None:
+                excluded_coins_list = list(excluded_coins)
             coins = await self.select_coins(
                 uint64(total_amount),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
-                exclude=exclude_coins_list,
+                excluded_coin_amounts=excluded_coin_amounts,
+                exclude=excluded_coins_list,
             )
-        elif exclude_coins is not None:
+        elif excluded_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
 
         assert len(coins) > 0
@@ -473,8 +473,8 @@ class Wallet:
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
-        exclude_coins: Optional[Set[Coin]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         """
@@ -502,8 +502,8 @@ class Wallet:
             negative_change_allowed,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
-            exclude_coin_amounts=exclude_coin_amounts,
-            exclude_coins=exclude_coins,
+            excluded_coin_amounts=excluded_coin_amounts,
+            excluded_coins=excluded_coins,
             reuse_puzhash=reuse_puzhash,
         )
         assert len(transaction) > 0

@@ -590,7 +590,7 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_env
 
 
 @pytest.mark.asyncio
-async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1: Wallet = env.wallet_1.wallet
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -603,7 +603,7 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
         assert len(selected_coins) == 1
         outputs = await create_tx_outputs(wallet_1, [(uint64(250000000000), None)])
 
-        tx = await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+        tx = await wallet_1_rpc.create_signed_transaction(outputs, excluded_coins=selected_coins)
 
         assert len(tx.removals) == 1
         assert tx.removals[0] != selected_coins[0]
@@ -616,7 +616,7 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
         outputs = await create_tx_outputs(wallet_1, [(uint64(1750000000000), None)])
 
         with pytest.raises(ValueError):
-            await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+            await wallet_1_rpc.create_signed_transaction(outputs, excluded_coins=selected_coins)
 
     await it_does_not_include_the_excluded_coins()
     await it_throws_an_error_when_all_spendable_coins_are_excluded()

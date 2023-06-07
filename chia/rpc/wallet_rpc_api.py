@@ -949,17 +949,19 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
-        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
-        if exclude_coin_ids is not None:
+        excluded_coin_amounts: Optional[List[uint64]] = request.get(
+            "excluded_coin_amounts", request.get("exclude_coin_amounts")
+        )
+        if excluded_coin_amounts is not None:
+            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
+        excluded_coin_ids: Optional[List] = request.get("excluded_coin_ids", request.get("exclude_coin_ids"))
+        if excluded_coin_ids is not None:
             result = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in result.records}
+            excluded_coins = {wr.coin for wr in result.records}
         else:
-            exclude_coins = set()
+            excluded_coins = set()
 
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
@@ -969,8 +971,8 @@ class WalletRpcApi:
                 memos=memos,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                exclude_coin_amounts=exclude_coin_amounts,
-                exclude_coins=exclude_coins,
+                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coins=excluded_coins,
                 reuse_puzhash=request.get("reuse_puzhash", None),
             )
             await wallet.push_transaction(tx)
@@ -1445,17 +1447,19 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
-        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
-        if exclude_coin_ids is not None:
+        excluded_coin_amounts: Optional[List[uint64]] = request.get(
+            "excluded_coin_amounts", request.get("exclude_coin_amounts")
+        )
+        if excluded_coin_amounts is not None:
+            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
+        excluded_coin_ids: Optional[List] = request.get("excluded_coin_ids", request.get("exclude_coin_ids"))
+        if excluded_coin_ids is not None:
             result = await self.service.wallet_state_manager.coin_store.get_coin_records(
-                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids])
+                coin_id_filter=HashFilter.include([bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids])
             )
-            exclude_coins = {wr.coin for wr in result.records}
+            excluded_coins = {wr.coin for wr in result.records}
         else:
-            exclude_coins = None
+            excluded_coins = None
         cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
             request.get("extra_delta", None),
             request.get("tail_reveal", None),
@@ -1485,8 +1489,8 @@ class WalletRpcApi:
                     memos=memos if memos else None,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
-                    exclude_cat_coins=exclude_coins,
+                    excluded_coin_amounts=excluded_coin_amounts,
+                    excluded_cat_coins=excluded_coins,
                     reuse_puzhash=request.get("reuse_puzhash", None),
                 )
                 for tx in txs:
@@ -1500,8 +1504,8 @@ class WalletRpcApi:
                 memos=memos if memos else None,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                exclude_coin_amounts=exclude_coin_amounts,
-                exclude_cat_coins=exclude_coins,
+                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_cat_coins=excluded_coins,
                 reuse_puzhash=request.get("reuse_puzhash", None),
             )
             for tx in txs:
@@ -2959,17 +2963,19 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
-        if exclude_coin_amounts is not None:
-            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
+        excluded_coin_amounts: Optional[List[uint64]] = request.get(
+            "excluded_coin_amounts", request.get("excluded_coin_amounts")
+        )
+        if excluded_coin_amounts is not None:
+            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        exclude_coins = None
-        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
-            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
+        _excluded_coins: Optional[List[bytes32]] = request.get("excluded_coins", request.get("exclude_coins"))
+        if _excluded_coins is not None and len(_excluded_coins) > 0:
+            excluded_coins = set([Coin.from_json_dict(coin_json) for coin_json in _excluded_coins])
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (
@@ -3012,7 +3018,7 @@ class WalletRpcApi:
                     bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
-                    exclude_coins=exclude_coins,
+                    excluded_coins=excluded_coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
@@ -3020,7 +3026,7 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
+                    excluded_coin_amounts=excluded_coin_amounts,
                 )
                 signed_tx = tx.to_json_dict_convenience(self.service.config)
 
@@ -3034,14 +3040,14 @@ class WalletRpcApi:
                     [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                     fee,
                     coins=coins,
-                    exclude_cat_coins=exclude_coins,
+                    excluded_cat_coins=excluded_coins,
                     ignore_max_send_amount=True,
                     memos=[memos_0] + [output.memos for output in additional_outputs],
                     coin_announcements_to_consume=coin_announcements,
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
-                    exclude_coin_amounts=exclude_coin_amounts,
+                    excluded_coin_amounts=excluded_coin_amounts,
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
 
