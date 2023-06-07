@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -92,8 +92,8 @@ async def setup_two_nodes(
 
         service1 = await node_iters[0].__anext__()
         service2 = await node_iters[1].__anext__()
-        fn1 = service1._api
-        fn2 = service2._api
+        fn1 = cast(FullNodeAPI, service1._api)
+        fn2 = cast(FullNodeAPI, service2._api)
 
         yield fn1, fn2, fn1.full_node.server, fn2.full_node.server, bt1
 
@@ -124,7 +124,7 @@ async def setup_n_nodes(
     nodes = []
     for ni in node_iters:
         service = await ni.__anext__()
-        nodes.append(service._api)
+        nodes.append(cast(FullNodeAPI, service._api))
 
     yield nodes
 
@@ -170,7 +170,7 @@ async def setup_simulators_and_wallets(
 
         nodes = []
         for nodes_service in simulators:
-            nodes.append(nodes_service._api)
+            nodes.append(cast(FullNodeAPI, nodes_service._api))
 
         yield nodes, wallets, bt_tools[0]
 
@@ -419,7 +419,7 @@ async def setup_full_system_inner(
         for i in range(2)
     ]
     nodes = [await fni.__anext__() for fni in full_node_iters]
-    node_apis = [fni._api for fni in nodes]
+    node_apis = [cast(FullNodeAPI, fni._api) for fni in nodes]
     full_node_0_port = node_apis[0].full_node.server.get_port()
     farmer_iter = setup_farmer(
         shared_b_tools,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from pathlib import Path
-from typing import List
+from typing import List, cast
 
 import pytest
 
@@ -854,7 +854,7 @@ class TestCATWallet:
     ) -> None:
         num_blocks = 1
         full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-        full_node_api: FullNodeSimulator = full_nodes[0]._api
+        full_node_api = cast(FullNodeSimulator, full_nodes[0]._api)
         full_node_server = full_node_api.full_node.server
         wallet_service_0 = wallets[0]
         wallet_node_0 = wallet_service_0._node

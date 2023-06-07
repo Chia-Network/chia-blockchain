@@ -34,6 +34,10 @@ class HarvesterAPI:
     def __init__(self, harvester: Harvester):
         self.harvester = harvester
 
+    @property
+    def api_ready(self) -> bool:
+        return True
+
     @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection

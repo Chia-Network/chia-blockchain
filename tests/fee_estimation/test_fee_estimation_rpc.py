@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, cast
 
 import pytest
 import pytest_asyncio
@@ -11,6 +11,7 @@ from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
@@ -27,7 +28,7 @@ async def setup_node_and_rpc(
     full_nodes, wallets, bt = two_wallet_nodes_services
     wallet = wallets[0]._node.wallet_state_manager.main_wallet
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
-    full_node_api = full_node_apis[0]
+    full_node_api = cast(FullNodeSimulator, full_node_apis[0])
     full_node_service_1 = full_nodes[0]
     assert full_node_service_1.rpc_server is not None
     client = await FullNodeRpcClient.create(
@@ -52,7 +53,7 @@ async def one_node_no_blocks(
 ) -> Tuple[FullNodeRpcClient, FullNodeRpcApi]:
     full_nodes, wallets, bt = one_node
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
-    full_node_api = full_node_apis[0]
+    full_node_api = cast(FullNodeSimulator, full_node_apis[0])
     full_node_service_1 = full_nodes[0]
     assert full_node_service_1.rpc_server is not None
     client = await FullNodeRpcClient.create(

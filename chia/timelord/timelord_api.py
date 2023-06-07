@@ -21,6 +21,10 @@ class TimelordAPI:
     def __init__(self, timelord) -> None:
         self.timelord = timelord
 
+    @property
+    def api_ready(self) -> bool:
+        return True
+
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
 

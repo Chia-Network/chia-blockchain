@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import cast
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
@@ -31,7 +33,7 @@ class TestWalletRpc:
     ) -> None:
         num_blocks = 5
         [full_node_service], wallet_services, bt = two_wallet_nodes_services
-        full_node_api = full_node_service._api
+        full_node_api = cast(FullNodeSimulator, full_node_service._api)
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_services[0]._node
         server_2 = wallet_node.server

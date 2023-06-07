@@ -16,6 +16,7 @@ import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
@@ -157,7 +158,7 @@ async def test_farmer_get_harvesters_and_summary(
 @pytest.mark.asyncio
 async def test_farmer_signage_point_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
-    farmer_api = farmer_service._api
+    farmer_api = cast(FarmerAPI, farmer_service._api)
 
     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is None
     assert len(await farmer_rpc_client.get_signage_points()) == 0
@@ -177,7 +178,7 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment: Harv
 @pytest.mark.asyncio
 async def test_farmer_reward_target_endpoints(harvester_farmer_environment: HarvesterFarmerEnvironment) -> None:
     farmer_service, farmer_rpc_client, _, _, bt = harvester_farmer_environment
-    farmer_api = farmer_service._api
+    farmer_api = cast(FarmerAPI, farmer_service._api)
 
     targets_1 = await farmer_rpc_client.get_reward_targets(False)
     assert "have_pool_sk" not in targets_1
@@ -233,7 +234,7 @@ async def test_farmer_get_pool_state(
     harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
 ) -> None:
     farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
-    farmer_api = farmer_service._api
+    farmer_api = cast(FarmerAPI, farmer_service._api)
 
     assert len((await farmer_rpc_client.get_pool_state())["pool_state"]) == 0
     pool_list = [
@@ -290,7 +291,7 @@ async def test_farmer_get_pool_state_plot_count(
     harvester_farmer_environment: HarvesterFarmerEnvironment, self_hostname: str
 ) -> None:
     farmer_service, farmer_rpc_client, harvester_service, _, _ = harvester_farmer_environment
-    farmer_api = farmer_service._api
+    farmer_api = cast(FarmerAPI, farmer_service._api)
 
     async def wait_for_plot_sync() -> bool:
         try:
@@ -403,7 +404,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     farmer_service, farmer_rpc_client, harvester_service, harvester_rpc_client, _ = harvester_farmer_environment
     harvester = harvester_service._node
     harvester_id = harvester_service._server.node_id
-    receiver = farmer_service._api.farmer.plot_sync_receivers[harvester_id]
+    receiver = cast(FarmerAPI, farmer_service._api).farmer.plot_sync_receivers[harvester_id]
 
     if receiver.initial_sync():
         await wait_for_plot_sync(receiver, receiver.last_sync().sync_id)
@@ -479,7 +480,7 @@ async def test_farmer_get_harvester_plots_endpoints(
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
             request = dataclasses.replace(request, page=uint32(page))
-            await wait_for_synced_receiver(farmer_service._api.farmer, harvester_id)
+            await wait_for_synced_receiver(cast(FarmerAPI, farmer_service._api).farmer, harvester_id)
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size
             expected_plots = plots[offset : offset + page_size]

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
-from typing import Callable, Tuple
+import logging
+from typing import Callable, Tuple, cast
 
 import pytest
 from packaging.version import Version
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.wallet_protocol import RejectHeaderRequest
+from chia.server.outbound_message import make_msg
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
 from tests.connection_utils import connect_and_get_peer
 
 
@@ -48,10 +53,38 @@ async def test_connection_versions(
     [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
     wallet_node = wallet_service._node
     full_node = full_node_service._node
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_service._api.server._port)), None)
+    await wallet_node.server.start_client(
+        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+    )
     outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version)
         assert connection.version == Version(chia_full_version_str())
         assert connection.get_version() == chia_full_version_str()
+
+
+@pytest.mark.asyncio
+async def test_api_not_ready(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
+    wallet_node = wallet_service._node
+    full_node = full_node_service._node
+    await wallet_node.server.start_client(
+        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+    )
+    wallet_node.log_out()
+    assert not wallet_service._api.api_ready
+    connection = full_node.server.all_connections[wallet_node.server.node_id]
+
+    def request_ignored() -> bool:
+        return "API not ready, ignore request: {'data': '0x00000000', 'id': None, 'type': 53}" in caplog.text
+
+    with caplog.at_level(logging.WARNING):
+        assert await connection.send_message(
+            make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(uint32(0)))
+        )
+        await time_out_assert(10, request_ignored)

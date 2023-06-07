@@ -58,6 +58,10 @@ class FarmerAPI:
     def __init__(self, farmer: Farmer) -> None:
         self.farmer = farmer
 
+    @property
+    def api_ready(self) -> bool:
+        return self.farmer.started
+
     @api_request(peer_required=True)
     async def new_proof_of_space(
         self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
