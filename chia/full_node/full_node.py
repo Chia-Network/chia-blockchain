@@ -1849,9 +1849,30 @@ class FullNode:
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
 
+        prev_ses_hash = self.constants.GENESIS_CHALLENGE
+        prev_reward_chain_hash = self.constants.GENESIS_CHALLENGE
+        prev_ses_height = uint32(0)
+        ses_heights = self.blockchain.get_ses_heights()
+        # if (
+        #         not self.blockchain.contains_block(block.prev_header_hash)
+        #         and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
+        # ):
+        #     return PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)
+        prev_block = self.blockchain.block_record(block.prev_header_hash)
+        for height in reversed(ses_heights):
+            if height < prev_block.height + 1:
+                ses_block = self.blockchain.height_to_block_record(height)
+                assert ses_block.sub_epoch_summary_included is not None
+                assert ses_block.finished_reward_slot_hashes is not None
+                prev_ses_hash = ses_block.sub_epoch_summary_included.get_hash()
+                prev_reward_chain_hash = ses_block.finished_reward_slot_hashes[-1]
+                prev_ses_height = height
+
         async with self._blockchain_lock_high_priority:
             start_header_time = time.time()
-            _, header_error = await self.blockchain.validate_unfinished_block_header(block)
+            _, header_error = await self.blockchain.validate_unfinished_block_header(
+                block, prev_ses_height, prev_ses_hash, prev_reward_chain_hash
+            )
             if header_error is not None:
                 raise ConsensusError(header_error)
             validate_time = time.time() - start_header_time

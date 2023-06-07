@@ -58,6 +58,9 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
+    prev_ses_height: uint32,
+    prev_ses_hash: bytes32,
+    prev_reward_chain_hash: bytes32,
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
@@ -108,6 +111,9 @@ def batch_pre_validate_blocks(
                     check_filter,
                     expected_difficulty[i],
                     expected_sub_slot_iters[i],
+                    prev_ses_height,
+                    prev_ses_hash,
+                    prev_reward_chain_hash,
                 )
                 error_int: Optional[uint16] = None
                 if error is not None:
@@ -135,6 +141,12 @@ def batch_pre_validate_blocks(
                 results.append(
                     PreValidationResult(error_int, required_iters, npc_result, successfully_validated_signatures)
                 )
+                block_rec = blocks[block.header_hash]
+                if block_rec.sub_epoch_summary_included is not None:
+                    prev_ses_hash = block_rec.sub_epoch_summary_included.get_hash()
+                    assert block_rec.finished_reward_slot_hashes is not None
+                    prev_reward_chain_hash = block_rec.finished_reward_slot_hashes[-1]
+                    prev_ses_height = block_rec.height
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
@@ -151,11 +163,20 @@ def batch_pre_validate_blocks(
                     check_filter,
                     expected_difficulty[i],
                     expected_sub_slot_iters[i],
+                    prev_ses_height,
+                    prev_ses_hash,
+                    prev_reward_chain_hash,
                 )
                 error_int = None
                 if error is not None:
                     error_int = uint16(error.code.value)
                 results.append(PreValidationResult(error_int, required_iters, None, False))
+                block_rec = blocks[header_block.header_hash]
+                if block_rec.sub_epoch_summary_included is not None:
+                    prev_ses_hash = block_rec.sub_epoch_summary_included.get_hash()
+                    assert block_rec.finished_reward_slot_hashes is not None
+                    prev_reward_chain_hash = block_rec.finished_reward_slot_hashes[-1]
+                    prev_ses_height = block_rec.height
             except Exception:
                 error_stack = traceback.format_exc()
                 log.error(f"Exception: {error_stack}")
@@ -202,8 +223,8 @@ async def pre_validate_blocks_multiprocessing(
         curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
-            curr.sub_epoch_summary_included is None
-            or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
+            # curr.sub_epoch_summary_included is None
+            num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
         ) and curr.height > 0:
             if curr.first_in_sub_slot:
@@ -290,12 +311,28 @@ async def pre_validate_blocks_multiprocessing(
     futures = []
     # Pool of workers to validate blocks concurrently
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
+    ses_heights = block_records.get_ses_heights()
+    prev_ses_hash = constants.GENESIS_CHALLENGE
+    prev_reward_chain_hash = constants.GENESIS_CHALLENGE
+    prev_ses_height = 0
+    for height in reversed(ses_heights):
+        assert prev_b is not None
+        if height < prev_b.height + 1:
+            ses_block = block_records.height_to_block_record(height)
+            assert ses_block.sub_epoch_summary_included is not None
+            assert ses_block.finished_reward_slot_hashes is not None
+            prev_ses_hash = ses_block.sub_epoch_summary_included.get_hash()
+            prev_reward_chain_hash = ses_block.finished_reward_slot_hashes[-1]
+            prev_ses_height = ses_block.height
+            break
+
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
         b_pickled: Optional[List[bytes]] = None
         hb_pickled: Optional[List[bytes]] = None
         previous_generators: List[Optional[bytes]] = []
+        ses_block_rec = None
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
@@ -329,6 +366,10 @@ async def pre_validate_blocks_multiprocessing(
                     hb_pickled = []
                 hb_pickled.append(bytes(block))
 
+            block_rec = recent_blocks[block.header_hash]
+            if block_rec.sub_epoch_summary_included:
+                ses_block_rec = block_rec
+
         futures.append(
             asyncio.get_running_loop().run_in_executor(
                 pool,
@@ -343,8 +384,18 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_signatures,
+                prev_ses_height,
+                prev_ses_hash,
+                prev_reward_chain_hash,
             )
         )
+        if ses_block_rec is not None:
+            prev_ses_height = ses_block_rec.height
+            assert ses_block_rec.sub_epoch_summary_included is not None
+            assert ses_block_rec.finished_reward_slot_hashes is not None
+            prev_ses_hash = ses_block_rec.sub_epoch_summary_included.get_hash()
+            prev_reward_chain_hash = ses_block_rec.finished_reward_slot_hashes[-1]
+
     # Collect all results into one flat list
     return [
         PreValidationResult.from_bytes(result)
