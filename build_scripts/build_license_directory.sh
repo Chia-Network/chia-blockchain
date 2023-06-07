@@ -4,7 +4,7 @@
 npm install -g license-checker
 
 cd ../chia-blockchain-gui || 'exit" or "cd' ... || return
-#npm install . - We do not want this to update
+
 npm ci
 
 npm
