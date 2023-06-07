@@ -324,6 +324,7 @@ class WalletRpcClient(RpcClient):
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
         excluded_coins: Optional[List[Coin]] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
         wallet_id: Optional[int] = None,
     ) -> TransactionRecord:
         txs: List[TransactionRecord] = await self.create_signed_transactions(
@@ -334,6 +335,7 @@ class WalletRpcClient(RpcClient):
             puzzle_announcements=puzzle_announcements,
             min_coin_amount=min_coin_amount,
             excluded_coins=excluded_coins,
+            excluded_amounts=excluded_amounts,
             wallet_id=wallet_id,
         )
         if len(txs) == 0:

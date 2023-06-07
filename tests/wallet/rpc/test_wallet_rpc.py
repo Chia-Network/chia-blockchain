@@ -305,7 +305,9 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         await client.send_transaction(1, uint64(100000000000000001), addr)
 
     # Tests sending a basic transaction
-    tx = await client.send_transaction(1, tx_amount, addr, memos=["this is a basic tx"])
+    tx = await client.send_transaction(
+        1, tx_amount, addr, memos=["this is a basic tx"], excluded_amounts=[uint64(250000000000)]
+    )
     transaction_id = tx.name
 
     spend_bundle = tx.spend_bundle
@@ -499,6 +501,8 @@ async def test_create_signed_transaction(
         coins=selected_coin,
         fee=amount_fee,
         wallet_id=wallet_id,
+        # shouldn't actually block it
+        excluded_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
     assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
@@ -836,6 +840,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert addr_0 != addr_1
 
     # Test CAT spend without a fee
+    with pytest.raises(ValueError):
+        await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"], excluded_amounts=[uint64(20)])
     tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle

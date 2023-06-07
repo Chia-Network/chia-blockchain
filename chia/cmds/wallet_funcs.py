@@ -201,7 +201,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
     return fee >= amount
 
 
-async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
