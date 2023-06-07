@@ -139,6 +139,10 @@ def visit_timelord_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_compact_proof_of_time, "respond_compact_proof_of_time")
 
 
+def visit_shared_protocol(visitor: Callable[[Any, str], None]) -> None:
+    visitor(error, "error")
+
+
 def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
     visit_farmer_protocol(visitor)
     visit_full_node(visitor)
@@ -147,6 +151,7 @@ def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
     visit_introducer_protocol(visitor)
     visit_pool_protocol(visitor)
     visit_timelord_protocol(visitor)
+    visit_shared_protocol(visitor)
 
 
 def get_protocol_bytes() -> bytes:

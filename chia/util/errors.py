@@ -206,6 +206,13 @@ class ProtocolError(Exception):
         self.errors = errors
 
 
+class ApiError(Exception):
+    def __init__(self, code: Err, message: str):
+        super().__init__(f"{code.name}: {message}")
+        self.code: Err = code
+        self.message: str = message
+
+
 ##
 #  Keychain errors
 ##

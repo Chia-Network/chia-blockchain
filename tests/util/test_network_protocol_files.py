@@ -490,4 +490,9 @@ def test_protocol_bytes() -> None:
     assert message_92 == respond_compact_proof_of_time
     assert bytes(message_92) == bytes(respond_compact_proof_of_time)
 
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message_93 = type(error).from_bytes(message_bytes)
+    assert message_93 == error
+    assert bytes(message_93) == bytes(error)
+
     assert input_bytes == b""
