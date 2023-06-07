@@ -2974,6 +2974,7 @@ class WalletRpcApi:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
         _excluded_coins: Optional[List[bytes32]] = request.get("excluded_coins", request.get("exclude_coins"))
+        excluded_coins: Optional[Set[Coin]] = None
         if _excluded_coins is not None and len(_excluded_coins) > 0:
             excluded_coins = set([Coin.from_json_dict(coin_json) for coin_json in _excluded_coins])
 
