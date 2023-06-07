@@ -1,6 +1,5 @@
 #!/bin/bash
 
-pwd
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
 
@@ -8,8 +7,6 @@ cd ../chia-blockchain-gui || 'exit" or "cd' ... || return
 #npm install . - We do not want this to update
 npm ci
 
-pwd
-ls -lah
 npm
 sum=$(license-checker --summary)
 printf "%s\n" "$sum"
@@ -29,10 +26,9 @@ for i in "${licenses_array[@]}"; do
     cp "$i" "$dirname"
 done
 
-ls -lah licenses
-mv licenses/ ../build_scripts/dist
+mv licenses/ ../build_scripts/dist/daemon
 cd ../build_scripts || 'exit" or "cd' || return
-ls -lah dist/
+
 
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
@@ -50,12 +46,11 @@ done <<< "$output"
 
 # create a dir for each license and copy the license file over
 for i in "${license_path_array[@]}"; do
-  dirname="dist/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
+  dirname="dist/daemon/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
   echo "$dirname"
   mkdir -p "$dirname"
   cp "$i" "$dirname"
   echo "$i"
 done
 
-pwd
-ls -lah dist/licenses
+ls -lah dist/daemon

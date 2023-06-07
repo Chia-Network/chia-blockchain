@@ -50,7 +50,6 @@ pwd
 bash ./build_license_directory.sh
 
 
-pwd
 # Builds CLI only .deb
 # need j2 for templating the control file
 pip install j2cli
@@ -58,18 +57,15 @@ CLI_DEB_BASE="chia-blockchain-cli_$CHIA_INSTALLER_VERSION-1_$PLATFORM"
 mkdir -p "dist/$CLI_DEB_BASE/opt/chia"
 mkdir -p "dist/$CLI_DEB_BASE/usr/bin"
 mkdir -p "dist/$CLI_DEB_BASE/DEBIAN"
-cp -r dist/licenses "dist/$CLI_DEB_BASE/opt/chia/"
 j2 -o "dist/$CLI_DEB_BASE/DEBIAN/control" assets/deb/control.j2
 cp -r dist/daemon/* "dist/$CLI_DEB_BASE/opt/chia/"
-
-ls -lah "dist/$CLI_DEB_BASE/opt/chia/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
 dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
-cp -r dist/licenses ../chia-blockchain-gui/packages/gui
+cp -r dist/licenses ../chia-blockchain-gui/packages/gui/daemon
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 

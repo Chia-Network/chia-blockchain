@@ -31,13 +31,6 @@ Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
 
 Write-Output "   ---"
-Write-Output "Copy licenses directory to chia-blockchain-gui\"
-Write-Output "   ---"
-Copy-Item "dist\licenses" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
-
-
-
-Write-Output "   ---"
 Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
@@ -56,9 +49,6 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
 # Change to the GUI directory
 Set-Location -Path "chia-blockchain-gui\packages\gui" -PassThru
-
-#remove this later on
-dir
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
