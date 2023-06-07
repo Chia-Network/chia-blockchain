@@ -47,8 +47,11 @@ async def test_connection_versions(
 ) -> None:
     [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
     wallet_node = wallet_service._node
+    full_node = full_node_service._node
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_service._api.server._port)), None)
-    connection = wallet_node.server.all_connections[full_node_service._node.server.node_id]
-    assert connection.protocol_version == Version(protocol_version)
-    assert connection.version == Version(chia_full_version_str())
-    assert connection.get_version() == chia_full_version_str()
+    outgoing_connection = wallet_node.server.all_connections[full_node.server.node_id]
+    incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
+    for connection in [outgoing_connection, incoming_connection]:
+        assert connection.protocol_version == Version(protocol_version)
+        assert connection.version == Version(chia_full_version_str())
+        assert connection.get_version() == chia_full_version_str()
