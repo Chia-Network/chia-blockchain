@@ -1,7 +1,7 @@
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
 
-Set-Location "..\chia-blockchain-gui"
+cd "..\chia-blockchain-gui"
 
 npm ci
 
@@ -23,9 +23,9 @@ foreach ($i in $licenses_array) {
     Copy-Item $i -Destination $dirname
 }
 
-Move-Item licenses\ ..\build_scripts\dist\daemon
+Move-Item licenses\ "..\build_scripts\dist\daemon"
 
-Set-Location "..\build_scripts"
+cd "..\build_scripts"
 
 # PULL IN THE LICENSES FROM PIP-LICENSES
 pip install pip-licenses
