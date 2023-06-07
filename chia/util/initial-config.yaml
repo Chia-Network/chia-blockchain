@@ -580,6 +580,24 @@ wallet:
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 
+  #################################
+  #  Inner puzzle decorators      #
+  #################################
+  # Default puzzle decorator settings, this will apply to all asset wallets under the same key
+  # Here is an example
+  # puzzle_decorators:
+  #   2999502625:
+  #     - decorator: "CLAWBACK"
+  #       clawback_timelock: 3600
+  #     - decorator: "DECORATOR_TYPE" #If you want to add more decorators
+  #       parameter1: 0
+
+  auto_claim:
+    enabled: False
+    tx_fee: 0
+    min_amount: 0
+    batch_size: 50
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
