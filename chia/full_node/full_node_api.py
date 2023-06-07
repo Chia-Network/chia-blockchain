@@ -16,6 +16,7 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -739,7 +740,7 @@ class FullNodeAPI:
             block_generator: Optional[BlockGenerator] = None
             additions: Optional[List[Coin]] = []
             removals: Optional[List[Coin]] = []
-            async with self.full_node._blockchain_lock_high_priority:
+            async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
                     # Finds the last transaction block before this one
