@@ -218,9 +218,9 @@ def default_10000_blocks(bt):
     from tests.util.blockchain import persistent_blocks
 
     if bt.constants.SOFT_FORK3_HEIGHT == 0:
-        return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
+        pytest.skip("Test cache not available yet")
     else:
-        return persistent_blocks(10000, f"test_blocks_4000_{saved_blocks_version}_softfork3.db", bt, seed=b"10000")
+        return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
@@ -276,16 +276,7 @@ def default_10000_blocks_compact(bt):
     from tests.util.blockchain import persistent_blocks
 
     if bt.constants.SOFT_FORK3_HEIGHT == 0:
-        return persistent_blocks(
-            10000,
-            f"test_blocks_4000_compact_{saved_blocks_version}_softfork3.db",
-            bt,
-            normalized_to_identity_cc_eos=True,
-            normalized_to_identity_icc_eos=True,
-            normalized_to_identity_cc_ip=True,
-            normalized_to_identity_cc_sp=True,
-            seed=b"1000_compact",
-        )
+        pytest.skip("Test cache not available yet")
     else:
         return persistent_blocks(
             10000,
