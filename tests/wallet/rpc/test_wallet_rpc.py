@@ -1356,7 +1356,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     coin_300: List[Coin]
-    for tx_amount in [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]:
+    tx_amounts: List[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
+    for tx_amount in tx_amounts:
         funds -= tx_amount
         # create coins for tests
         tx = await client.send_transaction(1, tx_amount, addr)
@@ -1383,11 +1384,15 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
+    non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
     excluded_amt_coins: List[Coin] = await client_2.select_coins(
-        amount=1000, wallet_id=1, excluded_amounts=[uint64(1000)]
+        amount=non_1000_amt, wallet_id=1, excluded_amounts=[uint64(1000)]
     )
     assert excluded_amt_coins is not None
-    assert len(excluded_amt_coins) == 1 and excluded_amt_coins[0].amount == uint64(10000)
+    assert (
+        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
+        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
+    )
 
     # test excluded coins
     with pytest.raises(ValueError):
@@ -1399,8 +1404,10 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     # test get coins
     all_coins, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1, excluded_coin_ids=[excluded_amt_coins[0].name().hex()]
+        wallet_id=1, excluded_coin_ids=[c.name().hex() for c in excluded_amt_coins]
     )
+    assert excluded_amt_coins not in all_coins
+    all_coins, _, _ = await client_2.get_spendable_coins(wallet_id=1, excluded_amounts=[uint64(1000)])
     assert excluded_amt_coins not in all_coins
     all_coins_2, _, _ = await client_2.get_spendable_coins(wallet_id=1, max_coin_amount=uint64(999))
     assert all_coins_2[0].coin == coin_300[0]
