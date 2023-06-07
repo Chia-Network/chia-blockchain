@@ -4,6 +4,8 @@ relative_files=True
 source_pkgs=
   chia
   tests
+omit=
+  tests/**/config.py
 concurrency=multiprocessing
 parallel=True
 
