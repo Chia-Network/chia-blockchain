@@ -2333,7 +2333,7 @@ class WalletRpcApi:
         )
         amount = uint64(request["amount"])
         fee = uint64(request.get("fee", 0))
-        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, fee, True)
+        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, push=True, fee=fee)
         return {
             "success": True,
             "tx_id": txs[0].name,
