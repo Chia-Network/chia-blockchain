@@ -20,10 +20,14 @@ from chia.clvm.spend_sim import CostLogger
 
 # Set spawn after stdlib imports, but before other imports
 from chia.consensus.constants import ConsensusConstants
+from chia.farmer.farmer import Farmer
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.harvester.harvester import Harvester
 from chia.protocols import full_node_protocol
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -594,8 +598,9 @@ async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, blockchain_constants: ConsensusConstants, get_keychain: Keychain
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
+    bt = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
     async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
         yield _
 
@@ -886,3 +891,35 @@ async def simulation(consensus_mode, bt):
         pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
+
+
+HarvesterFarmerEnvironment = Tuple[Service[Farmer], FarmerRpcClient, Service[Harvester], HarvesterRpcClient, BlockTools]
+
+
+@pytest_asyncio.fixture(scope="function")
+async def harvester_farmer_environment(
+    farmer_one_harvester: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools], self_hostname: str
+) -> AsyncIterator[HarvesterFarmerEnvironment]:
+    harvesters, farmer_service, bt = farmer_one_harvester
+    harvester_service = harvesters[0]
+
+    assert farmer_service.rpc_server is not None
+    farmer_rpc_cl = await FarmerRpcClient.create(
+        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+    )
+    assert harvester_service.rpc_server is not None
+    harvester_rpc_cl = await HarvesterRpcClient.create(
+        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
+    )
+
+    async def have_connections() -> bool:
+        return len(await farmer_rpc_cl.get_connections()) > 0
+
+    await time_out_assert(15, have_connections, True)
+
+    yield farmer_service, farmer_rpc_cl, harvester_service, harvester_rpc_cl, bt
+
+    farmer_rpc_cl.close()
+    harvester_rpc_cl.close()
+    await farmer_rpc_cl.await_closed()
+    await harvester_rpc_cl.await_closed()
