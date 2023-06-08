@@ -14,7 +14,9 @@ from tests.conftest import HarvesterFarmerEnvironment
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 
 
-@pytest.mark.parametrize("filter_prefix_bits, should_pass", [(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)])
+@pytest.mark.parametrize(
+    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)]
+)
 def test_filter_prefix_bits_on_blocks(
     default_10000_blocks: List[FullBlock], filter_prefix_bits: uint8, should_pass: int
 ) -> None:
@@ -32,7 +34,7 @@ def test_filter_prefix_bits_on_blocks(
     assert passed == should_pass
 
 
-@pytest.mark.parametrize("filter_prefix_bits, should_pass", [(9, False), (8, True)])
+@pytest.mark.parametrize(argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, False), (8, True)])
 @pytest.mark.asyncio
 async def test_filter_prefix_bits_with_farmer_harvester(
     harvester_farmer_environment: HarvesterFarmerEnvironment, filter_prefix_bits: uint8, should_pass: bool

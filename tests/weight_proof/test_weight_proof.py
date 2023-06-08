@@ -542,8 +542,8 @@ def test_calculate_prefix_bits_calmp_zero(height: uint32, expected: int):
 
 
 @pytest.mark.parametrize(
-    "height,expected",
-    [
+    argnames=["height", "expected"],
+    argvalues=[
         (0, 9),
         (5495999, 9),
         (5496000, 8),
