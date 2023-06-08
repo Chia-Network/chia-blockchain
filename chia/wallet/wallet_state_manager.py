@@ -993,6 +993,7 @@ class WalletStateManager:
         )
         # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
         assert isinstance(inner_puzzle, Program)
+        assert isinstance(singleton_id, bytes32)
         dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
             self,
             self.main_wallet,

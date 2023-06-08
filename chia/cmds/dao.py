@@ -147,6 +147,12 @@ def dao_add_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -160,6 +166,7 @@ def dao_create_cmd(
     cat_amount: int,
     name: Optional[str],
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -178,6 +185,7 @@ def dao_create_cmd(
         "oracle_spend_delay": oracle_delay,
         "filter_amount": filter_amount,
         "amount_of_cats": cat_amount,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_dao_wallet))
 
@@ -219,6 +227,12 @@ def dao_create_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_add_funds_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -226,6 +240,7 @@ def dao_add_funds_cmd(
     funding_wallet_id: int,
     amount: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -236,6 +251,7 @@ def dao_add_funds_cmd(
         "fee": fee,
         "funding_wallet_id": funding_wallet_id,
         "amount": amount,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_funds_to_treasury))
 
@@ -382,6 +398,12 @@ def dao_show_proposal_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_vote_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -390,6 +412,7 @@ def dao_vote_cmd(
     vote_amount: int,
     vote_no: Optional[bool],
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -403,6 +426,7 @@ def dao_vote_cmd(
         "proposal_id": proposal_id,
         "vote_amount": vote_amount,
         "is_yes_vote": is_yes_vote,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, vote_on_proposal))
 
@@ -437,12 +461,19 @@ def dao_vote_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_close_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -452,6 +483,7 @@ def dao_close_proposal_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "proposal_id": proposal_id,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, close_proposal))
 
@@ -486,12 +518,19 @@ def dao_close_proposal_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     amount: str,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -501,6 +540,7 @@ def dao_lockup_coins_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "amount": amount,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, lockup_coins))
 
@@ -524,11 +564,18 @@ def dao_lockup_coins_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -537,6 +584,7 @@ def dao_release_coins_cmd(
     extra_params = {
         "wallet_id": wallet_id,
         "fee": fee,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, release_coins))
 
@@ -560,11 +608,18 @@ def dao_release_coins_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -573,6 +628,7 @@ def dao_exit_lockup_cmd(
     extra_params = {
         "wallet_id": wallet_id,
         "fee": fee,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, exit_lockup))
 
@@ -645,6 +701,12 @@ def dao_proposal(ctx: click.Context) -> None:
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -655,6 +717,7 @@ def dao_create_spend_proposal_cmd(
     asset_id: Optional[str],
     from_json: Optional[str],
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -668,6 +731,7 @@ def dao_create_spend_proposal_cmd(
         "amount": amount,
         "asset_id": asset_id,
         "from_json": from_json,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_spend_proposal))
 
@@ -746,6 +810,12 @@ def dao_create_spend_proposal_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -758,6 +828,7 @@ def dao_create_update_proposal_cmd(
     self_destruct: Optional[int],
     oracle_delay: Optional[int],
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -773,6 +844,7 @@ def dao_create_update_proposal_cmd(
         "pass_percentage": pass_percentage,
         "self_destruct_length": self_destruct,
         "oracle_spend_delay": oracle_delay,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_update_proposal))
 
@@ -818,6 +890,12 @@ def dao_create_update_proposal_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
 def dao_create_mint_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -826,6 +904,7 @@ def dao_create_mint_proposal_cmd(
     to_address: int,
     vote_amount: int,
     fee: str,
+    reuse: bool,
 ) -> None:
     import asyncio
 
@@ -837,6 +916,7 @@ def dao_create_mint_proposal_cmd(
         "amount": amount,
         "cat_target_address": to_address,
         "vote_amount": vote_amount,
+        "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_mint_proposal))
 

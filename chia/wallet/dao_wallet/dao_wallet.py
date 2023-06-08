@@ -1285,6 +1285,7 @@ class DAOWallet(WalletProtocol):
         proposed_puzzle: Program,
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
         push: bool = True,
     ) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(uint64(fee + 1))
@@ -1323,7 +1324,15 @@ class DAOWallet(WalletProtocol):
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            uint64(1), genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+            uint64(1),
+            genesis_launcher_puz.get_tree_hash(),
+            fee,
+            origin.name(),
+            coins,
+            None,
+            False,
+            announcement_set,
+            reuse_puzhash=reuse_puzhash,
         )
 
         genesis_launcher_solution = Program.to([full_proposal_puzzle_hash, 1, bytes(0x80)])
@@ -1463,6 +1472,7 @@ class DAOWallet(WalletProtocol):
         vote_amount: Optional[uint64],
         is_yes_vote: bool,
         fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
         push: bool = True,
     ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
@@ -1557,7 +1567,7 @@ class DAOWallet(WalletProtocol):
         list_of_coinspends = [CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee)
+            chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
         spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
@@ -1584,7 +1594,12 @@ class DAOWallet(WalletProtocol):
         return spend_bundle
 
     async def create_proposal_close_spend(
-        self, proposal_id: bytes32, fee: uint64 = uint64(0), push: bool = True, self_destruct: bool = False
+        self,
+        proposal_id: bytes32,
+        fee: uint64 = uint64(0),
+        push: bool = True,
+        self_destruct: bool = False,
+        reuse_puzhash: Optional[bool] = None,
     ) -> SpendBundle:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
@@ -1961,7 +1976,7 @@ class DAOWallet(WalletProtocol):
         else:
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee)
+            chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
@@ -2020,7 +2035,11 @@ class DAOWallet(WalletProtocol):
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
     async def _create_treasury_fund_transaction(
-        self, funding_wallet: WalletProtocol, amount: uint64, fee: uint64 = uint64(0)
+        self,
+        funding_wallet: WalletProtocol,
+        amount: uint64,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
@@ -2030,6 +2049,7 @@ class DAOWallet(WalletProtocol):
                 p2_singleton_puzhash,
                 fee=fee,
                 memos=[self.dao_info.treasury_id],
+                reuse_puzhash=reuse_puzhash,
             )
         elif funding_wallet.type() == WalletType.CAT.value:
             cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
@@ -2041,6 +2061,7 @@ class DAOWallet(WalletProtocol):
                 [p2_singleton_puzhash],
                 fee=fee,
                 memos=[[self.dao_info.treasury_id]],
+                reuse_puzhash=reuse_puzhash,
                 override_memos=True,
             )
             return tx_records[0]
@@ -2048,12 +2069,16 @@ class DAOWallet(WalletProtocol):
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
 
     async def create_add_money_to_treasury_spend(
-        self, amount: uint64, fee: uint64 = uint64(0), funding_wallet_id: uint32 = uint32(1)
+        self,
+        amount: uint64,
+        fee: uint64 = uint64(0),
+        funding_wallet_id: uint32 = uint32(1),
+        reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
         # TODO: add tests for create_add_money_to_treasury_spend
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
-        tx_record = await self._create_treasury_fund_transaction(funding_wallet, amount, fee)
+        tx_record = await self._create_treasury_fund_transaction(funding_wallet, amount, fee, reuse_puzhash)
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         return tx_record
 
@@ -2070,7 +2095,9 @@ class DAOWallet(WalletProtocol):
         assert isinstance(parent_inner_puz, Program)
         return LineageProof(state[0].coin.parent_coin_info, parent_inner_puz.get_tree_hash(), state[0].coin.amount)
 
-    async def free_coins_from_finished_proposals(self, fee: uint64 = uint64(0), push: bool = True) -> SpendBundle:
+    async def free_coins_from_finished_proposals(
+        self, fee: uint64 = uint64(0), push: bool = True, reuse_puzhash: Optional[bool] = None
+    ) -> SpendBundle:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         full_spend = None
         spends = []
@@ -2095,7 +2122,7 @@ class DAOWallet(WalletProtocol):
 
         full_spend = SpendBundle.aggregate(spends)
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee)
+            chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
         if push:
@@ -2272,11 +2299,14 @@ class DAOWallet(WalletProtocol):
         return self.dao_info.cat_wallet_id
 
     async def create_new_dao_cats(
-        self, amount: uint64, push: bool = False
+        self,
+        amount: uint64,
+        push: bool = False,
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # get the lockup puzzle hash
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-        return await dao_cat_wallet.create_new_dao_cats(amount, push)
+        return await dao_cat_wallet.create_new_dao_cats(amount, push, reuse_puzhash=reuse_puzhash)
 
     @staticmethod
     def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:

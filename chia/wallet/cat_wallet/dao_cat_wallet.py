@@ -472,7 +472,11 @@ class DAOCATWallet:
         return puzzle
 
     async def create_new_dao_cats(
-        self, amount: uint64, push: bool = False, fee: uint64 = uint64(0),
+        self,
+        amount: uint64,
+        push: bool = False,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
@@ -482,7 +486,9 @@ class DAOCATWallet:
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
         # create the cat spend
-        txs = await cat_wallet.generate_signed_transactions([amount], [lockup_puzzle.get_tree_hash()], fee=fee)
+        txs = await cat_wallet.generate_signed_transactions(
+            [amount], [lockup_puzzle.get_tree_hash()], fee=fee, reuse_puzhash=reuse_puzhash
+        )
         new_cats = []
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle
@@ -498,26 +504,30 @@ class DAOCATWallet:
         return txs, new_cats
 
     async def exit_vote_state(
-        self, coins: List[LockedCoinInfo], fee: uint64 = uint64(0), push: bool = True
+        self,
+        coins: List[LockedCoinInfo],
+        fee: uint64 = uint64(0),
+        push: bool = True,
+        reuse_puzhash: Optional[bool] = None,
     ) -> SpendBundle:
-        self.log.warning("CREATING EXIT SPEND")
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
-        cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
         total_amt = 0
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
+            if reuse_puzhash:
+                new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
+            else:
+                new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
 
             # CREATE_COIN new_puzzle coin.amount
             primaries = [
                 Payment(
-                    new_innerpuzzle.get_tree_hash(),
+                    new_inner_puzhash,
                     uint64(coin.amount),
-                    [new_innerpuzzle.get_tree_hash()],
+                    [new_inner_puzhash],
                 ),
             ]
             total_amt += coin.amount
@@ -564,7 +574,7 @@ class DAOCATWallet:
 
         if fee > 0:
             dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-            chia_tx = await dao_wallet.create_tandem_xch_tx(fee)
+            chia_tx = await dao_wallet.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
@@ -574,7 +584,7 @@ class DAOCATWallet:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=new_innerpuzzle.get_tree_hash(),
+                to_puzzle_hash=new_inner_puzhash,
                 amount=uint64(total_amt),
                 fee_amount=fee,
                 confirmed=False,

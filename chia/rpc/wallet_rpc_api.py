@@ -2310,7 +2310,10 @@ class WalletRpcApi:
         if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
         funding_tx = await dao_wallet.create_add_money_to_treasury_spend(
-            amount=uint64(request.get("amount")), fee=uint64(request.get("fee", 0)), funding_wallet_id=funding_wallet_id
+            amount=uint64(request.get("amount")),
+            fee=uint64(request.get("fee", 0)),
+            funding_wallet_id=funding_wallet_id,
+            reuse_puzhash=request.get("reuse_puzhash", None),
         )
         return {"success": True, "tx_id": funding_tx.name}
 
@@ -2333,7 +2336,12 @@ class WalletRpcApi:
         )
         amount = uint64(request["amount"])
         fee = uint64(request.get("fee", 0))
-        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, push=True, fee=fee)
+        txs, _ = await dao_cat_wallet.create_new_dao_cats(
+            amount,
+            push=True,
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
         return {
             "success": True,
             "tx_id": txs[0].name,
@@ -2379,7 +2387,11 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
-        tx = await dao_cat_wallet.exit_vote_state(coins, fee=fee)
+        tx = await dao_cat_wallet.exit_vote_state(
+            coins,
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
         return {"success": True, "tx_id": tx.name()}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
@@ -2443,6 +2455,7 @@ class WalletRpcApi:
             proposed_puzzle,
             vote_amount,
             fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None
         return {
@@ -2464,6 +2477,7 @@ class WalletRpcApi:
             request["is_yes_vote"],  # bool
             fee,
             push=True,
+            reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert sb is not None
         return {"success": True, "spend_bundle": sb}
@@ -2486,6 +2500,7 @@ class WalletRpcApi:
             bytes32.from_hexstr(request["proposal_id"]),
             fee,
             push=True,
+            reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None
         return {"success": True, "tx_id": tx.name()}
@@ -2495,7 +2510,10 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        tx = await dao_wallet.free_coins_from_finished_proposals(fee=fee)
+        tx = await dao_wallet.free_coins_from_finished_proposals(
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
         assert tx is not None
 
         return {"success": True, "spend_name": tx.name()}

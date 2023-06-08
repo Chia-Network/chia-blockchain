@@ -53,6 +53,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
     amount_of_cats = args["amount_of_cats"]
     filter_amount = args["filter_amount"]
     name = args["name"]
+    reuse_puzhash = args["reuse_puzhash"]
 
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
@@ -65,6 +66,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
         filter_amount=filter_amount,
         name=name,
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
 
     print("Successfully created DAO Wallet")
@@ -78,6 +80,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]
     amount = Decimal(args["amount"])
+    reuse_puzhash = args["reuse_puzhash"]
 
     try:
         typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
@@ -86,13 +89,16 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcCl
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    # fee = Decimal(args["fee"])
-    # final_fee: uint64 = uint64(int(fee * units["chia"]))
+    fee = Decimal(args["fee"])
+    final_fee: uint64 = uint64(int(fee * units["chia"]))
     final_amount: uint64 = uint64(int(amount * mojo_per_unit))
 
-    # TODO: Allow fee for adding DAO funds Transaction
     res = await wallet_client.dao_add_funds_to_treasury(
-        wallet_id=wallet_id, funding_wallet_id=funding_wallet_id, amount=final_amount
+        wallet_id=wallet_id,
+        funding_wallet_id=funding_wallet_id,
+        amount=final_amount,
+        fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
 
     tx_id = res["tx_id"]
@@ -219,9 +225,15 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient,
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
     is_yes_vote = args["is_yes_vote"]
+    reuse_puzhash = args["reuse_puzhash"]
     # wallet_id: int, proposal_id: str, vote_amount: uint64, is_yes_vote: bool = True, fee: uint64 = uint64(0)
     res = await wallet_client.dao_vote_on_proposal(
-        wallet_id=wallet_id, proposal_id=proposal_id, vote_amount=vote_amount, is_yes_vote=is_yes_vote, fee=final_fee
+        wallet_id=wallet_id,
+        proposal_id=proposal_id,
+        vote_amount=vote_amount,
+        is_yes_vote=is_yes_vote,
+        fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     spend_bundle = res["spend_bundle"]
     if res["success"]:
@@ -235,7 +247,13 @@ async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, f
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
-    res = await wallet_client.dao_close_proposal(wallet_id=wallet_id, proposal_id=proposal_id, fee=final_fee)
+    reuse_puzhash = args["reuse_puzhash"]
+    res = await wallet_client.dao_close_proposal(
+        wallet_id=wallet_id,
+        proposal_id=proposal_id,
+        fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
+    )
     # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
     if res["success"]:
         name = res["tx_id"]
@@ -250,8 +268,14 @@ async def lockup_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fin
     final_amount: uint64 = uint64(int(Decimal(amount) * units["cat"]))
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
     # typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
-    res = await wallet_client.dao_send_to_lockup(wallet_id=wallet_id, amount=final_amount, fee=final_fee)
+    res = await wallet_client.dao_send_to_lockup(
+        wallet_id=wallet_id,
+        amount=final_amount,
+        fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
+    )
     tx_id = res["tx_id"]
     start = time.time()
     while time.time() - start < 10:
@@ -269,9 +293,11 @@ async def release_coins(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
     res = await wallet_client.dao_free_coins_from_finished_proposals(
         wallet_id=wallet_id,
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
         print("Transaction submitted.")
@@ -283,10 +309,12 @@ async def exit_lockup(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
     res = await wallet_client.dao_exit_lockup(
         wallet_id=wallet_id,
         coins=[],
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
         print("Transaction submitted.")
@@ -298,6 +326,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
 
     if "to_address" in args:
         address = args["to_address"]
@@ -325,6 +354,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         inner_address=address,
         vote_amount=vote_amount,
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
         print("Successfully created proposal.")
@@ -336,6 +366,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
     wallet_id = args["wallet_id"]
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
     if "proposal_timelock" in args:
         proposal_timelock = args["proposal_timelock"]
     else:
@@ -378,6 +409,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_client: WalletRpcC
         new_dao_rules=new_dao_rules,
         vote_amount=vote_amount,
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
         print("Successfully created proposal.")
@@ -389,6 +421,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcCli
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
+    reuse_puzhash = args["reuse_puzhash"]
     cat_target_address = args["cat_target_address"]
     amount = args["amount"]
     vote_amount = None
@@ -401,6 +434,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_client: WalletRpcCli
         amount=amount,
         vote_amount=vote_amount,
         fee=final_fee,
+        reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
         print("Successfully created proposal.")
