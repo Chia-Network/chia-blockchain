@@ -472,7 +472,7 @@ class DAOCATWallet:
         return puzzle
 
     async def create_new_dao_cats(
-        self, amount: uint64, push: bool = False
+        self, amount: uint64, push: bool = False, fee: uint64 = uint64(0),
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
@@ -482,7 +482,7 @@ class DAOCATWallet:
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
         # create the cat spend
-        txs = await cat_wallet.generate_signed_transactions([amount], [lockup_puzzle.get_tree_hash()])
+        txs = await cat_wallet.generate_signed_transactions([amount], [lockup_puzzle.get_tree_hash()], fee=fee)
         new_cats = []
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle

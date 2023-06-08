@@ -2331,8 +2331,9 @@ class WalletRpcApi:
         dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
             id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
         )
-        amount = request["amount"]
-        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, True)
+        amount = uint64(request["amount"])
+        fee = uint64(request.get("fee", 0))
+        txs, _ = await dao_cat_wallet.create_new_dao_cats(amount, fee, True)
         return {
             "success": True,
             "tx_id": txs[0].name,
@@ -2377,7 +2378,8 @@ class WalletRpcApi:
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
                 if lci.active_votes == []:
                     coins.append(lci)
-        tx = await dao_cat_wallet.exit_vote_state(coins, fee=request["fee"])
+        fee = uint64(request.get("fee", 0))
+        tx = await dao_cat_wallet.exit_vote_state(coins, fee=fee)
         return {"success": True, "tx_id": tx.name()}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
@@ -2436,9 +2438,7 @@ class WalletRpcApi:
             vote_amount = uint64(request["vote_amount"])
         else:
             vote_amount = None
-        fee = uint64(0)
-        if "fee" in request:
-            fee = uint64(request["fee"])
+        fee = uint64(request.get("fee", 0))
         tx = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
             vote_amount,
@@ -2457,9 +2457,7 @@ class WalletRpcApi:
         vote_amount = None
         if "vote_amount" in request:
             vote_amount = uint64(request["vote_amount"])
-        fee = uint64(0)
-        if "fee" in request:
-            fee = uint64(request["fee"])
+        fee = uint64(request.get("fee", 0))
         sb = await dao_wallet.generate_proposal_vote_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
@@ -2483,10 +2481,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        fee = uint64(0)
-        if "fee" in request:
-            fee = uint64(request["fee"])
-
+        fee = uint64(request.get("fee", 0))
         tx = await dao_wallet.create_proposal_close_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             fee,
@@ -2497,10 +2492,7 @@ class WalletRpcApi:
 
     async def dao_free_coins_from_finished_proposals(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
-        if "fee" in request:
-            fee = request["fee"]
-        else:
-            fee = uint64(0)
+        fee = uint64(request.get("fee", 0))
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         tx = await dao_wallet.free_coins_from_finished_proposals(fee=fee)
