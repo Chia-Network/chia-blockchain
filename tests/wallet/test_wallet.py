@@ -342,12 +342,12 @@ class TestWalletSimulator:
         txs = await api_0.get_transactions(
             dict(type_filter={"values": [TransactionType.INCOMING_CLAWBACK_SEND], "mode": 1}, wallet_id=1)
         )
-        assert await wallet.get_confirmed_balance() == 3999999999500
-        # clawback merkle coin
-        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         assert len(txs["transactions"]) == 1
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
+        assert await wallet.get_confirmed_balance() == 3999999999500
+        # clawback merkle coin
         has_exception = False
         try:
             await api_0.spend_clawback_coins({})

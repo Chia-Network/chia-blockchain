@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs.chia_rs import CoinState
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -19,9 +20,12 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import VersionedBlob
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
+from chia.wallet.puzzles.clawback.drivers import create_merkle_puzzle, match_clawback_puzzle
+from chia.wallet.puzzles.clawback.metadata import ClawbackVersion
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -42,10 +46,12 @@ from chia.wallet.puzzles.puzzle_utils import (
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -623,10 +629,70 @@ class Wallet:
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
 
     # WSChiaConnection is only imported for type checking
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection
-    ) -> None:  # pylint: disable=used-before-assignment
-        pass
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        wallet_node = self.wallet_state_manager.wallet_node
+        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+        if coin_states is None or len(coin_states) == 0:
+            self.log.info(f"Cannot find parent coin: {coin.parent_coin_info.hex()}")
+            return
+        parent_coin_state = coin_states[0]
+        coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
+        solution = coin_spend.solution.to_program()
+        puzzle = coin_spend.puzzle_reveal.to_program()
+        uncurried = uncurry_puzzle(puzzle)
+        metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+        if (
+            metadata is None
+            or create_merkle_puzzle(
+                uint64(metadata.time_lock), metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash
+            ).get_tree_hash()
+            != coin.puzzle_hash
+        ):
+            # Not a Clawback coin
+            return
+        is_recipient = await metadata.is_recipient(self.wallet_state_manager.puzzle_store)
+        spend_bundle = SpendBundle([coin_spend], G2Element())
+        memos = compute_memos(spend_bundle)
+        # Override CoinRecord created in the wallet state manager
+        coin_record = WalletCoinRecord(
+            coin,
+            height,
+            uint32(0),
+            False,
+            False,
+            WalletType.STANDARD_WALLET,
+            1,
+            CoinType.CLAWBACK,
+            VersionedBlob(ClawbackVersion.V1.value, bytes(metadata)),
+        )
+        # Add merkle coin
+        await self.wallet_state_manager.coin_store.add_coin_record(coin_record)
+        # Add tx record
+        created_timestamp = await wallet_node.get_timestamp_for_height(height)
+        spend_bundle = SpendBundle([coin_spend], G2Element())
+        # Override TX created in the wallet state manager
+        tx_record = TransactionRecord(
+            confirmed_at_height=height,
+            created_at_time=uint64(created_timestamp),
+            to_puzzle_hash=metadata.recipient_puzzle_hash,
+            amount=uint64(coin.amount),
+            fee_amount=uint64(0),
+            confirmed=True,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=[coin],
+            removals=[coin_spend.coin],
+            wallet_id=uint32(1),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(
+                TransactionType.INCOMING_CLAWBACK_RECEIVE if is_recipient else TransactionType.INCOMING_CLAWBACK_SEND
+            ),
+            # Use coin ID as the TX ID to mapping with the coin table
+            name=coin_record.coin.name(),
+            memos=list(memos.items()),
+        )
+        await self.wallet_state_manager.tx_store.add_transaction_record(tx_record)
 
     def get_name(self) -> str:
         return "Standard Wallet"
