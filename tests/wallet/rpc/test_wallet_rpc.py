@@ -306,7 +306,12 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
 
     # Tests sending a basic transaction
     tx = await client.send_transaction(
-        1, tx_amount, addr, memos=["this is a basic tx"], excluded_amounts=[uint64(250000000000)]
+        1,
+        tx_amount,
+        addr,
+        memos=["this is a basic tx"],
+        excluded_amounts=[uint64(250000000000)],
+        excluded_coin_ids=[bytes32([0] * 32).hex()],
     )
     transaction_id = tx.name
 
@@ -841,7 +846,15 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Test CAT spend without a fee
     with pytest.raises(ValueError):
-        await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"], excluded_amounts=[uint64(20)])
+        await client.cat_spend(
+            cat_0_id,
+            uint64(4),
+            addr_1,
+            uint64(0),
+            ["the cat memo"],
+            excluded_amounts=[uint64(20)],
+            excluded_coin_ids=[bytes32([0] * 32).hex()],
+        )
     tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
