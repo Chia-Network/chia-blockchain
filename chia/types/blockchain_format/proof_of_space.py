@@ -68,6 +68,9 @@ def verify_and_get_quality_string(
         log.error("Calculated pos challenge doesn't match the provided one")
         return None
 
+    # Ensure we always pass in either height or filter_prefix_bits
+    assert (filter_prefix_bits is None) != (height is None)
+
     if filter_prefix_bits is not None:
         if not passes_plot_filter(filter_prefix_bits, plot_id, original_challenge_hash, signage_point):
             log.error("Did not pass the plot filter")
