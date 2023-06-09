@@ -54,11 +54,12 @@ from chia.util.config import (
 )
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -261,6 +262,19 @@ class WalletNode:
                     del config["wallet"]["reset_sync_for_fingerprint"]
                     self.log.info("Disabled resync for wallet fingerprint: %s", fingerprint)
             save_config(self.root_path, "config.yaml", config)
+
+    def set_auto_claim(self, auto_claim_config: AutoClaimSettings) -> Dict[str, Any]:
+        if auto_claim_config.batch_size < 1:
+            auto_claim_config = dataclasses.replace(auto_claim_config, batch_size=uint16(50))
+        auto_claim_config_json = auto_claim_config.to_json_dict()
+        if "auto_claim" not in self.config or self.config["auto_claim"] != auto_claim_config_json:
+            # Update in memory config
+            self.config["auto_claim"] = auto_claim_config_json
+            # Update config file
+            with lock_and_load_config(self.root_path, "config.yaml") as config:
+                config["wallet"]["auto_claim"] = self.config["auto_claim"]
+                save_config(self.root_path, "config.yaml", config)
+        return auto_claim_config.to_json_dict()
 
     async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:
         conn: aiosqlite.Connection
@@ -574,6 +588,9 @@ class WalletNode:
                     peer = item.data[1]
                     assert peer is not None
                     await self.new_peak_wallet(new_peak, peer)
+                    # Check if any coin needs auto spending
+                    if self.config.get("auto_claim", {}).get("enabled", False):
+                        await self.wallet_state_manager.auto_claim_coins()
                 else:
                     self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False

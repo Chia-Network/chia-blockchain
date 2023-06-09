@@ -7,13 +7,18 @@ from typing import Dict, List, Optional, Tuple
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.util.streamable import Streamable
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 from tests.util.db_connection import DBConnection
+
+clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_2 = Coin(coin_1.parent_coin_info, token_bytes(32), uint64(12311))
@@ -81,7 +86,7 @@ record_8 = WalletCoinRecord(
     WalletType.STANDARD_WALLET,
     1,
     CoinType.CLAWBACK,
-    VersionedBlob(uint16(1), b"TEST"),
+    VersionedBlob(uint16(1), bytes(clawback_metadata)),
 )
 record_9 = WalletCoinRecord(
     coin_9,
@@ -92,7 +97,7 @@ record_9 = WalletCoinRecord(
     WalletType.STANDARD_WALLET,
     2,
     CoinType.CLAWBACK,
-    VersionedBlob(uint16(1), b"TEST"),
+    VersionedBlob(uint16(1), bytes(clawback_metadata)),
 )
 
 
@@ -131,13 +136,13 @@ def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinR
 
 
 @pytest.mark.parametrize(
-    "coin_record, expected_metadata_type",
+    "coin_record, expected_metadata",
     [
-        (record_8, VersionedBlob),  # TODO: Replace proper clawback metadata here when its introduced
+        (record_8, clawback_metadata),
     ],
 )
-def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata_type: type) -> None:
-    assert type(coin_record.parsed_metadata()) == expected_metadata_type
+def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata: Streamable) -> None:
+    assert coin_record.parsed_metadata() == expected_metadata
 
 
 @pytest.mark.parametrize("coin_record", [record_1, record_2, record_8])
@@ -145,8 +150,7 @@ def test_wallet_coin_record_json_parsed(coin_record: WalletCoinRecord) -> None:
     expected_metadata = None
     if coin_record.coin_type == CoinType.CLAWBACK:
         assert coin_record.metadata is not None
-        #  TODO: Parse proper clawback metadata here when its introduced
-        expected_metadata = coin_record.metadata.to_json_dict()
+        expected_metadata = coin_record.parsed_metadata().to_json_dict()
 
     assert coin_record.to_json_dict_parsed_metadata() == {
         "id": "0x" + coin_record.name().hex(),
