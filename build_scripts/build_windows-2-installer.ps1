@@ -23,7 +23,7 @@ pyinstaller --log-level INFO $SPEC_FILE
 Write-Output "   ---"
 Write-Output "Creating a directory of licenses from pip and npm packages"
 Write-Output "   ---"
-bash ./build_license_directory.sh
+bash ./build_win_license_dir.sh
 
 Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"

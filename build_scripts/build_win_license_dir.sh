@@ -19,16 +19,19 @@ IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 printf '%s\n' "${licenses_array[@]}"
 
 for i in "${licenses_array[@]}"; do
-    dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
-    mkdir -p "$dirname"
-    echo "$dirname"
-    cp "$i" "$dirname"
+  dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
+  dirname="${dirname##*/}"
+  echo "$dirname"
+  mkdir -p "$dirname"
+  cp "$i" "$dirname"
 done
-
+ls -lah licenses
+ls -lah
 mv licenses/ ../build_scripts/dist/daemon
 cd ../build_scripts || 'exit" or "cd' || return
 
-
+ls -lah
+ls -lah licenses
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
 
@@ -45,7 +48,9 @@ done <<< "$output"
 
 # create a dir for each license and copy the license file over
 for i in "${license_path_array[@]}"; do
-  dirname="dist/daemon/licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
+  filename=$(basename "$i")
+  dirname="dist/daemon/licenses/${i%/*}"
+  dirname="${dirname##*/}"
   echo "$dirname"
   mkdir -p "$dirname"
   cp "$i" "$dirname"
