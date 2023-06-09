@@ -1318,8 +1318,19 @@ async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, finger
 
 async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    if args["parent_coin_id"] is None:
+        if args["vc_id"] is None:
+            print("Must specify either --parent-coin-id or --vc-id")
+            return
+        record = await wallet_client.vc_get(bytes32.from_hexstr(args["vc_id"]))
+        if record is None:
+            print(f"Cannot find a VC with ID {args['vc_id']}")
+            return
+        parent_id: bytes32 = record.vc.coin.parent_coin_info
+    else:
+        parent_id = bytes32.from_hexstr(args["parent_coin_id"])
     txs = await wallet_client.vc_revoke(
-        bytes32.from_hexstr(args["parent_coin_id"]),
+        parent_id,
         fee=uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
         reuse_puzhash=args["reuse_puzhash"],
     )
