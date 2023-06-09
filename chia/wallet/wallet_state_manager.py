@@ -1841,6 +1841,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
+        await self.retry_store.rollback_to_block(height)
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
