@@ -72,6 +72,16 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       SOFT_FORK2_HEIGHT: 0
+      SOFT_FORK3_HEIGHT: 0
+      # planned 2.0 release is July 26, height 2965036 on testnet
+      # 1 week later
+      HARD_FORK_HEIGHT": 2997292
+      # another 2 weeks later
+      PLOT_FILTER_128_HEIGHT": 3061804
+      # 3 years later
+      PLOT_FILTER_64_HEIGHT": 8010796
+      # 3 years later
+      PLOT_FILTER_32_HEIGHT": 13056556
   config:
     mainnet:
       address_prefix: "xch"
@@ -579,6 +589,24 @@ wallet:
   enable_notifications: True
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
+
+  #################################
+  #  Inner puzzle decorators      #
+  #################################
+  # Default puzzle decorator settings, this will apply to all asset wallets under the same key
+  # Here is an example
+  # puzzle_decorators:
+  #   2999502625:
+  #     - decorator: "CLAWBACK"
+  #       clawback_timelock: 3600
+  #     - decorator: "DECORATOR_TYPE" #If you want to add more decorators
+  #       parameter1: 0
+
+  auto_claim:
+    enabled: False
+    tx_fee: 0
+    min_amount: 0
+    batch_size: 50
 
 data_layer:
   # TODO: consider name

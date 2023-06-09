@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import List
+
 import pytest
 
 from chia.util.errors import InvalidPathError
-from chia.util.misc import format_bytes, format_minutes, validate_directory_writable
+from chia.util.misc import format_bytes, format_minutes, to_batches, validate_directory_writable
 
 
 class TestMisc:
@@ -70,3 +72,44 @@ def test_validate_directory_writable(tmp_path) -> None:
     with pytest.raises(InvalidPathError, match="Directory not writable") as exc_info:
         validate_directory_writable(tmp_path)
     assert exc_info.value.path == tmp_path
+
+
+def test_empty_lists() -> None:
+    # An empty list should return an empty iterator and skip the loop's body.
+    empty: List[int] = []
+    with pytest.raises(StopIteration):
+        next(to_batches(empty, 1))
+
+
+@pytest.mark.parametrize("collection_type", [list, set])
+def test_valid(collection_type: type) -> None:
+    for k in range(1, 10):
+        test_collection = collection_type([x for x in range(0, k)])
+        for i in range(1, len(test_collection) + 1):  # Test batch_size 1 to 11 (length + 1)
+            checked = 0
+            for batch in to_batches(test_collection, i):
+                assert batch.remaining == max(len(test_collection) - checked - i, 0)
+                assert len(batch.entries) <= i
+                entries = []
+                for j, entry in enumerate(test_collection):
+                    if j < checked:
+                        continue
+                    if j >= min(checked + i, len(test_collection)):
+                        break
+                    entries.append(entry)
+                assert batch.entries == entries
+                checked += len(batch.entries)
+            assert checked == len(test_collection)
+
+
+def test_invalid_batch_sizes() -> None:
+    with pytest.raises(ValueError):
+        next(to_batches([], 0))
+
+    with pytest.raises(ValueError):
+        next(to_batches([], -1))
+
+
+def test_invalid_input_type() -> None:
+    with pytest.raises(ValueError, match="Unsupported type"):
+        next(to_batches(dict({1: 2}), 1))
