@@ -81,7 +81,7 @@ class GSTOptionalArgs(TypedDict):
     add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
-    exclude_cat_coins: NotRequired[Optional[Set[Coin]]]
+    excluded_cat_coins: NotRequired[Optional[Set[Coin]]]
     cat_discrepancy: NotRequired[Optional[Tuple[int, Program, Program]]]
     # NFTWallet
     nft_coin: NotRequired[Optional[NFTCoinInfo]]
