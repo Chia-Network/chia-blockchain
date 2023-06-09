@@ -568,7 +568,7 @@ class CATWallet:
         announcement_to_assert: Optional[Announcement] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
@@ -590,7 +590,7 @@ class CATWallet:
                 fee,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
@@ -620,7 +620,7 @@ class CATWallet:
                 fee,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
@@ -645,8 +645,8 @@ class CATWallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
-        exclude_coins: Optional[Set[Coin]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[Set[Coin]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
@@ -674,16 +674,16 @@ class CATWallet:
                     str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
                 )
         if coins is None:
-            if exclude_coins is None:
-                exclude_coins = set()
+            if excluded_coins is None:
+                excluded_coins = set()
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
-                exclude=list(exclude_coins),
+                exclude=list(excluded_coins),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
-        elif exclude_coins is not None:
+        elif excluded_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
         else:
             cat_coins = coins
@@ -736,7 +736,7 @@ class CATWallet:
                             announcement_to_assert=announcement,
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
-                            exclude_coin_amounts=exclude_coin_amounts,
+                            excluded_coin_amounts=excluded_coin_amounts,
                             reuse_puzhash=reuse_puzhash,
                         )
                         innersol = self.standard_wallet.make_solution(
@@ -751,7 +751,7 @@ class CATWallet:
                             uint64(regular_chia_to_claim),
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
-                            exclude_coin_amounts=exclude_coin_amounts,
+                            excluded_coin_amounts=excluded_coin_amounts,
                             reuse_puzhash=reuse_puzhash,
                         )
                         innersol = self.standard_wallet.make_solution(
@@ -818,11 +818,11 @@ class CATWallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
-        exclude_cat_coins: Optional[Set[Coin]] = kwargs.get("exclude_cat_coins", None)
+        excluded_cat_coins: Optional[Set[Coin]] = kwargs.get("excluded_cat_coins", None)
         # (extra_delta, tail_reveal, tail_solution)
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
         if memos is None:
@@ -851,8 +851,8 @@ class CATWallet:
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
-            exclude_coin_amounts=exclude_coin_amounts,
-            exclude_coins=exclude_cat_coins,
+            excluded_coin_amounts=excluded_coin_amounts,
+            excluded_coins=excluded_cat_coins,
             reuse_puzhash=reuse_puzhash,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)

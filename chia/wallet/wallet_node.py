@@ -45,7 +45,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
-from chia.util.chunks import chunks
 from chia.util.config import (
     WALLET_PEERS_PATH_KEY_DEPRECATED,
     lock_and_load_config,
@@ -56,6 +55,7 @@ from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
+from chia.util.misc import to_batches
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
@@ -781,8 +781,8 @@ class WalletNode:
             not_checked_puzzle_hashes = set(all_puzzle_hashes) - already_checked_ph
             if not_checked_puzzle_hashes == set():
                 break
-            for chunk in chunks(list(not_checked_puzzle_hashes), 1000):
-                ph_update_res: List[CoinState] = await subscribe_to_phs(chunk, full_node, 0)
+            for batch in to_batches(not_checked_puzzle_hashes, 1000):
+                ph_update_res: List[CoinState] = await subscribe_to_phs(batch.entries, full_node, 0)
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -799,8 +799,8 @@ class WalletNode:
             not_checked_coin_ids = set(all_coin_ids) - already_checked_coin_ids
             if not_checked_coin_ids == set():
                 break
-            for chunk in chunks(list(not_checked_coin_ids), 1000):
-                c_update_res: List[CoinState] = await subscribe_to_coin_updates(chunk, full_node, 0)
+            for batch in to_batches(not_checked_coin_ids, 1000):
+                c_update_res: List[CoinState] = await subscribe_to_coin_updates(batch.entries, full_node, 0)
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -902,7 +902,7 @@ class WalletNode:
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
         chunk_size: int = 900 if trusted else 10
-        for states in chunks(items, chunk_size):
+        for batch in to_batches(items, chunk_size):
             if self._server is None:
                 self.log.error("No server")
                 await asyncio.gather(*all_tasks)
@@ -913,8 +913,8 @@ class WalletNode:
                 return False
             if trusted:
                 async with self.wallet_state_manager.db_wrapper.writer():
-                    self.log.info(f"new coin state received ({idx}-{idx + len(states) - 1}/ {len(items)})")
-                    if not await self.wallet_state_manager.add_coin_states(states, peer, fork_height):
+                    self.log.info(f"new coin state received ({idx}-{idx + len(batch.entries) - 1}/ {len(items)})")
+                    if not await self.wallet_state_manager.add_coin_states(batch.entries, peer, fork_height):
                         return False
             else:
                 while len(all_tasks) >= target_concurrent_tasks:
@@ -924,8 +924,8 @@ class WalletNode:
                         self.log.info("Terminating receipt and validation due to shut down request")
                         await asyncio.gather(*all_tasks)
                         return False
-                all_tasks.append(asyncio.create_task(validate_and_add(states, idx)))
-            idx += len(states)
+                all_tasks.append(asyncio.create_task(validate_and_add(batch.entries, idx)))
+            idx += len(batch.entries)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
         await asyncio.gather(*all_tasks)

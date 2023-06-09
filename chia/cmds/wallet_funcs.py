@@ -201,7 +201,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
     return fee >= amount
 
 
-async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
@@ -209,7 +209,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
     max_coin_amount = Decimal(args["max_coin_amount"])
-    exclude_coin_ids: List[str] = args["exclude_coin_ids"]
+    excluded_coin_ids: List[str] = args["excluded_coin_ids"]
     memo = args["memo"]
     reuse_puzhash = args["reuse_puzhash"]
     if memo is None:
@@ -248,7 +248,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
         )
     elif typ == WalletType.CAT:
@@ -261,7 +261,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
         )
     else:

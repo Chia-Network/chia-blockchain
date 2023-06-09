@@ -305,7 +305,14 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         await client.send_transaction(1, uint64(100000000000000001), addr)
 
     # Tests sending a basic transaction
-    tx = await client.send_transaction(1, tx_amount, addr, memos=["this is a basic tx"])
+    tx = await client.send_transaction(
+        1,
+        tx_amount,
+        addr,
+        memos=["this is a basic tx"],
+        excluded_amounts=[uint64(250000000000)],
+        excluded_coin_ids=[bytes32([0] * 32).hex()],
+    )
     transaction_id = tx.name
 
     spend_bundle = tx.spend_bundle
@@ -499,6 +506,8 @@ async def test_create_signed_transaction(
         coins=selected_coin,
         fee=amount_fee,
         wallet_id=wallet_id,
+        # shouldn't actually block it
+        excluded_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
     assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
@@ -590,7 +599,7 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_env
 
 
 @pytest.mark.asyncio
-async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1: Wallet = env.wallet_1.wallet
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -603,7 +612,7 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
         assert len(selected_coins) == 1
         outputs = await create_tx_outputs(wallet_1, [(uint64(250000000000), None)])
 
-        tx = await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+        tx = await wallet_1_rpc.create_signed_transaction(outputs, excluded_coins=selected_coins)
 
         assert len(tx.removals) == 1
         assert tx.removals[0] != selected_coins[0]
@@ -616,7 +625,7 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
         outputs = await create_tx_outputs(wallet_1, [(uint64(1750000000000), None)])
 
         with pytest.raises(ValueError):
-            await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+            await wallet_1_rpc.create_signed_transaction(outputs, excluded_coins=selected_coins)
 
     await it_does_not_include_the_excluded_coins()
     await it_throws_an_error_when_all_spendable_coins_are_excluded()
@@ -946,6 +955,16 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert addr_0 != addr_1
 
     # Test CAT spend without a fee
+    with pytest.raises(ValueError):
+        await client.cat_spend(
+            cat_0_id,
+            uint64(4),
+            addr_1,
+            uint64(0),
+            ["the cat memo"],
+            excluded_amounts=[uint64(20)],
+            excluded_coin_ids=[bytes32([0] * 32).hex()],
+        )
     tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
@@ -1466,7 +1485,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     coin_300: List[Coin]
-    for tx_amount in [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]:
+    tx_amounts: List[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
+    for tx_amount in tx_amounts:
         funds -= tx_amount
         # create coins for tests
         tx = await client.send_transaction(1, tx_amount, addr)
@@ -1493,11 +1513,15 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
+    non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
     excluded_amt_coins: List[Coin] = await client_2.select_coins(
-        amount=1000, wallet_id=1, excluded_amounts=[uint64(1000)]
+        amount=non_1000_amt, wallet_id=1, excluded_amounts=[uint64(1000)]
     )
     assert excluded_amt_coins is not None
-    assert len(excluded_amt_coins) == 1 and excluded_amt_coins[0].amount == uint64(10000)
+    assert (
+        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
+        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
+    )
 
     # test excluded coins
     with pytest.raises(ValueError):
@@ -1509,8 +1533,10 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     # test get coins
     all_coins, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1, excluded_coin_ids=[excluded_amt_coins[0].name().hex()]
+        wallet_id=1, excluded_coin_ids=[c.name().hex() for c in excluded_amt_coins]
     )
+    assert excluded_amt_coins not in all_coins
+    all_coins, _, _ = await client_2.get_spendable_coins(wallet_id=1, excluded_amounts=[uint64(1000)])
     assert excluded_amt_coins not in all_coins
     all_coins_2, _, _ = await client_2.get_spendable_coins(wallet_id=1, max_coin_amount=uint64(999))
     assert all_coins_2[0].coin == coin_300[0]
