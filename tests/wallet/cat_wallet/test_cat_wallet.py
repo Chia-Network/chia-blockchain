@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
+from pathlib import Path
 from typing import List
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -18,6 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
@@ -31,6 +35,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 
 class TestCATWallet:
@@ -1000,3 +1005,48 @@ class TestCATWallet:
         cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
         await time_out_assert(20, cat_wallet.get_confirmed_balance, cat_amount_1)
         assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
+
+
+@pytest.mark.asyncio
+async def test_unacknowledged_cat_table() -> None:
+    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
+    db_name.parent.mkdir(parents=True, exist_ok=True)
+    db_wrapper = await DBWrapper2.create(
+        database=db_name,
+    )
+    try:
+        interested_store = await WalletInterestedStore.create(db_wrapper)
+
+        def asset_id(i: int) -> bytes32:
+            return bytes32([i] * 32)
+
+        def coin_state(i: int) -> CoinState:
+            return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
+
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(0),
+            coin_state(0),
+            None,
+        )
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(1),
+            coin_state(1),
+            100,
+        )
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(0),
+            coin_state(0),
+            None,
+        )
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
+        await interested_store.rollback_to_block(50)
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
+        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
+    finally:
+        await db_wrapper.close()
