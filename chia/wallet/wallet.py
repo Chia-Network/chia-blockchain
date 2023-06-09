@@ -51,6 +51,7 @@ from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
@@ -61,7 +62,7 @@ class Wallet:
         _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
 
     wallet_info: WalletInfo
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
@@ -71,10 +72,10 @@ class Wallet:
     async def create(
         wallet_state_manager: Any,
         info: WalletInfo,
-        name: str = None,
-    ):
+        name: str = __name__,
+    ) -> Wallet:
         self = Wallet()
-        self.log = logging.getLogger(name if name else __name__)
+        self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
@@ -227,7 +228,7 @@ class Wallet:
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         magic_conditions: Optional[List[Any]] = None,
-        fee=0,
+        fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
         condition_list = []
@@ -255,7 +256,7 @@ class Wallet:
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
         python_program = solution.as_python()
         python_program[1].append(condition)
-        return Program.to(python_program)
+        return cast(Program, Program.to(python_program))
 
     async def select_coins(
         self,
@@ -300,12 +301,12 @@ class Wallet:
         amount: uint64,
         newpuzzlehash: bytes32,
         fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
+        origin_id: Optional[bytes32] = None,
+        coins: Optional[Set[Coin]] = None,
         primaries_input: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
@@ -487,11 +488,11 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         fee: uint64 = uint64(0),
-        coins: Set[Coin] = None,
+        coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,

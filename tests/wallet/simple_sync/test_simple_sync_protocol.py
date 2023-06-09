@@ -97,7 +97,7 @@ class TestSimpleSyncProtocol:
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
-        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [zero_ph])
+        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {zero_ph})
         all_zero_coin = set(zero_coin)
         notified_zero_coins = set()
 
@@ -131,9 +131,9 @@ class TestSimpleSyncProtocol:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(one_ph))
 
         zero_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            True, [zero_ph], peak.height + 1
+            True, {zero_ph}, peak.height + 1
         )
-        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [one_ph])
+        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
 
         all_coins = set(zero_coins)
         all_coins.update(one_coins)
