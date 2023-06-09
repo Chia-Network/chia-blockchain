@@ -5,7 +5,6 @@ chia.cmds.start_funcs
 chia.cmds.wallet
 chia.cmds.wallet_funcs
 chia.daemon.server
-chia.data_layer.data_layer_wallet
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
@@ -53,7 +52,6 @@ chia.util.profiler
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
-chia.wallet.cat_wallet.cat_wallet
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.did_wallet.did_wallet_puzzles
@@ -75,7 +73,6 @@ chia.wallet.trading.trade_store
 chia.wallet.transaction_record
 chia.wallet.util.debug_spend_bundle
 chia.wallet.util.new_peak_queue
-chia.wallet.wallet
 chia.wallet.wallet_coin_store
 chia.wallet.wallet_interested_store
 chia.wallet.wallet_node_api
@@ -150,7 +147,6 @@ tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils
-tests.util.test_lock_queue
 tests.util.test_misc
 tests.util.test_network
 tests.wallet.cat_wallet.test_cat_lifecycle
