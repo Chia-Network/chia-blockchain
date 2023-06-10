@@ -914,8 +914,8 @@ class WalletRpcApi:
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
                 tx["metadata"]["coin_id"] = coin.name().hex()
                 tx["metadata"]["spent"] = record.spent
-            except Exception as e:
-                log.error(f"Failed to get transaction {tr.name}: {e}")
+            except Exception:
+                log.exception(f"Failed to get transaction {tr.name}.")
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
