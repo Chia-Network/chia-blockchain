@@ -85,8 +85,7 @@ class FullNodeAPI:
     def log(self) -> logging.Logger:
         return self.full_node.log
 
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return self.full_node.initialized
 
     @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])

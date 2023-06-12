@@ -19,8 +19,7 @@ class WalletNodeAPI:
     def log(self):
         return self.wallet_node.log
 
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return self.wallet_node.logged_in
 
     @api_request(peer_required=True)

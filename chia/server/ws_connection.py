@@ -374,7 +374,7 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
-            if not self.api.api_ready:
+            if not self.api.ready():
                 self.log.warning(f"API not ready, ignore request: {full_message}")
                 return None
 

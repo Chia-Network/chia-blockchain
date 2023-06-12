@@ -77,7 +77,7 @@ async def test_api_not_ready(
         PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
     )
     wallet_node.log_out()
-    assert not wallet_service._api.api_ready
+    assert not wallet_service._api.ready()
     connection = full_node.server.all_connections[wallet_node.server.node_id]
 
     def request_ignored() -> bool:

@@ -19,8 +19,7 @@ class IntroducerAPI:
     def __init__(self, introducer) -> None:
         self.introducer = introducer
 
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return True
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:

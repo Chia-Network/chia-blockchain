@@ -23,6 +23,5 @@ class DataLayerAPI:
     def log(self) -> logging.Logger:
         return self.data_layer.log
 
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return self.data_layer.initialized
