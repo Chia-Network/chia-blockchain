@@ -1835,7 +1835,7 @@ class DAOWallet(WalletProtocol):
                                 ]
                             )
                             coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), eve_puzzle.get_tree_hash(), mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
                             # my_amount
                             # tail_reveal
                             # tail_solution
