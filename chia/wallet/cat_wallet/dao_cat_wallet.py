@@ -191,21 +191,25 @@ class DAOCATWallet:
             inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrf")
             active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrf").as_iter()]
 
-        # TODO: Move this section to dao_utils once we've got the close spend sorted
-        solution = parent_spend.solution.to_program().first()
-        if solution.first() == Program.to(0):
-            # No vote is being added so inner puz stays the same
-            # TODO: If the proposal is closed/coins are freed then what do we do here?
-            pass
+        if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
+            # shortcut, works for change
+            lockup_puz = cat_inner
         else:
-            new_vote = solution.at("rrrf")
-            active_votes_list.insert(0, bytes32(new_vote.as_atom()))
+            # TODO: Move this section to dao_utils once we've got the close spend sorted
+            solution = parent_spend.solution.to_program().first()
+            if solution.first() == Program.to(0):
+                # No vote is being added so inner puz stays the same
+                # TODO: If the proposal is closed/coins are freed then what do we do here?
+                pass
+            else:
+                new_vote = solution.at("rrrf")
+                active_votes_list.insert(0, bytes32(new_vote.as_atom()))
 
-        lockup_puz = get_lockup_puzzle(
-            self.dao_cat_info.limitations_program_hash,
-            active_votes_list,
-            inner_puzzle,
-        )
+            lockup_puz = get_lockup_puzzle(
+                self.dao_cat_info.limitations_program_hash,
+                active_votes_list,
+                inner_puzzle,
+            )
 
         new_cat_puzhash = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
