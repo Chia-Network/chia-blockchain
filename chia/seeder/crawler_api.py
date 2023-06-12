@@ -24,6 +24,9 @@ class CrawlerAPI:
         assert self.crawler.server is not None
         return self.crawler.server
 
+    def ready(self) -> bool:
+        return False
+
     @api_request(peer_required=True)
     async def request_peers(
         self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
