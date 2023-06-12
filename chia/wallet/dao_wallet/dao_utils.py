@@ -50,6 +50,7 @@ P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
+DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
 
 log = logging.Logger(__name__)
 
@@ -62,6 +63,10 @@ def singleton_struct_for_id(id: bytes32) -> Program:
 def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
     singleton_struct = singleton_struct_for_id(id)
     return DAO_CAT_LAUNCHER.curry(singleton_struct)
+
+
+def curry_cat_eve(next_puzzle_hash: bytes32) -> Program:
+    return DAO_CAT_EVE.curry(next_puzzle_hash)
 
 
 def create_new_proposal_puzzle(
