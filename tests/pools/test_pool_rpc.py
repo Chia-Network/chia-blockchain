@@ -145,7 +145,7 @@ async def setup(
 ) -> AsyncIterator[Setup]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
-    full_node_api = full_node_service._api
+    full_node_api: FullNodeSimulator = full_node_service._api
     wallet_node = wallet_service._node
     our_ph_record = await wallet_node.wallet_state_manager.get_unused_derivation_record(uint32(1), hardened=True)
     our_ph = our_ph_record.puzzle_hash

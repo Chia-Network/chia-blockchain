@@ -11,6 +11,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -853,7 +854,7 @@ class TestCATWallet:
     ) -> None:
         num_blocks = 1
         full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-        full_node_api = full_nodes[0]._api
+        full_node_api: FullNodeSimulator = full_nodes[0]._api
         full_node_server = full_node_api.full_node.server
         wallet_service_0 = wallets[0]
         wallet_node_0 = wallet_service_0._node
