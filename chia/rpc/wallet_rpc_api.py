@@ -2583,6 +2583,10 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         fee = uint64(request.get("fee", 0))
+        if "genesis_id" in request:
+            genesis_id = bytes32.from_hexstr(request["genesis_id"])
+        else:
+            genesis_id = None
         tx = await dao_wallet.create_proposal_close_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             fee,

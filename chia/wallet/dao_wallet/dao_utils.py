@@ -12,13 +12,12 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
