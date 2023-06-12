@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -10,14 +12,12 @@ from chia.wallet.wallet_node import PeerPeak, WalletNode
 
 
 class WalletNodeAPI:
+    log: logging.Logger
     wallet_node: WalletNode
 
     def __init__(self, wallet_node) -> None:
+        self.log = logging.getLogger(__name__)
         self.wallet_node = wallet_node
-
-    @property
-    def log(self):
-        return self.wallet_node.log
 
     def ready(self) -> bool:
         return self.wallet_node.logged_in

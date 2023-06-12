@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -53,9 +54,11 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
 
 
 class FarmerAPI:
+    log: logging.Logger
     farmer: Farmer
 
     def __init__(self, farmer: Farmer) -> None:
+        self.log = logging.getLogger(__name__)
         self.farmer = farmer
 
     def ready(self) -> bool:

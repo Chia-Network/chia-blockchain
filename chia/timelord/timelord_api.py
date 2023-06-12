@@ -12,13 +12,13 @@ from chia.timelord.types import Chain, IterationType
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint64
 
-log = logging.getLogger(__name__)
-
 
 class TimelordAPI:
+    log: logging.Logger
     timelord: Timelord
 
     def __init__(self, timelord) -> None:
+        self.log = logging.getLogger(__name__)
         self.timelord = timelord
 
     def ready(self) -> bool:
@@ -35,8 +35,8 @@ class TimelordAPI:
             if self.timelord.bluebox_mode:
                 return None
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
-                log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
-                log.info(
+                self.log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
+                self.log.info(
                     f"New peak: height: {new_peak.reward_chain_block.height} weight: "
                     f"{new_peak.reward_chain_block.weight} "
                 )
@@ -46,10 +46,10 @@ class TimelordAPI:
                 self.timelord.last_state.peak is not None
                 and self.timelord.last_state.peak.reward_chain_block == new_peak.reward_chain_block
             ):
-                log.info("Skipping peak, already have.")
+                self.log.info("Skipping peak, already have.")
                 self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
             else:
-                log.warning("block that we don't have, changing to it.")
+                self.log.warning("block that we don't have, changing to it.")
                 self.timelord.new_peak = new_peak
                 self.timelord.state_changed("new_peak", {"height": new_peak.reward_chain_block.height})
 
@@ -72,7 +72,7 @@ class TimelordAPI:
             last_ip_iters = self.timelord.last_state.get_last_ip()
             if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_block)
-                log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
+                self.log.debug(f"Overflow unfinished block, total {self.timelord.total_unfinished}")
             elif ip_iters > last_ip_iters:
                 new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_block)
                 if new_block_iters:
@@ -83,7 +83,7 @@ class TimelordAPI:
                         self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
                     self.timelord.total_unfinished += 1
-                    log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
+                    self.log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
     @api_request()
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):

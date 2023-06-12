@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -29,9 +30,11 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    log: logging.Logger
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):
+        self.log = logging.getLogger(__name__)
         self.harvester = harvester
 
     def ready(self) -> bool:

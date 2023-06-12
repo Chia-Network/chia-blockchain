@@ -69,10 +69,12 @@ else:
 
 
 class FullNodeAPI:
+    log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
 
     def __init__(self, full_node: FullNode) -> None:
+        self.log = logging.getLogger(__name__)
         self.full_node = full_node
         self.executor = ThreadPoolExecutor(max_workers=1)
 
@@ -80,10 +82,6 @@ class FullNodeAPI:
     def server(self) -> ChiaServer:
         assert self.full_node.server is not None
         return self.full_node.server
-
-    @property
-    def log(self) -> logging.Logger:
-        return self.full_node.log
 
     def ready(self) -> bool:
         return self.full_node.initialized

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from chia.introducer.introducer import Introducer
@@ -14,9 +15,11 @@ from chia.util.ints import uint64
 
 
 class IntroducerAPI:
+    log: logging.Logger
     introducer: Introducer
 
     def __init__(self, introducer) -> None:
+        self.log = logging.getLogger(__name__)
         self.introducer = introducer
 
     def ready(self) -> bool:

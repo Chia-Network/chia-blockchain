@@ -12,19 +12,17 @@ from chia.util.api_decorators import api_request
 
 
 class CrawlerAPI:
+    log: logging.Logger
     crawler: Crawler
 
     def __init__(self, crawler: Crawler) -> None:
+        self.log = logging.getLogger(__name__)
         self.crawler = crawler
 
     @property
     def server(self) -> ChiaServer:
         assert self.crawler.server is not None
         return self.crawler.server
-
-    @property
-    def log(self) -> logging.Logger:
-        return self.crawler.log
 
     @api_request(peer_required=True)
     async def request_peers(
