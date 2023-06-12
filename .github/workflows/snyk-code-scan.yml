@@ -95,3 +95,4 @@ jobs:
         args: |
           --all-projects
           --dev
+          --skip-unresolved
