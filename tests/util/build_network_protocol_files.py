@@ -140,7 +140,8 @@ def visit_timelord_protocol(visitor: Callable[[Any, str], None]) -> None:
 
 
 def visit_shared_protocol(visitor: Callable[[Any, str], None]) -> None:
-    visitor(error, "error")
+    visitor(error_without_data, "error_without_data")
+    visitor(error_with_data, "error_with_data")
 
 
 def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:

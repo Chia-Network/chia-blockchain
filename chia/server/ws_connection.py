@@ -406,7 +406,8 @@ class WSChiaConnection:
                     self.log.warning(f"ApiError: {api_error} from {self.peer_node_id}, {self.peer_info}")
                     if self.protocol_version >= error_response_version:
                         return make_msg(
-                            ProtocolMessageTypes.error, Error(int16(api_error.code.value), api_error.message)
+                            ProtocolMessageTypes.error,
+                            Error(int16(api_error.code.value), api_error.message, api_error.data),
                         )
                     else:
                         return None

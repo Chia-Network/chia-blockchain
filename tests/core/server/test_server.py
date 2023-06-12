@@ -37,7 +37,7 @@ class TestAPI:
     # API call from FullNodeAPI
     @api_request()
     async def request_transaction(self, request: RequestTransaction) -> None:
-        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}")
+        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", bytes(b"ab"))
 
 
 @pytest.mark.asyncio
@@ -137,18 +137,22 @@ async def test_error_response(
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
         assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
         if test_version >= error_response_version:
-            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message)
+            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, bytes(b"ab"))
             assert "Request timeout:" not in caplog.text
         else:
             assert response is None
             assert "Request timeout:" in caplog.text
 
 
+@pytest.mark.parametrize(
+    "error", [Error(int16(Err.UNKNOWN.value), "1", bytes([1, 2, 3])), Error(int16(Err.UNKNOWN.value), "2", None)]
+)
 @pytest.mark.asyncio
 async def test_error_receive(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
+    error: Error,
 ) -> None:
     [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
     wallet_node = wallet_service._node
@@ -158,7 +162,6 @@ async def test_error_receive(
     )
     wallet_connection = full_node.server.all_connections[wallet_node.server.node_id]
     full_node_connection = wallet_node.server.all_connections[full_node.server.node_id]
-    error = Error(int16(Err.UNKNOWN.value), "Unknown")
     message = make_msg(ProtocolMessageTypes.error, error)
 
     def error_log_found(connection: WSChiaConnection) -> bool:

@@ -43,7 +43,8 @@ from chia.util.errors import Err
 from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
 
 # SHARED PROTOCOL
-error = Error(int16(Err.UNKNOWN.value), "Unknown")
+error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)
+error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", bytes(b"extra data"))
 
 
 ### FARMER PROTOCOL
