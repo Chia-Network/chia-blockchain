@@ -19,8 +19,7 @@ IFS=$'\n' read -rd '' -a licenses_array <<< "$license_list"
 printf '%s\n' "${licenses_array[@]}"
 
 for i in "${licenses_array[@]}"; do
-  dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF}')"
-  dirname="${dirname##*/}"
+  dirname="licenses/$(dirname "$i" | awk -F'/' '{print $NF-1}')"
   echo "$dirname"
   mkdir -p "$dirname"
   cp "$i" "$dirname"
@@ -48,9 +47,7 @@ done <<< "$output"
 
 # create a dir for each license and copy the license file over
 for i in "${license_path_array[@]}"; do
-  filename=$(basename "$i")
-  dirname="dist/daemon/licenses/${i%/*}"
-  dirname="${dirname##*/}"
+  dirname="dist/daemon/licenses/$(dirname "$i" | awk -F'/' '{print $NF-1}')"
   echo "$dirname"
   mkdir -p "$dirname"
   cp "$i" "$dirname"
