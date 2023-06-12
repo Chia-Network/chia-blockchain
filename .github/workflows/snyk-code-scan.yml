@@ -93,6 +93,4 @@ jobs:
       with:
         command: monitor
         args: |
-          --all-projects
-          --dev
-          --skip-unresolved
+          --all-projects --dev --skip-unresolved
