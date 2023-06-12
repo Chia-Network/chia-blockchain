@@ -27,7 +27,10 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import SpendableCAT, construct_cat_puzzle, construct_cat_puzzlehash_for_inner_puzzlehash
+from chia.wallet.cat_wallet.cat_utils import (
+    SpendableCAT,
+    construct_cat_puzzle,
+)
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -1841,7 +1844,9 @@ class DAOWallet(WalletProtocol):
                             # tail_solution
 
                             # tail_solution is (singleton_inner_puzhash parent_parent_id parent_amount)
-                            tail_solution = Program.to([treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
+                            tail_solution = Program.to(
+                                [treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount]
+                            )
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(
                                 eve_coin,
@@ -1850,7 +1855,9 @@ class DAOWallet(WalletProtocol):
                                 solution,
                             )
                             if cat_spend_bundle is None:
-                                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat])
+                                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(
+                                    CAT_MOD, [new_spendable_cat]
+                                )
                             else:
                                 cat_spend_bundle = cat_spend_bundle.aggregate(
                                     [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats([new_spendable_cat])]
