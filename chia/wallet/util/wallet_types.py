@@ -35,6 +35,12 @@ class CoinType(IntEnum):
     CLAWBACK = 1
 
 
+class RemarkDataType(IntEnum):
+    NORMAL = 0
+    CUSTODY = 1
+    CLAWBACK = 2
+
+
 @dataclass(frozen=True)
 class WalletIdentifier:
     id: uint32

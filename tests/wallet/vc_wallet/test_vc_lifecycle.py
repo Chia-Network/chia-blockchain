@@ -41,7 +41,9 @@ from chia.wallet.vc_wallet.vc_drivers import (
 )
 
 ACS: Program = Program.to([3, (1, "entropy"), 1, None])
+ACS_2: Program = Program.to([3, (1, "entropy2"), 1, None])
 ACS_PH: bytes32 = ACS.get_tree_hash()
+ACS_2_PH: bytes32 = ACS_2.get_tree_hash()
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
 MOCK_SINGLETON_MOD_HASH: bytes32 = MOCK_SINGLETON_MOD.get_tree_hash()
 MOCK_LAUNCHER_ID: bytes32 = bytes32([0] * 32)
@@ -493,7 +495,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
-            Program.to([[51, ACS_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
+            Program.to([[51, ACS_2_PH, vc.coin.amount], vc.magic_condition_for_new_proofs(NEW_PROOF_HASH, ACS_PH)]),
             new_proof_hash=NEW_PROOF_HASH,
         )
         for use_did, correct_did in ((False, None), (True, False), (True, True)):
@@ -662,7 +664,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
             # Try to spend the coin to ourselves
             _, auth_spend, new_vc = vc.do_spend(
-                ACS,
+                ACS_2,
                 Program.to(
                     [
                         [51, ACS_PH, vc.coin.amount],

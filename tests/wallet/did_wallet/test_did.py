@@ -58,13 +58,8 @@ class TestDIDWallet:
         ph0 = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
 
-        keys0 = await wallet_node_0.wallet_state_manager.get_keys(ph0)
-        keys1 = await wallet_node_1.wallet_state_manager.get_keys(ph1)
-        assert keys0
-        assert keys1
-        pk0, sk0 = keys0
-        pk1, sk1 = keys1
-        assert pk0 == pk1
+        sk0 = await wallet_node_0.wallet_state_manager.get_private_key(ph0)
+        sk1 = await wallet_node_1.wallet_state_manager.get_private_key(ph1)
         assert sk0 == sk1
 
         if trusted:
@@ -902,7 +897,7 @@ class TestDIDWallet:
             odd_amount,
             ph1,
             fee,
-            exclude_coins=set([coin]),
+            excluded_coins=set([coin]),
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
@@ -1152,13 +1147,8 @@ class TestDIDWallet:
         ph0 = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
 
-        keys0 = await wallet_node_0.wallet_state_manager.get_keys(ph0)
-        keys1 = await wallet_node_1.wallet_state_manager.get_keys(ph1)
-        assert keys0
-        assert keys1
-        pk0, sk0 = keys0
-        pk1, sk1 = keys1
-        assert pk0 == pk1
+        sk0 = await wallet_node_0.wallet_state_manager.get_private_key(ph0)
+        sk1 = await wallet_node_1.wallet_state_manager.get_private_key(ph1)
         assert sk0 == sk1
 
         if trusted:

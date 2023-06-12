@@ -83,6 +83,9 @@ jobs:
     steps:
     - uses: chia-network/actions/clean-workspace@main
 
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
@@ -129,9 +132,16 @@ jobs:
             command: flake8 benchmarks build_scripts chia tests tools *.py
           - name: pylint
             command: pylint benchmarks build_scripts chia tests tools *.py
+          - name: generated protocol tests
+            command: |
+              python3 -m tests.util.build_network_protocol_files
+              git diff --exit-code
 
     steps:
     - uses: chia-network/actions/clean-workspace@main
+
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
 
     - uses: actions/checkout@v3
       with:
@@ -161,6 +171,9 @@ jobs:
       - mypy
       - check
     steps:
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:

@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import VersionedBlob
-from chia.util.streamable import Streamable
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
+
+MetadataTypes = Union[ClawbackMetadata]
 
 
 @dataclass(frozen=True)
@@ -35,14 +37,13 @@ class WalletCoinRecord:
     def wallet_identifier(self) -> StreamableWalletIdentifier:
         return StreamableWalletIdentifier(uint32(self.wallet_id), uint8(self.wallet_type))
 
-    def parsed_metadata(self) -> Streamable:
+    def parsed_metadata(self) -> MetadataTypes:
         if self.metadata is None:
             raise ValueError("Can't parse None metadata")
-        if self.coin_type == CoinType.CLAWBACK:
-            #  TODO: Parse proper clawback metadata here when its introduced
-            return self.metadata
-        else:
-            raise ValueError(f"Unknown metadata {self.metadata} for coin_type {self.coin_type}")
+        if self.coin_type == CoinType.CLAWBACK and self.metadata.version == ClawbackVersion.V1.value:
+            return ClawbackMetadata.from_bytes(self.metadata.blob)
+
+        raise ValueError(f"Unknown metadata {self.metadata} for coin_type {self.coin_type}")
 
     def name(self) -> bytes32:
         return self.coin.name()

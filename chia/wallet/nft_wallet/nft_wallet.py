@@ -464,9 +464,8 @@ class NFTWallet:
                     self.log.debug("Found a NFT state layer to sign")
                     puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
             for ph in puzzle_hashes:
-                keys = await self.wallet_state_manager.get_keys(ph)
-                assert keys
-                pks[bytes(keys[0])] = private = keys[1]
+                private = await self.wallet_state_manager.get_private_key(ph)
+                pks[bytes(private.get_g1())] = private
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 synthetic_pk = synthetic_secret_key.get_g1()
                 pks[bytes(synthetic_pk)] = synthetic_secret_key
@@ -563,7 +562,7 @@ class NFTWallet:
         if uncurried_nft is not None:
             p2_puzzle = uncurried_nft.p2_puzzle
             puzzle_hash = p2_puzzle.get_tree_hash()
-            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            private = await self.wallet_state_manager.get_private_key(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
             if is_hex:
