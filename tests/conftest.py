@@ -48,6 +48,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -378,7 +379,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[
-    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+    Tuple[List[Service[FullNode, FullNodeAPI]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _

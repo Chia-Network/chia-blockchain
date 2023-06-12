@@ -35,6 +35,7 @@ main_pid: Optional[int] = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
+_T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
 
@@ -43,12 +44,12 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol]):
+class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def __init__(
         self,
         root_path: Path,
         node: _T_RpcServiceProtocol,
-        peer_api: ApiProtocol,
+        peer_api: _T_ApiProtocol,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,

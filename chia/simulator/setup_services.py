@@ -14,9 +14,13 @@ from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.introducer.introducer import Introducer
+from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.seeder.crawler import Crawler
 from chia.seeder.start_crawler import create_full_node_crawler_service
@@ -31,6 +35,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -39,6 +44,7 @@ from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +108,7 @@ async def setup_full_node(
     disable_capabilities: Optional[List[Capability]] = None,
     *,
     reuse_db: bool = False,
-) -> AsyncGenerator[Service[FullNode], None]:
+) -> AsyncGenerator[Service[FullNode, FullNodeAPI], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
@@ -205,7 +211,7 @@ async def setup_wallet_node(
     introducer_port: Optional[uint16] = None,
     key_seed: Optional[bytes] = None,
     initial_num_public_keys: int = 5,
-) -> AsyncGenerator[Service[WalletNode], None]:
+) -> AsyncGenerator[Service[WalletNode, WalletNodeAPI], None]:
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
@@ -275,7 +281,7 @@ async def setup_harvester(
     farmer_peer: Optional[UnresolvedPeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
-) -> AsyncGenerator[Service[Harvester], None]:
+) -> AsyncGenerator[Service[Harvester, HarvesterAPI], None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as config:
         config["logging"]["log_stdout"] = True
         config["selected_network"] = "testnet0"
@@ -309,7 +315,7 @@ async def setup_farmer(
     full_node_port: Optional[uint16] = None,
     start_service: bool = True,
     port: uint16 = uint16(0),
-) -> AsyncGenerator[Service[Farmer], None]:
+) -> AsyncGenerator[Service[Farmer, FarmerAPI], None]:
     with create_lock_and_load_config(b_tools.root_path / "config" / "ssl" / "ca", root_path) as root_config:
         root_config["logging"]["log_stdout"] = True
         root_config["selected_network"] = "testnet0"
@@ -348,7 +354,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[Introducer], None]:
+async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[Introducer, IntroducerAPI], None]:
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -411,7 +417,7 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
-) -> AsyncGenerator[Service[Timelord], None]:
+) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
     config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port

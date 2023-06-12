@@ -5,14 +5,13 @@ import contextlib
 import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
@@ -34,6 +33,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -44,7 +44,10 @@ two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple
 
 @contextlib.asynccontextmanager
 async def init_data_layer(
-    wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
+    wallet_rpc_port: uint16,
+    bt: BlockTools,
+    db_path: Path,
+    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
 ) -> AsyncIterator[DataLayer]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -59,7 +62,7 @@ async def init_data_layer(
     )
     await service.start()
     try:
-        yield cast(DataLayerAPI, service._api).data_layer
+        yield service._api.data_layer
     finally:
         service.stop()
         await service.wait_closed()
@@ -79,7 +82,7 @@ async def init_wallet_and_node(
 ) -> nodes_with_port_bt_ph:
     [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator
     wallet_node = wallet_service._node
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -574,7 +577,7 @@ async def test_get_owned_stores(
     wallet_node = wallet_service._node
     assert wallet_service.rpc_server is not None
     wallet_rpc_port = wallet_service.rpc_server.listen_port
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
@@ -659,7 +662,7 @@ async def offer_setup_fixture(
     tmp_path: Path,
 ) -> AsyncIterator[OfferSetup]:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     wallets: List[Wallet] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node

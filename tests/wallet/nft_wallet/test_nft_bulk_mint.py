@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from secrets import token_bytes
-from typing import Any, Dict, cast
+from typing import Any, Dict
 
 import pytest
 
@@ -150,7 +150,7 @@ async def test_nft_mint_from_did_rpc(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     full_node_server = full_node_api.server
     wallet_node_maker = wallet_services[0]._node
     wallet_node_taker = wallet_services[1]._node
@@ -336,7 +336,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     full_node_server = full_node_api.server
     wallet_node_maker = wallet_services[0]._node
     wallet_node_taker = wallet_services[1]._node
@@ -721,7 +721,7 @@ async def test_nft_mint_from_xch_rpc(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
-    full_node_api = cast(FullNodeSimulator, full_node_service._api)
+    full_node_api = full_node_service._api
     full_node_server = full_node_api.server
     wallet_node_maker = wallet_services[0]._node
     wallet_node_taker = wallet_services[1]._node
