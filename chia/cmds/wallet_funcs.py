@@ -29,10 +29,11 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
-from chia.wallet.util.query_filter import TransactionTypeFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.wallet_coin_store import GetCoinRecords
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
@@ -50,7 +51,14 @@ def transaction_description_from_type(tx: TransactionRecord) -> str:
     return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
+def print_transaction(
+    tx: TransactionRecord,
+    verbose: bool,
+    name,
+    address_prefix: str,
+    mojo_per_unit: int,
+    coin_record: Optional[Dict[str, Any]] = None,
+) -> None:
     if verbose:
         print(tx)
     else:
@@ -62,6 +70,17 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        if coin_record is not None:
+            if tx.type == TransactionType.INCOMING_CLAWBACK_RECEIVE.value:
+                print("Clawback: Recipient")
+                print(
+                    "Claimable after:",
+                    datetime.fromtimestamp(tx.created_at_time + coin_record["metadata"]["time_lock"]).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+                )
+            else:
+                print("Clawback: Sender")
         print("")
 
 
@@ -187,12 +206,20 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
+            coin_record: Optional[Dict[str, Any]] = None
+            if txs[i + j].type in CLAWBACK_TRANSACTION_TYPES:
+                coin_record = (
+                    await wallet_client.get_coin_records(
+                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j].additions[0].name()]))
+                    )
+                )["coin_records"][0]
             print_transaction(
                 txs[i + j],
                 verbose=(args["verbose"] > 0),
                 name=name,
                 address_prefix=address_prefix,
                 mojo_per_unit=mojo_per_unit,
+                coin_record=coin_record,
             )
         if i + num_per_screen >= len(txs):
             return None
