@@ -7,7 +7,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, AsyncIterator, Dict, List, Tuple, cast
+from typing import Any, AsyncIterator, Dict, List, Tuple
 
 import pytest
 import pytest_asyncio
@@ -102,7 +102,7 @@ async def one_wallet_node_and_rpc(
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
         full_nodes, wallets, bt = nodes
-        full_node_api = cast(FullNodeSimulator, full_nodes[0]._api)
+        full_node_api: FullNodeSimulator = full_nodes[0]._api
         wallet_service = wallets[0]
         wallet_node = wallet_service._node
         wallet = wallet_node.wallet_state_manager.main_wallet

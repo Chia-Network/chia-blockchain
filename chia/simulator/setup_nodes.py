@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -152,7 +152,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 1,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[List[FullNodeAPI], List[Tuple[WalletNode, ChiaServer]], BlockTools], None]:
+) -> AsyncGenerator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools], None]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
@@ -196,7 +196,7 @@ async def setup_simulators_and_wallets_service(
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncGenerator[
-    Tuple[List[Service[FullNode, FullNodeAPI]], List[Service[WalletNode, WalletNodeAPI]], BlockTools], None
+    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools], None
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
@@ -235,14 +235,14 @@ async def setup_simulators_and_wallets_inner(
     disable_capabilities: Optional[List[Capability]],
 ) -> Tuple[
     List[BlockTools],
-    List[AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[WalletNode, WalletNodeAPI]], None]],
-    List[Service[FullNode, FullNodeAPI]],
+    List[AsyncGenerator[Union[Service[FullNode, FullNodeSimulator], Service[WalletNode, WalletNodeAPI]], None]],
+    List[Service[FullNode, FullNodeSimulator]],
     List[Service[WalletNode, WalletNodeAPI]],
 ]:
-    simulators: List[Service[FullNode, FullNodeAPI]] = []
+    simulators: List[Service[FullNode, FullNodeSimulator]] = []
     wallets: List[Service[WalletNode, WalletNodeAPI]] = []
     node_iters: List[
-        AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[WalletNode, WalletNodeAPI]], None]
+        AsyncGenerator[Union[Service[FullNode, FullNodeSimulator], Service[WalletNode, WalletNodeAPI]], None]
     ] = []
     bt_tools: List[BlockTools] = []
     consensus_constants: ConsensusConstants = constants_for_dic(dic)
@@ -253,14 +253,17 @@ async def setup_simulators_and_wallets_inner(
                 consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
             )
         )  # block tools modifies constants
-        sim = setup_full_node(
-            consensus_constants=bt_tools[index].constants,
-            db_name=db_name,
-            self_hostname=bt_tools[index].config["self_hostname"],
-            local_bt=bt_tools[index],
-            simulator=True,
-            db_version=db_version,
-            disable_capabilities=disable_capabilities,
+        sim = cast(
+            AsyncGenerator[Service[FullNode, FullNodeSimulator], None],
+            setup_full_node(
+                consensus_constants=bt_tools[index].constants,
+                db_name=db_name,
+                self_hostname=bt_tools[index].config["self_hostname"],
+                local_bt=bt_tools[index],
+                simulator=True,
+                db_version=db_version,
+                disable_capabilities=disable_capabilities,
+            ),
         )
         service = await sim.__anext__()
         simulators.append(service)
