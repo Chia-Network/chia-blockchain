@@ -83,6 +83,8 @@ def test_missing_messages() -> None:
         "RespondToPhUpdates",
         "SendTransaction",
         "TransactionAck",
+        "GetCoinInfosRequest",
+        "GetCoinInfosResponse",
     }
 
     farmer_msgs = {

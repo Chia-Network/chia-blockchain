@@ -142,6 +142,12 @@ def test_protocol_json() -> None:
     assert type(request_ses_info).from_json_dict(request_ses_info_json) == request_ses_info
     assert str(respond_ses_info_json) == str(respond_ses_info.to_json_dict())
     assert type(respond_ses_info).from_json_dict(respond_ses_info_json) == respond_ses_info
+    assert str(get_coin_infos_request_1_json) == str(get_coin_infos_request_1.to_json_dict())
+    assert type(get_coin_infos_request_1).from_json_dict(get_coin_infos_request_1_json) == get_coin_infos_request_1
+    assert str(get_coin_infos_request_2_json) == str(get_coin_infos_request_2.to_json_dict())
+    assert type(get_coin_infos_request_2).from_json_dict(get_coin_infos_request_2_json) == get_coin_infos_request_2
+    assert str(get_coin_infos_response_json) == str(get_coin_infos_response.to_json_dict())
+    assert type(get_coin_infos_response).from_json_dict(get_coin_infos_response_json) == get_coin_infos_response
     assert str(pool_difficulty_json) == str(pool_difficulty.to_json_dict())
     assert type(pool_difficulty).from_json_dict(pool_difficulty_json) == pool_difficulty
     assert str(harvester_handhsake_json) == str(harvester_handhsake.to_json_dict())

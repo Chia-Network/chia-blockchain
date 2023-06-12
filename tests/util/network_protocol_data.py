@@ -14,6 +14,7 @@ from chia.protocols import (
     wallet_protocol,
 )
 from chia.protocols.shared_protocol import Error
+from chia.types.block import BlockIdentifier, BlockIdentifierTimed
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -31,7 +32,7 @@ from chia.types.blockchain_format.slots import (
 )
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinInfo, CoinSpend, SpendInfo
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -165,6 +166,12 @@ request_transaction = full_node_protocol.RequestTransaction(
 coin_1 = Coin(
     bytes32(bytes.fromhex("d56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098")),
     bytes32(bytes.fromhex("9944f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3")),
+    uint64(6602327684212801382),
+)
+
+coin_2 = Coin(
+    bytes32(bytes.fromhex("aa6f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098")),
+    bytes32(bytes.fromhex("bb44f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3")),
     uint64(6602327684212801382),
 )
 
@@ -675,6 +682,32 @@ respond_ses_info = wallet_protocol.RespondSESInfo(
     [[uint32(1), uint32(2), uint32(3)], [uint32(4), uint32(606340525)]],
 )
 
+get_coin_infos_request_1 = wallet_protocol.GetCoinInfosRequest(
+    [coin_1.name(), coin_2.name()],
+    BlockIdentifier(coin_1.name(), uint32(0)),
+    BlockIdentifier(coin_2.name(), uint32(1)),
+    True,
+)
+
+get_coin_infos_request_2 = wallet_protocol.GetCoinInfosRequest(
+    [coin_1.name(), coin_2.name()],
+    None,
+    None,
+    False,
+)
+
+coin_info_1 = CoinInfo(
+    coin_1,
+    BlockIdentifierTimed(coin_1.name(), uint32(0), uint64(10)),
+    BlockIdentifierTimed(coin_2.name(), uint32(1), uint64(20)),
+    SpendInfo(serialized_program_1, serialized_program_2),
+)
+
+coin_info_2 = CoinInfo(coin_2, None, None, None)
+
+get_coin_infos_response = wallet_protocol.GetCoinInfosResponse(
+    [coin_info_1, coin_info_2],
+)
 
 ### HARVESTER PROTOCOL
 pool_difficulty = harvester_protocol.PoolDifficulty(

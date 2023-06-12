@@ -77,6 +77,9 @@ class SerializedProgram:
             return True
         return self._buf != other._buf
 
+    def __hash__(self) -> int:
+        return hash(self._buf)
+
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(self._buf))
 

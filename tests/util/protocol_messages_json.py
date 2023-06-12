@@ -1997,6 +1997,62 @@ respond_ses_info_json: Dict[str, Any] = {
     "heights": [[1, 2, 3], [4, 606340525]],
 }
 
+get_coin_infos_request_1_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x18fd2653a27f89c4e691bcbd61c7a84d39fb04238791621e21c8cbef96f9025a",
+        "0x15fe74fe730163ddc2d95ea6ff241e6f7e6aae455296d17c22306f260730bef8",
+    ],
+    "start_block": {"hash": "0x18fd2653a27f89c4e691bcbd61c7a84d39fb04238791621e21c8cbef96f9025a", "height": 0},
+    "end_block": {"hash": "0x15fe74fe730163ddc2d95ea6ff241e6f7e6aae455296d17c22306f260730bef8", "height": 1},
+    "include_spend_info": True,
+}
+
+get_coin_infos_request_2_json: Dict[str, Any] = {
+    "coin_ids": [
+        "0x18fd2653a27f89c4e691bcbd61c7a84d39fb04238791621e21c8cbef96f9025a",
+        "0x15fe74fe730163ddc2d95ea6ff241e6f7e6aae455296d17c22306f260730bef8",
+    ],
+    "start_block": None,
+    "end_block": None,
+    "include_spend_info": False,
+}
+
+get_coin_infos_response_json: Dict[str, Any] = {
+    "coin_infos": [
+        {
+            "coin": {
+                "parent_coin_info": "0xd56f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098",
+                "puzzle_hash": "0x9944f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3",
+                "amount": 6602327684212801382,
+            },
+            "created_block": {
+                "hash": "0x18fd2653a27f89c4e691bcbd61c7a84d39fb04238791621e21c8cbef96f9025a",
+                "height": 0,
+                "timestamp": 10,
+            },
+            "spent_block": {
+                "hash": "0x15fe74fe730163ddc2d95ea6ff241e6f7e6aae455296d17c22306f260730bef8",
+                "height": 1,
+                "timestamp": 20,
+            },
+            "spend_info": {
+                "puzzle": "0xff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080",
+                "solution": "0xffff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080ff8080",
+            },
+        },
+        {
+            "coin": {
+                "parent_coin_info": "0xaa6f435d3382cb9aa5f50f51816e4c54487c66402339901450f3c810f1d77098",
+                "puzzle_hash": "0xbb44f63fcc251719b2f04c47ab976a167f96510736dc6fdfa8e037d740f4b5f3",
+                "amount": 6602327684212801382,
+            },
+            "created_block": None,
+            "spent_block": None,
+            "spend_info": None,
+        },
+    ]
+}
+
 pool_difficulty_json: Dict[str, Any] = {
     "difficulty": 14819251421858580996,
     "sub_slot_iters": 12852879676624401630,

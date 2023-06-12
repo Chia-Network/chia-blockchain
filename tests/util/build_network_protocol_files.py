@@ -94,6 +94,9 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_children, "respond_children")
     visitor(request_ses_info, "request_ses_info")
     visitor(respond_ses_info, "respond_ses_info")
+    visitor(get_coin_infos_request_1, "get_coin_infos_request_1")
+    visitor(get_coin_infos_request_2, "get_coin_infos_request_2")
+    visitor(get_coin_infos_response, "get_coin_infos_response")
 
 
 def visit_harvester_protocol(visitor: Callable[[Any, str], None]) -> None:
