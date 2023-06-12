@@ -299,6 +299,23 @@ class Root:
             status=Status(row["status"]),
         )
 
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> "Root":
+        return cls(
+            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
+            generation=marshalled["generation"],
+            status=Status(marshalled["status"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "tree_id": self.tree_id.hex(),
+            "node_hash": None if self.node_hash is None else self.node_hash.hex(),
+            "generation": self.generation,
+            "status": self.status.value,
+        }
+
 
 node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]] = {
     NodeType.INTERNAL: InternalNode,
@@ -614,6 +631,49 @@ class CancelOfferResponse:
     def marshal(self) -> Dict[str, Any]:
         return {
             "success": self.success,
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class ClearPendingRootsRequest:
+    store_id: bytes32
+    # TODO: maybe require the pending root value be set to avoid accidents
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsRequest:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class ClearPendingRootsResponse:
+    success: bool
+
+    root: Optional[Root]
+    # tree_id: bytes32
+    # node_hash: Optional[bytes32]
+    # generation: int
+    # status: Status
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsResponse:
+        return cls(
+            success=marshalled["success"],
+            root=None if marshalled["root"] is None else Root.unmarshal(marshalled["root"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "root": None if self.root is None else self.root.marshal(),
         }
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from chia.data_layer.data_layer_util import ClearPendingRootsRequest
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -119,4 +120,9 @@ class DataLayerRpcClient(RpcClient):
 
     async def check_plugins(self) -> Dict[str, Any]:
         response = await self.fetch("check_plugins", {})
+        return response
+
+    async def clear_pending_roots(self, store_id: bytes32) -> Dict[str, Any]:
+        request = ClearPendingRootsRequest(store_id=store_id)
+        response = await self.fetch("clear_pending_roots", request.marshal())
         return response

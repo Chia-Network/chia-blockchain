@@ -345,12 +345,17 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, tree_id: bytes32) -> None:
+    async def clear_pending_roots(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id, "status": Status.PENDING.value},
-            )
+            pending_root = await self.get_pending_root(tree_id=tree_id)
+
+            if pending_root is not None:
+                await writer.execute(
+                    "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
+                    {"tree_id": tree_id, "status": Status.PENDING.value},
+                )
+
+        return pending_root
 
     async def shift_root_generations(self, tree_id: bytes32, shift_size: int) -> None:
         async with self.db_wrapper.writer():

@@ -222,3 +222,13 @@ async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
         if client is not None:
             res = await client.check_plugins()
             print(json.dumps(res, indent=4, sort_keys=True))
+
+
+async def clear_pending_roots(store_id: bytes32, rpc_port: Optional[int]) -> None:
+    async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
+        if client is None:
+            # TODO: log, error, etc
+            return
+
+        result = await client.clear_pending_roots(store_id=store_id)
+        print(json.dumps(result, indent=4, sort_keys=True))

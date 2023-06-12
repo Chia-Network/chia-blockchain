@@ -7,6 +7,8 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Unio
 
 import click
 
+from chia.types.blockchain_format.sized_bytes import bytes32
+
 _T = TypeVar("_T")
 
 
@@ -402,3 +404,19 @@ def check_plugins(
     from chia.cmds.data_funcs import check_plugins_cmd
 
     run(check_plugins_cmd(rpc_port=data_rpc_port))
+
+
+@data_cmd.command("clear_pending_roots", help="Clear pending roots that will not be published")
+@click.option("-i", "--id", "id_str", help="Store ID", type=str, required=True)
+@create_rpc_port_option()
+def clear_pending_roots(id_str: str, data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import clear_pending_roots
+
+    store_id = bytes32.from_hexstr(id_str)
+
+    run(
+        clear_pending_roots(
+            rpc_port=data_rpc_port,
+            store_id=store_id,
+        )
+    )
