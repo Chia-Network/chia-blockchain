@@ -260,12 +260,6 @@ class PoolWallet:
         pool_config_dict[new_config.launcher_id] = new_config
         await update_pool_config(self.wallet_state_manager.root_path, list(pool_config_dict.values()))
 
-    @staticmethod
-    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
-        # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
-        # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
-        return get_most_recent_singleton_coin_from_coin_spend(spend)
-
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
         Updates the Pool state (including DB) with new singleton spends.

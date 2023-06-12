@@ -1,25 +1,32 @@
 from __future__ import annotations
 
 import asyncio
+from typing import List, Tuple
 
 import pytest
 
 from chia.farmer.farmer import Farmer
+from chia.harvester.harvester import Harvester
+from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.keychain import generate_mnemonic
 
 
-def farmer_is_started(farmer):
+def farmer_is_started(farmer: Farmer) -> bool:
     return farmer.started
 
 
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
+async def test_start_with_empty_keychain(
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
     farmer_service.reconnect_retry_seconds = 1
     # First remove all keys from the keychain
+    assert bt.local_keychain is not None
     bt.local_keychain.delete_all_keys()
     # Make sure the farmer service is not initialized yet
     assert not farmer.started
@@ -37,7 +44,9 @@ async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(farmer_one_harvester_not_started):
+async def test_harvester_handshake(
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
     harvester = harvester_service._node
@@ -46,10 +55,10 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
     farmer_service.reconnect_retry_seconds = 1
     harvester_service.reconnect_retry_seconds = 1
 
-    def farmer_has_connections():
+    def farmer_has_connections() -> bool:
         return len(farmer.server.get_connections()) > 0
 
-    def handshake_task_active():
+    def handshake_task_active() -> bool:
         return farmer.harvester_handshake_task is not None
 
     async def handshake_done() -> bool:
@@ -57,6 +66,7 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
         return harvester.plot_manager._refresh_thread is not None and len(harvester.plot_manager.farmer_public_keys) > 0
 
     # First remove all keys from the keychain
+    assert bt.local_keychain is not None
     bt.local_keychain.delete_all_keys()
     # Handshake task and plot manager thread should not be running yet
     assert farmer.harvester_handshake_task is None

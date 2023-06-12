@@ -24,14 +24,14 @@ def test_has_ph_sub() -> None:
     assert sub.has_ph_subscription(ph2) is False
 
     ret = sub.add_ph_subscriptions(peer1, [ph1], 100)
-    assert ret == [ph1]
+    assert ret == {ph1}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is False
 
     ret = sub.add_ph_subscriptions(peer1, [ph1, ph2], 100)
     # we have already subscribed to ph1, it's filtered in the returned list
-    assert ret == [ph2]
+    assert ret == {ph2}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -127,13 +127,13 @@ def test_overlapping_ph_subscriptions() -> None:
 
     # subscribed to different phs
     ret = sub.add_ph_subscriptions(peer1, [ph1], 100)
-    assert ret == [ph1]
+    assert ret == {ph1}
 
     assert sub.peers_for_puzzle_hash(ph1) == {peer1}
     assert sub.peers_for_puzzle_hash(ph2) == set()
 
     ret = sub.add_ph_subscriptions(peer2, [ph2], 100)
-    assert ret == [ph2]
+    assert ret == {ph2}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -143,7 +143,7 @@ def test_overlapping_ph_subscriptions() -> None:
 
     # peer1 is now subscribing to both phs
     ret = sub.add_ph_subscriptions(peer1, [ph2], 100)
-    assert ret == [ph2]
+    assert ret == {ph2}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -171,7 +171,7 @@ def test_ph_sub_limit() -> None:
 
     ret = sub.add_ph_subscriptions(peer1, [ph1, ph2, ph3, ph4], 3)
     # we only ended up subscribing to 3 puzzle hashes because of the limit
-    assert ret == [ph1, ph2, ph3]
+    assert ret == {ph1, ph2, ph3}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -185,7 +185,7 @@ def test_ph_sub_limit() -> None:
 
     # peer1 should still be limited
     ret = sub.add_ph_subscriptions(peer1, [ph4], 3)
-    assert ret == []
+    assert ret == set()
 
     assert sub.has_ph_subscription(ph4) is False
     assert sub.peers_for_puzzle_hash(ph4) == set()
@@ -198,7 +198,7 @@ def test_ph_sub_limit() -> None:
 
     # peer2 is has its own limit
     ret = sub.add_ph_subscriptions(peer2, [ph4], 3)
-    assert ret == [ph4]
+    assert ret == {ph4}
 
     assert sub.has_ph_subscription(ph4) is True
     assert sub.peers_for_puzzle_hash(ph4) == {peer2}
@@ -216,7 +216,7 @@ def test_ph_sub_limit_incremental() -> None:
     assert sub.has_ph_subscription(ph3) is False
 
     ret = sub.add_ph_subscriptions(peer1, [ph1], 2)
-    assert ret == [ph1]
+    assert ret == {ph1}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is False
@@ -230,7 +230,7 @@ def test_ph_sub_limit_incremental() -> None:
 
     # this will cross the limit. Only ph2 will be added
     ret = sub.add_ph_subscriptions(peer1, [ph2, ph3], 2)
-    assert ret == [ph2]
+    assert ret == {ph2}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -273,7 +273,7 @@ def test_coin_sub_limit() -> None:
 
     # peer1 is also limied on ph subscriptions
     ret = sub.add_ph_subscriptions(peer1, [ph1], 3)
-    assert ret == []
+    assert ret == set()
 
     assert sub.has_ph_subscription(ph1) is False
     assert sub.peers_for_puzzle_hash(ph1) == set()
@@ -333,7 +333,7 @@ def test_ph_subscription_duplicates() -> None:
     assert sub.has_ph_subscription(ph4) is False
 
     ret = sub.add_ph_subscriptions(peer1, [ph1, ph2, ph3], 100)
-    assert ret == [ph1, ph2, ph3]
+    assert ret == {ph1, ph2, ph3}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True
@@ -342,7 +342,7 @@ def test_ph_subscription_duplicates() -> None:
 
     # only ph4 is new, the others are duplicates and ignored
     ret = sub.add_ph_subscriptions(peer1, [ph1, ph2, ph3, ph4], 100)
-    assert ret == [ph4]
+    assert ret == {ph4}
 
     assert sub.has_ph_subscription(ph1) is True
     assert sub.has_ph_subscription(ph2) is True

@@ -1,4 +1,5 @@
 {
+    "augmented_condition": "d303eafa617bedf0bc05850dd014e10fbddf622187dc07891a2aacba9d8a93f6",
     "block_program_zero": "f0a38c8efe58895ae527c65c37f700a4238504691b83990e5dd91bd8b3c30eae",
     "calculate_synthetic_public_key": "624c5d5704d0decadfc0503e71bbffb6cdfe45025bce7cf3e6864d1eafe8f65e",
     "cat_v2": "37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a",
@@ -45,6 +46,7 @@
     "nft_ownership_transfer_program_one_way_claim_with_royalties": "025dee0fb1e9fa110302a7e9bfb6e381ca09618e2778b0184fa5c6b275cfce1f",
     "nft_state_layer": "a04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2",
     "notification": "b8b9d8ffca6d5cba5422ead7f477ecfc8f6aaaa1c024b8c3aeb1956b24a0ab1e",
+    "p2_1_of_n": "46b29fd87fbeb6737600c4543931222a6c1ed3db6fa5601a3ca284a9f4efe780",
     "p2_announced_delegated_puzzle": "c4d24c3c5349376f3e8f3aba202972091713b4ec4915f0f26192ae4ace0bd04d",
     "p2_conditions": "1c77d7d5efde60a7a1d2d27db6d746bc8e568aea1ef8586ca967a0d60b83cc36",
     "p2_conditions_curryable": "a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222",

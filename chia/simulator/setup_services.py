@@ -98,9 +98,11 @@ async def setup_full_node(
     connect_to_daemon: bool = False,
     db_version: int = 1,
     disable_capabilities: Optional[List[Capability]] = None,
+    *,
+    reuse_db: bool = False,
 ) -> AsyncGenerator[Service[FullNode], None]:
     db_path = local_bt.root_path / f"{db_name}"
-    if db_path.exists():
+    if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
         gc.collect()
         db_path.unlink()
@@ -157,7 +159,7 @@ async def setup_full_node(
 
     service.stop()
     await service.wait_closed()
-    if db_path.exists():
+    if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
         gc.collect()
         db_path.unlink()
