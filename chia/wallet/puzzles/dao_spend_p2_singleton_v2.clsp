@@ -109,7 +109,6 @@
             P2_SINGLETON_PUZHASH
             tail_hash
             parent_amount_list
-            0
             (+ total (f (r (f parent_amount_list))))
             create_coin_sum
             output
@@ -124,7 +123,6 @@
                   CONDITIONS_FOR_THIS_ASSET_TYPE
                 )
               )
-              0
               output
             )
             (x)  ; the coins you've selected do not add up enough to cover the amount - TODO: is this necessary?
@@ -144,7 +142,6 @@
           CAT_MOD_HASH
           P2_SINGLETON_PUZHASH
           (r LIST_OF_TAILHASH_CONDITIONS)
-          LIST_OF_TAILHASH_CONDITIONS
           (r p2_singleton_tailhash_parent_amount_list)
           (for_each_asset
             CAT_MOD_HASH
