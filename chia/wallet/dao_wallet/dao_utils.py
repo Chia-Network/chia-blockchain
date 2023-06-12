@@ -224,7 +224,7 @@ def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = 
     if asset_id:
         # CAT
         puzzle = CAT_MOD.curry(CAT_MOD_HASH, asset_id, inner_puzzle)
-        return puzzle
+        return Program(puzzle)
     else:
         # XCH
         return inner_puzzle

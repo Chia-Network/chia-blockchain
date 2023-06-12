@@ -27,10 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import (
-    SpendableCAT,
-    construct_cat_puzzle,
-)
+from chia.wallet.cat_wallet.cat_utils import SpendableCAT, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -46,6 +43,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_TREASURY_MOD_HASH,
     SINGLETON_LAUNCHER,
     create_cat_launcher_for_singleton_id,
+    curry_cat_eve,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -71,7 +69,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_proposal,
     uncurry_proposal_validator,
     uncurry_treasury,
-    curry_cat_eve,
 )
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
@@ -1940,7 +1937,7 @@ class DAOWallet(WalletProtocol):
                         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
                     else:
                         cat_spend_bundle = cat_spend_bundle.aggregate(
-                            [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)]
+                            [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)]
                         )
                     tailhash_parent_amount_list.append([tail_hash, parent_amount_list])
 

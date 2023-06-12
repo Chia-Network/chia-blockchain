@@ -13,7 +13,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
@@ -76,8 +75,7 @@ def construct_cat_puzzle(
 
 
 def construct_cat_puzzlehash_for_inner_puzzlehash(tail_hash: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
-    CAT_MOD.curry(CAT_MOD_HASH, tail_hash, inner_puzzle_hash).get_tree_hash_precalc(inner_puzzle_hash)
-    return
+    return CAT_MOD.curry(CAT_MOD_HASH, tail_hash, inner_puzzle_hash).get_tree_hash_precalc(inner_puzzle_hash)
 
 
 def subtotals_for_deltas(deltas: List[int]) -> List[int]:

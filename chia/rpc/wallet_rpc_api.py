@@ -2585,6 +2585,7 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         tx = await dao_wallet.create_proposal_close_spend(
             bytes32.from_hexstr(request["proposal_id"]),
+            self.gen# bytes32.from_hexstr(request["genesis_id"]),
             fee,
             push=True,
             reuse_puzhash=request.get("reuse_puzhash", None),
