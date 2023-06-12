@@ -190,3 +190,7 @@ class WalletNodeAPI:
     @api_request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         pass
+
+    @api_request()
+    async def get_coin_infos(self, request: wallet_protocol.GetCoinInfosResponse):
+        pass

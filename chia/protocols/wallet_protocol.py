@@ -6,9 +6,11 @@ from typing import List, Optional, Tuple
 import chia_rs
 
 from chia.full_node.fee_estimate import FeeEstimateGroup
+from chia.types.block import BlockIdentifier
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -276,3 +278,18 @@ class RequestFeeEstimates(Streamable):
 @dataclass(frozen=True)
 class RespondFeeEstimates(Streamable):
     estimates: FeeEstimateGroup
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinInfosRequest(Streamable):
+    coin_ids: List[bytes32]
+    start_block: Optional[BlockIdentifier] = None
+    end_block: Optional[BlockIdentifier] = None
+    include_spend_info: bool = False
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCoinInfosResponse(Streamable):
+    coin_infos: List[CoinInfo]

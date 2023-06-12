@@ -187,6 +187,9 @@ class Err(Enum):
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
 
+    INVALID_SIZE = 142
+    INVALID_HASH = 143
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):

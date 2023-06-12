@@ -9,7 +9,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 from chiabip158 import PyBIP158
@@ -33,6 +33,8 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
+    GetCoinInfosRequest,
+    GetCoinInfosResponse,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
@@ -43,6 +45,7 @@ from chia.protocols.wallet_protocol import (
 from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.types.block import BlockIdentifierTimed
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -50,6 +53,7 @@ from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_s
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
+from chia.types.coin_spend import CoinInfo
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
@@ -59,6 +63,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request
+from chia.util.errors import ApiError, Err
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
@@ -76,6 +81,8 @@ class FullNodeAPI:
     log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
+
+    max_get_coin_info_ids: ClassVar[Dict[bool, int]] = {True: 50, False: 50000}
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
@@ -1578,6 +1585,75 @@ class FullNodeAPI:
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
+
+    async def coin_state_to_coin_info(self, coin_state: CoinState, *, include_spend_info: bool) -> CoinInfo:
+        created_block = None
+        spent_block = None
+        spend_info = None
+        if coin_state.created_height is not None:
+            block_record = self.full_node.blockchain.height_to_block_record(uint32(coin_state.created_height))
+            assert block_record.timestamp is not None, "created timestamp not available"
+            created_block = BlockIdentifierTimed(block_record.header_hash, block_record.height, block_record.timestamp)
+        if coin_state.spent_height is not None:
+            block_record = self.full_node.blockchain.height_to_block_record(uint32(coin_state.spent_height))
+            assert block_record.timestamp is not None, "spent timestamp not available"
+            spent_block = BlockIdentifierTimed(block_record.header_hash, block_record.height, block_record.timestamp)
+            if include_spend_info:
+                block = await self.full_node.block_store.get_block_info(spent_block.hash)
+                assert block is not None, "block not available"
+                block_generator = await self.full_node.blockchain.get_block_generator(block)
+                assert block_generator is not None, "block_generator not available"
+                # TODO: Group coins by blocks and get the spend infos in one call, this requires new rust method.
+                spend_info = await asyncio.get_running_loop().run_in_executor(
+                    self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_state.coin, 0
+                )
+        return CoinInfo(coin_state.coin, created_block, spent_block, spend_info)
+
+    @api_request()
+    async def get_coin_infos(self, request: GetCoinInfosRequest) -> Message:
+        max_coin_infos = self.max_get_coin_info_ids[request.include_spend_info]
+        filtered_coin_ids = set(request.coin_ids)
+        if len(filtered_coin_ids) > max_coin_infos:
+            raise ApiError(
+                Err.INVALID_SIZE,
+                f"too many coin_ids, maximum unique coin_ids allowed: {max_coin_infos}",
+            )
+
+        def process_block_parameter(key: str, default: uint32) -> uint32:
+            block_identifier: Optional[BlockIdentifierTimed] = getattr(request, key)
+            if block_identifier is None:
+                return default
+            local_hash = self.full_node.blockchain.height_to_hash(block_identifier.height)
+            if local_hash is None:
+                raise ApiError(
+                    Err.INVALID_HEIGHT,
+                    f"{key} not available - height: {block_identifier.height}, "
+                    f"peak: {self.full_node.blockchain.get_peak_height()}",
+                )
+            if local_hash != block_identifier.hash:
+                raise ApiError(
+                    Err.INVALID_HASH,
+                    f"{key} hash mismatch - expected: {block_identifier.hash.hex()} got: {local_hash.hex()}",
+                )
+            return block_identifier.height
+
+        # Validate start_block
+        start_height = process_block_parameter("start_block", uint32(0))
+        end_height = process_block_parameter("end_block", uint32.MAXIMUM)
+
+        # TODO, Investigate merging CoinState and CoinInfo creation in one step
+        coin_states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
+            include_spent_coins=True,
+            coin_ids=filtered_coin_ids,
+            min_height=start_height,
+            max_height=end_height,
+            max_items=max_coin_infos,
+        )
+        coin_infos = [
+            await self.coin_state_to_coin_info(coin_state, include_spend_info=request.include_spend_info)
+            for coin_state in coin_states
+        ]
+        return make_msg(ProtocolMessageTypes.get_coin_infos, GetCoinInfosResponse(coin_infos))
 
     @api_request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
