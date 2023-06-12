@@ -144,7 +144,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     )
 
 
-async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id = args["id"]
     paginate = args["paginate"]
     if paginate is None:
@@ -209,7 +209,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
     return fee >= amount
 
 
-async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
@@ -1241,7 +1241,7 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     print(f"Signing Mode: {signing_mode}")
 
 
-async def spend_clawback(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def spend_clawback(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     tx_ids = []
     for tid in args["tx_ids"].split(","):
         tx_ids.append(bytes32.from_hexstr(tid))

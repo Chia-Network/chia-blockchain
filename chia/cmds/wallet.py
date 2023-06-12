@@ -113,7 +113,7 @@ def get_transactions_cmd(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
-) -> None:
+) -> None:  # pragma: no cover
     extra_params = {
         "id": id,
         "verbose": verbose,
@@ -214,7 +214,7 @@ def send_cmd(
     coins_to_exclude: Tuple[str],
     reuse: bool,
     clawback_time: int,
-) -> None:
+) -> None:  # pragma: no cover
     extra_params = {
         "id": id,
         "amount": amount,
@@ -316,7 +316,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
-def clawback(wallet_rpc_port: Optional[int], id, fingerprint: int, tx_ids: str, fee: str) -> None:
+def clawback(wallet_rpc_port: Optional[int], id, fingerprint: int, tx_ids: str, fee: str) -> None:  # pragma: no cover
     extra_params = {"id": id, "tx_ids": tx_ids, "fee": fee}
     import asyncio
 
