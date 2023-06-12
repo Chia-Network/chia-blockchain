@@ -1013,10 +1013,10 @@ async def test_dao_proposal_partial_vote(
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
-    # await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_0, 0)
+    await time_out_assert(20, get_proposal_state, (True, True), dao_wallet_1, 0)
 
-    # await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
+    await time_out_assert(20, cat_wallet_1.get_spendable_balance, balance + new_mint_amount)
     # breakpoint()
 
 
