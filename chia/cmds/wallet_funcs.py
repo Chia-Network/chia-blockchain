@@ -58,7 +58,7 @@ def print_transaction(
     address_prefix: str,
     mojo_per_unit: int,
     coin_record: Optional[Dict[str, Any]] = None,
-) -> None:
+) -> None:  # pragma: no cover
     if verbose:
         print(tx)
     else:
