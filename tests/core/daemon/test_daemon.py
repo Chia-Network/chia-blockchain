@@ -22,9 +22,10 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-from chia.util.ws_message import create_payload
+from chia.util.ws_message import create_payload, create_payload_dict
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
 
@@ -78,6 +79,29 @@ test_key_data_no_secrets = replace(test_key_data, secrets=None)
 
 success_response_data = {
     "success": True,
+}
+
+plotter_request_ref = {
+    "service": "chia_plotter",
+    "plotter": "chiapos",
+    "k": 25,
+    "r": 2,
+    "u": 128,
+    "e": True,
+    "parallel": False,
+    "n": 1,
+    "queue": "default",
+    "d": "unknown",
+    "t": "unknown",
+    "t2": "",
+    "f": "",
+    "plotNFTContractAddr": "",
+    "x": True,
+    "b": 512,
+    "overrideK": True,
+    "delay": 0,
+    "a": 3598820529,
+    "c": "xxx",
 }
 
 
@@ -149,21 +173,27 @@ label_newline_or_tab_response_data = {
 }
 
 
-def assert_response(response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any]) -> None:
+def assert_response(
+    response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any], request_id: Optional[str] = None
+) -> None:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
     # Expect: daemon handled the request
     assert message["ack"] is True
+    if request_id is not None:
+        assert message["request_id"] == request_id
     # Expect: data matches the expected data
     assert message["data"] == expected_response_data
 
 
-def assert_response_success_only(response: aiohttp.http_websocket.WSMessage) -> None:
+def assert_response_success_only(response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None) -> None:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
     # Expect: {"success": True}
+    if request_id is not None:
+        assert message["request_id"] == request_id
     assert message["data"]["success"] is True
 
 
@@ -1140,101 +1170,26 @@ async def test_keyring_file_deleted(
     RouteCase(
         route="start_plotting",
         description="chiapos - missing k",
-        request={
-            "service": "chia_plotter",
-            "plotter": "chiapos",
-            "r": 2,
-            "u": 128,
-            "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "unknown",
-            "t": "unknown",
-            "t2": "",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-        },
+        request={k: v for k, v in plotter_request_ref.items() if k != "k"},
         response={"success": False, "error": "'k'"},
     ),
     RouteCase(
         route="start_plotting",
         description="chiapos - missing d",
-        request={
-            "service": "chia_plotter",
-            "plotter": "chiapos",
-            "k": 25,
-            "r": 2,
-            "u": 128,
-            "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "t": "unknown",
-            "t2": "",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-        },
+        request={k: v for k, v in plotter_request_ref.items() if k != "d"},
         response={"success": False, "error": "'d'"},
     ),
     RouteCase(
         route="start_plotting",
         description="chiapos - missing t",
-        request={
-            "service": "chia_plotter",
-            "plotter": "chiapos",
-            "k": 25,
-            "r": 2,
-            "u": 128,
-            "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "unknown",
-            "t2": "",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-        },
+        request={k: v for k, v in plotter_request_ref.items() if k != "t"},
         response={"success": False, "error": "'t'"},
     ),
     RouteCase(
         route="start_plotting",
         description="chiapos - both c and p",
         request={
-            "service": "chia_plotter",
-            "plotter": "chiapos",
-            "k": 25,
-            "r": 2,
-            "u": 128,
-            "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "unknown",
-            "t": "unknown",
-            "t2": "",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
+            **plotter_request_ref,
             "c": "hello",
             "p": "goodbye",
         },
@@ -1268,30 +1223,13 @@ async def test_plotter_errors(
         route="start_plotting",
         description="bladebit - ramplot",
         request={
-            "service": "chia_plotter",
+            **plotter_request_ref,
             "plotter": "bladebit",
             "plot_type": "ramplot",
             "w": True,
             "m": True,
             "no_cpu_affinity": True,
-            "k": 25,
-            "r": 2,
-            "u": 128,
             "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "root_path",
-            "t": "root_path",
-            "t2": "",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-            "c": "hello",
         },
         response={
             "success": True,
@@ -1301,30 +1239,13 @@ async def test_plotter_errors(
         route="start_plotting",
         description="bladebit - diskplot",
         request={
-            "service": "chia_plotter",
+            **plotter_request_ref,
             "plotter": "bladebit",
             "plot_type": "diskplot",
             "w": True,
             "m": True,
             "no_cpu_affinity": True,
-            "k": 25,
-            "r": 2,
-            "u": 128,
             "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "root_path",
-            "t": "root_path",
-            "t2": "testing",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-            "c": "hello",
             "cache": "cache",
             "f1_threads": 5,
             "fp_threads": 6,
@@ -1343,30 +1264,12 @@ async def test_plotter_errors(
         route="start_plotting",
         description="madmax",
         request={
-            "service": "chia_plotter",
+            **plotter_request_ref,
             "plotter": "madmax",
-            "plot_type": "diskplot",
             "w": True,
             "m": True,
             "no_cpu_affinity": True,
-            "k": 25,
-            "r": 2,
-            "u": 128,
-            "e": False,
-            "parallel": False,
-            "n": 1,
-            "queue": "default",
-            "d": "root_path",
-            "t": "root_path",
             "t2": "testing",
-            "f": "",
-            "plotNFTContractAddr": "",
-            "x": False,
-            "b": 512,
-            "overrideK": True,
-            "delay": 0,
-            "a": 3598820529,
-            "c": "hello",
             "v": 128,
         },
         response={
@@ -1393,16 +1296,17 @@ async def test_plotter_options(
     case.request["t"] = str(get_b_tools.root_path)
     case.request["d"] = str(get_b_tools.root_path)
 
-    payload = create_payload(
+    payload_rpc = create_payload_dict(
         case.route,
         case.request,
         "test_service_name",
         "daemon",
     )
+    payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
     response = await ws.receive()
 
-    assert_response_success_only(response)
+    assert_response_success_only(response, payload_rpc["request_id"])
 
 
 def assert_plot_queue_response(
@@ -1455,42 +1359,29 @@ async def test_plotter_roundtrip(
 
     root_path = get_b_tools.root_path
 
-    plotting_request = {
-        "service": "chia_plotter",
-        "plotter": "chiapos",
-        "k": 25,
-        "r": 2,
-        "u": 128,
-        "e": True,
-        "parallel": False,
-        "n": 1,
-        "queue": "default",
+    plotting_request: Dict[str, Any] = {
+        **plotter_request_ref,
         "d": str(root_path),
         "t": str(root_path),
-        "t2": "",
-        "f": "",
-        "plotNFTContractAddr": "",
-        "x": True,
-        "b": 512,
-        "overrideK": True,
-        "delay": 0,
-        "a": 3598820529,
         "p": "xxx",
     }
+    plotting_request.pop("c", None)
 
-    payload = create_payload(
+    payload_rpc = create_payload_dict(
         "start_plotting",
         plotting_request,
         "test_service_name",
         "daemon",
     )
+    payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
-    # should first get response to start_plotting
+    # should first get response to start_plottin
     response = await ws.receive()
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
     assert message["data"]["success"] is True
+    assert message["request_id"] == payload_rpc["request_id"]
     plot_id = message["data"]["ids"][0]
 
     # 1) Submitted
@@ -1514,6 +1405,10 @@ async def test_plotter_roundtrip(
         final_log_entry = check_plot_queue_log(
             response, "state_changed", "log_changed", plot_id, "RUNNING", "Renamed final file"
         )
+        if not final_log_entry:
+            with open(plot_log_path, "a") as f:
+                f.write("Renamed final file")
+                f.flush()
 
     # 4) Finished
     response = await ws.receive()
@@ -1536,35 +1431,19 @@ async def test_plotter_stop_plotting(
 
     root_path = get_b_tools.root_path
 
-    plotting_request = {
-        "service": "chia_plotter",
-        "plotter": "chiapos",
-        "k": 25,
-        "r": 2,
-        "u": 128,
-        "e": False,
-        "parallel": False,
-        "n": 1,
-        "queue": "default",
+    plotting_request: Dict[str, Any] = {
+        **plotter_request_ref,
         "d": str(root_path),
         "t": str(root_path),
-        "t2": "",
-        "f": "",
-        "plotNFTContractAddr": "",
-        "x": False,
-        "b": 512,
-        "overrideK": True,
-        "delay": 0,
-        "a": 3598820529,
-        "c": "xxx",
     }
 
-    payload = create_payload(
+    payload_rpc = create_payload_dict(
         "start_plotting",
         plotting_request,
         "test_service_name",
         "daemon",
     )
+    payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
     # should first get response to start_plotting
@@ -1572,6 +1451,8 @@ async def test_plotter_stop_plotting(
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
     assert message["data"]["success"] is True
+    # make sure matches the start_plotting request
+    assert message["request_id"] == payload_rpc["request_id"]
     plot_id = message["data"]["ids"][0]
 
     # 1) Submitted
@@ -1582,12 +1463,15 @@ async def test_plotter_stop_plotting(
     response = await ws.receive()
     assert_plot_queue_response(response, "state_changed", "state_changed", plot_id, "RUNNING")
 
-    payload = create_payload(
+    payload_rpc = create_payload_dict(
         "stop_plotting",
         {"id": plot_id},
         "service_name",
         "daemon",
     )
+
+    stop_plotting_request_id = payload_rpc["request_id"]
+    payload = dict_to_json_str(payload_rpc)
     await ws.send_str(payload)
 
     # 3) removing
@@ -1600,4 +1484,4 @@ async def test_plotter_stop_plotting(
 
     # 5) Finally, get the "ack" for the stop_plotting payload
     response = await ws.receive()
-    assert_response(response, {"success": True})
+    assert_response(response, {"success": True}, stop_plotting_request_id)
