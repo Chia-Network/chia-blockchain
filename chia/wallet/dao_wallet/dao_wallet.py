@@ -27,7 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import SpendableCAT, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, SpendableCAT, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -73,7 +73,6 @@ from chia.wallet.dao_wallet.dao_utils import (
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
