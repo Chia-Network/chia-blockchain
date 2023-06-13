@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -46,6 +47,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
@@ -57,8 +59,6 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 class Wallet:
     if TYPE_CHECKING:
-        from chia.wallet.wallet_protocol import WalletProtocol
-
         _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
 
     wallet_info: WalletInfo
@@ -485,21 +485,22 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         fee: uint64 = uint64(0),
-        origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
-        negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
         excluded_coins: Optional[Set[Coin]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> TransactionRecord:
+        origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
+        negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
