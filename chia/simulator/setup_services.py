@@ -18,6 +18,8 @@ from chia.full_node.full_node import FullNode
 from chia.harvester.harvester import Harvester
 from chia.introducer.introducer import Introducer
 from chia.protocols.shared_protocol import Capability, capabilities
+from chia.seeder.crawler import Crawler
+from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
@@ -163,6 +165,32 @@ async def setup_full_node(
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
         gc.collect()
         db_path.unlink()
+
+
+async def setup_crawler(
+    bt: BlockTools,
+) -> AsyncGenerator[Service[Crawler], None]:
+    config = bt.config
+    service_config = config["seeder"]
+    service_config["selected_network"] = "testnet0"
+    service_config["port"] = 0
+    service_config["start_rpc_server"] = False
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
+    updated_constants = bt.constants.replace_str_to_bytes(**overrides)
+    bt.change_config(config)
+    service = create_full_node_crawler_service(
+        bt.root_path,
+        config,
+        updated_constants,
+        connect_to_daemon=False,
+    )
+    await service.start()
+
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 # Note: convert these setup functions to fixtures, or push it one layer up,
