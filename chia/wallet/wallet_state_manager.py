@@ -1130,6 +1130,8 @@ class WalletStateManager:
         # Record metadata
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
+        # For resync correctly, we need to fetch the coin state again
+        latest_coin_state = (await self.wallet_node.get_coin_state([coin_state.coin.name()], peer=peer))[0]
         # Check if the wallet is the sender
         sender_derivation_record: Optional[
             DerivationRecord
@@ -1149,11 +1151,14 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
+            spent_height: uint32 = uint32(0)
+            if latest_coin_state.spent_height is not None:
+                spent_height = uint32(latest_coin_state.spent_height)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
-                uint32(0),
-                False,
+                spent_height,
+                False if latest_coin_state.spent_height is None else True,
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
@@ -1171,7 +1176,7 @@ class WalletStateManager:
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False,
+                confirmed=False if latest_coin_state.spent_height is None else True,
                 sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin_state.coin],
