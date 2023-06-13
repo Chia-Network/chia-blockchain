@@ -24,13 +24,10 @@ for i in "${licenses_array[@]}"; do
   mkdir -p "$dirname"
   cp "$i" "$dirname"
 done
-ls -lah licenses
-ls -lah
+
 mv licenses/ ../build_scripts/dist/daemon
 cd ../build_scripts || 'exit" or "cd' || return
 
-ls -lah
-ls -lah licenses
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
 
