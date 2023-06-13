@@ -1151,9 +1151,9 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
-            spent_height: uint32 = uint32(0)
-            if latest_coin_state.spent_height is not None:
-                spent_height = uint32(latest_coin_state.spent_height)
+            spent_height: uint32 = (
+                uint32(0) if latest_coin_state.spent_height is None else uint32(latest_coin_state.spent_height)
+            )
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
