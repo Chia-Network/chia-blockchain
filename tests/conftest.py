@@ -25,6 +25,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -822,7 +823,7 @@ async def timelord_service(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler]]:
+async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
     async for service in setup_crawler(bt):
         yield service
 

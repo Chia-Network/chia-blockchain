@@ -23,6 +23,7 @@ from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
@@ -175,7 +176,7 @@ async def setup_full_node(
 
 async def setup_crawler(
     bt: BlockTools,
-) -> AsyncGenerator[Service[Crawler], None]:
+) -> AsyncGenerator[Service[Crawler, CrawlerAPI], None]:
     config = bt.config
     service_config = config["seeder"]
     service_config["selected_network"] = "testnet0"

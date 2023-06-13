@@ -9,6 +9,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import RequestChildren
 from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import make_msg
 from chia.server.start_service import Service
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
@@ -22,7 +23,7 @@ from chia.util.ints import uint16
 async def test_unknown_messages(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
-    crawler_service: Service[Crawler],
+    crawler_service: Service[Crawler, CrawlerAPI],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
