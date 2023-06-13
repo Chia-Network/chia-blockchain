@@ -515,7 +515,7 @@ async def test_create_signed_transaction(
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
-    push_res = await full_node_rpc.push_tx(spend_bundle)
+    push_res = await wallet_1_rpc.push_transactions([tx])
     assert push_res["success"]
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
@@ -2099,7 +2099,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
                 cat_puzzle,
                 Program.to(
                     [
-                        Program.to([[51, our_ph, tx_amount], [51, None, -113, None, None]]),
+                        Program.to([[51, our_ph, tx_amount, [our_ph]], [51, None, -113, None, None]]),
                         None,
                         cat_coin.name(),
                         coin_as_list(cat_coin),
