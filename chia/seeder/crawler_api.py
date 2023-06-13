@@ -25,7 +25,7 @@ class CrawlerAPI:
         return self.crawler.server
 
     def ready(self) -> bool:
-        return False
+        return True
 
     @api_request(peer_required=True)
     async def request_peers(
