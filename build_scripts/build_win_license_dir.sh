@@ -47,7 +47,6 @@ done <<< "$output"
 
 # create a dir for each license and copy the license file over
 for i in "${license_path_array[@]}"; do
-  filename=$(basename "$i")
   dirname="dist/daemon/licenses/$(basename "$(dirname "$i")")"
   echo "$dirname"
   mkdir -p "$dirname"
