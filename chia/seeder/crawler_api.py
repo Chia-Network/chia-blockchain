@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.seeder.crawler import Crawler
@@ -16,12 +16,6 @@ class CrawlerAPI:
 
     def __init__(self, crawler: Crawler) -> None:
         self.crawler = crawler
-
-    def __getattr__(self, attr_name: str) -> Any:
-        async def invoke(*args: Any, **kwargs: Any) -> Any:
-            pass
-
-        return invoke
 
     @property
     def server(self) -> ChiaServer:

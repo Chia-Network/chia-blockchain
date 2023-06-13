@@ -36,7 +36,7 @@ async def test_unknown_messages(
     msg = make_msg(ProtocolMessageTypes.request_children, RequestChildren(bytes32(b"\0" * 32)))
 
     def receiving_failed() -> bool:
-        return "Peer trying to call non api function request_children" in caplog.text
+        return "Non existing function: request_children" in caplog.text
 
     with caplog.at_level(logging.ERROR):
         assert await send_connection.send_message(msg)
