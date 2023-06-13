@@ -923,7 +923,12 @@ class WalletRpcApi:
 
     async def get_transaction_count(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+            wallet_id, confirmed=request.get("confirmed", None), type_filter=type_filter
+        )
         return {
             "count": count,
             "wallet_id": wallet_id,
