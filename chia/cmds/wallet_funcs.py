@@ -44,6 +44,9 @@ transaction_type_descriptions = {
     TransactionType.FEE_REWARD: "rewarded",
     TransactionType.INCOMING_TRADE: "received in trade",
     TransactionType.OUTGOING_TRADE: "sent in trade",
+    TransactionType.INCOMING_CLAWBACK_RECEIVE: "received in clawback as recipient",
+    TransactionType.INCOMING_CLAWBACK_SEND: "received in clawback as sender",
+    TransactionType.OUTGOING_CLAWBACK: "claim/clawback",
 }
 
 
@@ -71,16 +74,12 @@ def print_transaction(
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
         if coin_record is not None:
-            if tx.type == TransactionType.INCOMING_CLAWBACK_RECEIVE.value:
-                print("Clawback: Recipient")
-                print(
-                    "Claimable after:",
-                    datetime.fromtimestamp(tx.created_at_time + coin_record["metadata"]["time_lock"]).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
-                )
-            else:
-                print("Clawback: Sender")
+            print(
+                "Recipient claimable time:",
+                datetime.fromtimestamp(tx.created_at_time + coin_record["metadata"]["time_lock"]).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            )
         print("")
 
 
