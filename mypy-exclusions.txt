@@ -23,7 +23,6 @@ chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
 chia.seeder.crawl_store
 chia.seeder.crawler
-chia.seeder.crawler_api
 chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
