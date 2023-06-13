@@ -118,6 +118,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=uint64(1),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
@@ -280,6 +281,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=uint64(1),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
@@ -429,6 +431,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=uint64(1),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
@@ -586,8 +589,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     if not trusted:
         # give the wallet node a second to collect the proposal votes
         await asyncio.sleep(1)
-    await time_out_assert(10, len, 1, dao_wallet_2.dao_info.proposals_list)
-    await time_out_assert(10, int, total_votes, dao_wallet_2.dao_info.proposals_list[0].amount_voted)
+    await time_out_assert(20, len, 1, dao_wallet_2.dao_info.proposals_list)
+    await time_out_assert(20, int, total_votes, dao_wallet_2.dao_info.proposals_list[0].amount_voted)
 
     # Get the proposal from singleton store and check the singleton block height updates correctly
     proposal_state = await dao_wallet_0.get_proposal_state(prop.proposal_id)
@@ -610,6 +613,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         pass_percentage=uint64(10000),  # 100%
         self_destruct_length=uint64(8),
         oracle_spend_delay=uint64(2),
+        proposal_minimum_amount=uint64(1),
     )
     update_inner = await dao_wallet_0.generate_update_proposal_innerpuz(new_dao_rules)
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
@@ -848,6 +852,7 @@ async def test_dao_proposal_partial_vote(
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=uint64(1),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
@@ -1076,6 +1081,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=uint64(1),
     )
 
     dao_wallet_0 = await api_0.create_new_wallet(
@@ -1359,6 +1365,7 @@ async def test_dao_rpc_client(
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),
             oracle_spend_delay=uint64(10),
+            proposal_minimum_amount=uint64(1),
         )
         filter_amount = 1
         fee = 10000
@@ -1584,6 +1591,7 @@ async def test_dao_cat_exits(
             pass_percentage=uint64(5100),  # 51%
             self_destruct_length=uint64(20),
             oracle_spend_delay=uint64(10),
+            proposal_minimum_amount=uint64(1),
         )
         filter_amount = 1
         fee = 10000

@@ -1753,6 +1753,8 @@ class DAOWallet(WalletProtocol):
                     proposal_id,
                     TOTAL_VOTES,
                     YES_VOTES,
+                    proposal_info.current_coin.parent_coin_info,
+                    proposal_info.current_coin.amount,
                 ]
             )
             # p2_singleton_parent_amount_list  ; for xch this is just a list of (coin_parent coin_amount)
@@ -1945,7 +1947,7 @@ class DAOWallet(WalletProtocol):
             treasury_solution = Program.to(
                 [
                     1,
-                    [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
+                    [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
                     validator_solution,
                     puzzle_reveal,
                     delegated_solution,
@@ -1985,7 +1987,7 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        # breakpoint()
+        breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

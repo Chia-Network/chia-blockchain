@@ -51,3 +51,4 @@ class DAORules(Streamable):
     pass_percentage: uint64
     self_destruct_length: uint64
     oracle_spend_delay: uint64
+    proposal_minimum_amount: uint64

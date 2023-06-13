@@ -7,6 +7,7 @@
     LOCKUP_MOD_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
+    PROPOSAL_MINIMUM_AMOUNT
     Attendance_Required  ; this is passed in as a Truth from above
     Pass_Margin  ; this is a pass in as a Truth from above
     (announcement_source delegated_puzzle_hash announcement_args)
@@ -14,6 +15,8 @@
       proposal_id
       total_votes
       yes_votes
+      coin_parent
+      coin_amount
     )
     conditions
   )
@@ -112,25 +115,30 @@
 
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
+    (> (+ coin_amount ONE) PROPOSAL_MINIMUM_AMOUNT) ; >=
     (> total_votes Attendance_Required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
     (> yes_votes (calculate_win_percentage total_votes Pass_Margin))
     (=
       announcement_source
-      (calculate_full_puzzle_hash
-        (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-        (calculate_proposal_puzzle
-          PROPOSAL_MOD_HASH
+      (calculate_coin_id
+        coin_parent
+        (calculate_full_puzzle_hash
           (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
-          PROPOSAL_TIMER_MOD_HASH
-          CAT_MOD_HASH
-          TREASURY_MOD_HASH
-          LOCKUP_MOD_HASH
-          CAT_TAIL_HASH
-          (f (r SINGLETON_STRUCT))
-          yes_votes  ; this is where we validate the yes votes and total votes
-          total_votes
-          delegated_puzzle_hash
+          (calculate_proposal_puzzle
+            PROPOSAL_MOD_HASH
+            (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))
+            PROPOSAL_TIMER_MOD_HASH
+            CAT_MOD_HASH
+            TREASURY_MOD_HASH
+            LOCKUP_MOD_HASH
+            CAT_TAIL_HASH
+            (f (r SINGLETON_STRUCT))
+            yes_votes  ; this is where we validate the yes votes and total votes
+            total_votes
+            delegated_puzzle_hash
+          )
         )
+        coin_amount
       )
     )
     conditions

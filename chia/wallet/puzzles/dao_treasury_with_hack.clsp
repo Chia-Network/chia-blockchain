@@ -77,7 +77,7 @@
               ; also announce the oracle info so proposals can close if treasury is being spammed
               (list CREATE_PUZZLE_ANNOUNCEMENT 0)  ; the arguments are secured implicitly in the puzzle of the treasury
               (c
-                (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
+                (list ASSERT_COIN_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
                 (a
                   PROPOSAL_VALIDATOR
                   (list
