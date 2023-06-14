@@ -68,7 +68,7 @@ async def validate_client_connection(
         if not consume_errors:
             raise
         connected = False
-        print(f"Connection error: {type(e).__name__} {e}")
+        print(f"Connection error: {type(e).__name__}: {e}")
         if isinstance(e, ClientConnectorCertificateError):
             print(f"Check if client and rpc (port: {rpc_port}) certificates match")
         else:
