@@ -51,7 +51,7 @@ dev_dependencies = [
     "pre-commit",
     "py3createtorrent",
     "pylint",
-    "pytest",
+    "pytest==7.3.1",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
