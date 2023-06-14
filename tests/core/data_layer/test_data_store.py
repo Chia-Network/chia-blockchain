@@ -1266,3 +1266,22 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     await data_store.clear_pending_roots(tree_id=tree_id)
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
     assert pending_root is None
+
+
+@pytest.mark.asyncio
+async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.PENDING,
+    )
+
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    cleared_root = await data_store.clear_pending_roots(tree_id=tree_id)
+    assert cleared_root == pending_root

@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import copy
+import json
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
@@ -10,12 +13,14 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 import pytest
 import pytest_asyncio
 
+from chia.cmds.data_funcs import clear_pending_roots
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import OfferIntegrityError
-from chia.data_layer.data_layer_util import OfferStore, StoreProofs
+from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
@@ -42,9 +47,9 @@ two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple
 
 
 @contextlib.asynccontextmanager
-async def init_data_layer(
+async def init_data_layer_service(
     wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
-) -> AsyncIterator[DataLayer]:
+) -> AsyncIterator[Service[DataLayer]]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
@@ -58,10 +63,18 @@ async def init_data_layer(
     )
     await service.start()
     try:
-        yield service._api.data_layer
+        yield service
     finally:
         service.stop()
         await service.wait_closed()
+
+
+@contextlib.asynccontextmanager
+async def init_data_layer(
+    wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
+) -> AsyncIterator[DataLayer]:
+    async with init_data_layer_service(wallet_rpc_port, bt, db_path, wallet_service) as data_layer_service:
+        yield data_layer_service._api.data_layer
 
 
 @pytest_asyncio.fixture(name="bare_data_layer_api")
@@ -1828,3 +1841,94 @@ async def test_get_sync_status(
         assert sync_status["target_root_hash"] != sync_status["root_hash"]
         assert sync_status["generation"] == 2
         assert sync_status["target_generation"] == 3
+
+
+# TODO: if this parametrization is kept then it should be an enumeration, not strings
+@pytest.mark.parametrize(argnames="use_client", argvalues=["direct", "client", "funcs", "cli"])
+@pytest.mark.asyncio
+async def test_clear_pending_roots(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    use_client: str,
+    bt: BlockTools,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    # TODO: we don't need the service for direct...
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        # test insert
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        data_store = data_layer.data_store
+
+        tree_id = bytes32(range(32))
+        await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+
+        key = b"\x01\x02"
+        value = b"abc"
+
+        await data_store.insert(
+            key=key,
+            value=value,
+            tree_id=tree_id,
+            reference_node_hash=None,
+            side=None,
+            status=Status.PENDING,
+        )
+
+        pending_root = await data_store.get_pending_root(tree_id=tree_id)
+        if use_client == "direct":
+            cleared_root = await data_rpc_api.clear_pending_roots({"store_id": tree_id.hex()})
+        elif use_client == "funcs":
+            cleared_root = await clear_pending_roots(
+                store_id=tree_id,
+                rpc_port=rpc_port,
+                root_path=bt.root_path,
+            )
+        elif use_client == "cli":
+            args: List[str] = [
+                sys.executable,
+                "-m",
+                "chia",
+                "data",
+                "clear_pending_roots",
+                "--id",
+                tree_id.hex(),
+                "--data-rpc-port",
+                str(rpc_port),
+            ]
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait()
+            assert process.stdout is not None
+            assert process.stderr is not None
+            stdout = await process.stdout.read()
+            cleared_root = json.loads(stdout)
+            stderr = await process.stderr.read()
+            assert process.returncode == 0
+            assert stderr == b""
+        elif use_client == "client":
+            client = await DataLayerRpcClient.create(
+                self_hostname=self_hostname,
+                port=rpc_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
+            try:
+                cleared_root = await client.clear_pending_roots(store_id=tree_id)
+            finally:
+                client.close()
+                await client.await_closed()
+        else:
+            assert False, "bad parametrization"
+
+        assert cleared_root == {"success": True, "root": pending_root.marshal()}
