@@ -16,6 +16,7 @@
     proposal_innerpuzhash
     proposal_timelock
     parent_parent
+    parent_amount
   )
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
@@ -110,7 +111,7 @@
           0
           proposal_innerpuzhash
         )
-        ONE
+        parent_amount
       )
 
     )

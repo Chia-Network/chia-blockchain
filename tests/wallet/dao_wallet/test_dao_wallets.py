@@ -431,7 +431,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         pass_percentage=uint64(5100),  # 51%
         self_destruct_length=uint64(20),
         oracle_spend_delay=uint64(10),
-        proposal_minimum_amount=uint64(1),
+        proposal_minimum_amount=uint64(101),
     )
 
     async with wallet_node_0.wallet_state_manager.lock:
