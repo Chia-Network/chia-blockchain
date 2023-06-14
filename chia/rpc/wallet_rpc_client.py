@@ -164,11 +164,16 @@ class WalletRpcClient(RpcClient):
     async def get_transaction_count(
         self,
         wallet_id: int,
+        confirmed: Optional[bool] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
-        res = await self.fetch(
-            "get_transaction_count",
-            {"wallet_id": wallet_id},
-        )
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        if type_filter is not None:
+            request["type_filter"] = type_filter.to_json_dict()
+
+        if confirmed is not None:
+            request["confirmed"] = confirmed
+        res = await self.fetch("get_transaction_count", request)
         return res["count"]
 
     async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
