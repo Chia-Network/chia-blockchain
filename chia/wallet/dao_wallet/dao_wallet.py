@@ -349,6 +349,8 @@ class DAOWallet(WalletProtocol):
             LOCKUP_MOD_HASH,
             TREASURY_MOD_HASH,
             CAT_TAIL_HASH,
+            PROPOSAL_MINIMUM_AMOUNT,
+            PAYOUT_PUZHASH,
         ) = curried_args.as_iter()
 
         # TODO: how is this working with our system about receiving CATs you haven't subscribed to?
@@ -1691,7 +1693,6 @@ class DAOWallet(WalletProtocol):
                 solution,
             ]
         )
-        breakpoint()
         proposal_cs = CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)
         # PROPOSAL_MOD_HASH
         # PROPOSAL_TIMER_MOD_HASH
@@ -2384,10 +2385,7 @@ class DAOWallet(WalletProtocol):
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if current_coin is None:
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
-        if current_coin.amount < dao_rules.proposal_minimum_amount:
-            # TODO: is this the best way of handling this?
-            breakpoint()
-            raise ValueError("this coin does not meet the minimum requirements and can be ignored")
+
         ended = False
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
@@ -2406,6 +2404,10 @@ class DAOWallet(WalletProtocol):
             if current_innerpuz == DAO_FINISHED_STATE:
                 ended = True
 
+        if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
+            # TODO: is this the best way of handling this?
+            # breakpoint()
+            raise ValueError("this coin does not meet the minimum requirements and can be ignored")
         new_total_votes = TOTAL_VOTES.as_int() + votes_added
         if new_total_votes < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount

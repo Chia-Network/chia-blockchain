@@ -104,7 +104,8 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         DAO_LOCKUP_MOD_HASH,
         DAO_TREASURY_MOD_HASH,
         cat_tail_hash,
-        dao_rules.proposal_minimum_amount
+        dao_rules.proposal_minimum_amount,
+        get_p2_singleton_puzzle(treasury_id).get_tree_hash(),  # TODO: let people set this later - for now a hidden feature
     )
     # TREASURY_MOD_HASH
     # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
@@ -188,6 +189,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
 
     dao_rules = DAORules(
@@ -393,6 +395,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
     return DAORules(
         uint64(int_from_bytes(proposal_timelock.as_atom())),
@@ -525,6 +528,7 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
     return bytes32(CAT_TAIL_HASH.as_atom())
 

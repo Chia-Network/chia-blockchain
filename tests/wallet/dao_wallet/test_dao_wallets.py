@@ -586,9 +586,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     assert dao_wallet_2 is not None
     assert dao_wallet_2.dao_info.treasury_id == treasury_id
 
-    if not trusted:
-        # give the wallet node a second to collect the proposal votes
-        await asyncio.sleep(1)
+    await asyncio.sleep(1)
     await time_out_assert(20, len, 1, dao_wallet_2.dao_info.proposals_list)
     await time_out_assert(20, int, total_votes, dao_wallet_2.dao_info.proposals_list[0].amount_voted)
 
