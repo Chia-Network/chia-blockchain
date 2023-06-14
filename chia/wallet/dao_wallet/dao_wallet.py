@@ -159,20 +159,20 @@ class DAOWallet(WalletProtocol):
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount_of_cats > bal:
-            raise ValueError("Not enough balance")
+            raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
 
         self.dao_info = DAOInfo(
-            bytes32([0] * 32),
-            uint32(0),
-            uint32(0),
-            [],
-            [],
-            None,
-            None,
-            uint32(0),
-            filter_amount,
-            [],
-            uint64(0),
+            treasury_id=bytes32([0] * 32),
+            cat_wallet_id=uint32(0),
+            dao_cat_wallet_id=uint32(0),
+            proposals_list=[],
+            parent_info=[],
+            current_treasury_coin=None,
+            current_treasury_innerpuz=None,
+            singleton_block_height=uint32(0),
+            filter_below_vote_amount=filter_amount,
+            assets=[],
+            current_height=uint64(0),
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -184,17 +184,15 @@ class DAOWallet(WalletProtocol):
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
 
         try:
-            launcher_spend = await self.generate_new_dao(
+            await self.generate_new_dao(
                 amount_of_cats,
                 fee=fee,
             )
-        except Exception:
+        except Exception as e_info:
             await wallet_state_manager.user_store.delete_wallet(self.id())
+            self.log.error(f"Failed to create dao wallet: {e_info}")
             raise
 
-        if launcher_spend is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
-            raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self)
 
         # Now the dao wallet is created we can create the dao_cat wallet
@@ -206,8 +204,8 @@ class DAOWallet(WalletProtocol):
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
-            dao_cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
+            self.dao_info.cat_wallet_id,
+            dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -520,17 +518,25 @@ class DAOWallet(WalletProtocol):
         return self.wallet_info.id
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        # This wallet only tracks coins, and does not hold any spendable value
-        return uint128(0)
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+
+        amount: uint128 = uint128(0)
+        for record in record_list:
+            parent = self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                amount = uint128(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for dao wallet is {amount}")
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         # No spendable or receivable value
         return uint64(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        # TODO: should get_unconfirmed_balance return zero?
-        # return uint128(await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list))
-        return uint128(0)
+        unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+        return uint128(unc_bal)
 
     async def select_coins(
         self,
@@ -543,6 +549,8 @@ class DAOWallet(WalletProtocol):
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
+        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        always be a single coin with amount 1
         """
 
         spendable_amount: uint128 = await self.get_spendable_balance()
@@ -783,19 +791,18 @@ class DAOWallet(WalletProtocol):
         return chia_tx
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return Program(Program.to(0))
+        puz: Program = Program.to(0)
+        return puz
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return bytes32(Program.to(0).get_tree_hash())
+        puz_hash: bytes32 = bytes32(Program.to(0).get_tree_hash())
+        return puz_hash
 
     async def get_new_puzzle(self) -> Program:
-        return self.puzzle_for_pk(
-            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        )
+        puz: Program = Program.to(0)
+        return puz
 
     async def set_name(self, new_name: str) -> None:
-        import dataclasses
-
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
@@ -2257,7 +2264,10 @@ class DAOWallet(WalletProtocol):
         return uint64(0)
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id, unspent_records
+        )
+        return uint128(spendable_am)
 
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)

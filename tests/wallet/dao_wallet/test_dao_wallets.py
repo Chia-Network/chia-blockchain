@@ -6,6 +6,7 @@ import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
+from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -120,6 +121,17 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         oracle_spend_delay=uint64(10),
     )
 
+    # Try to create a DAO with more CATs than xch balance
+    with pytest.raises(ValueError) as e_info:
+        async with wallet_node_0.wallet_state_manager.lock:
+            dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+                wallet_node_0.wallet_state_manager,
+                wallet,
+                funds + 1,
+                dao_rules,
+            )
+    assert e_info.value.args[0] == f"Your balance of {funds} mojos is not enough to create {funds + 1} CATs"
+
     async with wallet_node_0.wallet_state_manager.lock:
         dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
             wallet_node_0.wallet_state_manager,
@@ -146,20 +158,18 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
     for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    # async with wallet_node_0.wallet_state_manager.lock:
-    #     await dao_wallet_0.generate_treasury_eve_spend()
-    # tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-    # tx_record = tx_queue[0]
-    # await full_node_api.process_transaction_records(records=[tx_record])
-    # await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-    #
-    # eve_coin = tx_record.removals[0]
-    # await time_out_assert(
-    #     60,
-    #     dao_wallet_0.is_spend_retrievable,
-    #     True,
-    #     eve_coin.name(),
-    # )
+
+    # check the dao wallet balances
+    assert (await dao_wallet_0.get_confirmed_balance()) == uint64(1)
+    assert (await dao_wallet_0.get_unconfirmed_balance()) == uint64(1)
+    assert (await dao_wallet_0.get_pending_change_balance()) == uint64(0)
+    assert (await dao_wallet_0.get_spendable_balance()) == uint64(1)
+
+    # check select coins
+    no_coins = await dao_wallet_0.select_coins(uint64(2))
+    assert no_coins == set()
+    selected_coins = await dao_wallet_0.select_coins(uint64(1))
+    assert len(selected_coins) == 1
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
@@ -218,6 +228,40 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     await time_out_assert(10, cat_wallet_1.get_confirmed_balance, cat_amt)
+
+    # Smaller tests of dao_wallet funcs for coverage
+    # adjust filter level
+    await dao_wallet_0.adjust_filter_level(uint64(10))
+    assert dao_wallet_0.dao_info.filter_below_vote_amount == uint64(10)
+
+    assert dao_wallet_0.puzzle_for_pk(G1Element()) == Program.to(0)
+    assert dao_wallet_0.puzzle_hash_for_pk(G1Element()) == Program.to(0).get_tree_hash()
+    assert (await dao_wallet_0.get_new_puzzle()) == Program.to(0)
+
+    await dao_wallet_0.set_name("Renamed Wallet")
+    assert dao_wallet_0.get_name() == "Renamed Wallet"
+
+    new_inner_puzhash = await dao_wallet_0.get_new_p2_inner_hash()
+    assert isinstance(new_inner_puzhash, bytes32)
+
+    # generate new dao spends with bad cat details
+    with pytest.raises(ValueError) as e_info:
+        # negative cat amount
+        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, -100)
+    assert e_info.value.args[0] == "amount_of_cats must be >= 0, or None"
+
+    with pytest.raises(ValueError) as e_info:
+        # create 0 cats
+        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 0)
+    assert e_info.value.args[0] == "amount_of_cats must be > 0 or cat_tail_hash must be specified"
+
+    with pytest.raises(ValueError) as e_info:
+        # create with existing tail
+        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 100, bytes32(b"a" * 32))
+    assert e_info.value.args[0] == "cannot create voting cats and use existing cat_tail_hash"
+
+    # generate the spend successfully
+    new_dao_spend = await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, cat_amt)
 
 
 @pytest.mark.parametrize(
