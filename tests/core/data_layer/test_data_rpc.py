@@ -16,6 +16,7 @@ import pytest_asyncio
 from chia.cmds.data_funcs import clear_pending_roots
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
@@ -38,6 +39,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -48,8 +50,11 @@ two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple
 
 @contextlib.asynccontextmanager
 async def init_data_layer_service(
-    wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
-) -> AsyncIterator[Service[DataLayer]]:
+    wallet_rpc_port: uint16,
+    bt: BlockTools,
+    db_path: Path,
+    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
@@ -71,7 +76,10 @@ async def init_data_layer_service(
 
 @contextlib.asynccontextmanager
 async def init_data_layer(
-    wallet_rpc_port: uint16, bt: BlockTools, db_path: Path, wallet_service: Optional[Service[WalletNode]] = None
+    wallet_rpc_port: uint16,
+    bt: BlockTools,
+    db_path: Path,
+    wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(wallet_rpc_port, bt, db_path, wallet_service) as data_layer_service:
         yield data_layer_service._api.data_layer
@@ -1882,6 +1890,8 @@ async def test_clear_pending_roots(
         )
 
         pending_root = await data_store.get_pending_root(tree_id=tree_id)
+        assert pending_root is not None
+
         if use_client == "direct":
             cleared_root = await data_rpc_api.clear_pending_roots({"store_id": tree_id.hex()})
         elif use_client == "funcs":
