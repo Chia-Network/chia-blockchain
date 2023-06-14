@@ -38,7 +38,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python tests/build-job-matrix.py --per directory --verbose --only core --duplicates 50 > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
           echo matrix_mode=${{ ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || 'main' }} >> $GITHUB_OUTPUT
@@ -59,30 +59,6 @@ jobs:
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
-  ubuntu:
-    uses: ./.github/workflows/test-single.yml
-    needs: configure
-    with:
-      emoji: 🐧
-      matrix: ubuntu
-      name: Ubuntu
-      file_name: ubuntu
-      concurrency_name: ubuntu
-      configuration: ${{ needs.configure.outputs.configuration }}
-      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: ubuntu-latest
-  windows:
-    uses: ./.github/workflows/test-single.yml
-    needs: configure
-    with:
-      emoji: 🪟
-      matrix: windows
-      name: Windows
-      file_name: windows
-      concurrency_name: windows
-      configuration: ${{ needs.configure.outputs.configuration }}
-      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: windows-latest
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
