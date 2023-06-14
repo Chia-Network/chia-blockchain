@@ -62,7 +62,7 @@ class FarmerAPI:
         self.farmer = farmer
 
     def ready(self) -> bool:
-        return self.farmer.started
+        return True
 
     @api_request(peer_required=True)
     async def new_proof_of_space(
