@@ -115,7 +115,7 @@
 
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
-    (> (+ coin_amount ONE) PROPOSAL_MINIMUM_AMOUNT) ; >=
+    (> (+ coin_amount ONE) PROPOSAL_MINIMUM_AMOUNT)  ; >=
     (> total_votes Attendance_Required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
     (> yes_votes (calculate_win_percentage total_votes Pass_Margin))
     (=

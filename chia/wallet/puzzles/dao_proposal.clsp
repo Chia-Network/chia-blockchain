@@ -309,7 +309,7 @@
                     ; Passed
                     (list
                       ; (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
-                      (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list PRROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
+                      (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
                       (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
                         (sha256
                           (calculate_treasury_puzzlehash
