@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
-from aiohttp import ClientConnectorError
+from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -64,12 +64,17 @@ async def validate_client_connection(
     connected: bool = True
     try:
         await rpc_client.healthz()
-    except ClientConnectorError:
+    except ClientConnectorError as e:
         if not consume_errors:
             raise
         connected = False
-        print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
-        print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
+        print(f"Connection error: {type(e).__name__}: {e}")
+        if isinstance(e, ClientConnectorCertificateError):
+            print(f"Check if client and rpc (port: {rpc_port}) certificates match")
+        else:
+            print(f"Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
+            print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
+
     return connected
 
 
