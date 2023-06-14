@@ -7,6 +7,6 @@ contact_links:
     name: Make a Request
     url: >-
       https://github.com/Chia-Network/chia-blockchain/discussions/new?category=ideas
-  - about: Get support on the Chia Keybase chat channels.
-    name: Join the Keybase.io support chat
-    url: 'https://keybase.io/team/chia_network.public'
+  - about: Get support in the Chia Discord chat channels.
+    name: Join the Discord support chat
+    url: 'https://discord.gg/chia'
