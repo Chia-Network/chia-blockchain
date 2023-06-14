@@ -1987,7 +1987,7 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        breakpoint()
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
