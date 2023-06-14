@@ -82,7 +82,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
@@ -1442,10 +1442,7 @@ class WalletStateManager:
                                 await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
                             confirmed_tx_records: List[TransactionRecord] = []
                             for tx_record in all_unconfirmed:
-                                if tx_record.type in {
-                                    TransactionType.INCOMING_CLAWBACK_SEND.value,
-                                    TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
-                                }:
+                                if tx_record.type in CLAWBACK_TRANSACTION_TYPES:
                                     for add_coin in tx_record.additions:
                                         if add_coin == coin_state.coin:
                                             confirmed_tx_records.append(tx_record)
