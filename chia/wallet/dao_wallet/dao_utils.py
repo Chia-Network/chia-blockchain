@@ -105,7 +105,9 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         DAO_TREASURY_MOD_HASH,
         cat_tail_hash,
         dao_rules.proposal_minimum_amount,
-        get_p2_singleton_puzzle(treasury_id).get_tree_hash(),  # TODO: let people set this later - for now a hidden feature
+        get_p2_singleton_puzzle(
+            treasury_id
+        ).get_tree_hash(),  # TODO: let people set this later - for now a hidden feature
     )
     # TREASURY_MOD_HASH
     # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
@@ -404,7 +406,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         uint64(int_from_bytes(pass_percentage.as_atom())),
         uint64(int_from_bytes(self_destruct_length.as_atom())),
         uint64(int_from_bytes(oracle_spend_delay.as_atom())),
-        uint64(PROPOSAL_MINIMUM_AMOUNT.as_int())
+        uint64(PROPOSAL_MINIMUM_AMOUNT.as_int()),
     )
 
 

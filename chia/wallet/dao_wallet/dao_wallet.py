@@ -1323,7 +1323,9 @@ class DAOWallet(WalletProtocol):
         full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]).get_tree_hash()
+        announcement_message = Program.to(
+            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+        ).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
@@ -1338,7 +1340,9 @@ class DAOWallet(WalletProtocol):
             reuse_puzhash=reuse_puzhash,
         )
 
-        genesis_launcher_solution = Program.to([full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)])
+        genesis_launcher_solution = Program.to(
+            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+        )
 
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
@@ -1455,7 +1459,7 @@ class DAOWallet(WalletProtocol):
                 0,
                 0,
                 0,
-                eve_coin.amount
+                eve_coin.amount,
             ]
         )
         # full solution is (lineage_proof my_amount inner_solution)
@@ -1564,7 +1568,7 @@ class DAOWallet(WalletProtocol):
                 0,
                 0,
                 0,
-                proposal_info.current_coin.amount
+                proposal_info.current_coin.amount,
             ]
         )
         parent_info = self.get_parent_for_coin(proposal_info.current_coin)
