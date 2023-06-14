@@ -65,8 +65,6 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - macos
-      - ubuntu
-      - windows
     strategy:
       fail-fast: false
       matrix:
