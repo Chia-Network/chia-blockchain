@@ -209,9 +209,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
-                block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_3]
-                )
+                block_bad_3 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_3])
 
                 header_block_bad_3 = get_block_header(block_bad_3, [], [])
                 _, error = validate_finished_header_block(
@@ -240,9 +238,7 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss_4.challenge_chain.get_hash(),
                 )
-                block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_4]
-                )
+                block_bad_4 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_4])
 
                 header_block_bad_4 = get_block_header(block_bad_4, [], [])
                 _, error = validate_finished_header_block(
