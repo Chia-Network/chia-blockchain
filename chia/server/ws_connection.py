@@ -21,7 +21,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
-from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -67,7 +66,7 @@ class WSChiaConnection:
     """
 
     ws: WebSocket = field(repr=False)
-    api: ApiProtocol = field(repr=False)
+    api: Any = field(repr=False)
     local_type: NodeType
     local_port: int
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
@@ -124,7 +123,7 @@ class WSChiaConnection:
         cls,
         local_type: NodeType,
         ws: WebSocket,
-        api: ApiProtocol,
+        api: Any,
         server_port: int,
         log: logging.Logger,
         is_outbound: bool,
@@ -374,9 +373,9 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
-            if not self.api.ready():
-                self.log.warning(f"API not ready, ignore request: {full_message}")
-                return None
+            if hasattr(self.api, "api_ready"):
+                if self.api.api_ready is False:
+                    return None
 
             timeout: Optional[int] = 600
             if metadata.execute_task:

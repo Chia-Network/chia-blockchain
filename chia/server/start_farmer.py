@@ -30,7 +30,7 @@ def create_farmer_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[Farmer, FarmerAPI]:
+) -> Service[Farmer]:
     service_config = config[SERVICE_NAME]
 
     fnp = service_config.get("full_node_peer")

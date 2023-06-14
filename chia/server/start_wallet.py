@@ -33,7 +33,7 @@ def create_wallet_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[WalletNode, WalletNodeAPI]:
+) -> Service[WalletNode]:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]

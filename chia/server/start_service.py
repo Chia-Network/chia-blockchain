@@ -14,7 +14,6 @@ from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Opt
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
-from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -35,7 +34,6 @@ main_pid: Optional[int] = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
-_T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
 
@@ -44,12 +42,12 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
+class Service(Generic[_T_RpcServiceProtocol]):
     def __init__(
         self,
         root_path: Path,
         node: _T_RpcServiceProtocol,
-        peer_api: _T_ApiProtocol,
+        peer_api: Any,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,

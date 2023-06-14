@@ -69,12 +69,10 @@ else:
 
 
 class FullNodeAPI:
-    log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
 
     def __init__(self, full_node: FullNode) -> None:
-        self.log = logging.getLogger(__name__)
         self.full_node = full_node
         self.executor = ThreadPoolExecutor(max_workers=1)
 
@@ -83,7 +81,12 @@ class FullNodeAPI:
         assert self.full_node.server is not None
         return self.full_node.server
 
-    def ready(self) -> bool:
+    @property
+    def log(self) -> logging.Logger:
+        return self.full_node.log
+
+    @property
+    def api_ready(self) -> bool:
         return self.full_node.initialized
 
     @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])

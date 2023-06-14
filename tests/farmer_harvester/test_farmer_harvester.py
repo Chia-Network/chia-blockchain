@@ -6,9 +6,7 @@ from typing import List, Tuple
 import pytest
 
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
@@ -22,9 +20,7 @@ def farmer_is_started(farmer: Farmer) -> bool:
 
 @pytest.mark.asyncio
 async def test_start_with_empty_keychain(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ]
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
@@ -49,9 +45,7 @@ async def test_start_with_empty_keychain(
 
 @pytest.mark.asyncio
 async def test_harvester_handshake(
-    farmer_one_harvester_not_started: Tuple[
-        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
-    ]
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
 ) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]

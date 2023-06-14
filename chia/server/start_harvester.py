@@ -28,7 +28,7 @@ def create_harvester_service(
     consensus_constants: ConsensusConstants,
     farmer_peer: Optional[UnresolvedPeerInfo],
     connect_to_daemon: bool = True,
-) -> Service[Harvester, HarvesterAPI]:
+) -> Service[Harvester]:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
