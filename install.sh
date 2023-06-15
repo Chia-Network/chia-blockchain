@@ -3,7 +3,7 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adlsph]
+Usage: $0 [-adilpsh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
@@ -24,7 +24,7 @@ SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 EDITABLE='-e'
 
-while getopts adlsph flag
+while getopts adilpsh flag
 do
   case "${flag}" in
     # automated
