@@ -1130,8 +1130,6 @@ class WalletStateManager:
         # Record metadata
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
-        # For resync correctly, we need to fetch the coin state again
-        latest_coin_state = (await self.wallet_node.get_coin_state([coin_state.coin.name()], peer=peer))[0]
         # Check if the wallet is the sender
         sender_derivation_record: Optional[
             DerivationRecord
@@ -1151,14 +1149,14 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
-            spent_height: uint32 = (
-                uint32(0) if latest_coin_state.spent_height is None else uint32(latest_coin_state.spent_height)
-            )
+            spent_height: uint32 = uint32(0)
+            if coin_state.spent_height is not None:  # pragma: no cover
+                spent_height = uint32(coin_state.spent_height)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
                 spent_height,
-                False if latest_coin_state.spent_height is None else True,
+                False if spent_height == 0 else True,
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
@@ -1169,14 +1167,13 @@ class WalletStateManager:
             await self.coin_store.add_coin_record(coin_record)
             # Add tx record
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
-            spend_bundle = SpendBundle([coin_spend], G2Element())
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False if latest_coin_state.spent_height is None else True,
+                confirmed=False if spent_height == 0 else True,
                 sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin_state.coin],
