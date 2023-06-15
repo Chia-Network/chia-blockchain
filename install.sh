@@ -7,9 +7,10 @@ Usage: $0 [-adlsph]
 
   -a                          automated install, no questions
   -d                          install development dependencies
+  -i                          install non-editable
   -l                          install legacy keyring dependencies (linux only)
-  -s                          skip python package installation and just do pip install
   -p                          additional plotters installation
+  -s                          skip python package installation and just do pip install
   -h                          display this help and exit
 "
 
@@ -21,6 +22,7 @@ PACMAN_AUTOMATED=
 EXTRAS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
+EDITABLE='-e'
 
 while getopts adlsph flag
 do
@@ -29,11 +31,13 @@ do
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
     d) EXTRAS=${EXTRAS}dev,;;
-    # simple install
-    s) SKIP_PACKAGE_INSTALL=1;;
-    p) PLOTTER_INSTALL=1;;
+    # non-editable
+    i) EDITABLE='';;
     # legacy keyring
     l) EXTRAS=${EXTRAS}legacy_keyring,;;
+    p) PLOTTER_INSTALL=1;;
+    # simple install
+    s) SKIP_PACKAGE_INSTALL=1;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -342,7 +346,7 @@ python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+python -m pip install ${EDITABLE} ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
