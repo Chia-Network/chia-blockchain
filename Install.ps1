@@ -2,7 +2,7 @@ param(
     [Parameter(HelpMessage="install development dependencies")]
     [switch]$d = $False,
     [Parameter()]
-    [switch]$i = $False
+    [switch]$i = $False,
     [Parameter()]
     [switch]$p = $False
 )
