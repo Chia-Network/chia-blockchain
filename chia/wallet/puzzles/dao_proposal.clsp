@@ -238,7 +238,7 @@
               (+ TOTAL_VOTES sum)
               PROPOSED_PUZ_HASH
             )
-            my_amount  ; why would a proposal hold any value
+            my_amount
             (list TREASURY_ID)  ; hint to Treasury ID so people can find it
           )
           (c
@@ -314,8 +314,8 @@
                     )
                     ; Passed
                     (list
-                      ; (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
                       (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
+                      ; the above coin annnouncement lets us validate this coin in the proposal validator
                       (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
                         (sha256
                           (calculate_treasury_puzzlehash
