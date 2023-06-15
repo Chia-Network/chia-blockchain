@@ -72,7 +72,7 @@ fpm -s dir -t rpm \
   --depends /usr/lib64/libcrypt.so.1 \
   .
 # CLI only rpm done
-
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 
