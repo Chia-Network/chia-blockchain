@@ -45,4 +45,4 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }}
+        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }} ${{ (inputs.editable != 'true') && '-i' || '' }}
