@@ -17,6 +17,8 @@ from chia.wallet.util.query_filter import AmountFilter, FilterMode, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+unspent_range = UInt32Range(stop=uint32(0))
+
 
 class CoinRecordOrder(IntEnum):
     confirmed_height = 1
