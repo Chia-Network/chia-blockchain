@@ -25,6 +25,7 @@ class DBConnection:
         __exc_type: Optional[Type[BaseException]],
         __exc_value: Optional[BaseException],
         __traceback: TracebackType,
-    ) -> None:
+    ) -> Optional[bool]:
         await self._db_wrapper.close()
         self.db_path.unlink()
+        return False
