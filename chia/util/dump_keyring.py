@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Dict, Optional, cast
 
 import click
 import colorama
@@ -66,7 +66,7 @@ def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIO
         try:
             data_dict = file_content.get_decrypted_data_dict(passphrase)
             if full_payload:
-                dump_content = file_content_dict
+                dump_content: Dict[str, Any] = file_content_dict
                 dump_content["data"] = data_dict
             else:
                 dump_content = data_dict

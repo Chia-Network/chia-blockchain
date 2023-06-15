@@ -58,13 +58,8 @@ class TestDIDWallet:
         ph0 = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
 
-        keys0 = await wallet_node_0.wallet_state_manager.get_keys(ph0)
-        keys1 = await wallet_node_1.wallet_state_manager.get_keys(ph1)
-        assert keys0
-        assert keys1
-        pk0, sk0 = keys0
-        pk1, sk1 = keys1
-        assert pk0 == pk1
+        sk0 = await wallet_node_0.wallet_state_manager.get_private_key(ph0)
+        sk1 = await wallet_node_1.wallet_state_manager.get_private_key(ph1)
         assert sk0 == sk1
 
         if trusted:
@@ -240,6 +235,9 @@ class TestDIDWallet:
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 201)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 201)
 
+        for wallet in [did_wallet_0, did_wallet_1, did_wallet_2]:
+            assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
+
         some_ph = 32 * b"\2"
         await did_wallet_2.create_exit_spend(some_ph)
 
@@ -261,6 +259,9 @@ class TestDIDWallet:
         await time_out_assert(15, get_coins_with_ph, True)
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 0)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 0)
+
+        for wallet in [did_wallet_0, did_wallet_1]:
+            assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
     @pytest.mark.parametrize(
         "trusted",
@@ -400,6 +401,9 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 201)
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
+
+        for wallet in [did_wallet, did_wallet_2, did_wallet_3, did_wallet_4]:
+            assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
     @pytest.mark.parametrize(
         "trusted",
@@ -699,6 +703,9 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
 
+        for wallet in [did_wallet, did_wallet_3, did_wallet_4]:
+            assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
+
     @pytest.mark.parametrize(
         "with_recovery",
         [True, False],
@@ -902,7 +909,7 @@ class TestDIDWallet:
             odd_amount,
             ph1,
             fee,
-            exclude_coins=set([coin]),
+            excluded_coins=set([coin]),
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
@@ -1152,13 +1159,8 @@ class TestDIDWallet:
         ph0 = await wallet_0.get_new_puzzlehash()
         ph1 = await wallet_1.get_new_puzzlehash()
 
-        keys0 = await wallet_node_0.wallet_state_manager.get_keys(ph0)
-        keys1 = await wallet_node_1.wallet_state_manager.get_keys(ph1)
-        assert keys0
-        assert keys1
-        pk0, sk0 = keys0
-        pk1, sk1 = keys1
-        assert pk0 == pk1
+        sk0 = await wallet_node_0.wallet_state_manager.get_private_key(ph0)
+        sk1 = await wallet_node_1.wallet_state_manager.get_private_key(ph1)
         assert sk0 == sk1
 
         if trusted:

@@ -1175,7 +1175,7 @@ class DIDWallet:
         if puzzle_args is not None:
             p2_puzzle, _, _, _, _ = puzzle_args
             puzzle_hash = p2_puzzle.get_tree_hash()
-            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            private = await self.wallet_state_manager.get_private_key(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
             if is_hex:
@@ -1193,7 +1193,7 @@ class DIDWallet:
             if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
-                pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+                private = await self.wallet_state_manager.get_private_key(puzzle_hash)
                 synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
                 conditions = conditions_dict_for_solution(
                     spend.puzzle_reveal.to_program(),
@@ -1236,7 +1236,14 @@ class DIDWallet:
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount, genesis_launcher_puz.get_tree_hash(), fee, origin.name(), coins, None, False, announcement_set
+            amount,
+            genesis_launcher_puz.get_tree_hash(),
+            fee,
+            coins,
+            None,
+            False,
+            announcement_set,
+            origin_id=origin.name(),
         )
 
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])

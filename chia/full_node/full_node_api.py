@@ -16,6 +16,7 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -68,10 +69,12 @@ else:
 
 
 class FullNodeAPI:
+    log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
 
     def __init__(self, full_node: FullNode) -> None:
+        self.log = logging.getLogger(__name__)
         self.full_node = full_node
         self.executor = ThreadPoolExecutor(max_workers=1)
 
@@ -80,12 +83,7 @@ class FullNodeAPI:
         assert self.full_node.server is not None
         return self.full_node.server
 
-    @property
-    def log(self) -> logging.Logger:
-        return self.full_node.log
-
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return self.full_node.initialized
 
     @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
@@ -739,7 +737,7 @@ class FullNodeAPI:
             block_generator: Optional[BlockGenerator] = None
             additions: Optional[List[Coin]] = []
             removals: Optional[List[Coin]] = []
-            async with self.full_node._blockchain_lock_high_priority:
+            async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
                 if peak is not None:
                     # Finds the last transaction block before this one
@@ -1509,7 +1507,7 @@ class FullNodeAPI:
         if len(hint_coin_ids) > 0:
             hint_states = await self.full_node.coin_store.get_coin_states_by_ids(
                 include_spent_coins=True,
-                coin_ids=list(hint_coin_ids),
+                coin_ids=hint_coin_ids,
                 min_height=request.min_height,
                 max_items=len(hint_coin_ids),
             )
@@ -1553,7 +1551,7 @@ class FullNodeAPI:
         self.full_node.subscriptions.add_coin_subscriptions(peer.peer_node_id, request.coin_ids, max_subscriptions)
 
         states: List[CoinState] = await self.full_node.coin_store.get_coin_states_by_ids(
-            include_spent_coins=True, coin_ids=request.coin_ids, min_height=request.min_height, max_items=max_items
+            include_spent_coins=True, coin_ids=set(request.coin_ids), min_height=request.min_height, max_items=max_items
         )
 
         response = wallet_protocol.RespondToCoinUpdates(request.coin_ids, request.min_height, states)

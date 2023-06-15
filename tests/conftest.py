@@ -23,18 +23,22 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
+    setup_full_system,
     setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_daemon, setup_introducer, setup_timelord
+from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
@@ -45,6 +49,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -92,8 +97,13 @@ class Mode(Enum):
 
 
 @pytest.fixture(scope="session", params=[Mode.PLAIN])
-def blockchain_constants(request: SubRequest) -> ConsensusConstants:
-    if request.param == Mode.PLAIN:
+def consensus_mode(request):
+    return request.param
+
+
+@pytest.fixture(scope="session")
+def blockchain_constants(consensus_mode) -> ConsensusConstants:
+    if consensus_mode == Mode.PLAIN:
         return test_constants
     raise AssertionError("Invalid Blockchain mode in simulation")
 
@@ -146,7 +156,7 @@ def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3886635, 4200000, 5496000])
+@pytest.fixture(scope="function", params=[1000000, 3886635, 4410000, 5496000])
 def softfork_height(request) -> int:
     return request.param
 
@@ -370,7 +380,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[
-    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
@@ -575,32 +585,32 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_two_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_three_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
@@ -609,7 +619,9 @@ async def farmer_three_harvester_not_started(
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
-async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
+async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -670,17 +682,19 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
+async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
     farm_blocks = 3
     buffer = 1
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
+    full_nodes, wallets, bt = two_wallet_nodes_services
+    full_node_api = full_nodes[0]._api
     full_node_server = full_node_api.server
-    wallet_node_0, wallet_server_0 = wallets[0]
-    wallet_node_1, wallet_server_1 = wallets[1]
+    wallet_service_0 = wallets[0]
+    wallet_service_1 = wallets[1]
+    wallet_node_0 = wallet_service_0._node
+    wallet_node_1 = wallet_service_1._node
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
@@ -691,8 +705,21 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    wallet_0_rpc_client = await WalletRpcClient.create(
+        bt.config["self_hostname"],
+        wallet_service_0.rpc_server.listen_port,
+        wallet_service_0.root_path,
+        wallet_service_0.config,
+    )
+    wallet_1_rpc_client = await WalletRpcClient.create(
+        bt.config["self_hostname"],
+        wallet_service_1.rpc_server.listen_port,
+        wallet_service_1.root_path,
+        wallet_service_1.config,
+    )
+
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -705,7 +732,18 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
     assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
 
-    return (wallet_node_0, wallet_0_rewards), (wallet_node_1, wallet_1_rewards), full_node_api
+    return (
+        (wallet_node_0, wallet_0_rewards),
+        (wallet_node_1, wallet_1_rewards),
+        (wallet_0_rpc_client, wallet_1_rpc_client),
+        (wallet_service_0, wallet_service_1),
+        full_node_api,
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def wallets_prefarm(wallets_prefarm_services):
+    return wallets_prefarm_services[0], wallets_prefarm_services[1], wallets_prefarm_services[4]
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -784,6 +822,12 @@ async def timelord_service(bt):
         yield _
 
 
+@pytest_asyncio.fixture(scope="function")
+async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
+    async for service in setup_crawler(bt):
+        yield service
+
+
 @pytest.fixture(scope="function")
 def tmp_chia_root(tmp_path):
     """
@@ -838,3 +882,11 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
     print()
     print()
     print(cost_logger.log_cost_statistics())
+
+
+@pytest_asyncio.fixture(scope="function")
+async def simulation(consensus_mode, bt):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipping this run. This test only supports one running at a time.")
+    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
+        yield _

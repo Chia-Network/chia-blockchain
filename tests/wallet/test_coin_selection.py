@@ -496,7 +496,7 @@ class TestCoinSelection:
         assert len(selected_coins) == 1
         assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
 
-        exclude_all_coins = spendable_coins
+        excluded_all_coins = spendable_coins
         # make sure that a failure is raised if all coins are excluded.
         with pytest.raises(ValueError):
             await select_coins(
@@ -506,7 +506,7 @@ class TestCoinSelection:
                 {},
                 logging.getLogger("test"),
                 amount=target_amount,
-                exclude=exclude_all_coins,
+                exclude=excluded_all_coins,
             )
 
     @pytest.mark.asyncio
