@@ -27,7 +27,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import SpendableCAT, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, SpendableCAT, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -43,6 +43,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_TREASURY_MOD_HASH,
     SINGLETON_LAUNCHER,
     create_cat_launcher_for_singleton_id,
+    curry_cat_eve,
     curry_singleton,
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
@@ -159,20 +160,20 @@ class DAOWallet(WalletProtocol):
         std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount_of_cats > bal:
-            raise ValueError("Not enough balance")
+            raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
 
         self.dao_info = DAOInfo(
-            bytes32([0] * 32),
-            uint32(0),
-            uint32(0),
-            [],
-            [],
-            None,
-            None,
-            uint32(0),
-            filter_amount,
-            [],
-            uint64(0),
+            treasury_id=bytes32([0] * 32),
+            cat_wallet_id=uint32(0),
+            dao_cat_wallet_id=uint32(0),
+            proposals_list=[],
+            parent_info=[],
+            current_treasury_coin=None,
+            current_treasury_innerpuz=None,
+            singleton_block_height=uint32(0),
+            filter_below_vote_amount=filter_amount,
+            assets=[],
+            current_height=uint64(0),
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -184,17 +185,15 @@ class DAOWallet(WalletProtocol):
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
 
         try:
-            launcher_spend = await self.generate_new_dao(
+            await self.generate_new_dao(
                 amount_of_cats,
                 fee=fee,
             )
-        except Exception:
+        except Exception as e_info:
             await wallet_state_manager.user_store.delete_wallet(self.id())
+            self.log.error(f"Failed to create dao wallet: {e_info}")
             raise
 
-        if launcher_spend is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
-            raise ValueError("Failed to create spend.")
         await self.wallet_state_manager.add_new_wallet(self)
 
         # Now the dao wallet is created we can create the dao_cat wallet
@@ -206,8 +205,8 @@ class DAOWallet(WalletProtocol):
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
-            dao_cat_wallet_id,  # TODO: xxx if this is a local wallet id, we might need to change it.
+            self.dao_info.cat_wallet_id,
+            dao_cat_wallet_id,
             self.dao_info.proposals_list,
             self.dao_info.parent_info,
             self.dao_info.current_treasury_coin,
@@ -522,17 +521,25 @@ class DAOWallet(WalletProtocol):
         return self.wallet_info.id
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        # This wallet only tracks coins, and does not hold any spendable value
-        return uint128(0)
+        if record_list is None:
+            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
+
+        amount: uint128 = uint128(0)
+        for record in record_list:
+            parent = self.get_parent_for_coin(record.coin)
+            if parent is not None:
+                amount = uint128(amount + record.coin.amount)
+
+        self.log.info(f"Confirmed balance for dao wallet is {amount}")
+        return uint128(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         # No spendable or receivable value
         return uint64(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        # TODO: should get_unconfirmed_balance return zero?
-        # return uint128(await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list))
-        return uint128(0)
+        unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+        return uint128(unc_bal)
 
     async def select_coins(
         self,
@@ -545,6 +552,8 @@ class DAOWallet(WalletProtocol):
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
+        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        always be a single coin with amount 1
         """
 
         spendable_amount: uint128 = await self.get_spendable_balance()
@@ -785,19 +794,18 @@ class DAOWallet(WalletProtocol):
         return chia_tx
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        return Program(Program.to(0))
+        puz: Program = Program.to(0)
+        return puz
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        return bytes32(Program.to(0).get_tree_hash())
+        puz_hash: bytes32 = bytes32(Program.to(0).get_tree_hash())
+        return puz_hash
 
     async def get_new_puzzle(self) -> Program:
-        return self.puzzle_for_pk(
-            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        )
+        puz: Program = Program.to(0)
+        return puz
 
     async def set_name(self, new_name: str) -> None:
-        import dataclasses
-
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
@@ -1007,7 +1015,8 @@ class DAOWallet(WalletProtocol):
             )
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
-            cat_tail_hash = generate_cat_tail(cat_origin.name(), launcher_coin.name()).get_tree_hash()
+            cat_tail = generate_cat_tail(cat_origin.name(), launcher_coin.name())
+            cat_tail_hash = cat_tail.get_tree_hash()
 
         assert cat_tail_hash is not None
 
@@ -1050,7 +1059,7 @@ class DAOWallet(WalletProtocol):
         cat_wallet_id = new_cat_wallet.wallet_info.id
 
         assert cat_tail_hash == new_cat_wallet.cat_info.limitations_program_hash
-
+        await new_cat_wallet.set_tail_program(bytes(cat_tail).hex())
         dao_info = DAOInfo(
             self.dao_info.treasury_id,
             cat_wallet_id,
@@ -1266,7 +1275,8 @@ class DAOWallet(WalletProtocol):
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, Program(cats_new_innerpuzhash))
+        eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
+        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
         xch_conditions = [
             [
                 51,
@@ -1618,6 +1628,7 @@ class DAOWallet(WalletProtocol):
     async def create_proposal_close_spend(
         self,
         proposal_id: bytes32,
+        genesis_id: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
         self_destruct: bool = False,
@@ -1826,8 +1837,17 @@ class DAOWallet(WalletProtocol):
                 for cond in CONDITIONS.as_iter():
                     if cond.first().as_int() == 51:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
+                            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+                            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
                             mint_amount = cond.rest().rest().first().as_int()
                             new_cat_puzhash = cond.rest().rest().rest().first().first().as_atom()
+                            eve_puzzle = curry_cat_eve(new_cat_puzhash)
+                            if genesis_id is None:
+                                tail_reconstruction = cat_wallet.cat_info.my_tail
+                            else:
+                                tail_reconstruction = generate_cat_tail(genesis_id, self.dao_info.treasury_id)
+                            assert tail_reconstruction is not None
+                            assert tail_reconstruction.get_tree_hash() == cat_tail_hash
                             assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
                                 self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
@@ -1836,9 +1856,7 @@ class DAOWallet(WalletProtocol):
                             # parent_parent
                             # new_puzzle_hash  ; the full CAT puzzle
                             # amount
-                            cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-                            cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-                            full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, new_cat_puzhash)
+                            full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puzzle)
 
                             solution = Program.to(
                                 [
@@ -1849,6 +1867,30 @@ class DAOWallet(WalletProtocol):
                                 ]
                             )
                             coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
+                            # my_amount
+                            # tail_reveal
+                            # tail_solution
+
+                            # tail_solution is (singleton_inner_puzhash parent_parent_id parent_amount)
+                            tail_solution = Program.to(
+                                [treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount]
+                            )
+                            solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
+                            new_spendable_cat = SpendableCAT(
+                                eve_coin,
+                                cat_tail_hash,
+                                eve_puzzle,
+                                solution,
+                            )
+                            if cat_spend_bundle is None:
+                                cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(
+                                    CAT_MOD, [new_spendable_cat]
+                                )
+                            else:
+                                cat_spend_bundle = cat_spend_bundle.aggregate(
+                                    [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats([new_spendable_cat])]
+                                )
 
                 for condition_statement in CONDITIONS.as_iter():
                     if condition_statement.first().as_int() == 51:
@@ -1927,7 +1969,7 @@ class DAOWallet(WalletProtocol):
                         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
                     else:
                         cat_spend_bundle = cat_spend_bundle.aggregate(
-                            [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(spendable_cat_list)]
+                            [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)]
                         )
                     tailhash_parent_amount_list.append([tail_hash, parent_amount_list])
 
@@ -2248,7 +2290,10 @@ class DAOWallet(WalletProtocol):
         return uint64(0)
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id, unspent_records
+        )
+        return uint128(spendable_am)
 
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)

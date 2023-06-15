@@ -67,53 +67,6 @@
     )
   )
 
-  (defun assert_recreating_self (SINGLETON_STRUCT conditions)
-    (if conditions
-        (c
-          (f conditions)
-          (if (= (f (f conditions)) CREATE_COIN)
-              (if (logand (f (r (r (f conditions)))) 1)
-                  (c
-                    (list ASSERT_MY_PUZZLEHASH (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r (f conditions)))))
-                    (assert_recreating_self SINGLETON_STRUCT (r conditions))
-                  )
-                  (assert_recreating_self SINGLETON_STRUCT (r conditions))
-              )
-              (assert_recreating_self SINGLETON_STRUCT (r conditions))
-          )
-        )
-        ()
-    )
-  )
-
-  (defun check_update_conditions (SINGLETON_STRUCT conditions)
-    (if conditions
-        (if (= (f (f conditions)) CREATE_COIN)
-            (c
-              ; Proposal updates should only have one CREATE_COIN condition with an even amount
-              ; If there are > 1 CREATE_COIN conditions then ASSERT_MY_AMOUNT will fail
-              ; If the amount is even then the singleton top layer will fail.
-              (list ASSERT_MY_AMOUNT (f (r (r (f conditions)))))
-              (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions)))
-            )
-            (if
-              (any  ; block both types of announcement in the update case
-                (= (f (f conditions)) CREATE_COIN_ANNOUNCEMENT)
-                (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
-              )
-              (x)  ; fail
-              (c (f conditions) (check_update_conditions SINGLETON_STRUCT (r conditions)))
-            )
-        )
-        ; success: return all the conditions
-        ()
-    )
-  )
-
-  (defun-inline check_dangerous_conditions (SINGLETON_STRUCT conditions)
-    conditions
-  )
-
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
     (> (+ coin_amount ONE) PROPOSAL_MINIMUM_AMOUNT)  ; >=
