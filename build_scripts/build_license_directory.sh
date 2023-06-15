@@ -26,7 +26,7 @@ for i in "${licenses_array[@]}"; do
 done
 
 mv licenses/ ../build_scripts/dist/daemon
-cd ../build_scripts || || exit 1
+cd ../build_scripts || exit 1
 
 
 # PULL IN THE LICENSES FROM PIP-LICENSE
