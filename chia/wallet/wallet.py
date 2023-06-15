@@ -485,6 +485,7 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         fee: uint64 = uint64(0),
+        *,
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,

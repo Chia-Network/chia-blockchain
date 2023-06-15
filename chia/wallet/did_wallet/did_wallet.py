@@ -1239,10 +1239,10 @@ class DIDWallet:
             amount,
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            coins,
-            None,
-            False,
-            announcement_set,
+            coins=coins,
+            primaries=None,
+            ignore_max_send_amount=False,
+            coin_announcements_to_consume=announcement_set,
             origin_id=origin.name(),
         )
 

@@ -401,10 +401,10 @@ class NFTWallet:
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
             fee,
-            coins,
-            None,
-            False,
-            announcement_set,
+            coins=coins,
+            primaries=None,
+            ignore_max_send_amount=False,
+            coin_announcements_to_consume=announcement_set,
             origin_id=origin.name(),
         )
         genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
