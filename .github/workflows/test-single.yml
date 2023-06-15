@@ -123,8 +123,8 @@ jobs:
                 ${{ inputs.matrix_mode }}: True
 
     env:
-      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
+      CHIA_ROOT: ${{ env.GITHUB_WORKSPACE }}/.chia/mainnet
+      CHIA_SIMULATOR_ROOT: ${{ env.GITHUB_WORKSPACE }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
 
@@ -202,8 +202,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+          mkdir ${{ env.GITHUB_WORKSPACE }}/.chia
+          mv ${{ env.GITHUB_WORKSPACE }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ env.GITHUB_WORKSPACE }}/.chia
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
