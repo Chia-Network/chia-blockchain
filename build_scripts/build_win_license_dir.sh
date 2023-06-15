@@ -3,7 +3,7 @@
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
 
-cd ../chia-blockchain-gui || 'exit" or "cd' ... || return
+cd ../chia-blockchain-gui || exit 1
 
 npm ci
 
@@ -26,7 +26,7 @@ for i in "${licenses_array[@]}"; do
 done
 
 mv licenses/ ../build_scripts/dist/daemon
-cd ../build_scripts || 'exit" or "cd' || return
+cd ../build_scripts || || exit 1
 
 # PULL IN THE LICENSES FROM PIP-LICENSE
 pip install pip-licenses || pip3 install pip-licenses
