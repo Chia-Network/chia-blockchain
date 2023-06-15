@@ -10,15 +10,13 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH: bytes32 = SINGLETON_MOD.get_tree_hash()
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clsp")
@@ -50,6 +48,7 @@ P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
+DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
 
 log = logging.Logger(__name__)
 
@@ -62,6 +61,10 @@ def singleton_struct_for_id(id: bytes32) -> Program:
 def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
     singleton_struct = singleton_struct_for_id(id)
     return DAO_CAT_LAUNCHER.curry(singleton_struct)
+
+
+def curry_cat_eve(next_puzzle_hash: bytes32) -> Program:
+    return DAO_CAT_EVE.curry(next_puzzle_hash)
 
 
 def create_new_proposal_puzzle(
@@ -219,7 +222,7 @@ def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = 
     if asset_id:
         # CAT
         puzzle = CAT_MOD.curry(CAT_MOD_HASH, asset_id, inner_puzzle)
-        return puzzle
+        return Program(puzzle)
     else:
         # XCH
         return inner_puzzle

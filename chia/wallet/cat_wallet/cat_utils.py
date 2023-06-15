@@ -74,6 +74,10 @@ def construct_cat_puzzle(
     return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
 
 
+def construct_cat_puzzlehash_for_inner_puzzlehash(tail_hash: bytes32, inner_puzzle_hash: bytes32) -> bytes32:
+    return CAT_MOD.curry(CAT_MOD_HASH, tail_hash, inner_puzzle_hash).get_tree_hash_precalc(inner_puzzle_hash)
+
+
 def subtotals_for_deltas(deltas: List[int]) -> List[int]:
     """
     Given a list of deltas corresponding to input coins, create the "subtotals" list

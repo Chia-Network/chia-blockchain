@@ -156,6 +156,7 @@ class ClvmBytes:
     def strip(self) -> ClvmBytes:
         return ClvmBytes(hex=self.hex.strip(b"\n"), hash=self.hash.strip(b"\n"))
 
+
 # These files have the wrong extension for now so we'll just manually exclude them
 excludes: typing.Set[str] = set()
 
