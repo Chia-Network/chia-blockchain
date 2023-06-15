@@ -230,6 +230,10 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Remove chia/ so we test the installed code
+        run: |
+          rm -rf chia/
+
       - name: Test blockchain code with pytest
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
