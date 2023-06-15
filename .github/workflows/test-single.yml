@@ -202,8 +202,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
-          mkdir ${{ env.GITHUB_WORKSPACE }}/.chia
-          mv ${{ env.GITHUB_WORKSPACE }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ env.GITHUB_WORKSPACE }}/.chia
+          mkdir "${GITHUB_WORKSPACE }/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
