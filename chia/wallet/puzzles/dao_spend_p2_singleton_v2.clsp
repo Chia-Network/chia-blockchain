@@ -72,7 +72,18 @@
 
   (defun sum_create_coins (conditions)
     (if conditions
-        (+ (if (= (f (f conditions)) CREATE_COIN) (f (r (r (f conditions)))) 0) (sum_create_coins (r conditions)))
+        (+
+          (if
+            (= (f (f conditions)) CREATE_COIN)
+            (if
+              (> (f (r (r (f conditions)))) 0)  ; make an exception for -113 and other magic conditions
+              (f (r (r (f conditions))))
+              0
+            )
+            0
+          )
+          (sum_create_coins (r conditions))
+        )
         0
     )
   )
