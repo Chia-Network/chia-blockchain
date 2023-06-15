@@ -904,7 +904,7 @@ class WalletRpcApi:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
+                if tx["type"] not in clawback_types:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
