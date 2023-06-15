@@ -123,8 +123,8 @@ jobs:
                 ${{ inputs.matrix_mode }}: True
 
     env:
-      CHIA_ROOT: ${{ env.GITHUB_WORKSPACE }}/.chia/mainnet
-      CHIA_SIMULATOR_ROOT: ${{ env.GITHUB_WORKSPACE }}/.chia/simulator
+      CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
 
