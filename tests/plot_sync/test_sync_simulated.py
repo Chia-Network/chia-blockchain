@@ -14,7 +14,9 @@ import pytest
 from blspy import G1Element
 
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -239,8 +241,8 @@ async def _testable_process(
 
 
 async def create_test_runner(
-    harvester_services: List[Service[Harvester]],
-    farmer_service: Service[Farmer],
+    harvester_services: List[Service[Harvester, HarvesterAPI]],
+    farmer_service: Service[Farmer, FarmerAPI],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> TestRunner:
     await farmer_service.start()
@@ -288,7 +290,9 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
 @pytest.mark.asyncio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_three_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
@@ -367,7 +371,9 @@ async def test_sync_simulated(
 )
 @pytest.mark.asyncio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_one_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
@@ -392,7 +398,9 @@ async def test_farmer_error_simulation(
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.asyncio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_one_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:

@@ -681,11 +681,11 @@ class PoolWallet:
             amount,
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            launcher_parent.name(),
             coins,
             None,
             False,
             announcement_set,
+            origin_id=launcher_parent.name(),
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
