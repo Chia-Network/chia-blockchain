@@ -1992,7 +1992,6 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     assert updated_config["wallet"].get("reset_sync_for_fingerprint") is None
     wallet_node_2._close()
     await wallet_node_2._await_closed()
-    assert False
 
 
 @pytest.mark.asyncio
