@@ -5,14 +5,14 @@
     CAT_MOD_HASH
     TREASURY_MOD_HASH
     LOCKUP_MOD_HASH
-    CAT_TAIL_HASH
+    CAT_TAIL_HASH  ; [REVIEW - comments] Just starting to review this code, I don't know what's special about this tail.  A comment might be nice here.
     TREASURY_ID
     YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     TOTAL_VOTES  ; how many people responded
     PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
     vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     vote_info  ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-    vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
+    vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from  ; [REVIEW - comments] finish this comment?
     previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
     ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
     lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
@@ -29,6 +29,7 @@
   (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
+  ; [REVIEW - misc] Why use a constant here rather than curry in?
   (defconstant dao_finished_state 0x7f3cc356732907933a8f9b1ccf16f71735d07340eb38c847aa402e97d75eb40b)
   (defconstant TEN_THOUSAND 10000)
 
@@ -36,8 +37,10 @@
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
 
+  ; [REVIEW - optimization] looking at the code below, it looks like we always call this function with the same arguments.
+  ; [^] Maybe the optimizer already handles this (is that why you defined the hash as a constant?) but that means that this whole thing could just be a curried argument.
   (defun calculate_finished_state (singleton_struct dao_finished_state)
-    (puzzle-hash-of-curried-function dao_finished_state
+    (puzzle-hash-of-curried-function dao_finished_state  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE dao_finished_state)
       (sha256tree singleton_struct)
     )
@@ -52,7 +55,8 @@
       MY_SINGLETON_STRUCT
       TREASURY_ID
     )
-    (puzzle-hash-of-curried-function PROPOSAL_TIMER_MOD_HASH
+    ; [REVIEW - optimization] this is a constant yeah?  You may have different curried parameters but you could pass this whole hash in instead of PROPOSAL_TIMER_MOD_HASH.
+    (puzzle-hash-of-curried-function PROPOSAL_TIMER_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE TREASURY_ID)
       (sha256tree MY_SINGLETON_STRUCT)
       (sha256 ONE CAT_TAIL_HASH)
@@ -73,7 +77,8 @@
       previous_votes
       lockup_innerpuzhash
     )
-    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
+    ; [REVIEW - optimization] a lot of this hash is repetitive.  Maybe look at moving a lot of the constant values into a singleton struct hash that you curry in instead of using all of them individually.
+    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       lockup_innerpuzhash
       (sha256tree previous_votes)
       (sha256 ONE CAT_TAIL_HASH)
@@ -98,7 +103,15 @@
       TOTAL_VOTES
       PROPOSED_PUZ_HASH
     )
-    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+    ; [REVIEW - optimization] This is potentially pretty wasteful right?  All of these are constants meaning that this is whole call is actually itself a constant
+    ; [^] There's a better way to do this which you can see for reference here https://github.com/Chia-Network/chia-blockchain/blob/49140b2b3c0c128f2464c0b4e50c496e7029939d/chia/wallet/vc_wallet/cr_puzzles/credential_restriction.clsp#L30-L35
+    ; [^] Basically, you curry the program twice:
+    ; [^] - First, with everything except PROPOSAL_MOD_HASH, YES_VOTES, TOTAL_VOTES, PROPOSED_PUZ_HASH that's already curried in above
+    ; [^] - Second, you hash the program you have just created and curry that hash into the program as well as SELF_HASH
+    ; [^] (Note that doing this means there's no need for PROPOSAL_MOD_HASH as it's implicit in the first hash)
+    ; [^] Then this call can be much less expensive in execution: (puzzle-hash-of-curried-function SELF_HASH (sha256 ONE SELF_HASH))
+    ; [^] I think this would probably make validations of this proposal simpler as well
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE PROPOSED_PUZ_HASH)
       (sha256 ONE TOTAL_VOTES)
       (sha256 ONE YES_VOTES)
@@ -114,15 +127,15 @@
   )
 
   (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
-    (puzzle-hash-of-curried-function CAT_MOD_HASH
-      INNERPUZHASH
+    (puzzle-hash-of-curried-function CAT_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
+      INNERPUZHASH  ; [REVIEW - misc] captial == curried to me and this is not so I think it should be lowercase
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE CAT_MOD_HASH)
     )
   )
 
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
-    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       inner_puzzle_hash
       (sha256tree PROPOSAL_SINGLETON_STRUCT)
     )
@@ -141,7 +154,7 @@
     )
 
     (calculate_singleton_puzzle_hash treasury_singleton_struct
-      (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+      (puzzle-hash-of-curried-function TREASURY_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
         (sha256 ONE oracle_spend_delay)
         (sha256 ONE self_destruct_time)
         (sha256 ONE pass_percentage)
@@ -254,12 +267,18 @@
   (if self_destruct_flag
       ; assert self_destruct_time > proposal_timelock_length
       ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
+      ; [REVIEW - optimization] I don't see the point of these as two separate arguments.
+      ; [^] Couldn't you just ASSERT_HEIGHT_RELATIVE the vote_coin_ids_or_proposal_timelock_length (or the converse use self_destruct_time in the calculation of the treasury's puzhash)?
+      ; [^] This would save an assert as well.
       (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
         (list
+          ; [REVIEW - misc] Not a huge fans of hints being acknowledged in chialisp.  That being said, I have no idea if there's a reasonable way around this, but if there is I think we should remove this hint.
           (list CREATE_COIN (calculate_finished_state SINGLETON_STRUCT dao_finished_state) ONE (list TREASURY_ID))
           (list ASSERT_HEIGHT_RELATIVE self_destruct_time)
           (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
             (sha256
+              ; [REVIEW - optimization] I don't have a good enough grasp on the code yet to know whether or not this is possible, but most of the parameters here actually do not need to be verified for this spend path.
+              ; [^] it might be worth looking into whether or not you can group the not relevant ones in some way and only pass in their hash to this puzzle
               (calculate_treasury_puzzlehash
                 (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
                 TREASURY_MOD_HASH
@@ -312,6 +331,7 @@
                       (> TOTAL_VOTES lockup_innerpuzhashes_or_attendance_required)
                       (> YES_VOTES (calculate_win_percentage TOTAL_VOTES previous_votes_or_pass_margin))
                     )
+                    ; [REVIEW - optimization]  I'm not positive and really don't care about it that much but it might be possible to dedup these two segments a bit by calculating the value outside in a stager/let first.  Is that worth it? \_('_')_/
                     ; Passed
                     (list
                       (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list PROPOSED_PUZ_HASH 0)))  ; the 0 at the end is announcement_args in proposal_validators
@@ -394,6 +414,10 @@
                     )
                     0
                   )
+                  ; [REVIEW - optimization] I see your point here to force the reveal but is this really neccesary?
+                  ; [^] If the default behavior is just to not vote on proposals for which you have not been provided a puzzle reveal, then the proposer is forced to distribute this reveal.
+                  ; [^] If the purpose is for syncing, it can be an optional protocol in a parent spend that we can take out if we don't like it.
+                  ; [^] I personally am in favor of needing a copy of the proposal off chain and if that's truly lost then this proposal likely should just die anyways.
                   (if (= (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH)  ; reveal the proposed code on chain with the first vote
                       ()
                       (x)

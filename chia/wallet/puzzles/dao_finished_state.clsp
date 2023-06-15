@@ -7,14 +7,16 @@
   (include *standard-cl-21*)
 
   (defun wrap_in_singleton (SINGLETON_STRUCT my_inner_puzhash)
-    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       my_inner_puzhash
       (sha256tree SINGLETON_STRUCT)
     )
   )
 
+  ; [REVIEW - optimization] This is a constant that this function outputs.  I think it would be a good candidate for the SELF_HASH construct I've mentioned in other comments.
+  ; [^] (Although if you take my comment below, we don't even need SINGLETON_STRUCT so this is not very distinct from the existing MOD_HASH pattern.
   (defun recreate_self (SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH)
-    (puzzle-hash-of-curried-function DAO_FINISHED_STATE_MOD_HASH
+    (puzzle-hash-of-curried-function DAO_FINISHED_STATE_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
       (sha256tree SINGLETON_STRUCT)
     )
@@ -26,9 +28,14 @@
       (my_inner_puzhash (recreate_self SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH))
     )
     (list
+      ; [REVIEW - optimization] What's the point of this assertion.  This coin creates its own inner puzhash, it's not like it could lie, right?
+      ; [^] Perhaps the purpose is to make sure that this puzzle can't exist outside of a singleton, but anything that is asserting an announcement
+      ; [^] from this puzzle is also going to have to calculate that it is in fact inside of a singleton.
       (list ASSERT_MY_PUZZLEHASH (wrap_in_singleton SINGLETON_STRUCT my_inner_puzhash))
+      ; [REVIEW - optimization] This is never going to be able to pay out right?  Why not just force this to 0 and save a solution argument?
       (list ASSERT_MY_AMOUNT my_amount)
       (list CREATE_COIN my_inner_puzhash my_amount)
+      ; [REVIEW - optimization] This is the only announcement that this puzzle could create.  Why the special 'f'?  It should probably just be ().
       (list CREATE_PUZZLE_ANNOUNCEMENT 'f')
     )
   )

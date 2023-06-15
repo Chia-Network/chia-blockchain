@@ -20,17 +20,18 @@
     proposal_curry_vals
     vote_info
     vote_amount
-    my_inner_puzhash
+    my_inner_puzhash  ; [REVIEW - comments] I don't exactly have a better suggestion but I do know this name is confusing.  lockup_fullpuzhash or something maybe?
     new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
   )
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
   (include *standard-cl-21*)
 
+  ; [REVIEW - misc] Why use a constant here rather than curry in?
   (defconstant dao_finished_state 0x7f3cc356732907933a8f9b1ccf16f71735d07340eb38c847aa402e97d75eb40b)
 
   (defun calculate_finished_state (singleton_struct dao_finished_state)
-    (puzzle-hash-of-curried-function dao_finished_state
+    (puzzle-hash-of-curried-function dao_finished_state  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE dao_finished_state)
       (sha256tree singleton_struct)
     )
@@ -45,7 +46,7 @@
   )
 
   (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
-    (puzzle-hash-of-curried-function CAT_MOD_HASH
+    (puzzle-hash-of-curried-function CAT_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       INNERPUZHASH
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE CAT_MOD_HASH)
@@ -55,10 +56,13 @@
   ; loop through conditions and check that they aren't trying to create anything they shouldn't
   (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change)
     (if conditions
+        ; [REVIEW - architecture] I don't like restricting this CAT to one payment.  Couldn't you just forcibly wrap all of the outputs with the correct layer?
         (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
             (if (= (f (r (f conditions))) vote_added_puzhash)
                 (if seen_vote  ; assert we haven't already made a coin with the new vote included
                     (x)
+                    ; [REVIEW - architecture] If you take my comment above about allowing multiple payments, you can dispense with this distinction and just vote with the whole value each time because people can divide their coins if they wish.
+                    ; [^] I think like 99% of the time you just want to vote with your whole amount anyways.
                     (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
                         (if seen_change  ; assert that we haven't already recreated ourself in some fashion
                             (x)
@@ -70,6 +74,7 @@
                         )
                     )
                 )
+                ; [REVIEW - architecture] If you take my comment above about allowing multiple payments, you can dispense with this whole if branch
                 (if (all
                       (= (f (r (f conditions))) my_inner_puzhash)
                       (not seen_change)
@@ -79,7 +84,7 @@
                     (x)
                 )
             )
-            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
+            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES  ; [REVIEW - comments] excellent use of capitalization
                 (if (= (f (r (f conditions))) message)
                     (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
                     (x)
@@ -109,7 +114,7 @@
       proposal_curry_vals
     )
     (if active_votes
-        (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
+        (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existing vote id
             (x)
             (check_not_previously_voted
               SINGLETON_MOD_HASH
@@ -125,7 +130,10 @@
               proposal_curry_vals
             )
         )
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; the problem might be here
+        ; [REVIEW - optimization] Do we actually care to secure on this end that in fact we are voting on a proposal?
+        ; [^] Sure, you don't want someone to intercept your spend and only push this spend without the votes actually counting.
+        ; [^] However, the inner puzzle could make this assertion to secure itself against MITM and it could calculate the proper proposal puzzle hash to assert off chain.
+        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; the problem might be here  ; [REVIEW - comments] ???
             (calculate_proposal_puzzlehash
               PROPOSAL_MOD_HASH
               CAT_MOD_HASH
@@ -142,7 +150,7 @@
 
 
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
-    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       inner_puzzle_hash
       (sha256tree PROPOSAL_SINGLETON_STRUCT)
     )
@@ -165,7 +173,7 @@
     )
     (calculate_singleton_puzzle_hash
       proposal_singleton_struct
-      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
         (sha256 ONE INNERPUZHASH)
         (sha256 ONE TOTAL_VOTES)
         (sha256 ONE YES_VOTES)
@@ -199,7 +207,14 @@
       active_votes
       innerpuzhash
     )
-    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
+    ; [REVIEW - optimization] This is potentially pretty wasteful right?
+    ; [^] There's a better way to do this which you can see for reference here https://github.com/Chia-Network/chia-blockchain/blob/49140b2b3c0c128f2464c0b4e50c496e7029939d/chia/wallet/vc_wallet/cr_puzzles/credential_restriction.clsp#L30-L35
+    ; [^] Basically, you curry the program twice:
+    ; [^] - First, with everything except LOCKUP_MOD_HASH, ACTIVE_VOTES, and INNERPUZ that's already curried in above
+    ; [^] - Second, you hash the program you have just created and curry that hash into the program as well as SELF_HASH
+    ; [^] (Note that doing this means there's no need for LOCKUP_MOD_HASH as it's implicit in the first hash)
+    ; [^] Then this call can be much less expensive in execution: (puzzle-hash-of-curried-function SELF_HASH innerpuzhash active_votes (sha256 ONE SELF_HASH))
+    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       innerpuzhash
       (sha256tree active_votes)
       (sha256 ONE CAT_TAIL_HASH)
@@ -226,6 +241,10 @@
       proposal_curry_vals
       unused_votes
     )
+    ; [REVIEW - architecture] I'm not a huge fan that this does not run the inner puzzle.
+    ; [^] These CATs still belong to the user and maybe they want to do some weird announcement while removing a voting thing, I'm not sure.
+    ; [^] The point is, I think moving to a validation pattern here would make sense and potentially could be more optimal (can still prepend the assert)
+    ; [REVIEW - architecture] I think there's probably a way to do this where you could remove multiple ongoing votes at once.  This would save some user fees.
     (if ACTIVE_VOTES
         (if (= (f ACTIVE_VOTES) removal_id)
             (list
@@ -238,6 +257,7 @@
                   LOCKUP_MOD_HASH
                   CAT_MOD_HASH
                   CAT_TAIL_HASH
+                  ; [REVIEW - misc] merge_list merges from the left I believe which means this will shuffle the vote order and that seems less than ideal
                   (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
                   (sha256tree INNERPUZ)
                 )
@@ -247,6 +267,7 @@
                 ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
                 (sha256
                   (calculate_singleton_puzzle_hash
+                    ; [REVIEW - optimization] Do this a layer above (calculate_lockup_puzzlehash will need to unpack it but it's just a path reference, very cheap)
                     (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
                     (calculate_finished_state
                       (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
@@ -258,7 +279,7 @@
               )
               (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
             )
-
+            ; [REVIEW - comments] the comment on the next line should go here I think (don't really care, just a thought)
             (check_for_removal_announcement  ; keep looping through ACTIVE_VOTES to search for removal_id
               PROPOSAL_MOD_HASH
               SINGLETON_MOD_HASH
@@ -313,10 +334,13 @@
                   LOCKUP_MOD_HASH
                   CAT_MOD_HASH
                   CAT_TAIL_HASH
+                  ; [REVIEW - misc] If my reading of the code above is correct, this will result in some ()'s in this list which seems not great
                   (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
+                  ; [REVIEW - optimization] I think just always passing this in is almost always going to be cheaper than hashing the existing innerpuz
                   (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
                 )
                 my_amount
+                ; [REVIEW - comments] Make sure you do this TODO, I think it's pretty important
                 ; TODO: add namespace to this announcement to allow announcements from the innerpuz
                 (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))  ; (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
                 vote_amount
@@ -331,6 +355,7 @@
 
       ; return to return_address or remove something from active list - check if our locked list is empty
       (if ACTIVE_VOTES
+          ; [REVIEW - comments] the comment on the next line should go here I think (don't really care, just a thought)
           (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
             PROPOSAL_MOD_HASH
             SINGLETON_MOD_HASH

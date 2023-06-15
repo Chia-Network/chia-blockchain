@@ -1,3 +1,5 @@
+; [REVIEW - misc] I think these files should be grouped into a folder or have a prefix or something to classify them as potential proposals
+; [REVIEW - optimization] That said, I don't think this needs to be a file at all.  Just `(1, ((CREATE_COIN puzzle_hash_that_can_be_calculated_and_verified_off_chain ONE)))`.
 (mod
   (
     TREASURY_MOD_HASH

@@ -1,5 +1,6 @@
+; [REVIEW - comments] A description of where this fits into the larger architecture would be nice
 (mod (
-    TREASURY_SINGLETON_STRUCT
+    TREASURY_SINGLETON_STRUCT  ; [REVIEW - optimization]
     treasury_inner_puz_hash
     parent_parent
     new_puzzle_hash  ; the full CAT puzzle
@@ -8,6 +9,7 @@
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
 
+  ; [REVIEW - misc] PROPOSAL_SINGLETON_STRUCT mismatches the variable name TREASURY_SINGLETON_STRUCT
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
     (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
       inner_puzzle_hash
@@ -17,12 +19,18 @@
 
   (defun create_parent_conditions (parent_id new_puzzle_hash amount)
     (list
+      ; [REVIEW - optimization] A quick repo search says this 'm' isn't used anywhere which seems to make it unecessary?
+      ; [REVIEW - misc] I don't see a proposal dpuz for minting CATs, so maybe I'm missing something, but why not just work like a regular launcher and create the annoucment
+      ; [^] and have the creator assert it?  It's potentially cheaper becuase the creator may be able to calculate the announcement off chain.
       (list ASSERT_COIN_ANNOUNCEMENT (sha256 parent_id (sha256tree (list 'm' new_puzzle_hash))))
       (list ASSERT_MY_PARENT_ID parent_id)
     )
   )
 
   (c
+    ; [REVIEW - optimization] maybe I'm a little confused, but it seems like these last two memos are unecessary since they can be calculated from the first hint
+    ; [REVIEW - architecture] it seems like you'd want to hint to an inner puzzle right?  The coin's puzzle hash is already subscribable.
+    ; [REVIEW - misc] Not a huge fan of acknowledging hints in chialisp.  I feel like this should be a passed in rest_of_create_coin_args or something for future extensibility.
     (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash (sha256tree (list 'm' new_puzzle_hash)) (list 'm' new_puzzle_hash)))
     (c
       (list ASSERT_MY_AMOUNT amount)

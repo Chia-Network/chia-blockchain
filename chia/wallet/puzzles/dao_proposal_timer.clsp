@@ -23,7 +23,7 @@
   (include *standard-cl-21*)
 
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
-    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       inner_puzzle_hash
       (sha256tree PROPOSAL_SINGLETON_STRUCT)
     )
@@ -40,6 +40,11 @@
   ; proposal_yes_votes
   ; proposal_total_votes
   ; proposal_innerpuzhash
+  ; [REVIEW - optimization] We're passing in a _lot_ of stuff here to simply validate the proposal timelock is correct
+  ; [^] Could we either a) curry in the timelock to this puzzle
+  ; [^] b) have the proposal announce the timelock to us and verify it that way?
+  ; [REVIEW - optimization] Similar vein as above, but couldn't the proposal also verify our parent ID since it already has access to it's own singleton info?
+  ; [^] This would save us a couple of duplicated hash reveals.
   (defun calculate_proposal_puzzlehash (
       PROPOSAL_MOD_HASH
       CAT_MOD_HASH
@@ -55,7 +60,7 @@
     )
     (calculate_singleton_puzzle_hash
       proposal_singleton_struct
-      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
         (sha256 ONE INNERPUZHASH)
         (sha256 ONE TOTAL_VOTES)
         (sha256 ONE YES_VOTES)

@@ -33,7 +33,7 @@
   )
 
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       inner_puzzle_hash
       (sha256tree SINGLETON_STRUCT)
     )
@@ -52,7 +52,7 @@
       proposal_total_votes
       proposal_innerpuz_hash
     )
-    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       (sha256 ONE proposal_innerpuz_hash)
       (sha256 ONE proposal_total_votes)
       (sha256 ONE proposal_yes_votes)
@@ -70,6 +70,7 @@
   (assert
     ; (= (sha256tree my_solution) announcement_args) - quex suggested this. We don't need to check it now. Can be used for future functionality.
     (> (+ coin_amount ONE) PROPOSAL_MINIMUM_AMOUNT)  ; >=
+    ; [REVIEW - optimization]  Do we need these two assertions?  We're validating the source is a proposal which we know checked it right?
     (> total_votes Attendance_Required)  ; TODO: we might want to change this to storing total cats and calculating like with yes votes
     (> yes_votes (calculate_win_percentage total_votes Pass_Margin))
     (=

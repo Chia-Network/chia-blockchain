@@ -1,3 +1,4 @@
+; [REVIEW - comments] A description of where this fits into the larger architecture would be nice
 (mod (
     NEW_PUZZLE_HASH  ; this is the CAT inner_puzzle
     my_amount

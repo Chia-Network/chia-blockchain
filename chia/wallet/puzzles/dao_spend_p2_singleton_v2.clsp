@@ -1,3 +1,8 @@
+; [REVIEW - misc] I think these files should be grouped into a folder or have a prefix or something to classify them as potential proposals
+; [REVIEW - architecture] So this file basically supports XCH and CAT payments only right?
+; [^] I think we could make this file a little more general by, instead of curring in CAT mod and passing in tail hashes and hardcoding the p2_singleton wrapping,
+; [^] you could instead take a list in the format ((WRAPPER_FUNCTION CONDITIONS) (WRAPPER_FUNCTION CONDITIONS) ...)
+; [^] these wrapper functions are just as easily audited as the TAIL_HASHes they replace and would allow for all future asset types with p2_singleton as an inner puzzle
 (mod (
     TREASURY_SINGLETON_STRUCT
     CAT_MOD_HASH
@@ -22,7 +27,7 @@
   (include curry-and-treehash.clib)
 
   (defun-inline calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
-    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       inner_puzzle_hash
       (sha256tree PROPOSAL_SINGLETON_STRUCT)
     )
@@ -39,7 +44,7 @@
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list p2_calculated (sha256tree 0))))
       (c
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))  ; [REVIEW - optimization] very tiny, but this which we thought was a nice-to-have in python is actually very doable and we should probably switch back to announcing ()
         (if p2_singleton_list
             (loop_through_list
               SPEND_AMOUNT
@@ -53,6 +58,7 @@
                   (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT))
                   output
                 )
+                ; [REVIEW - comments] My answer to the TODO below is "no" :)
                 (x)  ; the coins you've selected do not add up enough to cover the amount - TODO: is this necessary?
             )
         )
@@ -64,7 +70,7 @@
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list p2_calculated delegated_puzhash)))
       (c
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))  ; [REVIEW - optimization] very tiny, but this which we thought was a nice-to-have in python is actually very doable and we should probably switch back to announcing ()
         output
       )
     )
@@ -93,7 +99,7 @@
   )
 
   (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
-    (puzzle-hash-of-curried-function CAT_MOD_HASH
+    (puzzle-hash-of-curried-function CAT_MOD_HASH  ; [REVIEW - misc]  I think curry_hashes or curry_hashes_inline here will be less expensive/have a more sensible API.  I think we're trying to deprecate this function.
       INNERPUZHASH
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE CAT_MOD_HASH)
@@ -110,8 +116,12 @@
       create_coin_sum
       output
     )
+    ; [REVIEW - optimization] You can simplify this loop a bit I think:
+    ; [^] - start with (if parent_amount_list ... output)
+    ; [^] - move the (if (r parent_amount_list)) (and total sum assertion if you decide to keep it) to only switch on what delegated puzzle to return (that's the only different part)
     (if (r parent_amount_list)
         (add_announcements_to_result
+          ; [REVIEW - optimization] this wrap_in_cat_layer can be done a layer above to avoid repetitive calculation
           (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
           (sha256tree 0)  ; this is the delegated_puzhash
           (for_each_asset
@@ -120,7 +130,7 @@
             P2_SINGLETON_PUZHASH
             tail_hash
             parent_amount_list
-            (+ total (f (r (f parent_amount_list))))
+            (+ total (f (r (f parent_amount_list))))  ; [REVIEW - optimization] you can do the first one of these a layer above and pass it in so that you're one ahead and then in the final iteration below you can avoid the recalculation
             create_coin_sum
             output
           )
@@ -137,27 +147,29 @@
               0
               output
             )
+            ; [REVIEW - comments] My answer to the TODO below is "no" :)
             (x)  ; the coins you've selected do not add up enough to cover the amount - TODO: is this necessary?
         )
     )
   )
 
+  ; [REVIEW - comments] a comment about what this function is doing would be good
   (defun for_each_asset_type (
       CAT_MOD_HASH
       P2_SINGLETON_PUZHASH
       LIST_OF_TAILHASH_CONDITIONS
-      p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
+      p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)  ; [REVIEW - comments] it seems like this comment is malformatted
       output
     )
     (if p2_singleton_tailhash_parent_amount_list
-        (for_each_asset_type
+        (for_each_asset_type  ; [REVIEW - bugs]  This function has too many arguments (which means it's probably not tested yet)
           CAT_MOD_HASH
           P2_SINGLETON_PUZHASH
           (r LIST_OF_TAILHASH_CONDITIONS)
           (r p2_singleton_tailhash_parent_amount_list)
           (for_each_asset
             CAT_MOD_HASH
-            (if
+            (if  ; [REVIEW - misc] I think you should look into using `assert` more for code readability (applies to other places/files as well as this)
               (=
                 (f (f LIST_OF_TAILHASH_CONDITIONS))
                 (f (f p2_singleton_tailhash_parent_amount_list))
@@ -182,6 +194,7 @@
   (c
     (list ASSERT_MY_PUZZLEHASH (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash))
     (c
+      ; [REVIEW - misc] Not a huge fans of hints being acknowledged in chialisp.  That being said, I have no idea if there's a reasonable way around this, but if there is I think we should remove this hint.
       (list CREATE_COIN treasury_inner_puzhash ONE (list (f (r TREASURY_SINGLETON_STRUCT))))
       (loop_through_list
         (sum_create_coins CONDITIONS)
