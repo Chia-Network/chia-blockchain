@@ -9,6 +9,11 @@ omit=
 concurrency=multiprocessing, thread
 parallel=True
 
+[paths]
+source =
+  chia/
+  venv/**/site-packages/chia/ 
+
 [report]
 precision = 1
 exclude_lines =
