@@ -1312,9 +1312,10 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
     vc_records, proofs = await wallet_client.vc_get_list(args["start"], args["count"])
     print("Proofs:")
     for hash, proof_dict in proofs.items():
-        print(f"- {hash}")
-        for proof in proof_dict:
-            print(f"  - {proof}")
+        if proof_dict is not None:
+            print(f"- {hash}")
+            for proof in proof_dict:
+                print(f"  - {proof}")
     for record in vc_records:
         print("")
         print(f"Launcher ID: {record.vc.launcher_id.hex()}")
