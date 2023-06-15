@@ -38,6 +38,7 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -268,7 +269,7 @@ class DAOCATWallet:
         await self.lineage_store.remove_lineage_proof(name)
 
     async def advanced_select_coins(
-        self, amount: uint64, proposal_id: bytes32, permission_to_convert_more: bool = False
+        self, amount: uint64, proposal_id: bytes32
     ) -> List[LockedCoinInfo]:
         coins = []
         s = 0
@@ -284,14 +285,10 @@ class DAOCATWallet:
                 if s >= amount:
                     break
         if s < amount:
-            if permission_to_convert_more:
-                tx_list = await self.create_new_dao_cats(uint64(amount - s))
-                self.log.info("New voting tokens created: %s", tx_list)
-            else:
-                raise ValueError(
-                    "We do not have enough CATs in Voting Mode right now. "
-                    "Please convert some more or try again with permission to convert."
-                )
+            raise ValueError(
+                "We do not have enough CATs in Voting Mode right now. "
+                "Please convert some more or try again with permission to convert."
+            )
         return coins
 
     def id(self) -> uint32:

@@ -73,6 +73,7 @@ from chia.wallet.dao_wallet.dao_utils import (
 
 # from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
@@ -347,6 +348,8 @@ class DAOWallet(WalletProtocol):
             LOCKUP_MOD_HASH,
             TREASURY_MOD_HASH,
             CAT_TAIL_HASH,
+            PROPOSAL_MINIMUM_AMOUNT,
+            PAYOUT_PUZHASH,
         ) = curried_args.as_iter()
 
         # TODO: how is this working with our system about receiving CATs you haven't subscribed to?
@@ -1297,14 +1300,15 @@ class DAOWallet(WalletProtocol):
         reuse_puzhash: Optional[bool] = None,
         push: bool = True,
     ) -> SpendBundle:
-        coins = await self.standard_wallet.select_coins(uint64(fee + 1))
+        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
+        coins = await self.standard_wallet.select_coins(uint64(fee + dao_rules.proposal_minimum_amount))
         if coins is None:
             return None
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER
         # launcher coin contains singleton launcher, launcher coin ID == singleton_id == treasury_id
-        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), 1)
+        launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), dao_rules.proposal_minimum_amount)
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
 
@@ -1329,11 +1333,13 @@ class DAOWallet(WalletProtocol):
         full_proposal_puzzle_hash = full_proposal_puzzle.get_tree_hash()
 
         announcement_set: Set[Announcement] = set()
-        announcement_message = Program.to([full_proposal_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
+        announcement_message = Program.to(
+            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+        ).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            uint64(1),
+            uint64(dao_rules.proposal_minimum_amount),
             genesis_launcher_puz.get_tree_hash(),
             fee,
             origin.name(),
@@ -1344,11 +1350,13 @@ class DAOWallet(WalletProtocol):
             reuse_puzhash=reuse_puzhash,
         )
 
-        genesis_launcher_solution = Program.to([full_proposal_puzzle_hash, 1, bytes(0x80)])
+        genesis_launcher_solution = Program.to(
+            [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
+        )
 
         launcher_cs = CoinSpend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
         launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
-        eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, 1)
+        eve_coin = Coin(launcher_coin.name(), full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount)
 
         future_parent = LineageProof(
             eve_coin.parent_coin_info,
@@ -1376,13 +1384,13 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-
+        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
                 to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
-                amount=uint64(1),
+                amount=uint64(dao_rules.proposal_minimum_amount),
                 fee_amount=fee,
                 confirmed=False,
                 sent=uint32(10),
@@ -1461,6 +1469,7 @@ class DAOWallet(WalletProtocol):
                 0,
                 0,
                 0,
+                eve_coin.amount,
             ]
         )
         # full solution is (lineage_proof my_amount inner_solution)
@@ -1544,6 +1553,19 @@ class DAOWallet(WalletProtocol):
                     get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
                 ).get_tree_hash()
             )
+        # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
+        # vote_info  ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
+        # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
+        # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
+        # ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
+        # lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
+        # ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
+        # innerpuz_reveal  ; this is only added during the first vote
+        # soft_close_length  ; revealed by the treasury
+        # self_destruct_time  ; revealed by the treasury
+        # oracle_spend_delay  ; used to recreate the treasury
+        # self_destruct_flag  ; if not 0, do the self-destruct spend
+        # my_amount
         inner_sol = Program.to(
             [
                 vote_amounts,
@@ -1556,6 +1578,7 @@ class DAOWallet(WalletProtocol):
                 0,
                 0,
                 0,
+                proposal_info.current_coin.amount,
             ]
         )
         parent_info = self.get_parent_for_coin(proposal_info.current_coin)
@@ -1568,7 +1591,7 @@ class DAOWallet(WalletProtocol):
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ],
-                1,
+                proposal_info.current_coin.amount,
                 inner_sol,
             ]
         )
@@ -1681,7 +1704,7 @@ class DAOWallet(WalletProtocol):
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ],
-                1,
+                proposal_info.current_coin.amount,
                 solution,
             ]
         )
@@ -1738,6 +1761,7 @@ class DAOWallet(WalletProtocol):
                     PROPOSED_PUZ_HASH,
                     proposal_timelock,
                     proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
+                    proposal_info.current_coin.amount,  # amount should never change
                 ]
             )
             timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
@@ -1763,6 +1787,8 @@ class DAOWallet(WalletProtocol):
                     proposal_id,
                     TOTAL_VOTES,
                     YES_VOTES,
+                    proposal_info.current_coin.parent_coin_info,
+                    proposal_info.current_coin.amount,
                 ]
             )
             # p2_singleton_parent_amount_list  ; for xch this is just a list of (coin_parent coin_amount)
@@ -1986,7 +2012,7 @@ class DAOWallet(WalletProtocol):
             treasury_solution = Program.to(
                 [
                     1,
-                    [full_proposal_puzzle.get_tree_hash(), PROPOSED_PUZ_HASH.as_atom(), 0],
+                    [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
                     validator_solution,
                     puzzle_reveal,
                     delegated_solution,
@@ -2404,10 +2430,11 @@ class DAOWallet(WalletProtocol):
             TOTAL_VOTES,  # how many people responded
             INNERPUZ,
         ) = curried_args
-
+        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if current_coin is None:
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+
         ended = False
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
@@ -2426,6 +2453,10 @@ class DAOWallet(WalletProtocol):
             if current_innerpuz == DAO_FINISHED_STATE:
                 ended = True
 
+        if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
+            # TODO: is this the best way of handling this?
+            # breakpoint()
+            raise ValueError("this coin does not meet the minimum requirements and can be ignored")
         new_total_votes = TOTAL_VOTES.as_int() + votes_added
         if new_total_votes < self.dao_info.filter_below_vote_amount:
             return  # ignore all proposals below the filter amount
@@ -2495,7 +2526,7 @@ class DAOWallet(WalletProtocol):
                 children = await wallet_node.fetch_children(parent_coin_id, peer)
                 if len(children) == 0:
                     break
-                children_state = [child for child in children if child.coin.amount == 1]
+                children_state = [child for child in children if child.coin.amount % 2 == 1]
                 assert children_state is not None
                 assert len(children_state) > 0
                 child_state = children_state[0]

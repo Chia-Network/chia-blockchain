@@ -345,10 +345,7 @@
             proposal_curry_vals
             ()
           )
-          (if new_proposal_vote_id_or_removal_id  ; this forces the new_proposal_vote_id to be 0 if you're actually exiting, allows for tricks a layer up
-              (x)  ; Dear Reviewer: you likely hate multi-layer tricks, but it saves a LOT of processing above, and costs v little here
-              (a INNERPUZ inner_solution)
-          )
+          (a INNERPUZ inner_solution)
       )
   )
 )

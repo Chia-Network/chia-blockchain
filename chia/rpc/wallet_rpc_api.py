@@ -2591,6 +2591,7 @@ class WalletRpcApi:
             bytes32.from_hexstr(request["proposal_id"]),
             genesis_id,
             fee,
+            # genesis_id,
             push=True,
             reuse_puzhash=request.get("reuse_puzhash", None),
         )

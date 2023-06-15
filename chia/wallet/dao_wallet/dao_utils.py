@@ -12,6 +12,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
@@ -29,7 +30,7 @@ DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clsp")
 DAO_PROPOSAL_MOD_HASH: bytes32 = DAO_PROPOSAL_MOD.get_tree_hash()
 DAO_PROPOSAL_VALIDATOR_MOD: Program = load_clvm("dao_proposal_validator.clsp")
 DAO_PROPOSAL_VALIDATOR_MOD_HASH: bytes32 = DAO_PROPOSAL_VALIDATOR_MOD.get_tree_hash()
-DAO_TREASURY_MOD: Program = load_clvm("dao_treasury_with_hack.clsp")
+DAO_TREASURY_MOD: Program = load_clvm("dao_treasury.clsp")
 DAO_TREASURY_MOD_HASH: bytes32 = DAO_TREASURY_MOD.get_tree_hash()
 SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
@@ -108,6 +109,10 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         DAO_LOCKUP_MOD_HASH,
         DAO_TREASURY_MOD_HASH,
         cat_tail_hash,
+        dao_rules.proposal_minimum_amount,
+        get_p2_singleton_puzzle(
+            treasury_id
+        ).get_tree_hash(),  # TODO: let people set this later - for now a hidden feature
     )
     # TREASURY_MOD_HASH
     # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
@@ -181,6 +186,19 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
     # pass_percentage: uint64
     # self_destruct_length: uint64
     # oracle_spend_delay: uint64
+    curried_args = uncurry_proposal_validator(proposal_validator)
+    (
+        SINGLETON_STRUCT,
+        PROPOSAL_MOD_HASH,
+        PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        LOCKUP_MOD_HASH,
+        TREASURY_MOD_HASH,
+        CAT_TAIL_HASH,
+        PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
+    ) = curried_args.as_iter()
+
     dao_rules = DAORules(
         proposal_timelock.as_int(),
         soft_close_length.as_int(),
@@ -188,6 +206,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         pass_percentage.as_int(),
         self_destruct_length.as_int(),
         oracle_spend_delay.as_int(),
+        PROPOSAL_MINIMUM_AMOUNT.as_int(),
     )
     return dao_rules
 
@@ -365,7 +384,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
     curried_args = uncurry_treasury(puzzle_reveal)
     (
         _DAO_TREASURY_MOD_HASH,
-        _DAO_PROPOSAL_VALIDATOR,
+        proposal_validator,
         proposal_timelock,
         soft_close_length,
         attendance_required,
@@ -373,6 +392,18 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args
+    curried_args = uncurry_proposal_validator(proposal_validator)
+    (
+        SINGLETON_STRUCT,
+        PROPOSAL_MOD_HASH,
+        PROPOSAL_TIMER_MOD_HASH,
+        CAT_MOD_HASH,
+        LOCKUP_MOD_HASH,
+        TREASURY_MOD_HASH,
+        CAT_TAIL_HASH,
+        PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
+    ) = curried_args.as_iter()
     return DAORules(
         uint64(int_from_bytes(proposal_timelock.as_atom())),
         uint64(int_from_bytes(soft_close_length.as_atom())),
@@ -380,6 +411,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         uint64(int_from_bytes(pass_percentage.as_atom())),
         uint64(int_from_bytes(self_destruct_length.as_atom())),
         uint64(int_from_bytes(oracle_spend_delay.as_atom())),
+        uint64(PROPOSAL_MINIMUM_AMOUNT.as_int()),
     )
 
 
@@ -502,6 +534,8 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         LOCKUP_MOD_HASH,
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
+        PROPOSAL_MINIMUM_AMOUNT,
+        PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
     return bytes32(CAT_TAIL_HASH.as_atom())
 
