@@ -66,6 +66,8 @@ class FullNodeDiscovery:
         if introducer_info is not None:
             self.introducer_info = UnresolvedPeerInfo(introducer_info["host"], introducer_info["port"])
             self.enable_private_networks = introducer_info.get("enable_private_networks", False)
+        else:
+            self.enable_private_networks = False
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue: Optional[asyncio.Queue[Tuple[TimestampedPeerInfo, int]]] = None
