@@ -1938,7 +1938,7 @@ async def test_clear_pending_roots(
             finally:
                 client.close()
                 await client.await_closed()
-        else:
-            assert False, "bad parametrization"
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
 
         assert cleared_root == {"success": True, "root": pending_root.marshal()}

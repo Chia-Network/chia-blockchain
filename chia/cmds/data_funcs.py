@@ -5,8 +5,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import click
-
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -233,10 +231,8 @@ async def clear_pending_roots(
     root_path: Path = DEFAULT_ROOT_PATH,
 ) -> Dict[str, Any]:
     async with get_any_service_client(DataLayerRpcClient, rpc_port, root_path=root_path) as (client, _):
-        if client is None:
-            raise click.ClickException("Failed to connect to data layer")
-
-        result = await client.clear_pending_roots(store_id=store_id)
-        print(json.dumps(result, indent=4, sort_keys=True))
+        if client is not None:
+            result = await client.clear_pending_roots(store_id=store_id)
+            print(json.dumps(result, indent=4, sort_keys=True))
 
     return result
