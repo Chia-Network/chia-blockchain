@@ -912,11 +912,9 @@ class DAOWallet(WalletProtocol):
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            origin.name(),
-            coins,
-            None,
-            False,
-            announcement_set,
+            origin_id=origin.name(),
+            coins=coins,
+            coin_announcements_to_consume=announcement_set,
             memos=[new_cat_wallet.cat_info.limitations_program_hash],
         )
 
@@ -1083,16 +1081,13 @@ class DAOWallet(WalletProtocol):
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
-
         tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            origin.name(),
-            coins,
-            None,
-            False,
-            announcement_set,
+            origin_id=origin.name(),
+            coins=set(coins),
+            coin_announcements_to_consume=announcement_set,
             memos=[new_cat_wallet.cat_info.limitations_program_hash],
         )
 
@@ -1342,11 +1337,9 @@ class DAOWallet(WalletProtocol):
             uint64(dao_rules.proposal_minimum_amount),
             genesis_launcher_puz.get_tree_hash(),
             fee,
-            origin.name(),
-            coins,
-            None,
-            False,
-            announcement_set,
+            origin_id=origin.name(),
+            coins=coins,
+            coin_announcements_to_consume=announcement_set,
             reuse_puzhash=reuse_puzhash,
         )
 

@@ -252,7 +252,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
+            amount, minted_cat_puzzle_hash, uint64(0), origin_id=origin_id, coins=set(coins)
         )
         assert tx_record.spend_bundle is not None
         payment = Payment(cat_inner.get_tree_hash(), amount)
