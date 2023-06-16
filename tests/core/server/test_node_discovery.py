@@ -40,6 +40,8 @@ async def test_enable_private_networks(
     )
     assert discovery0 is not None
     assert discovery0.enable_private_networks is False
+    await discovery0.initialize_address_manager()
+    assert discovery0.address_manager.allow_private_subnets is False
 
     # Test with enable_private_networks set to False in Config
     discovery1 = FullNodeDiscovery(
@@ -62,6 +64,8 @@ async def test_enable_private_networks(
     )
     assert discovery1 is not None
     assert discovery1.enable_private_networks is False
+    await discovery1.initialize_address_manager()
+    assert discovery1.address_manager.allow_private_subnets is False
 
     # Test with enable_private_networks set to True in Config
     discovery2 = FullNodeDiscovery(
@@ -84,3 +88,5 @@ async def test_enable_private_networks(
     )
     assert discovery2 is not None
     assert discovery2.enable_private_networks is True
+    await discovery2.initialize_address_manager()
+    assert discovery2.address_manager.allow_private_subnets is True
