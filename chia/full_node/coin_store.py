@@ -432,7 +432,7 @@ class CoinStore:
         coin_ids: Set[bytes32],
         min_height: uint32 = uint32(0),
         *,
-        max_height: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1),
+        max_height: uint32 = uint32.MAXIMUM,
         max_items: int = 50000,
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
@@ -448,7 +448,7 @@ class CoinStore:
                     coin_ids_db = tuple([pid.hex() for pid in batch.entries])
 
                 max_height_sql = ""
-                if max_height != uint32.MAXIMUM_EXCLUSIVE - 1:
+                if max_height != uint32.MAXIMUM:
                     max_height_sql = f"AND confirmed_index<={max_height} AND spent_index<={max_height}"
 
                 async with conn.execute(
