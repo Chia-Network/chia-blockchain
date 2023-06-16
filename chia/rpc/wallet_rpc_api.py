@@ -1972,11 +1972,14 @@ class WalletRpcApi:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
-        hint_dict, coin_dict = compute_spend_hints_and_additions(coin_spend)
+        hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        try:
-            hint: bytes32 = next(hint_dict[id] for id, c in coin_dict.items() if c.amount % 2 == 1)
-        except StopIteration:  # pragma: no cover
+        hint: Optional[bytes32] = None
+        for hinted_coin in hinted_coins:
+            if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+                hint = hinted_coin.hint
+                break
+        if hint is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
