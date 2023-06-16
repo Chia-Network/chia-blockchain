@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from secrets import token_bytes
 
 import pytest
@@ -25,8 +26,8 @@ record_3 = WalletCoinRecord(coin_3, uint32(6), uint32(0), False, True, WalletTyp
 
 
 @pytest.mark.asyncio
-async def test_get_coins_of_interest_with_trade_statuses() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_coins_of_interest_with_trade_statuses(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         coin_store = await WalletCoinStore.create(db_wrapper)
         trade_store = await TradeStore.create(db_wrapper)
         await coin_store.add_coin_record(record_1)

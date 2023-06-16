@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, List
 
 import aiosqlite
@@ -105,8 +106,8 @@ def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionCon
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod, tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         concurrent_task_count = 200
@@ -133,8 +134,8 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
 
 @pytest.mark.asyncio
-async def test_writers_nests() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_writers_nests(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
         async with db_wrapper.writer_maybe_transaction() as conn1:
             async with conn1.execute("SELECT value FROM counter") as cursor:
@@ -152,8 +153,8 @@ async def test_writers_nests() -> None:
 
 
 @pytest.mark.asyncio
-async def test_writer_journal_mode_wal() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_writer_journal_mode_wal(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         async with db_wrapper.writer() as connection:
             async with connection.execute("PRAGMA journal_mode") as cursor:
                 result = await cursor.fetchone()
@@ -161,8 +162,8 @@ async def test_writer_journal_mode_wal() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reader_journal_mode_wal() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_reader_journal_mode_wal(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         async with db_wrapper.reader_no_transaction() as connection:
             async with connection.execute("PRAGMA journal_mode") as cursor:
                 result = await cursor.fetchone()
@@ -170,9 +171,9 @@ async def test_reader_journal_mode_wal() -> None:
 
 
 @pytest.mark.asyncio
-async def test_partial_failure() -> None:
+async def test_partial_failure(tmp_path: Path) -> None:
     values = []
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
         async with db_wrapper.writer() as conn1:
             await conn1.execute("UPDATE counter SET value = 42")
@@ -197,8 +198,8 @@ async def test_partial_failure() -> None:
 
 
 @pytest.mark.asyncio
-async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_readers_nests(get_reader_method: GetReaderMethod, tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with get_reader_method(db_wrapper)() as conn1:
@@ -213,8 +214,8 @@ async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
 
 
 @pytest.mark.asyncio
-async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_readers_nests_writer(get_reader_method: GetReaderMethod, tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as conn1:
@@ -236,7 +237,7 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> None:
+async def test_only_transactioned_reader_ignores_writer(transactioned: bool, tmp_path: Path) -> None:
     writer_committed = asyncio.Event()
     reader_read = asyncio.Event()
 
@@ -253,7 +254,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
 
         assert await query_value(connection=writer) == 1
 
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         get_reader = db_wrapper.reader if transactioned else db_wrapper.reader_no_transaction
 
         await setup_table(db_wrapper)
@@ -274,8 +275,8 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
 
 
 @pytest.mark.asyncio
-async def test_reader_nests_and_ends_transaction() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_reader_nests_and_ends_transaction(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         async with db_wrapper.reader() as reader:
             assert reader.in_transaction
 
@@ -289,8 +290,8 @@ async def test_reader_nests_and_ends_transaction() -> None:
 
 
 @pytest.mark.asyncio
-async def test_writer_in_reader_works() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_writer_in_reader_works(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
@@ -304,8 +305,8 @@ async def test_writer_in_reader_works() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reader_transaction_is_deferred() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_reader_transaction_is_deferred(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
@@ -324,8 +325,8 @@ async def test_reader_transaction_is_deferred() -> None:
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod, tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
@@ -353,8 +354,8 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod, tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as connection:
@@ -406,8 +407,9 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
 async def test_in_transaction_as_expected(
     manager_method: Callable[[DBWrapper2], ConnectionContextManager],
     expected: bool,
+    tmp_path: Path,
 ) -> None:
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with manager_method(db_wrapper) as connection:
@@ -415,8 +417,8 @@ async def test_in_transaction_as_expected(
 
 
 @pytest.mark.asyncio
-async def test_cancelled_reader_does_not_cancel_writer() -> None:
-    async with DBConnection(2) as db_wrapper:
+async def test_cancelled_reader_does_not_cancel_writer(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer() as writer:

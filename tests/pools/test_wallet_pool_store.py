@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from secrets import token_bytes
 from typing import Dict, List, Optional
 
@@ -133,11 +134,11 @@ class TestWalletPoolStore:
 
 
 @pytest.mark.asyncio
-async def test_delete_wallet() -> None:
+async def test_delete_wallet(tmp_path: Path) -> None:
     dummy_spends = DummySpends()
     for i in range(5):
         dummy_spends.generate(i, i * 5)
-    async with DBConnection(1) as db_wrapper:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletPoolStore.create(db_wrapper)
         # Add the spends per wallet and verify them
         for wallet_id, spends in dummy_spends.spends_per_wallet.items():

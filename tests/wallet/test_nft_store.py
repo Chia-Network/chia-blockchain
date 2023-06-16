@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from secrets import token_bytes
 from typing import Dict, List
 
@@ -38,8 +39,8 @@ class DummyNFTs:
 
 class TestNftStore:
     @pytest.mark.asyncio
-    async def test_nft_insert(self) -> None:
-        async with DBConnection(1) as wrapper:
+    async def test_nft_insert(self, tmp_path: Path) -> None:
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as wrapper:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
             b_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f2")
@@ -92,8 +93,8 @@ class TestNftStore:
             assert not await db.exists(bytes32(b"0" * 32))
 
     @pytest.mark.asyncio
-    async def test_nft_remove(self) -> None:
-        async with DBConnection(1) as wrapper:
+    async def test_nft_remove(self, tmp_path: Path) -> None:
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as wrapper:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
             puzzle = Program.to(["A Test puzzle"])
@@ -123,8 +124,8 @@ class TestNftStore:
             assert not await db.exists(a_bytes32)
 
     @pytest.mark.asyncio
-    async def test_nft_reorg(self) -> None:
-        async with DBConnection(1) as wrapper:
+    async def test_nft_reorg(self, tmp_path: Path) -> None:
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as wrapper:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f0")
             nft_id_1 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
@@ -171,11 +172,11 @@ class TestNftStore:
 
 
 @pytest.mark.asyncio
-async def test_delete_wallet() -> None:
+async def test_delete_wallet(tmp_path: Path) -> None:
     dummy_nfts = DummyNFTs()
     for i in range(5):
         dummy_nfts.generate(i, i * 5)
-    async with DBConnection(1) as wrapper:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as wrapper:
         db = await WalletNftStore.create(wrapper)
         # Add the nfts per wallet and verify them
         for wallet_id, nfts in dummy_nfts.nfts_per_wallet.items():

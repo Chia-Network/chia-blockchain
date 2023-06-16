@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 from secrets import token_bytes
 from typing import Any, List, Optional, Tuple
 
@@ -42,8 +43,8 @@ tr1 = TransactionRecord(
 
 
 @pytest.mark.asyncio
-async def test_add() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_add(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         assert await store.get_transaction_record(tr1.name) is None
@@ -52,8 +53,8 @@ async def test_add() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_delete(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         await store.add_transaction_record(tr1)
@@ -63,8 +64,8 @@ async def test_delete() -> None:
 
 
 @pytest.mark.asyncio
-async def test_set_confirmed() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_set_confirmed(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         await store.add_transaction_record(tr1)
@@ -76,8 +77,8 @@ async def test_set_confirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_increment_sent_noop() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_increment_sent_noop(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         assert (
@@ -86,8 +87,8 @@ async def test_increment_sent_noop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_increment_sent() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_increment_sent(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         await store.add_transaction_record(tr1)
@@ -112,8 +113,8 @@ async def test_increment_sent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_increment_sent_error() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_increment_sent_error(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         await store.add_transaction_record(tr1)
@@ -127,7 +128,7 @@ async def test_increment_sent_error() -> None:
         assert tr.sent_to == [("peer1", uint8(3), "MEMPOOL_NOT_INITIALIZED")]
 
 
-def test_filter_ok_mempool_status() -> None:
+def test_filter_ok_mempool_status(tmp_path: Path) -> None:
     assert filter_ok_mempool_status([("peer1", uint8(1), None)]) == []
     assert filter_ok_mempool_status([("peer1", uint8(2), None)]) == []
     assert filter_ok_mempool_status([("peer1", uint8(3), None)]) == [("peer1", uint8(3), None)]
@@ -142,8 +143,8 @@ def test_filter_ok_mempool_status() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tx_reorged_update() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_tx_reorged_update(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr = dataclasses.replace(tr1, sent=2, sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
@@ -159,8 +160,8 @@ async def test_tx_reorged_update() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tx_reorged_add() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_tx_reorged_add(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr = dataclasses.replace(tr1, sent=2, sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
@@ -173,8 +174,8 @@ async def test_tx_reorged_add() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_tx_record() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_tx_record(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32))
@@ -198,8 +199,8 @@ async def test_get_tx_record() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_farming_rewards() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_farming_rewards(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -235,8 +236,8 @@ async def test_get_farming_rewards() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_all_unconfirmed() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_all_unconfirmed(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
@@ -247,8 +248,8 @@ async def test_get_all_unconfirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_unconfirmed_for_wallet() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_unconfirmed_for_wallet(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
@@ -264,8 +265,8 @@ async def test_get_unconfirmed_for_wallet() -> None:
 
 
 @pytest.mark.asyncio
-async def test_transaction_count_for_wallet() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_transaction_count_for_wallet(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
@@ -286,8 +287,8 @@ async def test_transaction_count_for_wallet() -> None:
 
 
 @pytest.mark.asyncio
-async def test_all_transactions_for_wallet() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_all_transactions_for_wallet(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -330,8 +331,8 @@ def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
 
 
 @pytest.mark.asyncio
-async def test_get_all_transactions() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_all_transactions(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -347,8 +348,8 @@ async def test_get_all_transactions() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transaction_above() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_transaction_above(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -365,8 +366,8 @@ async def test_get_transaction_above() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_tx_by_trade_id() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_tx_by_trade_id(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), trade_id=token_bytes(32))
@@ -397,8 +398,8 @@ async def test_get_tx_by_trade_id() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rollback_to_block() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_rollback_to_block(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -418,8 +419,8 @@ async def test_rollback_to_block() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_unconfirmed() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_delete_unconfirmed(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True)
@@ -439,8 +440,8 @@ async def test_delete_unconfirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_confirmed() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_transactions_between_confirmed(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))
@@ -520,8 +521,8 @@ async def test_get_transactions_between_confirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_relevance() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_transactions_between_relevance(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         t1 = dataclasses.replace(
@@ -619,8 +620,8 @@ async def test_get_transactions_between_relevance() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_to_puzzle_hash() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_transactions_between_to_puzzle_hash(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         ph1 = token_bytes(32)
@@ -657,8 +658,8 @@ async def test_get_transactions_between_to_puzzle_hash() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_not_sent() -> None:
-    async with DBConnection(1) as db_wrapper:
+async def test_get_not_sent(tmp_path: Path) -> None:
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))

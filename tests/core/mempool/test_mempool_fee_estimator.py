@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from random import Random
 
 import pytest
@@ -60,8 +61,8 @@ async def test_basics() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fee_increase() -> None:
-    async with DBConnection(db_version=2) as db_wrapper:
+async def test_fee_increase(tmp_path: Path) -> None:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         mempool_manager = MempoolManager(coin_store.get_coin_record, test_constants)
         assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
