@@ -124,14 +124,14 @@ else:
 @dataclasses.dataclass(frozen=True)
 class UInt32Range(Streamable):
     start: uint32 = uint32(0)
-    stop: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1)
+    stop: uint32 = uint32.MAXIMUM
 
 
 @streamable
 @dataclasses.dataclass(frozen=True)
 class UInt64Range(Streamable):
     start: uint64 = uint64(0)
-    stop: uint64 = uint64(uint64.MAXIMUM_EXCLUSIVE - 1)
+    stop: uint64 = uint64.MAXIMUM
 
 
 @dataclass(frozen=True)
