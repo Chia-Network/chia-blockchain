@@ -1,7 +1,9 @@
-import pytest
+from __future__ import annotations
 
 from logging import Logger
 from typing import Tuple
+
+import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.node_discovery import FullNodeDiscovery
@@ -10,8 +12,11 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
+
 @pytest.mark.asyncio
-async def test_enable_private_networks(two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],) -> None:
+async def test_enable_private_networks(
+    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+) -> None:
     chia_server = two_nodes[2]
 
     # Missing `enable_private_networks` config entry in introducer_peer should default to False for back compat
@@ -26,7 +31,7 @@ async def test_enable_private_networks(two_nodes: Tuple[FullNodeAPI, FullNodeAPI
             legacy_peer_db_path_key="db/peer_table_node.sqlite",
             default_peers_file_path="db/peers.dat",
         ),
-        {"host":"introducer.chia.net", "port": 8444},
+        {"host": "introducer.chia.net", "port": 8444},
         [],
         0,
         chia_server.config["selected_network"],
@@ -48,7 +53,7 @@ async def test_enable_private_networks(two_nodes: Tuple[FullNodeAPI, FullNodeAPI
             legacy_peer_db_path_key="db/peer_table_node.sqlite",
             default_peers_file_path="db/peers.dat",
         ),
-        {"host":"introducer.chia.net", "port": 8444, "enable_private_networks": False},
+        {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": False},
         [],
         0,
         chia_server.config["selected_network"],
@@ -70,7 +75,7 @@ async def test_enable_private_networks(two_nodes: Tuple[FullNodeAPI, FullNodeAPI
             legacy_peer_db_path_key="db/peer_table_node.sqlite",
             default_peers_file_path="db/peers.dat",
         ),
-        {"host":"introducer.chia.net", "port": 8444, "enable_private_networks": True},
+        {"host": "introducer.chia.net", "port": 8444, "enable_private_networks": True},
         [],
         0,
         chia_server.config["selected_network"],
