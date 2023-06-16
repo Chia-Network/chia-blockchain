@@ -1,0 +1,119 @@
+; This is a persistent timer for a proposal which allows it to have a relative time that survives despite it being recreated.
+; The closing time is contained in the timelock and passed in to the solution, and confirmed via an announcement from the Proposal
+; It creates/asserts announcements to pair it with the finishing spend of a proposal
+
+(mod (
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL_HASH
+    (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+    TREASURY_ID
+    treasury_mod_hash
+    proposal_yes_votes
+    proposal_total_votes
+    proposal_innerpuzhash
+    proposal_timelock
+    parent_parent
+    parent_amount
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  ; PROPOSAL_MOD_HASH
+  ; CAT_MOD_HASH
+  ; LOCKUP_MOD_HASH
+  ; CAT_TAIL_HASH
+  ; MY_PARENT_SINGLETON_STRUCT
+  ; treasury_mod_hash
+  ; PROPOSAL_TIMER_MOD_HASH
+  ; TREASURY_ID
+  ; proposal_yes_votes
+  ; proposal_total_votes
+  ; proposal_innerpuzhash
+  (defun calculate_proposal_puzzlehash (
+      PROPOSAL_MOD_HASH
+      CAT_MOD_HASH
+      LOCKUP_MOD_HASH
+      CAT_TAIL_HASH
+      proposal_singleton_struct
+      TREASURY_MOD_HASH
+      PROPOSAL_TIMER_MOD_HASH
+      TREASURY_ID
+      YES_VOTES
+      TOTAL_VOTES
+      INNERPUZHASH
+    )
+    (calculate_singleton_puzzle_hash
+      proposal_singleton_struct
+      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+        (sha256 ONE INNERPUZHASH)
+        (sha256 ONE TOTAL_VOTES)
+        (sha256 ONE YES_VOTES)
+        (sha256 ONE TREASURY_ID)
+        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE LOCKUP_MOD_HASH)
+        (sha256 ONE TREASURY_MOD_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+        (sha256 ONE PROPOSAL_MOD_HASH)
+        (sha256tree proposal_singleton_struct)
+      )
+    )
+  )
+
+  ; main
+  (list
+    (list ASSERT_HEIGHT_RELATIVE proposal_timelock)
+    (list CREATE_PUZZLE_ANNOUNCEMENT (f (r MY_PARENT_SINGLETON_STRUCT)))
+    (list
+      ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (calculate_proposal_puzzlehash
+          PROPOSAL_MOD_HASH
+          CAT_MOD_HASH
+          LOCKUP_MOD_HASH
+          CAT_TAIL_HASH
+          MY_PARENT_SINGLETON_STRUCT
+          treasury_mod_hash
+          PROPOSAL_TIMER_MOD_HASH
+          TREASURY_ID
+          proposal_yes_votes
+          proposal_total_votes
+          proposal_innerpuzhash
+        )
+        proposal_timelock
+      )
+    )
+    (list
+      ASSERT_MY_PARENT_ID
+      (sha256
+        parent_parent
+        (calculate_proposal_puzzlehash
+          PROPOSAL_MOD_HASH
+          CAT_MOD_HASH
+          LOCKUP_MOD_HASH
+          CAT_TAIL_HASH
+          MY_PARENT_SINGLETON_STRUCT
+          treasury_mod_hash
+          PROPOSAL_TIMER_MOD_HASH
+          TREASURY_ID
+          0
+          0
+          proposal_innerpuzhash
+        )
+        parent_amount
+      )
+
+    )
+  )
+)

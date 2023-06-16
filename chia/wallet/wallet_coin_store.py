@@ -29,7 +29,7 @@ class CoinRecordOrder(IntEnum):
 @dataclass(frozen=True)
 class GetCoinRecords(Streamable):
     offset: uint32 = uint32(0)
-    limit: uint32 = uint32.MAXIMUM
+    limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1)
     wallet_id: Optional[uint32] = None
     wallet_type: Optional[uint8] = None  # WalletType
     coin_type: Optional[uint8] = None  # CoinType
@@ -188,7 +188,7 @@ class WalletCoinStore:
         self,
         *,
         offset: uint32 = uint32(0),
-        limit: uint32 = uint32.MAXIMUM,
+        limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1),
         wallet_id: Optional[uint32] = None,
         wallet_type: Optional[WalletType] = None,
         coin_type: Optional[CoinType] = None,
@@ -237,7 +237,7 @@ class WalletCoinStore:
 
         where_sql = "WHERE " + " AND ".join(conditions) if len(conditions) > 0 else ""
         order_sql = f"ORDER BY {order.name} {'DESC' if reverse else 'ASC'}, rowid"
-        limit_sql = f"LIMIT {offset}, {limit}" if offset > 0 or limit < uint32.MAXIMUM else ""
+        limit_sql = f"LIMIT {offset}, {limit}" if offset > 0 or limit < uint32.MAXIMUM_EXCLUSIVE - 1 else ""
         query_sql = f"{where_sql} {order_sql} {limit_sql}"
 
         async with self.db_wrapper.reader_no_transaction() as conn:

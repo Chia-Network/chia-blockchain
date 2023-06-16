@@ -39,6 +39,11 @@ from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
+from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
+from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.dao_wallet.dao_utils import get_treasury_rules_from_puzzle
+from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
@@ -51,9 +56,9 @@ from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
+    did_program_to_metadata,
     match_did_puzzle,
     metadata_to_program,
-    program_to_metadata,
 )
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
@@ -194,6 +199,19 @@ class WalletRpcApi:
             "/did_message_spend": self.did_message_spend,
             "/did_get_info": self.did_get_info,
             "/did_find_lost_did": self.did_find_lost_did,
+            # DAO Wallets
+            "/dao_get_proposals": self.dao_get_proposals,
+            "/dao_create_proposal": self.dao_create_proposal,
+            "/dao_parse_proposal": self.dao_parse_proposal,
+            "/dao_vote_on_proposal": self.dao_vote_on_proposal,
+            "/dao_get_treasury_balance": self.dao_get_treasury_balance,
+            "/dao_close_proposal": self.dao_close_proposal,
+            "/dao_exit_lockup": self.dao_exit_lockup,
+            "/dao_adjust_filter_level": self.dao_adjust_filter_level,
+            "/dao_add_funds_to_treasury": self.dao_add_funds_to_treasury,
+            "/dao_send_to_lockup": self.dao_send_to_lockup,
+            "/dao_get_proposal_state": self.dao_get_proposal_state,
+            "/dao_free_coins_from_finished_proposals": self.dao_free_coins_from_finished_proposals,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_count_nfts": self.nft_count_nfts,
@@ -713,6 +731,42 @@ class WalletRpcApi:
                 }
             else:  # undefined did_type
                 pass
+        elif request["wallet_type"] == "dao_wallet":
+            name = None
+            if request["name"]:
+                name = request["name"]
+            if request["mode"] == "new":
+                if request["dao_rules"]:
+                    dao_rules = DAORules.from_json_dict(request["dao_rules"])
+                else:
+                    raise ValueError("DAO rules must be specified for wallet creation")
+                async with self.service.wallet_state_manager.lock:
+                    dao_wallet = await DAOWallet.create_new_dao_and_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        uint64(request["amount_of_cats"]),
+                        dao_rules,
+                        uint64(request["filter_amount"]),
+                        name,
+                        uint64(request.get("fee", 0)),
+                    )
+            elif request["mode"] == "existing":
+                # async with self.service.wallet_state_manager.lock:
+                dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+                    wallet_state_manager,
+                    main_wallet,
+                    bytes32.from_hexstr(request["treasury_id"]),
+                    uint64(request["filter_amount"]),
+                    name,
+                )
+            return {
+                "success": True,
+                "type": dao_wallet.type(),
+                "wallet_id": dao_wallet.id(),
+                "treasury_id": dao_wallet.dao_info.treasury_id,
+                "cat_wallet_id": dao_wallet.dao_info.cat_wallet_id,
+                "dao_cat_wallet_id": dao_wallet.dao_info.dao_cat_wallet_id,
+            }
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
                 did_id: Optional[bytes32] = None
@@ -904,7 +958,7 @@ class WalletRpcApi:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in clawback_types:
+                if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
@@ -1561,7 +1615,7 @@ class WalletRpcApi:
                 )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
-                txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+                txs: List[TransactionRecord] = await wallet.generate_signed_transactions(
                     amounts,
                     puzzle_hashes,
                     fee,
@@ -1577,7 +1631,7 @@ class WalletRpcApi:
                 for tx in txs:
                     await wallet.standard_wallet.push_transaction(tx)
         else:
-            txs = await wallet.generate_signed_transaction(
+            txs = await wallet.generate_signed_transactions(
                 amounts,
                 puzzle_hashes,
                 fee,
@@ -1945,7 +1999,7 @@ class WalletRpcApi:
             "public_key": public_key.atom.hex(),
             "recovery_list_hash": recovery_list_hash.atom.hex(),
             "num_verification": num_verification.as_int(),
-            "metadata": program_to_metadata(metadata),
+            "metadata": did_program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().atom.hex(),
             "full_puzzle": full_puzzle,
             "solution": Program.from_bytes(bytes(coin_spend.solution)).as_python(),
@@ -2116,7 +2170,7 @@ class WalletRpcApi:
                         None,
                         None,
                         False,
-                        json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+                        json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
                     )
                     await did_wallet.save_info(did_info)
                     await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
@@ -2321,6 +2375,241 @@ class WalletRpcApi:
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
         }
+
+    ##########################################################################################
+    # DAO Wallet
+    ##########################################################################################
+
+    async def dao_adjust_filter_level(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        await dao_wallet.adjust_filter_level(uint64(request["filter_level"]))
+        return {
+            "success": True,
+            "dao_info": dao_wallet.dao_info,
+        }
+
+    async def dao_add_funds_to_treasury(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        funding_wallet_id = uint32(request["funding_wallet_id"])
+        wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
+        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
+            raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
+        funding_tx = await dao_wallet.create_add_money_to_treasury_spend(
+            amount=uint64(request.get("amount")),
+            fee=uint64(request.get("fee", 0)),
+            funding_wallet_id=funding_wallet_id,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        return {"success": True, "tx_id": funding_tx.name}
+
+    async def dao_get_treasury_balance(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        asset_list = dao_wallet.dao_info.assets
+        balances = {}
+        for asset_id in asset_list:
+            balance = await dao_wallet.get_balance_by_asset_type(asset_id=asset_id)
+            balances[asset_id] = balance
+        return {"success": True, "balances": balances}
+
+    async def dao_send_to_lockup(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+        )
+        amount = uint64(request["amount"])
+        fee = uint64(request.get("fee", 0))
+        txs, _ = await dao_cat_wallet.create_new_dao_cats(
+            amount,
+            push=True,
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        return {
+            "success": True,
+            "tx_id": txs[0].name,
+        }
+
+    async def dao_get_proposals(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        proposal_list = dao_wallet.dao_info.proposals_list
+        dao_rules = get_treasury_rules_from_puzzle(dao_wallet.dao_info.current_treasury_innerpuz)
+        return {
+            "success": True,
+            "proposals": proposal_list,
+            "lockup_time": dao_rules.proposal_timelock,
+            "soft_close_length": dao_rules.soft_close_length,
+        }
+
+    async def dao_get_proposal_state(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        state = await dao_wallet.get_proposal_state(bytes32.from_hexstr(request["proposal_id"]))
+        return {"success": True, "state": state}
+
+    async def dao_exit_lockup(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        dao_cat_wallet = self.service.wallet_state_manager.get_wallet(
+            id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
+        )
+        assert dao_cat_wallet is not None
+        if request["coins"]:
+            coin_list = [Coin.from_json_dict(coin) for coin in request["coins"]]
+            coins: List[LockedCoinInfo] = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.coin in coin_list:
+                    coins.append(lci)
+        else:
+            coins = []
+            for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                if lci.active_votes == []:
+                    coins.append(lci)
+        fee = uint64(request.get("fee", 0))
+        tx = await dao_cat_wallet.exit_vote_state(
+            coins,
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        return {"success": True, "tx_id": tx.name()}
+
+    async def dao_create_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+
+        if request["proposal_type"] == "spend":
+            amounts: List[uint64] = []
+            puzzle_hashes: List[bytes32] = []
+            asset_types: List[Optional[bytes32]] = []
+            additions: Optional[List[Dict]] = request.get("additions")
+            if additions is not None:
+                for addition in additions:
+                    if "asset_id" in addition:
+                        asset_id = bytes32.from_hexstr(addition["asset_id"])
+                    else:
+                        asset_id = None
+                    receiver_ph = bytes32.from_hexstr(addition["puzzle_hash"])
+                    amount = uint64(addition["amount"])
+                    amounts.append(amount)
+                    puzzle_hashes.append(receiver_ph)
+                    asset_types.append(asset_id)
+            else:
+                amounts.append(uint64(request["amount"]))
+                puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
+                if request["asset_id"] is not None:
+                    asset_types.append(bytes32.from_hexstr(request["asset_id"]))
+                else:
+                    asset_types.append(None)
+            proposed_puzzle = dao_wallet.generate_simple_proposal_innerpuz(puzzle_hashes, amounts, asset_types)
+
+        elif request["proposal_type"] == "update":
+            rules = dao_wallet.dao_rules
+            prop = request["new_dao_rules"]
+            new_rules = DAORules(
+                proposal_timelock=prop.get("proposal_timelock") or rules.proposal_timelock,
+                soft_close_length=prop.get("soft_close_length") or rules.soft_close_length,
+                attendance_required=prop.get("attendance_required") or rules.attendance_required,
+                pass_percentage=prop.get("pass_percentage") or rules.pass_percentage,
+                self_destruct_length=prop.get("self_destruct_length") or rules.self_destruct_length,
+                oracle_spend_delay=prop.get("oracle_spend_delay") or rules.oracle_spend_delay,
+            )
+
+            proposed_puzzle = await dao_wallet.generate_update_proposal_innerpuz(new_rules)
+        elif request["proposal_type"] == "mint":
+            amount_of_cats = uint64(request["amount"])
+            mint_address = decode_puzzle_hash(request["cat_target_address"])
+            # amount_of_cats_to_create: uint64,
+            # cats_new_innerpuzhash: bytes32,
+            proposed_puzzle = await dao_wallet.generate_mint_proposal_innerpuz(amount_of_cats, mint_address)
+        else:
+            return {"success": False, "error": "Unknown proposal type."}
+
+        if "vote_amount" in request:
+            vote_amount = uint64(request["vote_amount"])
+        else:
+            vote_amount = None
+        fee = uint64(request.get("fee", 0))
+        tx = await dao_wallet.generate_new_proposal(
+            proposed_puzzle,
+            vote_amount,
+            fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        assert tx is not None
+        return {
+            "success": True,
+            "tx_id": tx.name().hex(),
+        }
+
+    async def dao_vote_on_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        vote_amount = None
+        if "vote_amount" in request:
+            vote_amount = uint64(request["vote_amount"])
+        fee = uint64(request.get("fee", 0))
+        sb = await dao_wallet.generate_proposal_vote_spend(
+            bytes32.from_hexstr(request["proposal_id"]),
+            vote_amount,
+            request["is_yes_vote"],  # bool
+            fee,
+            push=True,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        assert sb is not None
+        return {"success": True, "spend_bundle": sb}
+
+    async def dao_parse_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        proposal_id = bytes32.from_hexstr(request["proposal_id"])
+        proposal_dictionary = await dao_wallet.parse_proposal(proposal_id)
+        assert proposal_dictionary is not None
+        return {"success": True, "proposal_dictionary": proposal_dictionary}
+
+    async def dao_close_proposal(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        fee = uint64(request.get("fee", 0))
+        if "genesis_id" in request:
+            genesis_id = bytes32.from_hexstr(request["genesis_id"])
+        else:
+            genesis_id = None
+        tx = await dao_wallet.create_proposal_close_spend(
+            bytes32.from_hexstr(request["proposal_id"]),
+            genesis_id,
+            fee,
+            # genesis_id,
+            push=True,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        assert tx is not None
+        return {"success": True, "tx_id": tx.name()}
+
+    async def dao_free_coins_from_finished_proposals(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        fee = uint64(request.get("fee", 0))
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        tx = await dao_wallet.free_coins_from_finished_proposals(
+            fee=fee,
+            reuse_puzhash=request.get("reuse_puzhash", None),
+        )
+        assert tx is not None
+
+        return {"success": True, "spend_name": tx.name()}
 
     ##########################################################################################
     # NFT Wallet
@@ -2926,7 +3215,10 @@ class WalletRpcApi:
     async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)
 
-        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
+        if (
+            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
+            and parsed_request.limit > self.max_get_coin_records_limit
+        ):
             raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
 
         for filter_name, filter in {
@@ -3114,7 +3406,7 @@ class WalletRpcApi:
             else:
                 assert isinstance(wallet, CATWallet)
 
-                txs = await wallet.generate_signed_transaction(
+                txs = await wallet.generate_signed_transactions(
                     [amount_0] + [output.amount for output in additional_outputs],
                     [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                     fee,
