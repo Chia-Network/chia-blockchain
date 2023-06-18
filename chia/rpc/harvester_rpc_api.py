@@ -21,7 +21,7 @@ class HarvesterRpcApi:
             "/add_plot_directory": self.add_plot_directory,
             "/get_plot_directories": self.get_plot_directories,
             "/remove_plot_directory": self.remove_plot_directory,
-            "/get_harvesting_mode": self.get_harvesting_mode,
+            "/get_harvester_config": self.get_harvester_config,
             "/update_harvesting_mode": self.update_harvesting_mode,
         }
 
@@ -82,8 +82,8 @@ class HarvesterRpcApi:
             return {}
         raise ValueError(f"Did not remove plot directory {directory_name}")
 
-    async def get_harvesting_mode(self, _: Dict[str, Any]) -> EndpointResult:
-        harvester_config = await self.service.get_harvesting_mode()
+    async def get_harvester_config(self, _: Dict[str, Any]) -> EndpointResult:
+        harvester_config = await self.service.get_harvester_config()
         return {
             "use_gpu_harvesting": harvester_config["use_gpu_harvesting"],
             "gpu_index": harvester_config["gpu_index"],

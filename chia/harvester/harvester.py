@@ -20,7 +20,7 @@ from chia.plotting.util import (
     PlotRefreshResult,
     PlotsRefreshParameter,
     add_plot_directory,
-    get_harvesting_mode,
+    get_harvester_config,
     get_plot_directories,
     remove_plot,
     remove_plot_directory,
@@ -210,8 +210,8 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvesting_mode(self) -> Dict[str, Any]:
-        return get_harvesting_mode(self.root_path)
+    async def get_harvester_config(self) -> Dict[str, Any]:
+        return get_harvester_config(self.root_path)
 
     async def update_harvesting_mode(
         self,
