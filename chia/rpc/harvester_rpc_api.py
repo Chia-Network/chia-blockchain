@@ -22,7 +22,7 @@ class HarvesterRpcApi:
             "/get_plot_directories": self.get_plot_directories,
             "/remove_plot_directory": self.remove_plot_directory,
             "/get_harvester_config": self.get_harvester_config,
-            "/update_harvesting_mode": self.update_harvesting_mode,
+            "/update_harvester_config": self.update_harvester_config,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
@@ -95,7 +95,7 @@ class HarvesterRpcApi:
             "refresh_parameter_interval_seconds": harvester_config["plots_refresh_parameter"].get("interval_seconds"),
         }
 
-    async def update_harvesting_mode(self, request: Dict[str, Any]) -> EndpointResult:
+    async def update_harvester_config(self, request: Dict[str, Any]) -> EndpointResult:
         use_gpu_harvesting: Optional[bool] = None
         gpu_index: Optional[int] = None
         enforce_gpu_index: Optional[bool] = None
@@ -123,7 +123,7 @@ class HarvesterRpcApi:
             if refresh_parameter_interval_seconds < 3:
                 raise ValueError(f"Plot refresh interval seconds({refresh_parameter_interval_seconds}) is too short")
 
-        await self.service.update_harvesting_mode(
+        await self.service.update_harvester_config(
             use_gpu_harvesting=use_gpu_harvesting,
             gpu_index=gpu_index,
             enforce_gpu_index=enforce_gpu_index,

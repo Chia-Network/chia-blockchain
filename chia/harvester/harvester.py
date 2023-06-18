@@ -24,7 +24,7 @@ from chia.plotting.util import (
     get_plot_directories,
     remove_plot,
     remove_plot_directory,
-    update_harvesting_mode,
+    update_harvester_config,
 )
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
@@ -213,7 +213,7 @@ class Harvester:
     async def get_harvester_config(self) -> Dict[str, Any]:
         return get_harvester_config(self.root_path)
 
-    async def update_harvesting_mode(
+    async def update_harvester_config(
         self,
         *,
         use_gpu_harvesting: Optional[bool] = None,
@@ -234,7 +234,7 @@ class Harvester:
                 batch_sleep_milliseconds=self.plot_manager.refresh_parameter.batch_sleep_milliseconds,
             )
 
-        update_harvesting_mode(
+        update_harvester_config(
             self.root_path,
             use_gpu_harvesting=use_gpu_harvesting,
             gpu_index=gpu_index,
