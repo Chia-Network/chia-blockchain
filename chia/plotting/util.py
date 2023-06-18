@@ -151,7 +151,7 @@ def remove_plot(path: Path):
         path.unlink()
 
 
-def get_harvesting_mode(root_path: Path, config: Dict = None) -> Dict:
+def get_harvester_config(root_path: Path, config: Dict = None) -> Dict:
     if config is None:
         config = load_config(root_path, "config.yaml")
 
