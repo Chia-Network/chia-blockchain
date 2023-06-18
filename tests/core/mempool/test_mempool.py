@@ -12,6 +12,7 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -2004,6 +2005,11 @@ class TestGeneratorConditions:
             mempool_mode=mempool,
             height=softfork_height,
         )
+
+        # with the 2.0 hard fork, division with negative numbers is allowed
+        if operand < 0 and softfork_height >= DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+            expected = None
+
         assert npc_result.error == expected
 
     def test_invalid_condition_list_terminator(self, softfork_height):
