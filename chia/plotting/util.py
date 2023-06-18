@@ -171,7 +171,7 @@ def get_harvester_config(root_path: Path, config: Dict = None) -> Dict:
     }
 
 
-def update_harvesting_mode(
+def update_harvester_config(
     root_path: Path,
     *,
     use_gpu_harvesting: Optional[bool] = None,
