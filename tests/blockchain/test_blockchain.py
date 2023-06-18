@@ -2018,7 +2018,13 @@ class TestBodyValidation:
             (False, (AddBlockResult.NEW_PEAK, None, 2)),
         ],
     )
-    async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected, bt):
+    async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected, bt, consensus_mode: Mode):
+        # in the 2.0 hard fork, we relax the strict 2-parameters rule of
+        # AGG_SIG_* conditions, in consensus mode. In mempool mode we always
+        # apply strict rules.
+        if consensus_mode == Mode.HARD_FORK_2_0 and with_garbage:
+            expected = (AddBlockResult.NEW_PEAK, None, 2)
+
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -2035,7 +2041,7 @@ class TestBodyValidation:
         wt: WalletTool = bt.get_pool_wallet_tool()
 
         tx1: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         coin1: Coin = tx1.additions()[0]
         secret_key = wt.get_private_key_for_puzzle_hash(coin1.puzzle_hash)
@@ -2045,7 +2051,9 @@ class TestBodyValidation:
         args = [public_key, b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
-        tx2: SpendBundle = wt.generate_signed_transaction(10, wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
+        tx2: SpendBundle = wt.generate_signed_transaction(
+            uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions
+        )
         assert coin1 in tx2.removals()
 
         bundles = SpendBundle.aggregate([tx1, tx2])
