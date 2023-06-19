@@ -1975,7 +1975,7 @@ class WalletRpcApi:
         hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
-        for hinted_coin in hinted_coins:
+        for hinted_coin in hinted_coins.values():
             if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
                 hint = hinted_coin.hint
                 break
