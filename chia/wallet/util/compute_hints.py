@@ -35,13 +35,3 @@ def compute_spend_hints_and_additions(cs: CoinSpend) -> Dict[bytes32, HintedCoin
             hinted_coins[bytes32(coin.name())] = HintedCoin(coin, hint)
 
     return hinted_coins
-
-
-def compute_hint_for_coin(coin_name: bytes32, coin_spend: CoinSpend) -> bytes32:
-    try:
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_name]
-    except KeyError:
-        raise ValueError(f"{coin_name} not found in {coin_spend}")
-    if hinted_coin.hint is None:
-        raise ValueError(f"No hint found for {coin_name} in {coin_spend}")
-    return hinted_coin.hint

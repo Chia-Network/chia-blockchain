@@ -352,15 +352,17 @@ class CoinGenerator:
         self._seed += 1
         return uint64(self._seed)
 
-    def get(self, parent_coin_id: Optional[bytes32] = None) -> HintedCoin:
+    def get(self, parent_coin_id: Optional[bytes32] = None, include_hint: bool = True) -> HintedCoin:
         if parent_coin_id is None:
             parent_coin_id = self._get_hash()
-        return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), self._get_hash())
+        hint = None
+        if include_hint:
+            hint = self._get_hash()
+        return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), hint)
 
 
-def coin_creation_args(hinted_coin: HintedCoin, include_hint: bool = True) -> List[Any]:
-    if include_hint:
-        assert hinted_coin is not None
+def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
+    if hinted_coin.hint is not None:
         memos = [hinted_coin.hint]
     else:
         memos = []

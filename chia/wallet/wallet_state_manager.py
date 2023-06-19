@@ -77,7 +77,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
-from chia.wallet.util.compute_hints import compute_hint_for_coin
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
@@ -855,8 +855,9 @@ class WalletStateManager:
         """
         mod_hash, tail_hash, inner_puzzle = curried_args
 
-        hint = compute_hint_for_coin(coin_state.coin.name(), coin_spend)
-        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
@@ -905,8 +906,9 @@ class WalletStateManager:
         inner_puzzle_hash = p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hint = compute_hint_for_coin(coin_state.coin.name(), coin_spend)
-        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
+        derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
