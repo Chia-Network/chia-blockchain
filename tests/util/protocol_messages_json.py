@@ -2094,11 +2094,6 @@ respond_plots_json: Dict[str, Any] = {
     "no_key_filenames": ["str"],
 }
 
-harvesting_mode_update_json: Dict[str, Any] = {
-    "identifier": {"timestamp": 1685202597, "sync_id": 1, "message_id": 0},
-    "harvesting_mode": 1,
-}
-
 request_peers_introducer_json: Dict[str, Any] = {}
 
 respond_peers_introducer_json: Dict[str, Any] = {

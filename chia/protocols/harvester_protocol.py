@@ -177,10 +177,3 @@ class PlotSyncResponse(Streamable):
 
     def __str__(self) -> str:
         return f"PlotSyncResponse: identifier {self.identifier}, message_type {self.message_type}, error {self.error}"
-
-
-@streamable
-@dataclass(frozen=True)
-class HarvestingModeUpdate(Streamable):
-    identifier: PlotSyncIdentifier
-    harvesting_mode: uint8

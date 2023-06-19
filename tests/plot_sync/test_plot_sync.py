@@ -178,7 +178,7 @@ class Environment:
         self.remove_directory(harvester_index, self.dir_invalid, State.invalid)
         self.remove_directory(harvester_index, self.dir_duplicates, State.duplicates)
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta], other_update: bool = False) -> None:
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
         if delta is None:
             return
         harvester: Optional[Harvester] = self.get_harvester(peer_id)

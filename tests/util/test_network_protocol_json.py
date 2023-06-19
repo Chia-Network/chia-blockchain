@@ -163,8 +163,6 @@ def test_protocol_json() -> None:
     assert type(request_plots).from_json_dict(request_plots_json) == request_plots
     assert str(respond_plots_json) == str(respond_plots.to_json_dict())
     assert type(respond_plots).from_json_dict(respond_plots_json) == respond_plots
-    assert str(harvesting_mode_update_json) == str(harvesting_mode_update.to_json_dict())
-    assert type(harvesting_mode_update).from_json_dict(harvesting_mode_update_json) == harvesting_mode_update
     assert str(request_peers_introducer_json) == str(request_peers_introducer.to_json_dict())
     assert type(request_peers_introducer).from_json_dict(request_peers_introducer_json) == request_peers_introducer
     assert str(respond_peers_introducer_json) == str(respond_peers_introducer.to_json_dict())

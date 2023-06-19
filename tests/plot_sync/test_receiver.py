@@ -16,7 +16,6 @@ from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
-    HarvestingModeUpdate,
     Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
@@ -63,17 +62,6 @@ class SyncStepData:
         self, state: State, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
     ) -> None:
         self.state = state
-        self.function = function
-        self.payload_type = payload_type
-        self.args = args
-
-
-class HarvesterStateSyncData:
-    function: Any
-    payload_type: Any
-    args: Any
-
-    def __init__(self, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any) -> None:
         self.function = function
         self.payload_type = payload_type
         self.args = args
@@ -175,12 +163,7 @@ async def run_plot_sync_step(receiver: Receiver, sync_step: SyncStepData) -> Non
         assert receiver._last_sync.time_done == last_sync_time_before
 
 
-@pytest.mark.asyncio
-async def run_harvester_sync_step(receiver: Receiver, sync_step: HarvesterStateSyncData) -> None:
-    await sync_step.function(create_payload(sync_step.payload_type, False, *sync_step.args))
-
-
-def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterStateSyncData]]:
+def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER)
     receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
@@ -226,11 +209,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData], List[HarvesterState
         SyncStepData(State.done, receiver.sync_done, PlotSyncDone, uint64(0)),
     ]
 
-    harvester_state_sync_steps: List[HarvesterStateSyncData] = [
-        HarvesterStateSyncData(receiver.harvesting_mode_update, HarvestingModeUpdate, uint8(HarvestingMode.GPU)),
-    ]
-
-    return receiver, sync_steps, harvester_state_sync_steps
+    return receiver, sync_steps
 
 
 def test_default_values() -> None:
@@ -239,7 +218,7 @@ def test_default_values() -> None:
 
 @pytest.mark.asyncio
 async def test_reset() -> None:
-    receiver, plot_sync_steps, harvester_sync_steps = plot_sync_setup()
+    receiver, plot_sync_steps = plot_sync_setup()
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done
@@ -273,7 +252,7 @@ async def test_reset() -> None:
 @pytest.mark.parametrize("counts_only", [True, False])
 @pytest.mark.asyncio
 async def test_to_dict(counts_only: bool) -> None:
-    receiver, plot_sync_steps, harvester_sync_steps = plot_sync_setup()
+    receiver, plot_sync_steps = plot_sync_setup()
     plot_sync_dict_1 = receiver.to_dict(counts_only)
 
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
@@ -339,11 +318,6 @@ async def test_to_dict(counts_only: bool) -> None:
     assert plot_sync_dict_3["syncing"] is None
     assert plot_sync_steps[State.idle].args[3] == plot_sync_dict_3["harvesting_mode"]
 
-    # Trigger harvesting mode update
-    for step in harvester_sync_steps:
-        await run_harvester_sync_step(receiver, step)
-        assert receiver.to_dict()["harvesting_mode"] == step.args[0]
-
     # Trigger a repeated plot sync
     await receiver.sync_started(
         PlotSyncStart(
@@ -405,7 +379,7 @@ async def test_sync_flow() -> None:
 
 @pytest.mark.asyncio
 async def test_invalid_ids() -> None:
-    receiver, sync_steps, _ = plot_sync_setup()
+    receiver, sync_steps = plot_sync_setup()
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]
@@ -456,7 +430,7 @@ async def test_invalid_ids() -> None:
 )
 @pytest.mark.asyncio
 async def test_plot_errors(state_to_fail: State, expected_error_code: ErrorCodes) -> None:
-    receiver, sync_steps, _ = plot_sync_setup()
+    receiver, sync_steps = plot_sync_setup()
     for state in State:
         assert receiver.current_sync().state == state
         current_step = sync_steps[state]

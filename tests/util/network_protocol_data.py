@@ -762,11 +762,6 @@ respond_plots = harvester_protocol.RespondPlots(
     ["str"],
 )
 
-harvesting_mode_update = harvester_protocol.HarvestingModeUpdate(
-    harvester_protocol.PlotSyncIdentifier(uint64(1685202597), uint64(1), uint64(0)),
-    uint8(HarvestingMode.CPU),
-)
-
 ### INTRODUCER PROTOCOL
 request_peers_introducer = introducer_protocol.RequestPeersIntroducer()
 

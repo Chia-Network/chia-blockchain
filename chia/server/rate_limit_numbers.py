@@ -150,7 +150,6 @@ rate_limits = {
             ProtocolMessageTypes.respond_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_children: RLSettings(2000, 1024 * 1024),
             ProtocolMessageTypes.respond_children: RLSettings(2000, 1 * 1024 * 1024),
-            ProtocolMessageTypes.harvesting_mode_update: RLSettings(1000, 100 * 1024 * 1024),
         },
     },
     2: {

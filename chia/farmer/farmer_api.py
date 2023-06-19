@@ -13,7 +13,6 @@ from chia.farmer.farmer import Farmer, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
-    HarvestingModeUpdate,
     PlotSyncDone,
     PlotSyncPathList,
     PlotSyncPlotList,
@@ -626,7 +625,3 @@ class FarmerAPI:
     @api_request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
-
-    @api_request(peer_required=True)
-    async def harvesting_mode_update(self, message: HarvestingModeUpdate, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].harvesting_mode_update(message)
