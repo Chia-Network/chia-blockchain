@@ -2220,6 +2220,32 @@ class TestGeneratorConditions:
         else:
             assert npc_result.error is None
 
+    @pytest.mark.parametrize("mempool", [True, False])
+    @pytest.mark.parametrize(
+        "condition, expect_error",
+        [
+            # the softfork condition must include at least 1 argument to
+            # indicate its cost
+            ("(90)", Err.INVALID_CONDITION.value),
+            ("(90 1000000)", None),
+        ],
+    )
+    def test_softfork_condition(
+        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+    ):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+
+        # in mempool all unknown conditions are always a failure
+        if mempool:
+            expect_error = Err.INVALID_CONDITION.value
+        # the SOFTFORK condition is only activated with the hard fork, so
+        # before then there are no errors
+        elif softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+            expect_error = None
+
+        assert npc_result.error == expect_error
+
 
 # the tests below are malicious generator programs
 
