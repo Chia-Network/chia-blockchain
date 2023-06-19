@@ -2201,14 +2201,24 @@ class TestGeneratorConditions:
         assert coins == [(puzzle_hash_1.encode("ascii"), 5, hint.encode("ascii"))]
 
     @pytest.mark.parametrize("mempool", [True, False])
-    def test_unknown_condition(self, mempool: bool, softfork_height: uint32):
-        for c in ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=softfork_height)
-            print(npc_result)
-            if mempool:
-                assert npc_result.error == Err.INVALID_CONDITION.value
-            else:
-                assert npc_result.error is None
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            '(2 100 "foo" "bar")',
+            "(100)",
+            "(4 1) (2 2) (3 3)",
+            '("foobar")',
+            '(0x100 "foobar")',
+            '(0x1ff "foobar")',
+        ],
+    )
+    def test_unknown_condition(self, mempool: bool, condition: str, softfork_height: uint32):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+        if mempool:
+            assert npc_result.error == Err.INVALID_CONDITION.value
+        else:
+            assert npc_result.error is None
 
 
 # the tests below are malicious generator programs
