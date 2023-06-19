@@ -20,7 +20,6 @@ from chia.plot_sync.exceptions import (
 from chia.plot_sync.util import ErrorCodes, State, T_PlotSyncMessage
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
-    HarvestingModeUpdate,
     Plot,
     PlotSyncDone,
     PlotSyncError,
@@ -72,7 +71,7 @@ class Sync:
 
 
 class ReceiverUpdateCallback(Protocol):
-    def __call__(self, peer_id: bytes32, delta: Optional[Delta], other_update: bool = False) -> Awaitable[None]:
+    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
         pass
 
 
@@ -106,9 +105,9 @@ class Receiver:
         self._update_callback = update_callback
         self._harvesting_mode = None
 
-    async def trigger_callback(self, delta: Optional[Delta] = None, other_update: bool = False) -> None:
+    async def trigger_callback(self, delta: Optional[Delta] = None) -> None:
         try:
-            await self._update_callback(self._connection.peer_node_id, delta, other_update)
+            await self._update_callback(self._connection.peer_node_id, delta)
         except Exception as e:
             log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
@@ -356,13 +355,6 @@ class Receiver:
 
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
-
-    async def _harvesting_mode_update(self, data: HarvestingModeUpdate) -> None:
-        self._harvesting_mode = HarvestingMode(data.harvesting_mode)
-        await self.trigger_callback(None, True)
-
-    async def harvesting_mode_update(self, data: HarvestingModeUpdate) -> None:
-        await self._process(self._harvesting_mode_update, ProtocolMessageTypes.harvesting_mode_update, data)
 
     def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
         syncing = None

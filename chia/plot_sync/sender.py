@@ -15,7 +15,6 @@ from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
-    HarvestingModeUpdate,
     Plot,
     PlotSyncDone,
     PlotSyncIdentifier,
@@ -311,10 +310,6 @@ class Sender:
         self._messages.clear()
         # Do this at the end since `_sync_id` is used as sync active indicator.
         self._sync_id = uint64(0)
-
-    def harvesting_mode_update(self, mode: HarvestingMode) -> None:
-        log.debug(f"harvesting_mode_update: {mode}")
-        self._add_message(ProtocolMessageTypes.harvesting_mode_update, HarvestingModeUpdate, int8(mode.value))
 
     def sync_active(self) -> bool:
         return self._sync_id != 0
