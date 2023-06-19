@@ -31,3 +31,9 @@ class HarvesterRpcClient(RpcClient):
 
     async def remove_plot_directory(self, dirname: str) -> bool:
         return (await self.fetch("remove_plot_directory", {"dirname": dirname}))["success"]
+
+    async def get_harvester_config(self) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_config", {})
+
+    async def update_harvester_config(self, config: Dict[str, Any]) -> bool:
+        return (await self.fetch("update_harvester_config", config))["success"]
