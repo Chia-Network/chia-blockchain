@@ -337,7 +337,7 @@ async def test_to_dict(counts_only: bool) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_flow() -> None:
-    receiver, sync_steps, _ = plot_sync_setup()
+    receiver, sync_steps = plot_sync_setup()
 
     for plot_info in sync_steps[State.loaded].args[0]:
         assert plot_info.filename not in receiver.plots()
