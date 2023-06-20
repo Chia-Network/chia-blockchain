@@ -1244,7 +1244,7 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache[bytes32, uint32] = LRUCache(100)
 
-        coin_names = [coin_state.coin.name() for coin_state in coin_states]
+        coin_names = [bytes32(coin_state.coin.name()) for coin_state in coin_states]
         local_records = await self.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_names))
 
         for coin_name, coin_state in zip(coin_names, coin_states):
