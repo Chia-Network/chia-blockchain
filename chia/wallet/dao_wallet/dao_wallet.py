@@ -639,6 +639,21 @@ class DAOWallet(WalletProtocol):
         )
         await self.save_info(dao_info)
 
+    async def clear_finished_proposals_from_memory(self):
+        new_list = []
+        for prop_info in self.dao_info.proposals_list:
+            if prop_info.closed is False or prop_info.closed is None:
+                new_list.append(prop_info)
+            else:
+                dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+                # this is expensive, but a worthwhile check
+                for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                    if prop_info.proposal_id in lci.active_votes:
+                        new_list.append(prop_info)  # keep it
+        dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
+        await self.save_info(dao_info)
+        return
+
     async def resync_treasury_state(self) -> None:
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: Any = self.wallet_state_manager.wallet_node
@@ -2161,8 +2176,10 @@ class DAOWallet(WalletProtocol):
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         full_spend = None
         spends = []
+        closed_list = []
         for proposal_info in self.dao_info.proposals_list:
             if proposal_info.closed:
+                closed_list.append(proposal_info.proposal_id)
                 inner_solution = Program.to(
                     [
                         proposal_info.current_coin.amount,
@@ -2173,9 +2190,10 @@ class DAOWallet(WalletProtocol):
                 finished_puz = get_finished_state_puzzle(proposal_info.proposal_id)
                 cs = CoinSpend(proposal_info.current_coin, finished_puz, solution)
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
-                sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id, push=False)
                 spends.append(prop_sb)
-                spends.append(sb)
+
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
+        spends.append(sb)
 
         if not spends:
             raise ValueError("No proposals are available for release")

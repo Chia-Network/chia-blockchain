@@ -16,8 +16,8 @@
     my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
     inner_solution
     my_amount
-    new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-    proposal_curry_vals
+    new_proposal_vote_id_or_removal_id  ; removal_id is a list of removal_ids
+    proposal_curry_vals  ; list of curry_vals which should match the order of removal_id_list
     vote_info
     vote_amount
     my_inner_puzhash
@@ -228,36 +228,7 @@
     )
     (if ACTIVE_VOTES
         (if (= (f ACTIVE_VOTES) removal_id)
-            (list
-              (list
-                CREATE_COIN  ; recreate self with the finished proposal ID removed
-                (calculate_lockup_puzzlehash
-                  PROPOSAL_MOD_HASH
-                  SINGLETON_MOD_HASH
-                  SINGLETON_LAUNCHER_PUZHASH
-                  LOCKUP_MOD_HASH
-                  CAT_MOD_HASH
-                  CAT_TAIL_HASH
-                  (merge_list unused_votes (r ACTIVE_VOTES))  ; removes the current entry from the list
-                  (sha256tree INNERPUZ)
-                )
-                my_amount
-              )
-              (list
-                ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
-                (sha256
-                  (calculate_singleton_puzzle_hash
-                    (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
-                    (calculate_finished_state
-                      (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
-                      dao_finished_state
-                    )
-                  )
-                  'f'
-                )
-              )
-              (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
-            )
+
 
             (check_for_removal_announcement  ; keep looping through ACTIVE_VOTES to search for removal_id
               PROPOSAL_MOD_HASH
@@ -275,6 +246,87 @@
             )
         )
         (x)  ; proposal ID not found, invalid spend
+    )
+  )
+
+  (defun for_every_removal_id (
+      PROPOSAL_MOD_HASH
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      LOCKUP_MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      ACTIVE_VOTES
+      INNERPUZ
+      removal_ids
+      my_amount
+      proposal_curry_vals
+      unused_votes
+    )
+    (if removal_ids
+      (c
+        (list
+          ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
+          (sha256
+            (calculate_singleton_puzzle_hash
+              (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
+              (calculate_finished_state
+                (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
+                dao_finished_state
+              )
+            )
+            'f'
+          )
+        )
+        (for_every_removal_id
+          ROPOSAL_MOD_HASH
+          SINGLETON_MOD_HASH
+          SINGLETON_LAUNCHER_PUZHASH
+          LOCKUP_MOD_HASH
+          CAT_MOD_HASH
+          CAT_TAIL_HASH
+          ACTIVE_VOTES
+          INNERPUZ
+          (r removal_ids)
+          my_amount
+          (r proposal_curry_vals)
+          (c (f removal_ids) unused_votes)
+        )
+      )
+      (list
+        (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
+        (list
+          CREATE_COIN  ; recreate self with the finished proposal ID removed
+          (calculate_lockup_puzzlehash
+            PROPOSAL_MOD_HASH
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
+            LOCKUP_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            (remove_list_one_entries_from_list_two unused_votes ACTIVE_VOTES)
+            (sha256tree INNERPUZ)
+          )
+          my_amount
+        )
+      )
+    )
+  )
+
+  (defun remove_list_one_entries_from_list_two (list_one list_two)
+    (if list_one
+      (remove_item_from_list (f list_one) (remove_list_one_entries_from_list_two (r list_one) list_two))
+      list_two
+    )
+  )
+
+  (defun remove_item_from_list (item list_one)
+    (if list_one
+      (if (= (f list_one) item)
+        (r list_one)  ; assuming there are no duplicates
+        (c (f list_one) (remove_item_from_list item (r list_one)))
+      )
+      ()  ; item was never in list_one, return list_two entirely
     )
   )
 
@@ -331,7 +383,7 @@
 
       ; return to return_address or remove something from active list - check if our locked list is empty
       (if ACTIVE_VOTES
-          (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
+          (for_every_removal_id  ; locked list is not empty, so we must be trying to remove something from it
             PROPOSAL_MOD_HASH
             SINGLETON_MOD_HASH
             SINGLETON_LAUNCHER_PUZHASH

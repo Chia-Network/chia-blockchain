@@ -200,8 +200,12 @@ class DAOCATWallet:
             solution = parent_spend.solution.to_program().first()
             if solution.first() == Program.to(0):
                 # No vote is being added so inner puz stays the same
-                # TODO: If the proposal is closed/coins are freed then what do we do here?
-                pass
+                try:
+                    removals = solution.at("rrrf")
+                    for removal in removals.as_iter():
+                        active_votes_list.remove(bytes32(removal.as_atom()))
+                except Exception:
+                    pass
             else:
                 new_vote = solution.at("rrrf")
                 active_votes_list.insert(0, bytes32(new_vote.as_atom()))
@@ -618,34 +622,30 @@ class DAOCATWallet:
         return spend_bundle
 
     async def remove_active_proposal(
-        self, proposal_id: bytes32, fee: uint64 = uint64(0), push: bool = True
+        self, proposal_id_list: List[bytes32], fee: uint64 = uint64(0), push: bool = True
     ) -> SpendBundle:
-        locked_coins = []
+        locked_coins: List[Tuple[LockedCoinInfo, List[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
+            my_finished_proposals = []
             for active_vote in lci.active_votes:
-                if active_vote == proposal_id:
-                    locked_coins.append(lci)
-                    break
+                if active_vote in proposal_id_list:
+                    my_finished_proposals.append(active_vote)
+            locked_coins.append((lci, my_finished_proposals))
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-        YES_VOTES, TOTAL_VOTES, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
-        proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
-        for lci in locked_coins:
-            coin = lci.coin
+
+        for lci_proposals_tuple in locked_coins:
+            proposal_curry_vals = []
+            coin = lci_proposals_tuple[0].coin
+            proposals = lci_proposals_tuple[1]
+
+            for proposal_id in proposals:
+                YES_VOTES, TOTAL_VOTES, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
+                proposal_curry_vals.append([YES_VOTES, TOTAL_VOTES, INNERPUZ])
             # new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
-
-            # CREATE_COIN new_puzzle coin.amount
-            # primaries = [
-            #     AmountWithPuzzlehash({
-            #         "puzzlehash": new_innerpuzzle.get_tree_hash(),
-            #         "amount": uint64(coin.amount),
-            #         "memos": [new_innerpuzzle.get_tree_hash()],
-            #     }),
-            # ]
-
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
             # my_amount
@@ -659,7 +659,7 @@ class DAOCATWallet:
                     0,
                     0,
                     coin.amount,
-                    proposal_id,
+                    proposals,
                     proposal_curry_vals,
                     0,
                     0,
