@@ -8,8 +8,8 @@ from tests.util.db_connection import DBConnection
 
 
 @pytest.mark.asyncio
-async def test_store():
-    async with DBConnection(1) as db_wrapper:
+async def test_store(tmp_path):
+    async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
         store = await WalletUserStore.create(db_wrapper)
         await store.init_wallet()
         wallet = None

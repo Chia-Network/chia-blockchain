@@ -26,11 +26,13 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
-async def test_block_store(tmp_dir, db_version, bt):
+async def test_block_store(tmp_dir, db_version, bt, tmp_path):
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper, DBConnection(
+        db_version=db_version, tmp_path=tmp_path
+    ) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -78,14 +80,16 @@ async def test_block_store(tmp_dir, db_version, bt):
 
 
 @pytest.mark.asyncio
-async def test_deadlock(tmp_dir, db_version, bt):
+async def test_deadlock(tmp_dir, db_version, bt, tmp_path):
     """
     This test was added because the store was deadlocking in certain situations, when fetching and
     adding blocks repeatedly. The issue was patched.
     """
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as wrapper, DBConnection(
+        db_version=db_version, tmp_path=tmp_path
+    ) as wrapper_2:
         store = await BlockStore.create(wrapper)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
@@ -155,10 +159,10 @@ async def test_rollback(bt, tmp_dir):
 
 
 @pytest.mark.asyncio
-async def test_count_compactified_blocks(bt, tmp_dir, db_version):
+async def test_count_compactified_blocks(bt, tmp_dir, db_version, tmp_path):
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as db_wrapper:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
@@ -174,10 +178,10 @@ async def test_count_compactified_blocks(bt, tmp_dir, db_version):
 
 
 @pytest.mark.asyncio
-async def test_count_uncompactified_blocks(bt, tmp_dir, db_version):
+async def test_count_uncompactified_blocks(bt, tmp_dir, db_version, tmp_path):
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as db_wrapper:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
@@ -193,7 +197,7 @@ async def test_count_uncompactified_blocks(bt, tmp_dir, db_version):
 
 
 @pytest.mark.asyncio
-async def test_replace_proof(bt, tmp_dir, db_version):
+async def test_replace_proof(bt, tmp_dir, db_version, tmp_path):
     blocks = bt.get_consecutive_blocks(10)
 
     def rand_bytes(num) -> bytes:
@@ -209,7 +213,7 @@ async def test_replace_proof(bt, tmp_dir, db_version):
             bool(random.randint(0, 1)),  # normalized_to_identity
         )
 
-    async with DBConnection(db_version) as db_wrapper:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
@@ -237,13 +241,13 @@ async def test_replace_proof(bt, tmp_dir, db_version):
 
 
 @pytest.mark.asyncio
-async def test_get_generator(bt, db_version):
+async def test_get_generator(bt, db_version, tmp_path):
     blocks = bt.get_consecutive_blocks(10)
 
     def generator(i: int) -> SerializedProgram:
         return SerializedProgram.from_bytes(int_to_bytes(i))
 
-    async with DBConnection(db_version) as db_wrapper:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
         store = await BlockStore.create(db_wrapper)
 
         new_blocks = []
@@ -277,11 +281,13 @@ async def test_get_generator(bt, db_version):
 
 
 @pytest.mark.asyncio
-async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
+async def test_get_blocks_by_hash(tmp_dir, bt, db_version, tmp_path):
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper, DBConnection(
+        db_version=db_version, tmp_path=tmp_path
+    ) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)
@@ -315,11 +321,11 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
 
 
 @pytest.mark.asyncio
-async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
+async def test_get_block_bytes_in_range(tmp_dir, bt, db_version, tmp_path):
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(db_version) as db_wrapper_2:
+    async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
         store_2 = await BlockStore.create(db_wrapper_2)

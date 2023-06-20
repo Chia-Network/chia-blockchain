@@ -16,7 +16,7 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletBlockchain:
     @pytest.mark.asyncio
-    async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks):
+    async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks, tmp_path):
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
         for block in default_1000_blocks[:600]:
@@ -45,7 +45,7 @@ class TestWalletBlockchain:
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
         records_long = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof_long, True)
 
-        async with DBConnection(1) as db_wrapper:
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
             chain = await WalletBlockchain.create(store, bt.constants)
 

@@ -51,7 +51,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self, db_version, softfork_height, bt):
+    async def test_basic_coin_store(self, db_version, softfork_height, bt, tmp_path):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -74,7 +74,7 @@ class TestCoinStoreWithBlocks:
             uint64(1000), wallet_a.get_new_puzzlehash(), coins_to_spend[0]
         )
 
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper)
 
             blocks = bt.get_consecutive_blocks(
@@ -156,10 +156,10 @@ class TestCoinStoreWithBlocks:
                     should_be_included = set()
 
     @pytest.mark.asyncio
-    async def test_set_spent(self, db_version, bt):
+    async def test_set_spent(self, db_version, bt, tmp_path):
         blocks = bt.get_consecutive_blocks(9, [])
 
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper)
 
             # Save/get block
@@ -197,13 +197,13 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
-    async def test_num_unspent(self, bt, db_version):
+    async def test_num_unspent(self, bt, db_version, tmp_path):
         blocks = bt.get_consecutive_blocks(37, [])
 
         expect_unspent = 0
         test_excercised = False
 
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper)
 
             for block in blocks:
@@ -229,10 +229,10 @@ class TestCoinStoreWithBlocks:
         assert test_excercised
 
     @pytest.mark.asyncio
-    async def test_rollback(self, db_version, bt):
+    async def test_rollback(self, db_version, bt, tmp_path):
         blocks = bt.get_consecutive_blocks(20)
 
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             coin_store = await CoinStore.create(db_wrapper)
 
             selected_coin: Optional[CoinRecord] = None
@@ -313,8 +313,8 @@ class TestCoinStoreWithBlocks:
                             assert record is None
 
     @pytest.mark.asyncio
-    async def test_basic_reorg(self, tmp_dir, db_version, bt):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_basic_reorg(self, tmp_dir, db_version, bt, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             initial_block_count = 30
             reorg_length = 15
             blocks = bt.get_consecutive_blocks(initial_block_count)
@@ -366,8 +366,8 @@ class TestCoinStoreWithBlocks:
                 b.shut_down()
 
     @pytest.mark.asyncio
-    async def test_get_puzzle_hash(self, tmp_dir, db_version, bt):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_get_puzzle_hash(self, tmp_dir, db_version, bt, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             num_blocks = 20
             farmer_ph = bytes32(32 * b"0")
             pool_ph = bytes32(32 * b"1")
@@ -395,8 +395,8 @@ class TestCoinStoreWithBlocks:
             b.shut_down()
 
     @pytest.mark.asyncio
-    async def test_get_coin_states(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_get_coin_states(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             crs = [
                 CoinRecord(
                     Coin(std_hash(i.to_bytes(4, byteorder="big")), std_hash(b"2"), uint64(100)),

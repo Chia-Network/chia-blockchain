@@ -116,8 +116,8 @@ async def setup_chain(
 
 class TestBlockHeightMap:
     @pytest.mark.asyncio
-    async def test_height_to_hash(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_height_to_hash(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10)
 
@@ -131,8 +131,8 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    async def test_height_to_hash_long_chain(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_height_to_hash_long_chain(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000)
 
@@ -145,8 +145,8 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    async def test_save_restore(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_save_restore(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20)
 
@@ -189,11 +189,11 @@ class TestBlockHeightMap:
                         height_map.get_ses(height)
 
     @pytest.mark.asyncio
-    async def test_restore_entire_chain(self, tmp_dir, db_version):
+    async def test_restore_entire_chain(self, tmp_dir, db_version, tmp_path):
         # this is a test where the height-to-hash and height-to-ses caches are
         # entirely unrelated to the database. Make sure they can both be fully
         # replaced
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             heights = bytearray(900 * 32)
             for i in range(900):
                 idx = i * 32
@@ -222,11 +222,11 @@ class TestBlockHeightMap:
                         height_map.get_ses(height)
 
     @pytest.mark.asyncio
-    async def test_restore_extend(self, tmp_dir, db_version):
+    async def test_restore_extend(self, tmp_dir, db_version, tmp_path):
         # test the case where the cache has fewer blocks than the DB, and that
         # we correctly load all the missing blocks from the DB to update the
         # cache
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 2000, ses_every=20)
 
@@ -245,7 +245,7 @@ class TestBlockHeightMap:
 
             del height_map
 
-        async with DBConnection(db_version) as db_wrapper:
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             # add 2000 blocks to the chain
             await setup_chain(db_wrapper, 4000, ses_every=20)
@@ -262,8 +262,8 @@ class TestBlockHeightMap:
                         height_map.get_ses(height)
 
     @pytest.mark.asyncio
-    async def test_height_to_hash_with_orphans(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_height_to_hash_with_orphans(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10)
 
@@ -277,8 +277,8 @@ class TestBlockHeightMap:
                 assert height_map.get_hash(height) == gen_block_hash(height)
 
     @pytest.mark.asyncio
-    async def test_height_to_hash_update(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_height_to_hash_update(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10)
 
@@ -298,8 +298,8 @@ class TestBlockHeightMap:
             assert height_map.get_hash(10) == gen_block_hash(100)
 
     @pytest.mark.asyncio
-    async def test_update_ses(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_update_ses(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10)
 
@@ -317,8 +317,8 @@ class TestBlockHeightMap:
             assert height_map.get_hash(10) == gen_block_hash(10)
 
     @pytest.mark.asyncio
-    async def test_height_to_ses(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_height_to_ses(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10, ses_every=2)
 
@@ -342,8 +342,8 @@ class TestBlockHeightMap:
                 height_map.get_ses(9)
 
     @pytest.mark.asyncio
-    async def test_rollback(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_rollback(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10, ses_every=2)
 
@@ -378,8 +378,8 @@ class TestBlockHeightMap:
                 height_map.get_ses(8)
 
     @pytest.mark.asyncio
-    async def test_rollback2(self, tmp_dir, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_rollback2(self, tmp_dir, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10, ses_every=2)
 

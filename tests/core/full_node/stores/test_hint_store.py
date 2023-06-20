@@ -20,8 +20,8 @@ log = logging.getLogger(__name__)
 
 class TestHintStore:
     @pytest.mark.asyncio
-    async def test_basic_store(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_basic_store(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
@@ -45,8 +45,8 @@ class TestHintStore:
             assert coins_for_non_hint == []
 
     @pytest.mark.asyncio
-    async def test_duplicate_coins(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_duplicate_coins(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
@@ -62,8 +62,8 @@ class TestHintStore:
             assert coin_id_0 in coins_for_hint_1
 
     @pytest.mark.asyncio
-    async def test_duplicate_hints(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_duplicate_hints(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
@@ -81,8 +81,8 @@ class TestHintStore:
             assert coins_for_hint_1 == []
 
     @pytest.mark.asyncio
-    async def test_duplicates(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_duplicates(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             coin_id_0 = 32 * b"\4"
@@ -146,8 +146,8 @@ class TestHintStore:
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 
     @pytest.mark.asyncio
-    async def test_counts(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_counts(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             count = await hint_store.count_hints()
             assert count == 0
@@ -164,8 +164,8 @@ class TestHintStore:
             assert count == 2
 
     @pytest.mark.asyncio
-    async def test_limits(self, db_version):
-        async with DBConnection(db_version) as db_wrapper:
+    async def test_limits(self, db_version, tmp_path):
+        async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
 
             # Add 200 coins, all with the same hint

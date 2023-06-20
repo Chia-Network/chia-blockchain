@@ -58,8 +58,8 @@ class DummySpends:
 
 class TestWalletPoolStore:
     @pytest.mark.asyncio
-    async def test_store(self):
-        async with DBConnection(1) as db_wrapper:
+    async def test_store(self, tmp_path):
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
             store = await WalletPoolStore.create(db_wrapper)
 
             try:

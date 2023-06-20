@@ -10,8 +10,8 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletKeyValStore:
     @pytest.mark.asyncio
-    async def test_store(self, bt):
-        async with DBConnection(1) as db_wrapper:
+    async def test_store(self, bt, tmp_path):
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
             blocks = bt.get_consecutive_blocks(20)
             block: FullBlock = blocks[0]

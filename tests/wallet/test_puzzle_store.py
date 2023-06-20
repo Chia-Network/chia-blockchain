@@ -42,8 +42,8 @@ class DummyDerivationRecords:
 
 class TestPuzzleStore:
     @pytest.mark.asyncio
-    async def test_puzzle_store(self):
-        async with DBConnection(1) as wrapper:
+    async def test_puzzle_store(self, tmp_path):
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as wrapper:
             db = await WalletPuzzleStore.create(wrapper)
             derivation_recs = []
             for i in range(1000):

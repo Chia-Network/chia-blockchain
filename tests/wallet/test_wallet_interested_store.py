@@ -12,8 +12,8 @@ from tests.util.db_connection import DBConnection
 
 class TestWalletInterestedStore:
     @pytest.mark.asyncio
-    async def test_store(self):
-        async with DBConnection(1) as db_wrapper:
+    async def test_store(self, tmp_path):
+        async with DBConnection(db_version=1, tmp_path=tmp_path) as db_wrapper:
             store = await WalletInterestedStore.create(db_wrapper)
             coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
             coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
