@@ -1527,7 +1527,20 @@ def _get_proofs_for_root(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-p", "--parent-coin-id", help="The ID of the parent coin of the VC", type=str, required=True)
+@click.option(
+    "-p",
+    "--parent-coin-id",
+    help="The ID of the parent coin of the VC (optional if VC ID is used)",
+    type=str,
+    required=False,
+)
+@click.option(
+    "-l",
+    "--vc-id",
+    help="The launcher ID of the VC to revoke (must be tracked by wallet) (optional if Parent ID is used)",
+    type=str,
+    required=False,
+)
 @click.option("-m", "--fee", help="Blockchain fee for revocation transaction, in XCH", type=str, required=False)
 @click.option(
     "--reuse-puzhash/--generate-new-puzhash",
@@ -1538,7 +1551,8 @@ def _get_proofs_for_root(
 def _revoke_vc(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    parent_coin_id: str,
+    parent_coin_id: Optional[str],
+    vc_id: Optional[str],
     fee: str,
     reuse_puzhash: bool,
 ) -> None:  # pragma: no cover
@@ -1550,6 +1564,7 @@ def _revoke_vc(
 
     extra_params = {
         "parent_coin_id": parent_coin_id,
+        "vc_id": vc_id,
         "fee": fee,
         "reuse_puzhash": reuse_puzhash,
     }

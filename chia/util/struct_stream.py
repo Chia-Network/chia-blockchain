@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import BinaryIO, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, ClassVar, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Protocol, SupportsIndex
 
@@ -37,24 +37,28 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
         raise ValueError(f"cls.BITS must be a multiple of 8: {cls.BITS}")
 
     if cls.SIGNED:
-        cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
         cls.MINIMUM = -(2 ** (cls.BITS - 1))
+        cls.MAXIMUM = (2 ** (cls.BITS - 1)) - 1
     else:
-        cls.MAXIMUM_EXCLUSIVE = 2**cls.BITS
         cls.MINIMUM = 0
+        cls.MAXIMUM = (2**cls.BITS) - 1
+
+    cls.MINIMUM = cls(cls.MINIMUM)
+    cls.MAXIMUM = cls(cls.MAXIMUM)
 
     return cls
 
 
 class StructStream(int):
-    SIZE = 0
-    BITS = 0
-    SIGNED = False
-    MAXIMUM_EXCLUSIVE = 0
-    MINIMUM = 0
+    SIZE: ClassVar[int]
+    BITS: ClassVar[int]
+    SIGNED: ClassVar[bool]
+    MAXIMUM: ClassVar[int]
+    MINIMUM: ClassVar[int]
 
     """
-    Create a class that can parse and stream itself based on a struct.pack template string.
+    Create a class that can parse and stream itself based on a struct.pack template string. This is only meant to be
+    a base class for further derivation and it's not recommended to instantiate it directly.
     """
 
     # This is just a partial exposure of the underlying int constructor.  Liskov...
@@ -65,7 +69,7 @@ class StructStream(int):
         # additional special action to take here beyond verifying that the newly
         # created instance satisfies the bounds limitations of the particular subclass.
         super().__init__()
-        if not (self.MINIMUM <= self < self.MAXIMUM_EXCLUSIVE):
+        if not (self.MINIMUM <= self <= self.MAXIMUM):
             raise ValueError(f"Value {self} does not fit into {type(self).__name__}")
 
     @classmethod
