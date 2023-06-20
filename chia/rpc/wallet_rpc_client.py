@@ -1194,6 +1194,191 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
         return response["pubkey"], response["signature"], response["signing_mode"]
 
+    # DAOs
+    async def create_new_dao_wallet(
+        self,
+        mode: str,
+        dao_rules: Optional[Dict[str, uint64]] = None,
+        amount_of_cats: Optional[uint64] = None,
+        treasury_id: Optional[bytes32] = None,
+        filter_amount: uint64 = uint64(1),
+        name: Optional[str] = None,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ) -> Dict:
+        """
+        TODO: Rearrange argument list order
+        """
+        request: Dict[str, Any] = {
+            "wallet_type": "dao_wallet",
+            "mode": mode,
+            "treasury_id": treasury_id,
+            "dao_rules": dao_rules,
+            "amount_of_cats": amount_of_cats,
+            "filter_amount": filter_amount,
+            "name": name,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
+
+    async def dao_create_proposal(
+        self,
+        wallet_id: int,
+        proposal_type: str,
+        additions: Optional[List[Dict]] = None,
+        amount: Optional[uint64] = None,
+        inner_address: Optional[str] = None,
+        asset_id: Optional[str] = None,
+        cat_target_address: Optional[str] = None,
+        vote_amount: Optional[int] = None,
+        new_dao_rules: Optional[Dict[str, uint64]] = None,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "proposal_type": proposal_type,
+            "additions": additions,
+            "amount": amount,
+            "inner_address": inner_address,
+            "asset_id": asset_id,
+            "cat_target_address": cat_target_address,
+            "vote_amount": vote_amount,
+            "new_dao_rules": new_dao_rules,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+
+        response = await self.fetch("dao_create_proposal", request)
+        return response
+
+    async def dao_get_proposal_state(self, wallet_id: int, proposal_id: str):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "proposal_id": proposal_id}
+        response = await self.fetch("dao_get_proposal_state", request)
+        return response
+
+    async def dao_parse_proposal(self, wallet_id: int, proposal_id: str):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "proposal_id": proposal_id}
+        response = await self.fetch("dao_parse_proposal", request)
+        return response
+
+    async def dao_vote_on_proposal(
+        self,
+        wallet_id: int,
+        proposal_id: str,
+        vote_amount: uint64,
+        is_yes_vote: bool = True,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "proposal_id": proposal_id,
+            "vote_amount": vote_amount,
+            "is_yes_vote": is_yes_vote,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_vote_on_proposal", request)
+        return response
+
+    async def dao_get_proposals(self, wallet_id: int):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("dao_get_proposals", request)
+        return response
+
+    async def dao_close_proposal(
+        self,
+        wallet_id: int,
+        proposal_id: str,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "proposal_id": proposal_id,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_close_proposal", request)
+        return response
+
+    async def dao_free_coins_from_finished_proposals(
+        self,
+        wallet_id: int,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_free_coins_from_finished_proposals", request)
+        return response
+
+    async def dao_get_treasury_balance(self, wallet_id: int):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("dao_get_treasury_balance", request)
+        return response
+
+    async def dao_add_funds_to_treasury(
+        self,
+        wallet_id: int,
+        funding_wallet_id: int,
+        amount: uint64,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "funding_wallet_id": funding_wallet_id,
+            "amount": amount,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_add_funds_to_treasury", request)
+        return response
+
+    async def dao_send_to_lockup(
+        self,
+        wallet_id: int,
+        amount: uint64,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "amount": amount,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_send_to_lockup", request)
+        return response
+
+    async def dao_exit_lockup(
+        self,
+        wallet_id: int,
+        coins: Optional[List[Dict]] = None,
+        fee: uint64 = uint64(0),
+        reuse_puzhash: Optional[bool] = None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "coins": coins,
+            "fee": fee,
+            "reuse_puzhash": reuse_puzhash,
+        }
+        response = await self.fetch("dao_exit_lockup", request)
+        return response
+
+    async def dao_adjust_filter_level(self, wallet_id: int, filter_level: int):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "filter_level": filter_level}
+        response = await self.fetch("dao_adjust_filter_level", request)
+        return response
+
     async def vc_mint(
         self, did_id: bytes32, target_address: Optional[bytes32] = None, fee: uint64 = uint64(0)
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
