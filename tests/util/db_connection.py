@@ -13,4 +13,7 @@ async def DBConnection(db_version: int, tmp_path: Path) -> AsyncIterator[DBWrapp
     with tempfile.TemporaryDirectory(dir=tmp_path) as directory:
         db_path = Path(directory).joinpath("db.sqlite")
         _db_wrapper = await DBWrapper2.create(database=db_path, reader_count=4, db_version=db_version)
-        yield _db_wrapper
+        try:
+            yield _db_wrapper
+        finally:
+            await _db_wrapper.close()
