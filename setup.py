@@ -8,7 +8,7 @@ from setuptools import setup
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
     "anyio==3.6.2",
-    "boto3==1.26.148",  # AWS S3 for DL s3 plugin
+    "boto3==1.26.156",  # AWS S3 for DL s3 plugin
     "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
