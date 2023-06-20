@@ -283,6 +283,24 @@ async def test_transaction_count_for_wallet() -> None:
 
         assert await store.get_transaction_count_for_wallet(1) == 5
         assert await store.get_transaction_count_for_wallet(2) == 2
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, True, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
+            == 0
+        )
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            )
+            == 0
+        )
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
+            == 5
+        )
 
 
 @pytest.mark.asyncio
