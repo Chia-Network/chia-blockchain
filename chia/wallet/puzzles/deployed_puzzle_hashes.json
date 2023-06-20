@@ -22,8 +22,6 @@
     "dao_spend_p2_singleton": "54964584da94f665a970e4d8b6e2091c4f2abe447886db82f19583f1a7e43ceb",
     "dao_spend_p2_singleton_v2": "5163024ea180c9ee3949da9db3105a0e3b706a1248ae4138ecd7078d77d5b7c9",
     "dao_treasury": "8db946dbea7db3c6e99f45225b4159bd5f2ed0b53576a5c80aca2fe8ffdd99b6",
-    "dao_treasury_with_before_cond": "f1b1ae5386e9668a4ac2cd3bb34d9e610f0d324189619f5eb0c3c50437bb4d0f",
-    "dao_treasury_with_hack": "32865fb271c24f6092085fecaa3a4fa6d32d7436773be06700a0aa47539ebdcc",
     "dao_update_proposal": "70567fde4ec4b6ed83a62bc0e92c3a391203b0d6f7a4d4bf3516c95662ba316c",
     "decompress_coin_spend_entry": "9d98ed08770d31be4bd1bde4705dab388db5e7e9c349f5a76fc3c347aa3a0b79",
     "decompress_coin_spend_entry_with_prefix": "92aa4bc8060a8836355a1884075141b4791ce1b67ae6092bb166b2845954bc89",
