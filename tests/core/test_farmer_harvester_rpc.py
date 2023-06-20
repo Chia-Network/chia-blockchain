@@ -146,8 +146,8 @@ async def test_farmer_get_harvesters_and_summary(
         counts_only: bool = endpoint == "get_harvesters_summary"
 
         if not counts_only:
-            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])  # type: ignore[no-any-return] # noqa: E501
-            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])  # type: ignore[no-any-return] # noqa: E501
+            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])
+            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
 
         assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
         assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)
