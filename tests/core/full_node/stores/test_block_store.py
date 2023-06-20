@@ -114,10 +114,10 @@ async def test_deadlock(tmp_dir, db_version, bt, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_rollback(bt, tmp_dir):
+async def test_rollback(bt, tmp_dir, tmp_path):
     blocks = bt.get_consecutive_blocks(10)
 
-    async with DBConnection(2) as db_wrapper:
+    async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
         # Use a different file for the blockchain
         coin_store = await CoinStore.create(db_wrapper)
         block_store = await BlockStore.create(db_wrapper)
