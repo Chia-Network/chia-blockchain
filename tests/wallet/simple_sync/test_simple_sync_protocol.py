@@ -561,13 +561,13 @@ class TestSimpleSyncProtocol:
             },
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), wallet_connection)
-
         await full_node_api.process_spend_bundles(bundles=[tx])
-
+        # Query the coin states and make sure it doesn't contain duplicated entries
         msg = wallet_protocol.RegisterForPhUpdates([ph], uint32(0))
         msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, wallet_connection)
         assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
         response = RespondToCoinUpdates.from_bytes(msg_response.data)
+        assert len(response.coin_states) > 0
         assert len(set(response.coin_states)) == len(response.coin_states)
 
     @pytest.mark.asyncio
