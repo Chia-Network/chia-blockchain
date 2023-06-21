@@ -68,6 +68,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     match_dao_cat_puzzle,
     match_funding_puzzle,
     match_proposal_puzzle,
+    match_finished_puzzle,
     match_treasury_puzzle,
 )
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
@@ -717,6 +718,12 @@ class WalletStateManager:
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
+        # Check if the coin is a finished proposal
+        dao_curried_args = match_finished_puzzle(uncurried.mod, uncurried.args)
+        if dao_curried_args is not None:
+            return await self.handle_dao_finished_proposals(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
         # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
@@ -1168,6 +1175,27 @@ class WalletStateManager:
                     assert isinstance(coin_state.created_height, int)
                     await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
                     return WalletIdentifier.create(wallet)
+        return None
+
+    async def handle_dao_finished_proposals(
+        self,
+        uncurried_args: Iterator[Program],
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+    ) -> Optional[WalletIdentifier]:
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            FINISHED_STATE_MOD_HASH,
+        ) = uncurried_args
+        proposal_id = SINGLETON_STRUCT.rest().first().as_atom()
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.DAO:
+                assert isinstance(wallet, DAOWallet)
+                for proposal_info in wallet.dao_info.proposals_list:
+                    if proposal_info.proposal_id == proposal_id:
+                        await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
+                        return WalletIdentifier.create(wallet)
         return None
 
     async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend) -> Optional[WalletIdentifier]:

@@ -2061,11 +2061,12 @@ class DAOWallet(WalletProtocol):
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
         # breakpoint()
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=DAO_FINISHED_STATE.get_tree_hash(),
+                to_puzzle_hash=get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(),
                 amount=uint64(1),
                 fee_amount=fee,
                 confirmed=False,
@@ -2177,6 +2178,7 @@ class DAOWallet(WalletProtocol):
         full_spend = None
         spends = []
         closed_list = []
+        finished_puz = None
         for proposal_info in self.dao_info.proposals_list:
             if proposal_info.closed:
                 closed_list.append(proposal_info.proposal_id)
@@ -2194,7 +2196,8 @@ class DAOWallet(WalletProtocol):
 
         sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
         spends.append(sb)
-
+        if finished_puz is None:
+            finished_puz = DAO_FINISHED_STATE  # this shouldn't happen
         if not spends:
             raise ValueError("No proposals are available for release")
 
@@ -2203,6 +2206,7 @@ class DAOWallet(WalletProtocol):
             chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -2427,46 +2431,71 @@ class DAOWallet(WalletProtocol):
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if singleton_id is None:
             raise ValueError("get_singleton_id_from_puzzle failed")
-        curried_args = puzzle.uncurry()[1].as_iter()
-        (
-            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-            PROPOSAL_MOD_HASH,
-            PROPOSAL_TIMER_MOD_HASH,
-            CAT_MOD_HASH,
-            TREASURY_MOD_HASH,
-            LOCKUP_MOD_HASH,
-            CAT_TAIL_HASH,
-            TREASURY_ID,
-            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-            TOTAL_VOTES,  # how many people responded
-            INNERPUZ,
-        ) = curried_args
+        ended = (puzzle == get_finished_state_puzzle(singleton_id))
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
-        if current_coin is None:
-            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+        current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
+        if current_innerpuz == get_finished_state_puzzle(singleton_id):
+            ended = True
 
-        ended = False
-        timer_coin = None
-        if solution.at("rrrrrrf").as_int() == 0:
-            # we need to add the vote amounts from the solution to get accurate totals
-            is_yes_vote = solution.at("rf").as_int()
-            votes_added = solution.at("ff").as_int()
-            current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-            if current_innerpuz is None:
-                raise RuntimeError("get_new_puzzle_from_proposal_solution failed")
+        if ended:
+            index = 0
+            for current_info in new_dao_info.proposals_list:
+                # Search for current proposal_info
+                if current_info.proposal_id == singleton_id:
+                    new_proposal_info = ProposalInfo(
+                        singleton_id,
+                        puzzle,
+                        0,
+                        0,
+                        current_coin,
+                        current_innerpuz,
+                        None,
+                        block_height,
+                        None,
+                        ended,
+                    )
+                    new_dao_info.proposals_list[index] = new_proposal_info
+                    await self.save_info(new_dao_info)
+                    future_parent = LineageProof(
+                        new_state.coin.parent_coin_info,
+                        puzzle.get_tree_hash(),
+                        uint64(new_state.coin.amount),
+                    )
+                    await self.add_parent(new_state.coin.name(), future_parent)
+                    return
         else:
-            # If we have entered the finished state
-            # TODO: we need to alert the user that they can free up their coins
-            is_yes_vote = 0
-            votes_added = 0
-            current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-            if current_innerpuz == DAO_FINISHED_STATE:
-                ended = True
+            curried_args = puzzle.uncurry()[1].as_iter()
+            (
+                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+                PROPOSAL_MOD_HASH,
+                PROPOSAL_TIMER_MOD_HASH,
+                CAT_MOD_HASH,
+                TREASURY_MOD_HASH,
+                LOCKUP_MOD_HASH,
+                CAT_TAIL_HASH,
+                TREASURY_ID,
+                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+                TOTAL_VOTES,  # how many people responded
+                INNERPUZ,
+            ) = curried_args
+
+            if current_coin is None:
+                raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+
+            timer_coin = None
+            if solution.at("rrrrrrf").as_int() == 0:
+                # we need to add the vote amounts from the solution to get accurate totals
+                is_yes_vote = solution.at("rf").as_int()
+                votes_added = solution.at("ff").as_int()
+            else:
+                # If we have entered the finished state
+                # TODO: we need to alert the user that they can free up their coins
+                is_yes_vote = 0
+                votes_added = 0
 
         if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
             # TODO: is this the best way of handling this?
-            # breakpoint()
             raise ValueError("this coin does not meet the minimum requirements and can be ignored")
         new_total_votes = TOTAL_VOTES.as_int() + votes_added
         if new_total_votes < self.dao_info.filter_below_vote_amount:
@@ -2757,7 +2786,7 @@ class DAOWallet(WalletProtocol):
             await self.update_treasury_info(new_state, block_height)
         elif mod == DAO_PROPOSAL_MOD:
             await self.add_or_update_proposal_info(new_state, block_height)
-        elif puzzle == DAO_FINISHED_STATE:
+        elif mod == DAO_FINISHED_STATE:
             await self.update_closed_proposal_coin(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")

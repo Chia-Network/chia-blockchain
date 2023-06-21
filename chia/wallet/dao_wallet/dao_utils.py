@@ -464,6 +464,9 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 # This also returns the proposal puzzle and not the full puzzle
 def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # Check if soft_close_length is in solution. If not, then add votes, otherwise close proposal
+    if len(solution.as_python()) == 1:
+        return puzzle_reveal  # we're finished, shortcut this function
+
     if solution.at("rrrrrrf") == Program.to(0):
         curried_args = uncurry_proposal(puzzle_reveal)
         (
@@ -503,7 +506,28 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             INNERPUZ_HASH,
         )
     else:
-        return DAO_FINISHED_STATE
+        # we are in the finished state, puzzle is the same as ever
+        mod, currieds = puzzle_reveal.uncurry() # singleton
+        if mod == DAO_PROPOSAL_MOD:
+
+            (
+                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+                PROPOSAL_MOD_HASH,
+                PROPOSAL_TIMER_MOD_HASH,
+                CAT_MOD_HASH,
+                TREASURY_MOD_HASH,
+                LOCKUP_MOD_HASH,
+                CAT_TAIL_HASH,
+                TREASURY_ID,
+                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+                TOTAL_VOTES,  # how many people responded
+                INNERPUZ_HASH,
+            ) = currieds.as_iter()
+        else:
+            SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
+
+        assert SINGLETON_STRUCT is not None
+        return get_finished_state_puzzle(SINGLETON_STRUCT.rest().first().as_atom())
 
 
 def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
@@ -695,6 +719,24 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_PROPOSAL_MOD:
+                return curried_args.as_iter()  # type: ignore[no-any-return]
+    except ValueError:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None
+
+
+def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
+    """
+    Given a puzzle test if it's a Proposal, if it is, return the curried arguments
+    :param curried_args: Puzzle
+    :return: Curried parameters
+    """
+    try:
+        if mod == SINGLETON_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == DAO_FINISHED_STATE:
                 return curried_args.as_iter()  # type: ignore[no-any-return]
     except ValueError:
         import traceback

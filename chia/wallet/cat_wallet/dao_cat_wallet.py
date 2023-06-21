@@ -202,8 +202,9 @@ class DAOCATWallet:
                 # No vote is being added so inner puz stays the same
                 try:
                     removals = solution.at("rrrf")
-                    for removal in removals.as_iter():
-                        active_votes_list.remove(bytes32(removal.as_atom()))
+                    if removals != Program.to(0):
+                        for removal in removals.as_iter():
+                            active_votes_list.remove(bytes32(removal.as_atom()))
                 except Exception:
                     pass
             else:
