@@ -114,6 +114,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
+from chia.util.ssl_check import fix_ssl
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -216,6 +217,7 @@ class BlockTools:
                 private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
                 node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
+            fix_ssl(root_path)
             with lock_config(root_path=root_path, filename="config.yaml"):
                 path = config_path_for_filename(root_path=root_path, filename="config.yaml")
                 path.write_text(path.read_text().replace("localhost", "127.0.0.1"))

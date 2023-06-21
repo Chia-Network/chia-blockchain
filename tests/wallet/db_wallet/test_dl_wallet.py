@@ -6,6 +6,7 @@ from typing import Any, List
 
 import pytest
 
+from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -172,6 +173,12 @@ class TestDLWallet:
         async with wallet_node_1.wallet_state_manager.lock:
             dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wallet_node_1.wallet_state_manager)
 
+        peer = wallet_node_1.get_full_node_peer()
+
+        # Test tracking a launcher id that does not exist
+        with pytest.raises(LauncherCoinNotFoundError):
+            await dl_wallet_0.track_new_launcher_id(bytes32([1] * 32), peer)
+
         nodes = [Program.to("thing").get_tree_hash(), Program.to([8]).get_tree_hash()]
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
@@ -187,7 +194,6 @@ class TestDLWallet:
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
 
-        peer = wallet_node_1.get_full_node_peer()
         await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_1, launcher_id)
         await asyncio.sleep(0.5)

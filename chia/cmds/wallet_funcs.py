@@ -28,9 +28,12 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType, ensure_valid_address
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
+from chia.wallet.wallet_coin_store import GetCoinRecords
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
@@ -41,6 +44,9 @@ transaction_type_descriptions = {
     TransactionType.FEE_REWARD: "rewarded",
     TransactionType.INCOMING_TRADE: "received in trade",
     TransactionType.OUTGOING_TRADE: "sent in trade",
+    TransactionType.INCOMING_CLAWBACK_RECEIVE: "received in clawback as recipient",
+    TransactionType.INCOMING_CLAWBACK_SEND: "received in clawback as sender",
+    TransactionType.OUTGOING_CLAWBACK: "claim/clawback",
 }
 
 
@@ -48,7 +54,14 @@ def transaction_description_from_type(tx: TransactionRecord) -> str:
     return transaction_type_descriptions.get(TransactionType(tx.type), "(unknown reason)")
 
 
-def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix: str, mojo_per_unit: int) -> None:
+def print_transaction(
+    tx: TransactionRecord,
+    verbose: bool,
+    name,
+    address_prefix: str,
+    mojo_per_unit: int,
+    coin_record: Optional[Dict[str, Any]] = None,
+) -> None:  # pragma: no cover
     if verbose:
         print(tx)
     else:
@@ -60,6 +73,13 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        if coin_record is not None:
+            print(
+                "Recipient claimable time:",
+                datetime.fromtimestamp(tx.created_at_time + coin_record["metadata"]["time_lock"]).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+            )
         print("")
 
 
@@ -142,7 +162,7 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     )
 
 
-async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id = args["id"]
     paginate = args["paginate"]
     if paginate is None:
@@ -151,9 +171,15 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     limit = args["limit"]
     sort_key = args["sort_key"]
     reverse = args["reverse"]
-
+    type_filter = (
+        None
+        if not args["clawback"]
+        else TransactionTypeFilter.include(
+            [TransactionType.INCOMING_CLAWBACK_RECEIVE, TransactionType.INCOMING_CLAWBACK_SEND]
+        )
+    )
     txs: List[TransactionRecord] = await wallet_client.get_transactions(
-        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse
+        wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse, type_filter=type_filter
     )
 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
@@ -179,12 +205,20 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         for j in range(0, num_per_screen):
             if i + j >= len(txs):
                 break
+            coin_record: Optional[Dict[str, Any]] = None
+            if txs[i + j].type in CLAWBACK_TRANSACTION_TYPES:
+                coin_record = (
+                    await wallet_client.get_coin_records(
+                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j].additions[0].name()]))
+                    )
+                )["coin_records"][0]
             print_transaction(
                 txs[i + j],
                 verbose=(args["verbose"] > 0),
                 name=name,
                 address_prefix=address_prefix,
                 mojo_per_unit=mojo_per_unit,
+                coin_record=coin_record,
             )
         if i + num_per_screen >= len(txs):
             return None
@@ -201,7 +235,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
     return fee >= amount
 
 
-async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     wallet_id: int = args["id"]
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
@@ -209,9 +243,10 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
     max_coin_amount = Decimal(args["max_coin_amount"])
-    exclude_coin_ids: List[str] = args["exclude_coin_ids"]
+    excluded_coin_ids: List[str] = args["excluded_coin_ids"]
     memo = args["memo"]
     reuse_puzhash = args["reuse_puzhash"]
+    clawback_time_lock = args["clawback_time"]
     if memo is None:
         memos = None
     else:
@@ -226,7 +261,9 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     if amount == 0:
         print("You can not send an empty transaction")
         return
-
+    if clawback_time_lock < 0:
+        print("Clawback time lock seconds cannot be negative.")
+        return
     try:
         typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(typ)
@@ -248,8 +285,13 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
+            puzzle_decorator_override=[
+                {"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}
+            ]
+            if clawback_time_lock > 0
+            else None,
         )
     elif typ == WalletType.CAT:
         print("Submitting transaction...")
@@ -261,7 +303,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
         )
     else:
@@ -1225,6 +1267,21 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     print(f"Signing Mode: {signing_mode}")
 
 
+async def spend_clawback(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
+    tx_ids = []
+    for tid in args["tx_ids"].split(","):
+        tx_ids.append(bytes32.from_hexstr(tid))
+    if len(tx_ids) == 0:
+        print("Transaction ID is required.")
+        return
+    fee = Decimal(args["fee"])
+    if fee < 0:
+        print("Batch fee cannot be negative.")
+        return
+    response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]))
+    print(str(response))
+
+
 async def mint_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     vc_record, txs = await wallet_client.vc_mint(
@@ -1255,9 +1312,10 @@ async def get_vcs(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) 
     vc_records, proofs = await wallet_client.vc_get_list(args["start"], args["count"])
     print("Proofs:")
     for hash, proof_dict in proofs.items():
-        print(f"- {hash}")
-        for proof in proof_dict:
-            print(f"  - {proof}")
+        if proof_dict is not None:
+            print(f"- {hash}")
+            for proof in proof_dict:
+                print(f"  - {proof}")
     for record in vc_records:
         print("")
         print(f"Launcher ID: {record.vc.launcher_id.hex()}")
@@ -1318,8 +1376,19 @@ async def get_proofs_for_root(args: Dict, wallet_client: WalletRpcClient, finger
 
 async def revoke_vc(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:  # pragma: no cover
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    if args["parent_coin_id"] is None:
+        if args["vc_id"] is None:
+            print("Must specify either --parent-coin-id or --vc-id")
+            return
+        record = await wallet_client.vc_get(bytes32.from_hexstr(args["vc_id"]))
+        if record is None:
+            print(f"Cannot find a VC with ID {args['vc_id']}")
+            return
+        parent_id: bytes32 = record.vc.coin.parent_coin_info
+    else:
+        parent_id = bytes32.from_hexstr(args["parent_coin_id"])
     txs = await wallet_client.vc_revoke(
-        bytes32.from_hexstr(args["parent_coin_id"]),
+        parent_id,
         fee=uint64(0) if args["fee"] is None else uint64(int(Decimal(args["fee"]) * units["chia"])),
         reuse_puzhash=args["reuse_puzhash"],
     )

@@ -14,6 +14,7 @@ from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
@@ -97,7 +98,7 @@ class TestSimpleSyncProtocol:
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
-        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [zero_ph])
+        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {zero_ph})
         all_zero_coin = set(zero_coin)
         notified_zero_coins = set()
 
@@ -131,9 +132,9 @@ class TestSimpleSyncProtocol:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(one_ph))
 
         zero_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            True, [zero_ph], peak.height + 1
+            True, {zero_ph}, peak.height + 1
         )
-        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [one_ph])
+        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
 
         all_coins = set(zero_coins)
         all_coins.update(one_coins)
@@ -534,6 +535,40 @@ class TestSimpleSyncProtocol:
         # we have already subscribed to this puzzle hash. The full node will
         # ignore the duplicate
         assert data_response.coin_states == []
+
+    @pytest.mark.asyncio
+    async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
+        self, simulator_and_wallet: SimulatorsAndWallets, self_hostname: str
+    ) -> None:
+        [full_node_api], [[_, wallet_server]], bt = simulator_and_wallet
+        full_node_server = full_node_api.full_node.server
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        ph = wt.get_new_puzzlehash()
+        await full_node_api.farm_blocks_to_puzzlehash(4, ph)
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+        wallet_connection = full_node_server.all_connections[wallet_server.node_id]
+
+        # Create a coin which is hinted with its own destination puzzle hash
+        tx: SpendBundle = wt.generate_signed_transaction(
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            coins[0].coin,
+            condition_dic={
+                ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [ph, int_to_bytes(1), ph])]
+            },
+        )
+        await full_node_api.respond_transaction(RespondTransaction(tx), wallet_connection)
+        await full_node_api.process_spend_bundles(bundles=[tx])
+        # Query the coin states and make sure it doesn't contain duplicated entries
+        msg = wallet_protocol.RegisterForPhUpdates([ph], uint32(0))
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, wallet_connection)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        response = RespondToCoinUpdates.from_bytes(msg_response.data)
+        assert len(response.coin_states) > 0
+        assert len(set(response.coin_states)) == len(response.coin_states)
 
     @pytest.mark.asyncio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
