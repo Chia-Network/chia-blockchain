@@ -638,7 +638,6 @@ class CancelOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class ClearPendingRootsRequest:
     store_id: bytes32
-    # TODO: maybe require the pending root value be set to avoid accidents
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> ClearPendingRootsRequest:

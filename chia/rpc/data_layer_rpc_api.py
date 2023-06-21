@@ -442,7 +442,6 @@ class DataLayerRpcApi:
 
     @marshal()  # type: ignore[arg-type]
     async def clear_pending_roots(self, request: ClearPendingRootsRequest) -> ClearPendingRootsResponse:
-        # TODO: do we need an implementation at the `.service` level
         root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
 
         return ClearPendingRootsResponse(success=root is not None, root=root)

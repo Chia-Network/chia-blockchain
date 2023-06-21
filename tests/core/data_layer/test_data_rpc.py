@@ -1864,8 +1864,8 @@ async def test_clear_pending_roots(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    # TODO: we don't need the service for direct...
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+        # NOTE: we don't need the service for direct...  simpler to leave it in
         assert data_layer_service.rpc_server is not None
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
