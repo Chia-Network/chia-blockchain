@@ -1,0 +1,13 @@
+(mod
+  (
+    CONDITION
+    INNER_PUZZLE
+    inner_solution
+  )
+
+  (c
+    CONDITION
+    (a INNER_PUZZLE inner_solution)
+  )
+
+)
