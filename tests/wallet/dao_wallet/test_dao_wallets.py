@@ -841,11 +841,11 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     fs = await dao_wallet_0.free_coins_from_finished_proposals()
     assert fs is not None
-    # Give the wallet nodes a second and farm enough blocks so we can close the next proposal
-    await asyncio.sleep(1)
+
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-
+    # Wait a second for the dao cat wallet to update
+    await asyncio.sleep(1)
     await dao_wallet_0.clear_finished_proposals_from_memory()
     await time_out_assert(20, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
 
