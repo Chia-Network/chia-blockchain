@@ -21,6 +21,11 @@ $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join 
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
+Write-Output "Creating a directory of licenses from pip and npm packages"
+Write-Output "   ---"
+bash ./build_win_license_dir.sh
+
+Write-Output "   ---"
 Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
