@@ -420,32 +420,50 @@ class TestCoinStoreWithBlocks:
             coin_store = await CoinStore.create(db_wrapper)
             await coin_store._add_coin_records(crs)
 
-            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0)) == 300
-            assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, [std_hash(b"2")], 0)) == 0
-            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 300)) == 151
-            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 603)) == 0
-            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"1")], 0)) == 0
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, 0)) == 300
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(False, {std_hash(b"2")}, 0)) == 0
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, 300)) == 151
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, 603)) == 0
+            assert len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"1")}, 0)) == 0
 
             # test max_items limit
             for limit in [0, 1, 42, 300]:
                 assert (
-                    len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=limit))
+                    len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, 0, max_items=limit))
                     == limit
                 )
 
             # if the limit is very high, we should get all of them
             assert (
-                len(await coin_store.get_coin_states_by_puzzle_hashes(True, [std_hash(b"2")], 0, max_items=10000))
+                len(await coin_store.get_coin_states_by_puzzle_hashes(True, {std_hash(b"2")}, 0, max_items=10000))
                 == 300
             )
 
-            coins = [cr.coin.name() for cr in crs]
+            coins = {cr.coin.name() for cr in crs}
             bad_coins = [std_hash(cr.coin.name()) for cr in crs]
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 0)) == 600
             assert len(await coin_store.get_coin_states_by_ids(False, coins, 0)) == 0
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 300)) == 302
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 603)) == 0
             assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, 0)) == 0
+            # Test max_height
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(603))) == 600
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(602))) == 600
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(599))) == 598
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(400))) == 400
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(301))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(300))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(299))) == 298
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(0))) == 0
+            # Test min_height + max_height
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(603))) == 302
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(602))) == 302
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(599))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(400))) == 102
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(301))) == 2
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(300))) == 2
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(299))) == 0
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(0))) == 0
 
             # test max_items limit
             for limit in [0, 1, 42, 300]:

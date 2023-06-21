@@ -16,7 +16,9 @@ import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
@@ -64,12 +66,15 @@ async def wait_for_synced_receiver(farmer: Farmer, harvester_id: bytes32) -> Non
     await time_out_assert(30, wait)
 
 
-HarvesterFarmerEnvironment = Tuple[Service[Farmer], FarmerRpcClient, Service[Harvester], HarvesterRpcClient, BlockTools]
+HarvesterFarmerEnvironment = Tuple[
+    Service[Farmer, FarmerAPI], FarmerRpcClient, Service[Harvester, HarvesterAPI], HarvesterRpcClient, BlockTools
+]
 
 
 @pytest_asyncio.fixture(scope="function")
 async def harvester_farmer_environment(
-    farmer_one_harvester: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools], self_hostname: str
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    self_hostname: str,
 ) -> AsyncIterator[HarvesterFarmerEnvironment]:
     harvesters, farmer_service, bt = farmer_one_harvester
     harvester_service = harvesters[0]
@@ -141,8 +146,8 @@ async def test_farmer_get_harvesters_and_summary(
         counts_only: bool = endpoint == "get_harvesters_summary"
 
         if not counts_only:
-            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])  # type: ignore[no-any-return] # noqa: E501
-            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])  # type: ignore[no-any-return] # noqa: E501
+            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])
+            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
 
         assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
         assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)

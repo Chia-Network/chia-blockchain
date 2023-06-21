@@ -5,7 +5,6 @@ chia.cmds.start_funcs
 chia.cmds.wallet
 chia.cmds.wallet_funcs
 chia.daemon.server
-chia.data_layer.data_layer_wallet
 chia.introducer.introducer
 chia.introducer.introducer_api
 chia.plotters.bladebit
@@ -24,7 +23,6 @@ chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
 chia.seeder.crawl_store
 chia.seeder.crawler
-chia.seeder.crawler_api
 chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
@@ -53,7 +51,6 @@ chia.util.profiler
 chia.util.service_groups
 chia.util.ssl_check
 chia.wallet.block_record
-chia.wallet.cat_wallet.cat_wallet
 chia.wallet.chialisp
 chia.wallet.did_wallet.did_wallet
 chia.wallet.did_wallet.did_wallet_puzzles
@@ -69,14 +66,12 @@ chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle
 chia.wallet.puzzles.p2_m_of_n_delegate_direct
 chia.wallet.puzzles.p2_puzzle_hash
 chia.wallet.puzzles.prefarm.spend_prefarm
-chia.wallet.puzzles.puzzle_utils
 chia.wallet.puzzles.singleton_top_layer
 chia.wallet.puzzles.tails
 chia.wallet.trading.trade_store
 chia.wallet.transaction_record
 chia.wallet.util.debug_spend_bundle
 chia.wallet.util.new_peak_queue
-chia.wallet.wallet
 chia.wallet.wallet_coin_store
 chia.wallet.wallet_interested_store
 chia.wallet.wallet_node_api
@@ -138,7 +133,6 @@ tests.core.util.test_keychain
 tests.core.util.test_keyring_wrapper
 tests.core.util.test_lru_cache
 tests.core.util.test_significant_bits
-tests.generator.test_list_to_batches
 tests.generator.test_scan
 tests.plotting.test_plot_manager
 tests.pools.test_pool_cmdline
@@ -148,11 +142,9 @@ tests.pools.test_wallet_pool_store
 tests.simulation.test_simulation
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils
-tests.util.test_lock_queue
 tests.util.test_misc
 tests.util.test_network
 tests.wallet.cat_wallet.test_cat_lifecycle
