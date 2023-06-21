@@ -5,6 +5,8 @@ import dataclasses
 import logging
 import random
 import sqlite3
+from pathlib import Path
+from typing import List
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -14,11 +16,12 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
 
@@ -26,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
-async def test_block_store(tmp_dir, db_version, bt, tmp_path):
+async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, tmp_path: Path) -> None:
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
@@ -55,9 +58,9 @@ async def test_block_store(tmp_dir, db_version, bt, tmp_path):
             await store.set_peak(block_record.header_hash)
             await store.set_peak(block_record.header_hash)
 
-        assert len(await store.get_full_blocks_at([1])) == 1
-        assert len(await store.get_full_blocks_at([0])) == 1
-        assert len(await store.get_full_blocks_at([100])) == 0
+        assert len(await store.get_full_blocks_at([uint32(1)])) == 1
+        assert len(await store.get_full_blocks_at([uint32(0)])) == 1
+        assert len(await store.get_full_blocks_at([uint32(100)])) == 0
 
         # get_block_records_in_range
         block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
@@ -80,7 +83,7 @@ async def test_block_store(tmp_dir, db_version, bt, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_deadlock(tmp_dir, db_version, bt, tmp_path):
+async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, tmp_path: Path) -> None:
     """
     This test was added because the store was deadlocking in certain situations, when fetching and
     adding blocks repeatedly. The issue was patched.
@@ -98,7 +101,7 @@ async def test_deadlock(tmp_dir, db_version, bt, tmp_path):
         for block in blocks:
             await _validate_and_add_block(bc, block)
             block_records.append(bc.block_record(block.header_hash))
-        tasks = []
+        tasks: List[asyncio.Task[object]] = []
 
         for i in range(10000):
             rand_i = random.randint(0, 9)
@@ -114,7 +117,7 @@ async def test_deadlock(tmp_dir, db_version, bt, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_rollback(bt, tmp_dir, tmp_path):
+async def test_rollback(bt: BlockTools, tmp_dir: Path, tmp_path: Path) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version=2, tmp_path=tmp_path) as db_wrapper:
@@ -138,7 +141,7 @@ async def test_rollback(bt, tmp_dir, tmp_path):
                 async with conn.execute(
                     "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
                 ) as cursor:
-                    rows = await cursor.fetchall()
+                    rows = list(await cursor.fetchall())
                     assert len(rows) == 1
                     assert rows[0][0]
 
@@ -151,7 +154,7 @@ async def test_rollback(bt, tmp_dir, tmp_path):
                     "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height",
                     (block.header_hash,),
                 ) as cursor:
-                    rows = await cursor.fetchall()
+                    rows = list(await cursor.fetchall())
                     print(count, rows)
                     assert len(rows) == 1
                     assert rows[0][0] == (count <= 5)
@@ -159,7 +162,7 @@ async def test_rollback(bt, tmp_dir, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_count_compactified_blocks(bt, tmp_dir, db_version, tmp_path):
+async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, tmp_path: Path) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
@@ -178,7 +181,7 @@ async def test_count_compactified_blocks(bt, tmp_dir, db_version, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_count_uncompactified_blocks(bt, tmp_dir, db_version, tmp_path):
+async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, tmp_path: Path) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version=db_version, tmp_path=tmp_path) as db_wrapper:
@@ -197,10 +200,10 @@ async def test_count_uncompactified_blocks(bt, tmp_dir, db_version, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_replace_proof(bt, tmp_dir, db_version, tmp_path):
+async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, tmp_path: Path) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
-    def rand_bytes(num) -> bytes:
+    def rand_bytes(num: int) -> bytes:
         ret = bytearray(num)
         for i in range(num):
             ret[i] = random.getrandbits(8)
@@ -231,17 +234,19 @@ async def test_replace_proof(bt, tmp_dir, db_version, tmp_path):
 
         for block, proof in zip(blocks, replaced):
             b = await block_store.get_full_block(block.header_hash)
+            assert b is not None
             assert b.challenge_chain_ip_proof == proof
 
             # make sure we get the same result when we hit the database
             # itself (and not just the block cache)
             block_store.rollback_cache_block(block.header_hash)
             b = await block_store.get_full_block(block.header_hash)
+            assert b is not None
             assert b.challenge_chain_ip_proof == proof
 
 
 @pytest.mark.asyncio
-async def test_get_generator(bt, db_version, tmp_path):
+async def test_get_generator(bt: BlockTools, db_version: int, tmp_path: Path) -> None:
     blocks = bt.get_consecutive_blocks(10)
 
     def generator(i: int) -> SerializedProgram:
@@ -254,7 +259,7 @@ async def test_get_generator(bt, db_version, tmp_path):
         for i, block in enumerate(blocks):
             block = dataclasses.replace(block, transactions_generator=generator(i))
             block_record = header_block_to_sub_block_record(
-                DEFAULT_CONSTANTS, 0, block, 0, False, 0, max(0, block.height - 1), None
+                DEFAULT_CONSTANTS, uint64(0), block, uint64(0), False, uint8(0), uint32(max(0, block.height - 1)), None
             )
             await store.add_full_block(block.header_hash, block, block_record)
             await store.set_in_chain([(block_record.header_hash,)])
@@ -263,16 +268,16 @@ async def test_get_generator(bt, db_version, tmp_path):
 
         if db_version == 2:
             expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
-            generators = await store.get_generators_at(range(1, 10))
+            generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
             assert generators == expected_generators
 
             # test out-of-order heights
             expected_generators = list(map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]]))
-            generators = await store.get_generators_at([4, 8, 3, 9])
+            generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
             assert generators == expected_generators
 
             with pytest.raises(KeyError):
-                await store.get_generators_at([100])
+                await store.get_generators_at([uint32(100)])
 
         assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator
         assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
@@ -281,7 +286,7 @@ async def test_get_generator(bt, db_version, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_get_blocks_by_hash(tmp_dir, bt, db_version, tmp_path):
+async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int, tmp_path: Path) -> None:
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
@@ -321,7 +326,7 @@ async def test_get_blocks_by_hash(tmp_dir, bt, db_version, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_get_block_bytes_in_range(tmp_dir, bt, db_version, tmp_path):
+async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int, tmp_path: Path) -> None:
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
