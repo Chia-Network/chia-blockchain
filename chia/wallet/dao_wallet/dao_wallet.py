@@ -2431,14 +2431,14 @@ class DAOWallet(WalletProtocol):
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if singleton_id is None:
             raise ValueError("get_singleton_id_from_puzzle failed")
-        ended = (puzzle == get_finished_state_puzzle(singleton_id))
+        ended = False
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-        if current_innerpuz == get_finished_state_puzzle(singleton_id):
-            ended = True
 
-        if ended:
+        # check if our parent puzzle was the finished state
+        if puzzle.uncurry()[0] == DAO_FINISHED_STATE:
+            ended = True
             index = 0
             for current_info in new_dao_info.proposals_list:
                 # Search for current proposal_info
@@ -2446,13 +2446,13 @@ class DAOWallet(WalletProtocol):
                     new_proposal_info = ProposalInfo(
                         singleton_id,
                         puzzle,
-                        0,
-                        0,
+                        current_info.amount_voted,
+                        current_info.yes_votes,
                         current_coin,
                         current_innerpuz,
-                        None,
+                        current_info.timer_coin,
                         block_height,
-                        None,
+                        current_info.passed,
                         ended,
                     )
                     new_dao_info.proposals_list[index] = new_proposal_info
@@ -2464,35 +2464,41 @@ class DAOWallet(WalletProtocol):
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
+
+        # check if we are the finished state
+        if current_innerpuz == get_finished_state_puzzle(singleton_id):
+            ended = True
+
+        curried_args = puzzle.uncurry()[1].as_iter()
+        # if len(puzzle.uncurry()[1].as_python()) == 2:
+        #     breakpoint()
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            PROPOSAL_MOD_HASH,
+            PROPOSAL_TIMER_MOD_HASH,
+            CAT_MOD_HASH,
+            TREASURY_MOD_HASH,
+            LOCKUP_MOD_HASH,
+            CAT_TAIL_HASH,
+            TREASURY_ID,
+            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+            TOTAL_VOTES,  # how many people responded
+            INNERPUZ,
+        ) = curried_args
+
+        if current_coin is None:
+            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+
+        timer_coin = None
+        if solution.at("rrrrrrf").as_int() == 0:
+            # we need to add the vote amounts from the solution to get accurate totals
+            is_yes_vote = solution.at("rf").as_int()
+            votes_added = solution.at("ff").as_int()
         else:
-            curried_args = puzzle.uncurry()[1].as_iter()
-            (
-                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-                PROPOSAL_MOD_HASH,
-                PROPOSAL_TIMER_MOD_HASH,
-                CAT_MOD_HASH,
-                TREASURY_MOD_HASH,
-                LOCKUP_MOD_HASH,
-                CAT_TAIL_HASH,
-                TREASURY_ID,
-                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-                TOTAL_VOTES,  # how many people responded
-                INNERPUZ,
-            ) = curried_args
-
-            if current_coin is None:
-                raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
-
-            timer_coin = None
-            if solution.at("rrrrrrf").as_int() == 0:
-                # we need to add the vote amounts from the solution to get accurate totals
-                is_yes_vote = solution.at("rf").as_int()
-                votes_added = solution.at("ff").as_int()
-            else:
-                # If we have entered the finished state
-                # TODO: we need to alert the user that they can free up their coins
-                is_yes_vote = 0
-                votes_added = 0
+            # If we have entered the finished state
+            # TODO: we need to alert the user that they can free up their coins
+            is_yes_vote = 0
+            votes_added = 0
 
         if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
             # TODO: is this the best way of handling this?
