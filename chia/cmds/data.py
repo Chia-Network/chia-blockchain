@@ -406,8 +406,14 @@ def check_plugins(
     run(check_plugins_cmd(rpc_port=data_rpc_port))
 
 
-@data_cmd.command("clear_pending_roots", help="Clear pending roots that will not be published")
+@data_cmd.command(
+    "clear_pending_roots",
+    help="Clear pending roots that will not be published, associated data may not be recoverable",
+)
 @click.option("-i", "--id", "id_str", help="Store ID", type=str, required=True)
+@click.confirmation_option(
+    prompt="Associated data may not be recoverable.\nAre you sure you want to remove the pending roots?",
+)
 @create_rpc_port_option()
 def clear_pending_roots(id_str: str, data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import clear_pending_roots
