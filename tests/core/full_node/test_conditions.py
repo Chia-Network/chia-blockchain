@@ -302,3 +302,42 @@ class TestConditions:
             )
         )
         await check_conditions(bt, conditions)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("softfork2", [True, False])
+    @pytest.mark.parametrize(
+        "announce_condition, consume_condition",
+        [
+            (co.CREATE_PUZZLE_ANNOUNCEMENT[0], co.ASSERT_PUZZLE_ANNOUNCEMENT[0]),
+            (co.CREATE_COIN_ANNOUNCEMENT[0], co.ASSERT_COIN_ANNOUNCEMENT[0]),
+        ],
+    )
+    async def test_v2_soft_fork_announce_conditions_limit(self, softfork2, announce_condition, consume_condition, bt):
+        """
+        Test that the condition checker accepts more announcements than the new per puzzle limit
+        pre-v2-softfork, and rejects more than the announcement limit afterward.
+        """
+
+        ANNOUNCE_LIMIT_POST_V2_SOFT_FORK = 1024
+        too_many_announcements = ANNOUNCE_LIMIT_POST_V2_SOFT_FORK + 1
+
+        if softfork2:
+            expected_err = Err.TOO_MANY_ANNOUNCEMENTS
+        else:
+            expected_err = None
+
+        if consume_condition == co.ASSERT_COIN_ANNOUNCEMENT[0]:
+            blocks = await initial_blocks(bt)
+            coin = list(blocks[-2].get_included_reward_coins())[0]
+            announcement = Announcement(coin.name(), b"test")
+        else:
+            announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+
+        list_preamble = b"\xff"
+        announce_conditions = (assemble(f"({announce_condition} 'test')").as_bin() + b"\xff") * too_many_announcements
+        consume_condition = assemble(f"({consume_condition} 0x{announcement.name().hex()}))").as_bin()
+        list_suffix = b"\x80"
+        conditions_list_bytes = list_preamble + announce_conditions + consume_condition + list_suffix
+        conditions_program = Program.from_bytes(conditions_list_bytes)
+
+        await check_conditions(bt, conditions_program, expected_err=expected_err, softfork2=softfork2)

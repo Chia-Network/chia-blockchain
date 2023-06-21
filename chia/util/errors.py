@@ -176,6 +176,8 @@ class Err(Enum):
     ASSERT_EPHEMERAL_FAILED = 140
     EPHEMERAL_RELATIVE_CONDITION = 141
 
+    TOO_MANY_ANNOUNCEMENTS = 144
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):
