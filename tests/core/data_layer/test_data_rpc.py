@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import copy
+import enum
 import json
 import os
 import sys
@@ -46,6 +47,13 @@ nodes = Tuple[WalletNode, FullNodeSimulator]
 nodes_with_port_bt_ph = Tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
 wallet_and_port_tuple = Tuple[WalletNode, uint16]
 two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
+
+
+class InterfaceLayer(enum.Enum):
+    direct = enum.auto()
+    client = enum.auto()
+    funcs = enum.auto()
+    cli = enum.auto()
 
 
 @contextlib.asynccontextmanager
@@ -1851,14 +1859,13 @@ async def test_get_sync_status(
         assert sync_status["target_generation"] == 3
 
 
-# TODO: if this parametrization is kept then it should be an enumeration, not strings
-@pytest.mark.parametrize(argnames="use_client", argvalues=["direct", "client", "funcs", "cli"])
+@pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
 @pytest.mark.asyncio
 async def test_clear_pending_roots(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
-    use_client: str,
+    layer: InterfaceLayer,
     bt: BlockTools,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
@@ -1892,15 +1899,15 @@ async def test_clear_pending_roots(
         pending_root = await data_store.get_pending_root(tree_id=tree_id)
         assert pending_root is not None
 
-        if use_client == "direct":
+        if layer == InterfaceLayer.direct:
             cleared_root = await data_rpc_api.clear_pending_roots({"store_id": tree_id.hex()})
-        elif use_client == "funcs":
+        elif layer == InterfaceLayer.funcs:
             cleared_root = await clear_pending_roots(
                 store_id=tree_id,
                 rpc_port=rpc_port,
                 root_path=bt.root_path,
             )
-        elif use_client == "cli":
+        elif layer == InterfaceLayer.cli:
             args: List[str] = [
                 sys.executable,
                 "-m",
@@ -1911,6 +1918,7 @@ async def test_clear_pending_roots(
                 tree_id.hex(),
                 "--data-rpc-port",
                 str(rpc_port),
+                "--yes",
             ]
             process = await asyncio.create_subprocess_exec(
                 *args,
@@ -1926,7 +1934,7 @@ async def test_clear_pending_roots(
             stderr = await process.stderr.read()
             assert process.returncode == 0
             assert stderr == b""
-        elif use_client == "client":
+        elif layer == InterfaceLayer.client:
             client = await DataLayerRpcClient.create(
                 self_hostname=self_hostname,
                 port=rpc_port,
