@@ -664,6 +664,7 @@ class TestWalletSimulator:
         assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
         new_config = wallet_node.config.copy()
         new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
+        new_config["database_path"] = "wallet/db/blockchain_wallet_v2_test_CHALLENGE_KEY.sqlite"
         wallet_node_2.config = new_config
         wallet_node_2.root_path = wallet_node.root_path
         wallet_node_2.local_keychain = wallet_node.local_keychain
