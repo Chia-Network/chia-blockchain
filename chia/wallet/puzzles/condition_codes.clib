@@ -56,4 +56,8 @@
 
   ; A condition that is always true and always ignore all arguments
   (defconstant REMARK 1)
+
+  ; A condition whose first argument specifies its cost, but is unkown otherwise
+  ; It's a place-holder for soft-forking in new conditions
+  (defconstant SOFTFORK 90)
 )
