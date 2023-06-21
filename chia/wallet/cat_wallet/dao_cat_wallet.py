@@ -222,27 +222,10 @@ class DAOCATWallet:
         ).get_tree_hash()
 
         if new_cat_puzhash != coin.puzzle_hash:
-            breakpoint()
             raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
-
         await self.add_lineage(coin.name(), lineage_proof)
-
-        lineage = await self.get_lineage_proof_for_coin(coin)
-
-        if lineage is None:
-            try:
-                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin.parent_coin_info], peer=peer
-                )
-                assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await fetch_coin_spend(coin_state[0].spent_height, coin_state[0].coin, peer)
-                # TODO: process this coin
-                self.log.info("coin_added coin_spend: %s", coin_spend)
-                # await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
-            except Exception as e:
-                self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
         # add the new coin to the list of locked coins and remove the spent coin
         locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin != parent_spend.coin]
