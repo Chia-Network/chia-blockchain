@@ -75,14 +75,14 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords
+from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -899,12 +899,11 @@ class WalletRpcApi:
         )
         tx_list = []
         # Format for clawback transactions
-        clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
         for tr in transactions:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
+                if tx["type"] not in CLAWBACK_TRANSACTION_TYPES:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
@@ -914,8 +913,8 @@ class WalletRpcApi:
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
                 tx["metadata"]["coin_id"] = coin.name().hex()
                 tx["metadata"]["spent"] = record.spent
-            except Exception as e:
-                log.error(f"Failed to get transaction {tr.name}: {e}")
+            except Exception:
+                log.exception(f"Failed to get transaction {tr.name}.")
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
@@ -923,7 +922,12 @@ class WalletRpcApi:
 
     async def get_transaction_count(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+            wallet_id, confirmed=request.get("confirmed", None), type_filter=type_filter
+        )
         return {
             "count": count,
             "wallet_id": wallet_id,
@@ -1224,7 +1228,7 @@ class WalletRpcApi:
             kwargs["confirmed_range"] = confirmed_range
 
         if "include_spent_coins" in request and not str2bool(request["include_spent_coins"]):
-            kwargs["spent_range"] = UInt32Range(start=uint32(uint32.MAXIMUM_EXCLUSIVE - 1))
+            kwargs["spent_range"] = unspent_range
 
         async with self.service.wallet_state_manager.lock:
             coin_records: List[CoinRecord] = await self.service.wallet_state_manager.get_coin_records_by_coin_ids(
@@ -2926,10 +2930,7 @@ class WalletRpcApi:
     async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)
 
-        if (
-            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
-            and parsed_request.limit > self.max_get_coin_records_limit
-        ):
+        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
             raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
 
         for filter_name, filter in {

@@ -446,6 +446,24 @@ class TestCoinStoreWithBlocks:
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 300)) == 302
             assert len(await coin_store.get_coin_states_by_ids(True, coins, 603)) == 0
             assert len(await coin_store.get_coin_states_by_ids(True, bad_coins, 0)) == 0
+            # Test max_height
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(603))) == 600
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(602))) == 600
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(599))) == 598
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(400))) == 400
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(301))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(300))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(299))) == 298
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, max_height=uint32(0))) == 0
+            # Test min_height + max_height
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(603))) == 302
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(602))) == 302
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(599))) == 300
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(400))) == 102
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(301))) == 2
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(300))) == 2
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(299))) == 0
+            assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(300), max_height=uint32(0))) == 0
 
             # test max_items limit
             for limit in [0, 1, 42, 300]:
