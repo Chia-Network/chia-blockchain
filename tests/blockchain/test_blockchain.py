@@ -3628,11 +3628,7 @@ async def test_soft_fork3_activation(
             ),
             keychain=keychain,
         )
-        blockchain_constants = bt.constants.replace(
-            **{
-                "SOFT_FORK3_HEIGHT": soft_fork3_height,
-            }
-        )
+        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=soft_fork3_height)
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
