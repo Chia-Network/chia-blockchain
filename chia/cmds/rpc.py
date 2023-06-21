@@ -12,10 +12,17 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: List[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
 async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+    if service == "daemon":
+        return await call_daemon_command(endpoint, request, config)
+    
+    return await call_rpc_service_endpoint(service, endpoint, request, config)
+
+
+async def call_rpc_service_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 
     port: uint16
@@ -41,6 +48,26 @@ async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], co
     finally:
         client.close()
         await client.await_closed()
+    return result
+
+
+async def call_daemon_command(command: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+    from chia.daemon.client import connect_to_daemon_and_validate
+
+    daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config)
+
+    if daemon is None:
+        raise Exception("Failed to connect to chia daemon")
+
+    result: Dict[str, Any]
+    try:
+        ws_request = daemon.format_request(command, request)
+        ws_response = await daemon._get(ws_request)
+        result = ws_response["data"]
+    except Exception as e:
+        raise Exception(f"Request failed: {e}")
+    finally:
+        await daemon.close()
     return result
 
 
