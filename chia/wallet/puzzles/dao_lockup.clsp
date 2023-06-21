@@ -279,7 +279,7 @@
           )
         )
         (for_every_removal_id
-          ROPOSAL_MOD_HASH
+          PROPOSAL_MOD_HASH
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
           LOCKUP_MOD_HASH
