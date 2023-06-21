@@ -112,8 +112,8 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
+    if node_profiler and sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
