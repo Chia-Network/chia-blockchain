@@ -7,8 +7,8 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
-    "anyio==3.6.2",
     "blspy==2.0.0",  # Signature library
+    "anyio==3.7.0",
     "boto3==1.26.148",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
@@ -24,7 +24,7 @@ dependencies = [
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
     "cryptography==41.0.0",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
@@ -33,7 +33,7 @@ dependencies = [
     "dnspython==2.3.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.6.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.6.3",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.1",
     "psutil==5.9.4",
@@ -118,6 +118,8 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.db_wallet",
         "chia.wallet.puzzles",
+        "chia.wallet.puzzles.clawback",
+        "chia.wallet.puzzles.prefarm",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",

@@ -25,6 +25,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -48,6 +49,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -378,7 +380,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[
-    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
@@ -583,32 +585,32 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_two_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_three_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
@@ -821,7 +823,7 @@ async def timelord_service(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler]]:
+async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
     async for service in setup_crawler(bt):
         yield service
 

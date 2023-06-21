@@ -32,7 +32,7 @@ class ClawbackVersion(IntEnum):
 @streamable
 @dataclass(frozen=True)
 class AutoClaimSettings(Streamable):
-    enabled: bool = True
+    enabled: bool = False
     tx_fee: uint64 = uint64(0)
     min_amount: uint64 = uint64(0)
     batch_size: uint16 = uint16(50)

@@ -99,8 +99,6 @@ tests.core.custom_types.test_coin
 tests.core.custom_types.test_spend_bundle
 tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
-tests.core.full_node.stores.test_block_store
-tests.core.full_node.stores.test_coin_store
 tests.core.full_node.stores.test_full_node_store
 tests.core.full_node.stores.test_hint_store
 tests.core.full_node.stores.test_sync_store
@@ -142,7 +140,6 @@ tests.pools.test_wallet_pool_store
 tests.simulation.test_simulation
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils

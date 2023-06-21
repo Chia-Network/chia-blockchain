@@ -345,7 +345,10 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
+        assert merkle_coin.name() in set(interested_coins)
         assert len(txs["transactions"]) == 1
+        assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
         assert txs["transactions"][0]["metadata"]["coin_id"] == merkle_coin.name().hex()
         has_exception = False
@@ -402,6 +405,8 @@ class TestWalletSimulator:
         )
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
+        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
+        assert merkle_coin.name() not in set(interested_coins)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -422,6 +427,7 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
         api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -480,6 +486,20 @@ class TestWalletSimulator:
         )
         await time_out_assert(10, wallet.get_confirmed_balance, 3999999999500)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000500)
+
+        txs = await api_0.get_transactions(
+            dict(
+                type_filter={
+                    "values": [
+                        TransactionType.INCOMING_CLAWBACK_SEND.value,
+                    ],
+                    "mode": 1,
+                },
+                wallet_id=1,
+            )
+        )
+        assert len(txs["transactions"]) == 1
+        assert txs["transactions"][0]["confirmed"]
 
     @pytest.mark.parametrize(
         "trusted",
