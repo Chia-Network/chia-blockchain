@@ -345,6 +345,8 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
+        assert merkle_coin.name() in set(interested_coins)
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()

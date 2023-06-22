@@ -1158,11 +1158,41 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
+            spent_height: uint32 = uint32(0)
+            if coin_state.spent_height is not None:  # pragma: no cover
+                self.log.debug("Resync clawback coin: %s", coin_state.coin.name().hex())
+                # Resync case
+                spent_height = uint32(coin_state.spent_height)
+                # Create Clawback outgoing transaction
+                created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.spent_height))
+                clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
+                tx_record = TransactionRecord(
+                    confirmed_at_height=uint32(coin_state.spent_height),
+                    created_at_time=created_timestamp,
+                    to_puzzle_hash=metadata.sender_puzzle_hash
+                    if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                    else metadata.recipient_puzzle_hash,
+                    amount=uint64(coin_state.coin.amount),
+                    fee_amount=uint64(0),
+                    confirmed=True,
+                    sent=uint32(0),
+                    spend_bundle=clawback_spend_bundle,
+                    additions=clawback_spend_bundle.additions(),
+                    removals=clawback_spend_bundle.removals(),
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_CLAWBACK),
+                    name=clawback_spend_bundle.name(),
+                    memos=list(compute_memos(clawback_spend_bundle).items()),
+                )
+                await self.add_pending_transaction(tx_record)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
-                uint32(0),
-                False,
+                spent_height,
+                False if spent_height == 0 else True,
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
@@ -1173,14 +1203,13 @@ class WalletStateManager:
             await self.coin_store.add_coin_record(coin_record)
             # Add tx record
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
-            spend_bundle = SpendBundle([coin_spend], G2Element())
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False,
+                confirmed=False if spent_height == 0 else True,
                 sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin_state.coin],
@@ -1423,6 +1452,10 @@ class WalletStateManager:
                                             tx_record.name, uint32(coin_state.spent_height)
                                         )
                                 else:
+                                    tx_name = bytes(coin_state.coin.name())
+                                    for added_coin in additions:
+                                        tx_name += bytes(added_coin.name())
+                                    tx_name = std_hash(tx_name)
                                     tx_record = TransactionRecord(
                                         confirmed_at_height=uint32(coin_state.spent_height),
                                         created_at_time=uint64(spent_timestamp),
@@ -1440,7 +1473,7 @@ class WalletStateManager:
                                         sent_to=[],
                                         trade_id=None,
                                         type=uint32(TransactionType.OUTGOING_TX.value),
-                                        name=bytes32(token_bytes()),
+                                        name=tx_name,
                                         memos=[],
                                     )
 
