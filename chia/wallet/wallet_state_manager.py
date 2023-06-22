@@ -82,7 +82,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
@@ -754,15 +754,24 @@ class WalletStateManager:
                 if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
                     await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(derivation_record.puzzle_hash)
                 amount = uint64(amount + coin.amount)
+                memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1].copy()
+                if (
+                    len(memos) > 0
+                    and not is_recipient
+                    and await self.puzzle_store.puzzle_hash_exists(recipient_puzhash)
+                ):
+                    # Sender and recipient belong to the same wallet
+                    # Clean hint in this case to prevent duplicate processing
+                    memos[0] = b""
+                if len(memos) == 1 and memos[0] == b"":
+                    memos = []
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[
                         Payment(
                             derivation_record.puzzle_hash,
                             uint64(coin.amount),
-                            []
-                            if len(incoming_tx.memos) == 0
-                            else incoming_tx.memos[0][1],  # Forward memo of the first coin
+                            memos,  # Forward memo of the first coin
                         )
                     ],
                     coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
@@ -1149,41 +1158,11 @@ class WalletStateManager:
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
-            spent_height: uint32 = uint32(0)
-            if coin_state.spent_height is not None:  # pragma: no cover
-                self.log.debug("Resync clawback coin: %s", coin_state.coin.name().hex())
-                # Resync case
-                spent_height = uint32(coin_state.spent_height)
-                # Create Clawback outgoing transaction
-                created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.spent_height))
-                clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
-                clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
-                tx_record = TransactionRecord(
-                    confirmed_at_height=uint32(coin_state.spent_height),
-                    created_at_time=created_timestamp,
-                    to_puzzle_hash=metadata.sender_puzzle_hash
-                    if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                    else metadata.recipient_puzzle_hash,
-                    amount=uint64(coin_state.coin.amount),
-                    fee_amount=uint64(0),
-                    confirmed=True,
-                    sent=uint32(0),
-                    spend_bundle=clawback_spend_bundle,
-                    additions=clawback_spend_bundle.additions(),
-                    removals=clawback_spend_bundle.removals(),
-                    wallet_id=uint32(1),
-                    sent_to=[],
-                    trade_id=None,
-                    type=uint32(TransactionType.OUTGOING_CLAWBACK),
-                    name=clawback_spend_bundle.name(),
-                    memos=list(compute_memos(clawback_spend_bundle).items()),
-                )
-                await self.add_pending_transaction(tx_record)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
-                spent_height,
-                False if spent_height == 0 else True,
+                uint32(0),
+                False,
                 False,
                 WalletType.STANDARD_WALLET,
                 1,
@@ -1194,13 +1173,14 @@ class WalletStateManager:
             await self.coin_store.add_coin_record(coin_record)
             # Add tx record
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
+            spend_bundle = SpendBundle([coin_spend], G2Element())
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(coin_state.created_height),
                 created_at_time=uint64(created_timestamp),
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False if spent_height == 0 else True,
+                confirmed=False,
                 sent=uint32(0),
                 spend_bundle=None,
                 additions=[coin_state.coin],
@@ -1377,7 +1357,6 @@ class WalletStateManager:
                                 change = False
 
                             if not change:
-                                self.log.debug("Found spent incoming coin: %s", coin_state)
                                 created_timestamp = await self.wallet_node.get_timestamp_for_height(
                                     uint32(coin_state.created_height)
                                 )
@@ -1444,10 +1423,6 @@ class WalletStateManager:
                                             tx_record.name, uint32(coin_state.spent_height)
                                         )
                                 else:
-                                    tx_name = bytes(coin_state.coin.name())
-                                    for added_coin in additions:
-                                        tx_name += bytes(added_coin.name())
-                                    tx_name = std_hash(tx_name)
                                     tx_record = TransactionRecord(
                                         confirmed_at_height=uint32(coin_state.spent_height),
                                         created_at_time=uint64(spent_timestamp),
@@ -1465,9 +1440,10 @@ class WalletStateManager:
                                         sent_to=[],
                                         trade_id=None,
                                         type=uint32(TransactionType.OUTGOING_TX.value),
-                                        name=tx_name,
+                                        name=bytes32(token_bytes()),
                                         memos=[],
                                     )
+
                                     await self.tx_store.add_transaction_record(tx_record)
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
@@ -1475,10 +1451,7 @@ class WalletStateManager:
                                 await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
                             confirmed_tx_records: List[TransactionRecord] = []
                             for tx_record in all_unconfirmed:
-                                if tx_record.type in {
-                                    TransactionType.INCOMING_CLAWBACK_SEND.value,
-                                    TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
-                                }:
+                                if tx_record.type in CLAWBACK_TRANSACTION_TYPES:
                                     for add_coin in tx_record.additions:
                                         if add_coin == coin_state.coin:
                                             confirmed_tx_records.append(tx_record)

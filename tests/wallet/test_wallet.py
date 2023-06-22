@@ -14,20 +14,18 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, wait_for_coins_in_wallet
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
@@ -347,8 +345,6 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == 3999999999500
         # clawback merkle coin
         merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
-        interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
-        assert merkle_coin.name() in set(interested_coins)
         assert len(txs["transactions"]) == 1
         assert not txs["transactions"][0]["confirmed"]
         assert txs["transactions"][0]["metadata"]["recipient_puzzle_hash"][2:] == normal_puzhash.hex()
@@ -415,6 +411,92 @@ class TestWalletSimulator:
         [True, False],
     )
     @pytest.mark.asyncio
+    async def test_wallet_clawback_sent_self(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 1
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
+        if trusted:
+            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+        wallet_node_2.config["auto_claim"]["enabled"] = False
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+
+        assert await wallet.get_confirmed_balance() == expected_confirmed_balance
+        assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
+        normal_puzhash = await wallet.get_new_puzzlehash()
+        # Transfer to normal wallet
+        tx = await wallet.generate_signed_transaction(
+            uint64(500),
+            normal_puzhash,
+            uint64(0),
+            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+        )
+
+        await wallet.push_transaction(tx)
+        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        # Check merkle coins
+        await time_out_assert(
+            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
+        )
+        assert await wallet.get_confirmed_balance() == 3999999999500
+        # Claim merkle coin
+        await asyncio.sleep(20)
+        merkle_coin = tx.additions[0] if tx.additions[0].amount == 500 else tx.additions[1]
+        resp = await api_0.spend_clawback_coins(
+            dict({"coin_ids": [merkle_coin.name().hex(), normal_puzhash.hex()], "fee": 1000})
+        )
+        json.dumps(resp)
+        assert resp["success"]
+        assert len(resp["transaction_ids"]) == 1
+        # Wait mempool update
+        await time_out_assert_not_none(
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+        )
+        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        await time_out_assert(
+            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
+        )
+        await time_out_assert(10, wallet.get_confirmed_balance, 6000000000000)
+
+        txs = await api_0.get_transactions(
+            dict(
+                type_filter={
+                    "values": [TransactionType.INCOMING_CLAWBACK_SEND.value, TransactionType.OUTGOING_CLAWBACK.value],
+                    "mode": 1,
+                },
+                wallet_id=1,
+            )
+        )
+        assert len(txs["transactions"]) == 2
+        assert txs["transactions"][0]["confirmed"]
+        assert txs["transactions"][1]["confirmed"]
+        assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
+        assert txs["transactions"][0]["memos"] == {}
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
     async def test_wallet_clawback_claim_manual(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
@@ -429,6 +511,7 @@ class TestWalletSimulator:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
         api_1 = WalletRpcApi(wallet_node_2)
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -487,6 +570,20 @@ class TestWalletSimulator:
         )
         await time_out_assert(10, wallet.get_confirmed_balance, 3999999999500)
         await time_out_assert(10, wallet_1.get_confirmed_balance, 4000000000500)
+
+        txs = await api_0.get_transactions(
+            dict(
+                type_filter={
+                    "values": [
+                        TransactionType.INCOMING_CLAWBACK_SEND.value,
+                    ],
+                    "mode": 1,
+                },
+                wallet_id=1,
+            )
+        )
+        assert len(txs["transactions"]) == 1
+        assert txs["transactions"][0]["confirmed"]
 
     @pytest.mark.parametrize(
         "trusted",
@@ -584,110 +681,6 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
-
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.asyncio
-    async def test_clawback_resync(
-        self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
-        trusted: bool,
-        self_hostname: str,
-    ) -> None:
-        num_blocks = 1
-        full_nodes, wallets, _ = two_wallet_nodes
-        full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        api_0 = WalletRpcApi(wallet_node)
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
-
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        normal_puzhash = await wallet.get_new_puzzlehash()
-        # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
-            uint64(500),
-            normal_puzhash,
-            uint64(0),
-            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
-        )
-        clawback_coin_id = tx.additions[0].name()
-        assert tx.spend_bundle is not None
-        await wallet.push_transaction(tx)
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        # Check merkle coins
-        await time_out_assert(
-            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
-        )
-        assert await wallet.get_confirmed_balance() == 3999999999500
-        await asyncio.sleep(10)
-        # clawback merkle coin
-        resp = await api_0.spend_clawback_coins(
-            dict({"coin_ids": [normal_puzhash.hex(), clawback_coin_id.hex()], "fee": 0})
-        )
-        json.dumps(resp)
-        assert resp["success"]
-        assert len(resp["transaction_ids"]) == 1
-        expected_confirmed_balance += await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        await time_out_assert(
-            20, wallet_node.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
-        )
-        wallet_node_2._close()
-        await wallet_node_2._await_closed()
-        # set flag to reset wallet sync data on start
-        await api_0.set_wallet_resync_on_startup({"enable": True})
-        fingerprint = wallet_node.logged_in_fingerprint
-        assert wallet_node._wallet_state_manager
-        # 2 reward coins, 1 clawbacked coin
-        assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 7
-        # standard wallet
-        assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 1
-        before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-        # Delete tx records
-        await wallet_node.wallet_state_manager.tx_store.rollback_to_block(0)
-        wallet_node._close()
-        await wallet_node._await_closed()
-        config = load_config(wallet_node.root_path, "config.yaml")
-        # check that flag was set in config file
-        assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
-        new_config = wallet_node.config.copy()
-        new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
-        new_config["database_path"] = "wallet/db/blockchain_wallet_v2_test_CHALLENGE_KEY.sqlite"
-        wallet_node_2.config = new_config
-        wallet_node_2.root_path = wallet_node.root_path
-        wallet_node_2.local_keychain = wallet_node.local_keychain
-        # use second node to start the same wallet, reusing config and db
-        await wallet_node_2._start_with_fingerprint(fingerprint)
-        assert wallet_node_2._wallet_state_manager
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
-        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
-        after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
-        # transactions should be the same
-        assert len(after_txs) == len(before_txs)
-        # Check clawback
-        clawback_tx = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id)
-        assert clawback_tx is not None
-        assert clawback_tx.confirmed
-        outgoing_clawback_txs = await wallet_node_2.wallet_state_manager.tx_store.get_transactions_between(
-            1, 0, 100, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
-        )
-        assert len(outgoing_clawback_txs) == 1
-        assert outgoing_clawback_txs[0].confirmed
-        # Check unspent coins
-        assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 7
 
     @pytest.mark.parametrize(
         "trusted",
