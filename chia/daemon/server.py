@@ -388,21 +388,7 @@ class WebSocketServer:
             "get_status": self.get_status,
             "get_version": self.get_version,
             "get_plotters": self.get_plotters,
-            "get_routes": self.get_routes,
         }
-
-    async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Returns a list of keys in the mapping of commands to their respective function calls.
-        """
-        command_mapping = await self.get_command_mapping()
-        command_names = list(command_mapping.keys())
-
-        # add commands from keychain server to command_names
-        command_names.extend(keychain_commands)
-
-        response: Dict[str, Any] = {"success": True, "routes": command_names}
-        return response
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
