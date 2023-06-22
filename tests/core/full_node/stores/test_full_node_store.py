@@ -7,9 +7,6 @@ from typing import AsyncIterator, List, Optional
 import pytest
 import pytest_asyncio
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
-
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
@@ -42,23 +39,23 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request: SubRequest, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
     patched_constants = blockchain_constants.replace(
         **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
     )
-    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
-    request: SubRequest, blockchain_constants: ConsensusConstants
+    db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
