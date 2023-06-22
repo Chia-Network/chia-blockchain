@@ -498,7 +498,7 @@ def validate_unfinished_header_block(
         curr_sp = cc_sp_hash
         sp_count = 1
 
-        while curr_optional_block_record is not None and sp_count < constants.NUM_PLOT_FILTERS_DISALLOWED_TO_PASS:
+        while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
             if passes_plot_filter(
                 constants,
                 plot_id,

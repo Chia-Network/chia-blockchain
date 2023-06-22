@@ -3613,18 +3613,18 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         await _validate_and_add_block(b, block)
 
 
-@pytest.mark.parametrize("num_plot_filters_disallowed_to_pass", [1, 2])
+@pytest.mark.parametrize("unique_plots_window", [1, 2])
 @pytest.mark.parametrize("bt_respects_soft_fork3", [True, False])
 @pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
 @pytest.mark.asyncio
 async def test_soft_fork3_activation(
-    blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, num_plot_filters_disallowed_to_pass
+    blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
 ):
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
                 SOFT_FORK3_HEIGHT=(0 if bt_respects_soft_fork3 else 10000),
-                NUM_PLOT_FILTERS_DISALLOWED_TO_PASS=num_plot_filters_disallowed_to_pass,
+                UNIQUE_PLOTS_WINDOW=unique_plots_window,
             ),
             keychain=keychain,
         )
@@ -3641,7 +3641,7 @@ async def test_soft_fork3_activation(
         peak = b.get_peak()
         assert peak is not None
 
-        if bt_respects_soft_fork3 or num_plot_filters_disallowed_to_pass == 1:
+        if bt_respects_soft_fork3 or unique_plots_window == 1:
             assert peak.height == 24
         else:
             if soft_fork3_height == 0:
