@@ -7,9 +7,6 @@ from typing import AsyncIterator, List, Optional
 import pytest
 import pytest_asyncio
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
-
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
@@ -28,6 +25,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
+from tests.conftest import Mode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -42,23 +40,23 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request: SubRequest, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
     patched_constants = blockchain_constants.replace(
         **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
     )
-    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
+@pytest_asyncio.fixture(scope="function")
 async def empty_blockchain_with_original_constants(
-    request: SubRequest, blockchain_constants: ConsensusConstants
+    db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
@@ -67,9 +65,16 @@ async def empty_blockchain_with_original_constants(
 
 class TestFullNodeStore:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("normalized_to_identity", [False, True])
     async def test_basic_store(
-        self, empty_blockchain: Blockchain, custom_block_tools: BlockTools, normalized_to_identity: bool = False
+        self,
+        empty_blockchain: Blockchain,
+        custom_block_tools: BlockTools,
+        consensus_mode: Mode,
+        normalized_to_identity: bool,
     ) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
             10,
@@ -786,15 +791,14 @@ class TestFullNodeStore:
                     await _validate_and_add_block_no_error(blockchain, block)
 
     @pytest.mark.asyncio
-    async def test_basic_store_compact_blockchain(
-        self, empty_blockchain: Blockchain, custom_block_tools: BlockTools
-    ) -> None:
-        await self.test_basic_store(empty_blockchain, custom_block_tools, True)
-
-    @pytest.mark.asyncio
     async def test_long_chain_slots(
-        self, empty_blockchain_with_original_constants: Blockchain, default_1000_blocks: List[FullBlock]
+        self,
+        empty_blockchain_with_original_constants: Blockchain,
+        default_1000_blocks: List[FullBlock],
+        consensus_mode: Mode,
     ) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(blockchain.constants)
         peak = None

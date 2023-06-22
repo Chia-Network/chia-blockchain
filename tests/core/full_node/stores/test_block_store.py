@@ -23,13 +23,17 @@ from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.conftest import Mode
 from tests.util.db_connection import DBConnection
 
 log = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
-async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
+async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
+
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
@@ -81,11 +85,13 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools) -> No
 
 
 @pytest.mark.asyncio
-async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
+async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
     """
     This test was added because the store was deadlocking in certain situations, when fetching and
     adding blocks repeatedly. The issue was patched.
     """
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
@@ -113,7 +119,9 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
 
 
 @pytest.mark.asyncio
-async def test_rollback(bt: BlockTools, tmp_dir: Path) -> None:
+async def test_rollback(bt: BlockTools, tmp_dir: Path, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(2) as db_wrapper:
@@ -158,7 +166,9 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int) -> None:
+async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper:
@@ -177,7 +187,11 @@ async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_versi
 
 
 @pytest.mark.asyncio
-async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int) -> None:
+async def test_count_uncompactified_blocks(
+    bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode
+) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper:
@@ -196,7 +210,9 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
 
 
 @pytest.mark.asyncio
-async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int) -> None:
+async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     def rand_bytes(num: int) -> bytes:
@@ -242,7 +258,9 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int) -> 
 
 
 @pytest.mark.asyncio
-async def test_get_generator(bt: BlockTools, db_version: int) -> None:
+async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     def generator(i: int) -> SerializedProgram:
@@ -282,7 +300,9 @@ async def test_get_generator(bt: BlockTools, db_version: int) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int) -> None:
+async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 
@@ -320,7 +340,9 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
 
 
 @pytest.mark.asyncio
-async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int) -> None:
+async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
     assert sqlite3.threadsafety >= 1
     blocks = bt.get_consecutive_blocks(10)
 

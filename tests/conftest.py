@@ -131,14 +131,14 @@ def self_hostname():
 #       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request, blockchain_constants):
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, latest_db_version)
     yield bc1
 
     await db_wrapper.close()
@@ -286,31 +286,31 @@ async def node_with_params(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname, blockchain_constants):
+async def two_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_two_nodes(blockchain_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version):
+async def setup_two_nodes_fixture(db_version: int):
     async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_nodes(db_version, self_hostname, blockchain_constants):
+async def three_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 3, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version, self_hostname, blockchain_constants):
+async def four_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 4, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def five_nodes(db_version, self_hostname, blockchain_constants):
+async def five_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 5, db_version=db_version, self_hostname=self_hostname):
         yield _
 
