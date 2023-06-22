@@ -62,7 +62,7 @@ class Daemon:
     def is_service_running(self, service_name: str) -> bool:
         return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
 
-    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def running_services(self) -> Dict[str, Any]:
         return await WebSocketServer.running_services(cast(WebSocketServer, self))
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
