@@ -23,6 +23,7 @@ from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.conftest import Mode
 from tests.util.db_connection import DBConnection
 
 constants = test_constants
@@ -52,7 +53,12 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self, db_version: int, softfork_height: uint32, bt: BlockTools) -> None:
+    async def test_basic_coin_store(
+        self, db_version: int, softfork_height: uint32, bt: BlockTools, consensus_mode: Mode
+    ) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -159,7 +165,10 @@ class TestCoinStoreWithBlocks:
                     should_be_included = set()
 
     @pytest.mark.asyncio
-    async def test_set_spent(self, db_version: int, bt: BlockTools) -> None:
+    async def test_set_spent(self, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         blocks = bt.get_consecutive_blocks(9, [])
 
         async with DBConnection(db_version) as db_wrapper:
@@ -202,7 +211,10 @@ class TestCoinStoreWithBlocks:
                         assert record.spent_block_index == block.height
 
     @pytest.mark.asyncio
-    async def test_num_unspent(self, bt: BlockTools, db_version: int) -> None:
+    async def test_num_unspent(self, bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         blocks = bt.get_consecutive_blocks(37, [])
 
         expect_unspent = 0
@@ -234,7 +246,10 @@ class TestCoinStoreWithBlocks:
         assert test_excercised
 
     @pytest.mark.asyncio
-    async def test_rollback(self, db_version: int, bt: BlockTools) -> None:
+    async def test_rollback(self, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         blocks = bt.get_consecutive_blocks(20)
 
         async with DBConnection(db_version) as db_wrapper:
@@ -372,7 +387,10 @@ class TestCoinStoreWithBlocks:
                 b.shut_down()
 
     @pytest.mark.asyncio
-    async def test_get_puzzle_hash(self, tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
+    async def test_get_puzzle_hash(self, tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         async with DBConnection(db_version) as db_wrapper:
             num_blocks = 20
             farmer_ph = bytes32(32 * b"0")
@@ -401,7 +419,10 @@ class TestCoinStoreWithBlocks:
             b.shut_down()
 
     @pytest.mark.asyncio
-    async def test_get_coin_states(self, db_version: int) -> None:
+    async def test_get_coin_states(self, db_version: int, consensus_mode: Mode) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         async with DBConnection(db_version) as db_wrapper:
             crs = [
                 CoinRecord(

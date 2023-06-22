@@ -25,6 +25,7 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
+from tests.conftest import Mode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -64,9 +65,16 @@ async def empty_blockchain_with_original_constants(
 
 class TestFullNodeStore:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("normalized_to_identity", [False, True])
     async def test_basic_store(
-        self, empty_blockchain: Blockchain, custom_block_tools: BlockTools, normalized_to_identity: bool = False
+        self,
+        empty_blockchain: Blockchain,
+        custom_block_tools: BlockTools,
+        consensus_mode: Mode,
+        normalized_to_identity: bool,
     ) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
             10,
@@ -783,15 +791,14 @@ class TestFullNodeStore:
                     await _validate_and_add_block_no_error(blockchain, block)
 
     @pytest.mark.asyncio
-    async def test_basic_store_compact_blockchain(
-        self, empty_blockchain: Blockchain, custom_block_tools: BlockTools
-    ) -> None:
-        await self.test_basic_store(empty_blockchain, custom_block_tools, True)
-
-    @pytest.mark.asyncio
     async def test_long_chain_slots(
-        self, empty_blockchain_with_original_constants: Blockchain, default_1000_blocks: List[FullBlock]
+        self,
+        empty_blockchain_with_original_constants: Blockchain,
+        default_1000_blocks: List[FullBlock],
+        consensus_mode: Mode,
     ) -> None:
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(blockchain.constants)
         peak = None
