@@ -2484,7 +2484,12 @@ class TestMaliciousGenerators:
     )
     @pytest.mark.benchmark
     def test_duplicate_coin_announces(self, request, opcode, softfork_height):
-        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        # with soft-fork3, we only allow 1024 create- or assert announcements
+        # per spend
+        if softfork_height >= DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT:
+            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
+        else:
+            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
         with assert_runtime(seconds=9, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
