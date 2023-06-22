@@ -66,9 +66,9 @@ from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_treasury_solution,
     match_dao_cat_puzzle,
+    match_finished_puzzle,
     match_funding_puzzle,
     match_proposal_puzzle,
-    match_finished_puzzle,
     match_treasury_puzzle,
 )
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
