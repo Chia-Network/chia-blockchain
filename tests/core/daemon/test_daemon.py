@@ -63,7 +63,7 @@ class Daemon:
         return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
 
     async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.running_services(cast(WebSocketServer, self), request)
+        return await WebSocketServer.running_services(cast(WebSocketServer, self))
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.is_running(cast(WebSocketServer, self), request)
@@ -392,14 +392,14 @@ def test_is_service_running_with_services_and_connections(
 @pytest.mark.asyncio
 async def test_running_services_no_services(mock_lonely_daemon):
     daemon = mock_lonely_daemon
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(response, {"success": True, "running_services": []})
 
 
 @pytest.mark.asyncio
 async def test_running_services_with_services(mock_daemon_with_services):
     daemon = mock_daemon_with_services
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(
         response, {"success": True, "running_services": ["my_refrigerator", "the_river", service_plotter]}
     )
@@ -408,7 +408,7 @@ async def test_running_services_with_services(mock_daemon_with_services):
 @pytest.mark.asyncio
 async def test_running_services_with_services_and_connections(mock_daemon_with_services_and_connections):
     daemon = mock_daemon_with_services_and_connections
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(
         response, {"success": True, "running_services": ["my_refrigerator", "apple", "banana", service_plotter]}
     )

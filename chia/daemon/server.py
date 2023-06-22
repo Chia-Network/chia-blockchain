@@ -18,6 +18,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
+from typing_extensions import Protocol
+
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
@@ -103,6 +105,11 @@ else:
 async def ping() -> Dict[str, Any]:
     response = {"success": True, "value": "pong"}
     return response
+
+
+class Command(Protocol):
+    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        ...
 
 
 class WebSocketServer:
@@ -193,6 +200,9 @@ class WebSocketServer:
                 task.cancel()
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
+
+    async def stop_command(self, websocket: WebSocketResponse, request: Dict[str, Any] = {}) -> Dict[str, Any]:
+        return await self.stop()
 
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
@@ -345,51 +355,62 @@ class WebSocketServer:
             response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
-        elif command == "start_service":
-            response = await self.start_service(data)
-        elif command == "start_plotting":
-            response = await self.start_plotting(data)
-        elif command == "stop_plotting":
-            response = await self.stop_plotting(data)
-        elif command == "stop_service":
-            response = await self.stop_service(data)
-        elif command == "running_services":
-            response = await self.running_services(data)
-        elif command == "is_running":
-            response = await self.is_running(data)
-        elif command == "is_keyring_locked":
-            response = await self.is_keyring_locked()
-        elif command == "keyring_status":
-            response = await self.keyring_status()
-        elif command == "unlock_keyring":
-            response = await self.unlock_keyring(data)
-        elif command == "validate_keyring_passphrase":
-            response = await self.validate_keyring_passphrase(data)
-        elif command == "set_keyring_passphrase":
-            response = await self.set_keyring_passphrase(data)
-        elif command == "remove_keyring_passphrase":
-            response = await self.remove_keyring_passphrase(data)
-        elif command == "exit":
-            response = await self.stop()
-        elif command == "register_service":
-            response = await self.register_service(websocket, data)
-        elif command == "get_status":
-            response = self.get_status()
-        elif command == "get_version":
-            response = self.get_version()
-        elif command == "get_plotters":
-            response = await self.get_plotters()
         else:
-            self.log.error(f"UK>> {message}")
-            response = {"success": False, "error": f"unknown_command {command}"}
+            command_mapping = await self.get_command_mapping()
+            if command in command_mapping:
+                response = await command_mapping[command](websocket=websocket, request=data)
+            else:
+                self.log.error(f"UK>> {message}")
+                response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
         return full_response, {websocket}
 
-    async def is_keyring_locked(self) -> Dict[str, Any]:
+    async def get_command_mapping(self) -> Dict[str, Command]:
+        """
+        Returns a mapping of commands to their respective function calls.
+        """
+        return {
+            "start_service": self.start_service,
+            "start_plotting": self.start_plotting,
+            "stop_plotting": self.stop_plotting,
+            "stop_service": self.stop_service,
+            "is_running": self.is_running_command,
+            "running_services": self.running_services_command,
+            "is_keyring_locked": self.is_keyring_locked,
+            "keyring_status": self.keyring_status_command,
+            "unlock_keyring": self.unlock_keyring,
+            "validate_keyring_passphrase": self.validate_keyring_passphrase,
+            "set_keyring_passphrase": self.set_keyring_passphrase,
+            "remove_keyring_passphrase": self.remove_keyring_passphrase,
+            "exit": self.stop_command,
+            "register_service": self.register_service,
+            "get_status": self.get_status,
+            "get_version": self.get_version,
+            "get_plotters": self.get_plotters,
+            "get_routes": self.get_routes,
+        }
+
+    async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Returns a list of keys in the mapping of commands to their respective function calls.
+        """
+        command_mapping = await self.get_command_mapping()
+        command_names = list(command_mapping.keys())
+
+        # add commands from keychain server to command_names
+        command_names.extend(keychain_commands)
+
+        response: Dict[str, Any] = {"success": True, "routes": command_names}
+        return response
+
+    async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
         response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
         return response
+
+    async def keyring_status_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.keyring_status()
 
     async def keyring_status(self) -> Dict[str, Any]:
         can_save_passphrase: bool = supports_os_passphrase_storage()
@@ -411,7 +432,7 @@ class WebSocketServer:
         self.log.debug(f"Keyring status: {response}")
         return response
 
-    async def unlock_keyring(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def unlock_keyring(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -443,7 +464,11 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def validate_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def validate_keyring_passphrase(
+        self,
+        websocket: WebSocketResponse,
+        request: Dict[str, Any],
+    ) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -460,7 +485,7 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def set_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -504,7 +529,7 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def remove_keyring_passphrase(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -531,15 +556,15 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": success, "error": error}
         return response
 
-    def get_status(self) -> Dict[str, Any]:
+    async def get_status(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    def get_version(self) -> Dict[str, Any]:
+    async def get_version(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         response = {"success": True, "version": __version__}
         return response
 
-    async def get_plotters(self) -> Dict[str, Any]:
+    async def get_plotters(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         plotters: Dict[str, Any] = get_available_plotters(self.root_path)
         response: Dict[str, Any] = {"success": True, "plotters": plotters}
         return response
@@ -949,7 +974,7 @@ class WebSocketServer:
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
-    async def start_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def start_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]
 
         plotter = request.get("plotter", "chiapos")
@@ -1017,7 +1042,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -1059,7 +1084,7 @@ class WebSocketServer:
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
             return {"success": False}
 
-    async def start_service(self, request: Dict[str, Any]):
+    async def start_service(self, websocket: WebSocketResponse, request: Dict[str, Any]):
         service_command = request["service"]
 
         error = None
@@ -1103,7 +1128,7 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
@@ -1125,11 +1150,17 @@ class WebSocketServer:
                     is_running = len(service_connections) > 0
         return is_running
 
-    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def running_services_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.running_services()
+
+    async def running_services(self) -> Dict[str, Any]:
         services = list({*self.services.keys(), *self.connections.keys()})
         running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
         return {"success": True, "running_services": running_services}
+
+    async def is_running_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.is_running(request=request)
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         service_name = request["service"]
