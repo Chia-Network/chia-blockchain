@@ -26,7 +26,7 @@ jobs:
   build:
     name: Windows 10 Installer
     runs-on: [windows-2019]
-    timeout-minutes: 50
+    timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:

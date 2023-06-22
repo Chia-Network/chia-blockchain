@@ -7,15 +7,15 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
-    "anyio==3.6.2",
+    "blspy==2.0.0",  # Signature library
+    "anyio==3.7.0",
     "boto3==1.26.148",  # AWS S3 for DL s3 plugin
-    "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.7",
+    "chia_rs==0.2.8",
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
@@ -23,8 +23,8 @@ dependencies = [
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.0",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "cryptography==41.0.1",  # Python cryptography library for TLS - keyring conflict
+    "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
@@ -33,7 +33,7 @@ dependencies = [
     "dnspython==2.3.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.6.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.6.3",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.1",
     "psutil==5.9.4",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE, NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+from chia_rs import ENABLE_ASSERT_BEFORE, MEMPOOL_MODE, NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
@@ -38,10 +38,9 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
 ) -> NPCResult:
+    flags = 0
     if mempool_mode:
-        flags = MEMPOOL_MODE
-    else:
-        flags = LIMIT_STACK
+        flags = flags | MEMPOOL_MODE
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
@@ -75,6 +74,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin) -> S
             coin.parent_coin_info,
             coin.amount,
             coin.puzzle_hash,
+            0,
         )
         return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
     except Exception as e:
