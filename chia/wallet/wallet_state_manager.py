@@ -87,6 +87,7 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
     last_change_height_cs,
+    sort_coin_states,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -1602,7 +1603,8 @@ class WalletStateManager:
         fork_height: Optional[uint32],
     ) -> bool:
         try:
-            await self._add_coin_states(list(set(coin_states)), peer, fork_height)
+            unique_coin_states = sort_coin_states(list(set(coin_states)))
+            await self._add_coin_states(unique_coin_states, peer, fork_height)
         except Exception as e:
             log_level = logging.DEBUG if peer.closed else logging.ERROR
             self.log.log(log_level, f"add_coin_states failed - exception {e}, traceback: {traceback.format_exc()}")
