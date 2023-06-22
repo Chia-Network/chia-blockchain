@@ -7,7 +7,7 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
-    "blspy==2.0.0",  # Signature library
+    "blspy==2.0.1b1",  # Signature library
     "anyio==3.7.0",
     "boto3==1.26.148",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.8",  # timelord and vdf verification
