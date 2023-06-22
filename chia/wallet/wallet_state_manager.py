@@ -1602,7 +1602,7 @@ class WalletStateManager:
         fork_height: Optional[uint32],
     ) -> bool:
         try:
-            await self._add_coin_states(coin_states, peer, fork_height)
+            await self._add_coin_states(list(set(coin_states)), peer, fork_height)
         except Exception as e:
             log_level = logging.DEBUG if peer.closed else logging.ERROR
             self.log.log(log_level, f"add_coin_states failed - exception {e}, traceback: {traceback.format_exc()}")
