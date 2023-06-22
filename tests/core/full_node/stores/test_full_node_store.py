@@ -730,6 +730,7 @@ class TestFullNodeStore:
                 assert_sp_none(i2 + 1, False)
                 assert_sp_none(i1, True)
                 assert_sp_none(i1 + 1, True)
+                # We load into `all_sps` only up to `NUM_SPS_SUB_SLOT - 3`, so make sure we're not out of range
                 if i1 + 4 < custom_block_tools.constants.NUM_SPS_SUB_SLOT - 3:
                     assert_sp_none(i1 + 4, True)
 

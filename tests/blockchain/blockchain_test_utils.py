@@ -126,10 +126,8 @@ async def _validate_and_add_block_multi_error_or_pass(
     # Checks that the blockchain returns one of the expected errors, also allows block to be added.
     try:
         await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
-    except Exception as e:
-        assert isinstance(e, AssertionError)
+    except AssertionError as e:
         assert e.args[0] in expected_errors
-        return
 
 
 async def _validate_and_add_block_multi_result(
