@@ -30,7 +30,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_coin_store import GetCoinRecords
@@ -206,7 +206,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
             if i + j + skipped >= len(txs):
                 break
             coin_record: Optional[Dict[str, Any]] = None
-            if txs[i + j + skipped].type in CLAWBACK_TRANSACTION_TYPES:
+            if txs[i + j + skipped].type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                 coin_records = await wallet_client.get_coin_records(
                     GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()]))
                 )

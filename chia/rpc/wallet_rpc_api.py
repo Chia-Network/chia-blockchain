@@ -75,7 +75,7 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -903,7 +903,7 @@ class WalletRpcApi:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in CLAWBACK_TRANSACTION_TYPES:
+                if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
