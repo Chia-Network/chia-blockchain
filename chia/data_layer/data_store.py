@@ -1102,7 +1102,7 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
