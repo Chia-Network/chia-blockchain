@@ -682,7 +682,9 @@ class DataStore:
         return NodeType(raw_node_type["node_type"])
 
     async def get_terminal_node_for_seed(self, tree_id: bytes32, seed: bytes32) -> Optional[bytes32]:
-        path = int.from_bytes(seed[:8], byteorder="big", signed=False) >> 1
+        byte_count = 8
+        bit_count = 8 * byte_count
+        path = int.from_bytes(seed[-byte_count:], byteorder="big", signed=False) & ((1 << (bit_count - 1)) - 1)
         async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(tree_id)
             if root is None or root.node_hash is None:
