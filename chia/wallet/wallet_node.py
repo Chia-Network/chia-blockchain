@@ -865,9 +865,9 @@ class WalletNode:
         target_concurrent_tasks: int = 30
 
         # Ensure the list is sorted
-
-        before = len(items_input)
-        items = await self.wallet_state_manager.filter_spam(sort_coin_states(items_input))
+        unique_items = set(items_input)
+        before = len(unique_items)
+        items = await self.wallet_state_manager.filter_spam(sort_coin_states(unique_items))
         num_filtered = before - len(items)
         if num_filtered > 0:
             self.log.info(f"Filtered {num_filtered} spam transactions")
