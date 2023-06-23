@@ -682,24 +682,34 @@ class DataStore:
         return NodeType(raw_node_type["node_type"])
 
     async def get_terminal_node_for_seed(self, tree_id: bytes32, seed: bytes32) -> Optional[bytes32]:
-        path = int.from_bytes(seed, byteorder="big")
-        async with self.db_wrapper.reader():
+        path = int.from_bytes(seed[:8], byteorder="big", signed=False) >> 1
+        async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(tree_id)
             if root is None or root.node_hash is None:
                 return None
-            node_hash = root.node_hash
-            while True:
-                node = await self.get_node(node_hash)
-                assert node is not None
-                if isinstance(node, TerminalNode):
-                    break
-                if path % 2 == 0:
-                    node_hash = node.left_hash
-                else:
-                    node_hash = node.right_hash
-                path = path // 2
 
-            return node_hash
+            async with reader.execute(
+                """
+                WITH RECURSIVE
+                    random_leaf(hash, node_type, left, right, key, value, path) AS (
+                        SELECT node.*, :path AS path FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT node.*, random_leaf.path >> 1 AS path
+                        FROM node, random_leaf
+                        WHERE (
+                            (path % 2 == 0 AND node.hash == random_leaf.left)
+                            OR (path % 2 != 0 AND node.hash == random_leaf.right)
+                        )
+                    )
+                SELECT * FROM random_leaf
+                WHERE node_type == :node_type
+                """,
+                {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL, "path": path},
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    return None
+                return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
         side_seed = bytes(seed)[0]
