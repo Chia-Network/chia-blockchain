@@ -23,7 +23,7 @@
   )
 
   (c
-    (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash (sha256tree (list 'm' new_puzzle_hash)) (list 'm' new_puzzle_hash)))
+    (list CREATE_COIN new_puzzle_hash amount (list new_puzzle_hash))
     (c
       (list ASSERT_MY_AMOUNT amount)
       (create_parent_conditions
