@@ -43,6 +43,11 @@ class WalletInterestedStore:
             cursor = await conn.execute("INSERT OR REPLACE INTO interested_coins VALUES (?)", (coin_id.hex(),))
             await cursor.close()
 
+    async def remove_interested_coin_id(self, coin_id: bytes32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM interested_coins WHERE coin_name=?", (coin_id.hex(),))
+            await cursor.close()
+
     async def get_interested_puzzle_hashes(self) -> List[Tuple[bytes32, int]]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT puzzle_hash, wallet_id FROM interested_puzzle_hashes")
