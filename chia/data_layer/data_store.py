@@ -488,7 +488,7 @@ class DataStore:
     async def tree_id_exists(self, tree_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status",
+                "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 1",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
