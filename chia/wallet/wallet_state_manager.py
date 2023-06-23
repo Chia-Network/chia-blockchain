@@ -1159,7 +1159,7 @@ class WalletStateManager:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
             spent_height: uint32 = uint32(0)
-            if coin_state.spent_height is not None:  # pragma: no cover
+            if coin_state.spent_height is not None:
                 self.log.debug("Resync clawback coin: %s", coin_state.coin.name().hex())
                 # Resync case
                 spent_height = uint32(coin_state.spent_height)
