@@ -356,7 +356,7 @@ class WebSocketServer:
         elif command == "ping":
             response = await ping()
         else:
-            command_mapping = await self.get_command_mapping()
+            command_mapping = self.get_command_mapping()
             if command in command_mapping:
                 response = await command_mapping[command](websocket=websocket, request=data)
             else:
@@ -366,7 +366,7 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, {websocket}
 
-    async def get_command_mapping(self) -> Dict[str, Command]:
+    def get_command_mapping(self) -> Dict[str, Command]:
         """
         Returns a mapping of commands to their respective function calls.
         """
@@ -388,6 +388,7 @@ class WebSocketServer:
             "get_status": self.get_status,
             "get_version": self.get_version,
             "get_plotters": self.get_plotters,
+            "get_routes": self.get_routes,
         }
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -553,6 +554,11 @@ class WebSocketServer:
     async def get_plotters(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         plotters: Dict[str, Any] = get_available_plotters(self.root_path)
         response: Dict[str, Any] = {"success": True, "plotters": plotters}
+        return response
+
+    async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        routes = list(self.get_command_mapping().keys())
+        response: Dict[str, Any] = {"success": True, "routes": routes}
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
