@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
 import pytest
+from aiohttp.web_ws import WebSocketResponse
 
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
@@ -80,7 +81,9 @@ class Daemon:
         return await self.get_routes(request)
 
     async def get_routes(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.get_routes(cast(WebSocketServer, self), websocket=None, request=request)
+        return await WebSocketServer.get_routes(
+            cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
+        )
 
 
 test_key_data = KeyData.from_mnemonic(
@@ -436,6 +439,7 @@ async def test_get_routes(mock_lonely_daemon):
         "success": True,
         "routes": ["get_routes", "example_one", "example_two", "example_three"],
     }
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
