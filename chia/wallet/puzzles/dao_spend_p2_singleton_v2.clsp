@@ -48,12 +48,9 @@
               (r p2_singleton_list)
               (+ total (f (r (f p2_singleton_list))))
             )
-            (if (> total (- SPEND_AMOUNT ONE))
-                (c
-                  (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT))
-                  output
-                )
-                (x)  ; the coins you've selected do not add up enough to cover the amount - TODO: is this necessary?
+            (c
+              (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT))
+              output
             )
         )
       )
@@ -100,6 +97,7 @@
     )
   )
 
+  ; for a given asset type, loop through the cat coins and generate the announcements required for each
   (defun for_each_asset (
       CAT_MOD_HASH
       CONDITIONS_FOR_THIS_ASSET_TYPE
@@ -138,6 +136,7 @@
     )
   )
 
+  ; loops through the list of ((tailhash conditions))
   (defun for_each_asset_type (
       CAT_MOD_HASH
       P2_SINGLETON_PUZHASH
