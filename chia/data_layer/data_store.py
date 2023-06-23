@@ -330,7 +330,7 @@ class DataStore:
     async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status",
+                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 2",
                 {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
