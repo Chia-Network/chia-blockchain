@@ -84,9 +84,11 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "bar", "baz": "qux", "corge": "grault"})
     proof_root: bytes32 = proofs.root()
+    new_puzhash: bytes32 = await wallet_0.get_new_puzzlehash()
     txs = await client_0.vc_spend(
         vc_record.vc.launcher_id,
         new_proof_hash=proof_root,
+        new_puzhash=new_puzhash,
         fee=uint64(100),
     )
     confirmed_balance -= 100

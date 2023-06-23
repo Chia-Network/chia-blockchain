@@ -616,7 +616,7 @@ class VerifiedCredential(Streamable):
                 parent_name=parent_coin.parent_coin_info,
                 inner_puzzle_hash=create_viral_backdoor(
                     STANDARD_BRICK_PUZZLE_HASH,
-                    inner_puzzle_hash,
+                    inner_puzzle.get_tree_hash(),
                 ).get_tree_hash(),
                 amount=uint64(parent_coin.amount),
                 parent_proof_hash=None if parent_proof_hash == Program.to(None) else parent_proof_hash,
