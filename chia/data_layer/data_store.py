@@ -290,7 +290,12 @@ class DataStore:
                     "generation": generation,
                 }
                 cursor = await writer.execute(
-                    "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
+                    """
+                    SELECT *
+                    FROM ancestors
+                    WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                    LIMIT 1
+                    """,
                     {"hash": hash, "generation": generation, "tree_id": tree_id},
                 )
                 result = await cursor.fetchone()
