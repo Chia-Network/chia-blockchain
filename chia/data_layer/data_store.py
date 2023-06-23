@@ -230,7 +230,7 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
             result = await cursor.fetchone()
 
             if result is None:
