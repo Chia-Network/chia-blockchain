@@ -471,17 +471,18 @@ class DataStore:
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id)
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation AND status == :status",
+                """
+                SELECT *
+                FROM root
+                WHERE tree_id == :tree_id AND generation == :generation AND status == :status
+                LIMIT 1
+                """,
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
 
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
-
-            maybe_extra_result = await cursor.fetchone()
-            if maybe_extra_result is not None:
-                raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
 
         return Root.from_row(row=row)
 
