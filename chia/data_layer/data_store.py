@@ -682,9 +682,7 @@ class DataStore:
         return NodeType(raw_node_type["node_type"])
 
     async def get_terminal_node_for_seed(self, tree_id: bytes32, seed: bytes32) -> Optional[bytes32]:
-        byte_count = 8
-        bit_count = 8 * byte_count
-        path = int.from_bytes(seed[-byte_count:], byteorder="big", signed=False) & ((1 << (bit_count - 1)) - 1)
+        path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         async with self.db_wrapper.reader() as reader:
             root = await self.get_tree_root(tree_id)
             if root is None or root.node_hash is None:
@@ -693,13 +691,14 @@ class DataStore:
             async with reader.execute(
                 """
                 WITH RECURSIVE
-                    random_leaf(hash, node_type, left, right, path) AS (
+                    random_leaf(hash, node_type, left, right, depth, side) AS (
                         SELECT
                             node.hash AS hash,
                             node.node_type AS node_type,
                             node.left AS left,
                             node.right AS right,
-                            :path AS path
+                            1 AS depth,
+                            SUBSTR(:path, 1, 1) as side
                         FROM node
                         WHERE node.hash == :root_hash
                         UNION ALL
@@ -708,11 +707,12 @@ class DataStore:
                             node.node_type AS node_type,
                             node.left AS left,
                             node.right AS right,
-                            random_leaf.path >> 1 AS path
+                            random_leaf.depth + 1 AS depth,
+                            SUBSTR(:path, random_leaf.depth + 1, 1) as side
                         FROM node, random_leaf
                         WHERE (
-                            (path % 2 == 0 AND node.hash == random_leaf.left)
-                            OR (path % 2 != 0 AND node.hash == random_leaf.right)
+                            (random_leaf.side == "0" AND node.hash == random_leaf.left)
+                            OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
                         )
                     )
                 SELECT hash AS hash FROM random_leaf
