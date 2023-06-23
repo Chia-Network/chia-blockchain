@@ -17,6 +17,7 @@
   (include utility_macros.clib)
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
 
   (defun-inline recreate_self (
       TREASURY_MOD_HASH
@@ -72,19 +73,17 @@
             ; If the update case then the validator returns the new treasury create coin
             ; If the spend case then we need to recreate the treasury outselves
             ; treasury specific conditions
+
             (c
-              (list CREATE_PUZZLE_ANNOUNCEMENT (f proposal_validator_solution))  ; specify the proposal we're talking about
-              (c
-                (list ASSERT_COIN_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
-                (a
-                  PROPOSAL_VALIDATOR
-                  (list
-                    ATTENDANCE_REQUIRED
-                    PASS_MARGIN
-                    proposal_announcement
-                    proposal_validator_solution
-                    (a delegated_puzzle_reveal delegated_solution)
-                  )
+              (list ASSERT_COIN_ANNOUNCEMENT (sha256 announcement_source (sha256tree (list delegated_puzzle_hash announcement_args))))  ; announcement source is validated inside the ProposalValidator
+              (a
+                PROPOSAL_VALIDATOR
+                (list
+                  ATTENDANCE_REQUIRED
+                  PASS_MARGIN
+                  proposal_announcement
+                  proposal_validator_solution
+                  (a delegated_puzzle_reveal delegated_solution)
                 )
               )
             )
