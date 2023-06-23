@@ -4,16 +4,24 @@ import asyncio
 from typing import List, Tuple
 
 import pytest
+from blspy import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
+from chia.util.ints import uint8, uint64
 from chia.util.keychain import generate_mnemonic
+from tests.conftest import HarvesterFarmerEnvironment
+from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 
 
 def farmer_is_started(farmer: Farmer) -> bool:
@@ -111,3 +119,56 @@ async def test_harvester_handshake(
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)
+
+
+@pytest.mark.parametrize("with_sp", [False, True])
+@pytest.mark.asyncio
+async def test_farmer_respond_signatures(
+    caplog: pytest.LogCaptureFixture, harvester_farmer_environment: HarvesterFarmerEnvironment, with_sp: bool
+) -> None:
+    def log_is_ready() -> bool:
+        return len(caplog.text) > 0
+
+    farmer_service, _, harvester_service, _, _ = harvester_farmer_environment
+    if with_sp:
+        farmer_api = farmer_service._api
+        harvester_id = harvester_service._server.node_id
+        receiver = farmer_api.farmer.plot_sync_receivers[harvester_id]
+        if receiver.initial_sync():
+            await wait_for_plot_sync(receiver, receiver.last_sync().sync_id)
+        # Issue a new signage point message so that we'd have an sp record for this sp_hash
+        challenge_hash = bytes32.from_hexstr("0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a")
+        sp_hash = bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531")
+        sp = farmer_protocol.NewSignagePoint(
+            challenge_hash=challenge_hash,
+            challenge_chain_sp=sp_hash,
+            reward_chain_sp=bytes32(b"1" * 32),
+            difficulty=uint64(1),
+            sub_slot_iters=uint64(1000000),
+            signage_point_index=uint8(2),
+            filter_prefix_bits=uint8(8),
+        )
+        await farmer_api.new_signage_point(sp)
+    else:
+        # We won't have an sp record for this one
+        challenge_hash = bytes32(b"1" * 32)
+        sp_hash = bytes32(b"2" * 32)
+    response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
+        plot_identifier="test",
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        local_pk=G1Element(),
+        farmer_pk=G1Element(),
+        message_signatures=[],
+    )
+    msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
+    await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
+    await time_out_assert(5, log_is_ready)
+    if with_sp:
+        # We pass the sp record check and proceed to the sp_hash to filter size
+        # record check (where we fail)
+        expected_error = f"Do not have filter size for sp hash {sp_hash}"
+    else:
+        # We fail the sps record check
+        expected_error = f"Do not have challenge hash {challenge_hash}"
+    assert expected_error in caplog.text
