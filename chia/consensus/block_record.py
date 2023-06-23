@@ -43,6 +43,40 @@ class BlockRecordProtocol(Protocol):
 
 @streamable
 @dataclass(frozen=True)
+class BlockRecordDB(Streamable):
+    """
+    This class contains the fields from `BlockRecord` that get stored in the DB.
+    Unlike `BlockRecord`, this should never extend with more fields, in order to avoid DB corruption.
+    """
+    header_hash: bytes32
+    prev_hash: bytes32
+    height: uint32
+    weight: uint128
+    total_iters: uint128
+    signage_point_index: uint8
+    challenge_vdf_output: ClassgroupElement
+    infused_challenge_vdf_output: Optional[ClassgroupElement]
+    reward_infusion_new_challenge: bytes32
+    challenge_block_info_hash: bytes32
+    sub_slot_iters: uint64
+    pool_puzzle_hash: bytes32
+    farmer_puzzle_hash: bytes32
+    required_iters: uint64
+    deficit: uint8
+    overflow: bool
+    prev_transaction_block_height: uint32
+    timestamp: Optional[uint64]
+    prev_transaction_block_hash: Optional[bytes32]
+    fees: Optional[uint64]
+    reward_claims_incorporated: Optional[List[Coin]]
+    finished_challenge_slot_hashes: Optional[List[bytes32]]
+    finished_infused_challenge_slot_hashes: Optional[List[bytes32]]
+    finished_reward_slot_hashes: Optional[List[bytes32]]
+    sub_epoch_summary_included: Optional[SubEpochSummary]
+
+
+@streamable
+@dataclass(frozen=True)
 class BlockRecord(Streamable):
     """
     This class is not included or hashed into the blockchain, but it is kept in memory as a more
@@ -119,3 +153,66 @@ class BlockRecord(Streamable):
 
     def sp_total_iters(self, constants: ConsensusConstants) -> uint128:
         return uint128(self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants))
+
+    def to_block_record_db(self) -> BlockRecordDB:
+        return BlockRecordDB(
+            header_hash=self.header_hash,
+            prev_hash=self.prev_hash,
+            height=self.height,
+            weight=self.weight,
+            total_iters=self.total_iters,
+            signage_point_index=self.signage_point_index,
+            challenge_vdf_output=self.challenge_vdf_output,
+            infused_challenge_vdf_output=self.infused_challenge_vdf_output,
+            reward_infusion_new_challenge=self.reward_infusion_new_challenge,
+            challenge_block_info_hash=self.challenge_block_info_hash,
+            sub_slot_iters=self.sub_slot_iters,
+            pool_puzzle_hash=self.pool_puzzle_hash,
+            farmer_puzzle_hash=self.farmer_puzzle_hash,
+            required_iters=self.required_iters,
+            deficit=self.deficit,
+            overflow=self.overflow,
+            prev_transaction_block_height=self.prev_transaction_block_height,
+            timestamp=self.timestamp,
+            prev_transaction_block_hash=self.prev_transaction_block_hash,
+            fees=self.fees,
+            reward_claims_incorporated=self.reward_claims_incorporated,
+            finished_challenge_slot_hashes=self.finished_challenge_slot_hashes,
+            finished_infused_challenge_slot_hashes=self.finished_infused_challenge_slot_hashes,
+            finished_reward_slot_hashes=self.finished_reward_slot_hashes,
+            sub_epoch_summary_included=self.sub_epoch_summary_included,
+        )
+
+    @classmethod
+    def from_block_record_db(
+        cls, block_record_db: BlockRecordDB, pos_ss_cc_challenge_hash: bytes32, cc_sp_hash: bytes32
+    ) -> BlockRecord:
+        return cls(
+            header_hash=block_record_db.header_hash,
+            prev_hash=block_record_db.prev_hash,
+            height=block_record_db.height,
+            weight=block_record_db.weight,
+            total_iters=block_record_db.total_iters,
+            signage_point_index=block_record_db.signage_point_index,
+            challenge_vdf_output=block_record_db.challenge_vdf_output,
+            infused_challenge_vdf_output=block_record_db.infused_challenge_vdf_output,
+            reward_infusion_new_challenge=block_record_db.reward_infusion_new_challenge,
+            challenge_block_info_hash=block_record_db.challenge_block_info_hash,
+            sub_slot_iters=block_record_db.sub_slot_iters,
+            pool_puzzle_hash=block_record_db.pool_puzzle_hash,
+            farmer_puzzle_hash=block_record_db.farmer_puzzle_hash,
+            required_iters=block_record_db.required_iters,
+            deficit=block_record_db.deficit,
+            overflow=block_record_db.overflow,
+            prev_transaction_block_height=block_record_db.prev_transaction_block_height,
+            pos_ss_cc_challenge_hash=pos_ss_cc_challenge_hash,
+            cc_sp_hash=cc_sp_hash,
+            timestamp=block_record_db.timestamp,
+            prev_transaction_block_hash=block_record_db.prev_transaction_block_hash,
+            fees=block_record_db.fees,
+            reward_claims_incorporated=block_record_db.reward_claims_incorporated,
+            finished_challenge_slot_hashes=block_record_db.finished_challenge_slot_hashes,
+            finished_infused_challenge_slot_hashes=block_record_db.finished_infused_challenge_slot_hashes,
+            finished_reward_slot_hashes=block_record_db.finished_reward_slot_hashes,
+            sub_epoch_summary_included=block_record_db.sub_epoch_summary_included,
+        )
