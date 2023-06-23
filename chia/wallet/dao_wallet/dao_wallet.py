@@ -344,6 +344,7 @@ class DAOWallet(WalletProtocol):
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             LOCKUP_MOD_HASH,
             TREASURY_MOD_HASH,
             CAT_TAIL_HASH,
@@ -1739,6 +1740,7 @@ class DAOWallet(WalletProtocol):
                 PROPOSAL_MOD_HASH,
                 PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
                 CAT_MOD_HASH,
+                DAO_FINISHED_STATE_HASH,
                 TREASURY_MOD_HASH,
                 LOCKUP_MOD_HASH,
                 CAT_TAIL_HASH,
@@ -2476,6 +2478,7 @@ class DAOWallet(WalletProtocol):
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             TREASURY_MOD_HASH,
             LOCKUP_MOD_HASH,
             CAT_TAIL_HASH,
