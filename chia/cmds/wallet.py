@@ -96,6 +96,12 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=False,
     help="Reverse the transaction ordering",
 )
+@click.option(
+    "--clawback",
+    is_flag=True,
+    default=False,
+    help="Only show clawback transactions",
+)
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -106,7 +112,8 @@ def get_transactions_cmd(
     paginate: Optional[bool],
     sort_key: SortKey,
     reverse: bool,
-) -> None:
+    clawback: bool,
+) -> None:  # pragma: no cover
     extra_params = {
         "id": id,
         "verbose": verbose,
@@ -115,6 +122,7 @@ def get_transactions_cmd(
         "limit": limit,
         "sort_key": sort_key,
         "reverse": reverse,
+        "clawback": clawback,
     }
 
     import asyncio
@@ -185,6 +193,13 @@ def get_transactions_cmd(
     is_flag=True,
     default=False,
 )
+@click.option(
+    "--clawback_time",
+    help="The seconds that the recipient needs to wait to claim the fund."
+    " A positive number will enable the Clawback features.",
+    type=int,
+    default=0,
+)
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -198,7 +213,8 @@ def send_cmd(
     max_coin_amount: str,
     coins_to_exclude: Tuple[str],
     reuse: bool,
-) -> None:
+    clawback_time: int,
+) -> None:  # pragma: no cover
     extra_params = {
         "id": id,
         "amount": amount,
@@ -210,6 +226,7 @@ def send_cmd(
         "max_coin_amount": max_coin_amount,
         "exclude_coin_ids": list(coins_to_exclude),
         "reuse_puzhash": True if reuse else None,
+        "clawback_time": clawback_time,
     }
     import asyncio
 
@@ -272,6 +289,40 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
     from .wallet_funcs import get_address
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
+
+
+@wallet_cmd.command(
+    "clawback",
+    help="Claim or revert a Clawback transaction."
+    " The wallet will automatically detect if you are able to revert or claim.",
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option(
+    "-ids",
+    "--tx_ids",
+    help="IDs of the Clawback transactions you want to revert or claim. Separate multiple IDs by comma (,).",
+    type=str,
+    default="",
+    required=True,
+)
+@click.option(
+    "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
+)
+def clawback(wallet_rpc_port: Optional[int], id, fingerprint: int, tx_ids: str, fee: str) -> None:  # pragma: no cover
+    extra_params = {"id": id, "tx_ids": tx_ids, "fee": fee}
+    import asyncio
+
+    from .wallet_funcs import spend_clawback
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, spend_clawback))
 
 
 @wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
