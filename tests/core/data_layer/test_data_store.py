@@ -536,7 +536,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+        node_hash, _ = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         hashes.append(node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
@@ -556,7 +556,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         if i == 0 or i > 10:
-            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+            node_hash, _ = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         else:
             reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
             node_hash, _ = await data_store.insert(

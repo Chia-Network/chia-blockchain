@@ -241,7 +241,10 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            # cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            # cursor = await writer.execute(
+            #     "SELECT hash,node_type,left,right,key,value FROM node
+            #      "WHERE hash == :hash LIMIT 1", {"hash": node_hash}
+            # )
             # result = await cursor.fetchone()
             result = None
 
@@ -302,11 +305,13 @@ class DataStore:
                     "generation": generation,
                 }
                 # cursor = await writer.execute(
-                #     "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
+                #     "SELECT hash,ancestor,tree_id,generation FROM ancestors "
+                #     "WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id LIMIT 1",
                 #     {"hash": hash, "generation": generation, "tree_id": tree_id},
                 # )
                 # result = await cursor.fetchone()
                 result = None
+
                 if result is None:
                     await writer.execute(
                         """
@@ -852,11 +857,17 @@ class DataStore:
 
                 if use_optimized:
                     ancestors: List[InternalNode] = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash, tree_id=tree_id, root_hash=root.node_hash
+                        node_hash=reference_node_hash,
+                        tree_id=tree_id,
+                        generation=root.generation,
+                        root_hash=root.node_hash,
                     )
                 else:
                     ancestors = await self.get_ancestors_optimized(
-                        node_hash=reference_node_hash, tree_id=tree_id, root_hash=root.node_hash
+                        node_hash=reference_node_hash,
+                        tree_id=tree_id,
+                        generation=root.generation,
+                        root_hash=root.node_hash,
                     )
                     ancestors_2: List[InternalNode] = await self.get_ancestors(
                         node_hash=reference_node_hash, tree_id=tree_id, root_hash=root.node_hash
@@ -903,6 +914,7 @@ class DataStore:
                     tree_id=tree_id,
                     node_hash=new_hash,
                     status=status,
+                    generation=new_generation,
                 )
 
                 if status == Status.COMMITTED:
@@ -971,7 +983,10 @@ class DataStore:
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
-            new_generation = await self.get_tree_generation(tree_id) + 1
+            if root is None:
+                new_generation = await self.get_tree_generation(tree_id) + 1
+            else:
+                new_generation = root.generation + 1
             # update ancestors after inserting root, to keep table constraints.
             insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
             # more parents to handle so let's traverse them
@@ -993,6 +1008,7 @@ class DataStore:
                 tree_id=tree_id,
                 node_hash=new_child_hash,
                 status=status,
+                generation=new_generation,
             )
             if status == Status.COMMITTED:
                 for left_hash, right_hash, tree_id in insert_ancestors_cache:
@@ -1041,7 +1057,9 @@ class DataStore:
                         )
                 elif change["action"] == "delete":
                     key = change["key"]
-                    iter_root = await self.delete(key, tree_id, hint_keys_values, True, Status.COMMITTED, root=iter_root)
+                    iter_root = await self.delete(
+                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=iter_root
+                    )
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
