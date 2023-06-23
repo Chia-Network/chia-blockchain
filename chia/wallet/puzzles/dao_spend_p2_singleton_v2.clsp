@@ -104,41 +104,37 @@
       CAT_MOD_HASH
       CONDITIONS_FOR_THIS_ASSET_TYPE
       P2_SINGLETON_PUZHASH
-      tail_hash
+      p2_singleton_puzzle_hash
       parent_amount_list
       total
       create_coin_sum
       output
     )
-    (if (r parent_amount_list)
+    (if parent_amount_list
         (add_announcements_to_result
-          (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
-          (sha256tree 0)  ; this is the delegated_puzhash
+          (sha256 (f (f parent_amount_list)) p2_singleton_puzzle_hash (f (r (f parent_amount_list))))
+          (if
+            (r parent_amount_list)  ; this is the delegated_puzhash
+            (sha256tree 0)  ; most coins destroy themselves
+            (calculate_delegated_puzzlehash  ; the last coin creates the conditions
+              (c
+                (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum))
+                CONDITIONS_FOR_THIS_ASSET_TYPE
+              )
+            )
+          )
           (for_each_asset
             CAT_MOD_HASH
             CONDITIONS_FOR_THIS_ASSET_TYPE
             P2_SINGLETON_PUZHASH
-            tail_hash
+            p2_singleton_puzzle_hash
             parent_amount_list
             (+ total (f (r (f parent_amount_list))))
             create_coin_sum
             output
           )
         )
-        (if (> (+ total (f (r (f parent_amount_list)))) (- create_coin_sum ONE))
-            (add_announcements_to_result
-              (sha256 (f (f parent_amount_list)) (wrap_in_cat_layer CAT_MOD_HASH tail_hash P2_SINGLETON_PUZHASH) (f (r (f parent_amount_list))))
-              (calculate_delegated_puzzlehash
-                (c
-                  (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum))
-                  CONDITIONS_FOR_THIS_ASSET_TYPE
-                )
-              )
-              0
-              output
-            )
-            (x)  ; the coins you've selected do not add up enough to cover the amount - TODO: is this necessary?
-        )
+        ()
     )
   )
 
@@ -166,7 +162,7 @@
               (x)  ; bad solution format
             )
             P2_SINGLETON_PUZHASH
-            (f (f p2_singleton_tailhash_parent_amount_list))  ; tail_hash
+            (wrap_in_cat_layer CAT_MOD_HASH (f (f p2_singleton_tailhash_parent_amount_list)) P2_SINGLETON_PUZHASH)  ; p2_singleton_puzzle_hash
             (r (f p2_singleton_tailhash_parent_amount_list))  ; list of ((parent amount) (parent amount)...)
             0  ; current total - initialise as 0
             (sum_create_coins (f (r (f LIST_OF_TAILHASH_CONDITIONS))))
