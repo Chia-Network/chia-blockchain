@@ -691,17 +691,29 @@ class DataStore:
             async with reader.execute(
                 """
                 WITH RECURSIVE
-                    random_leaf(hash, node_type, left, right, key, value, path) AS (
-                        SELECT node.*, :path AS path FROM node WHERE node.hash == :root_hash
+                    random_leaf(hash, node_type, left, right, path) AS (
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            :path AS path
+                        FROM node
+                        WHERE node.hash == :root_hash
                         UNION ALL
-                        SELECT node.*, random_leaf.path >> 1 AS path
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            random_leaf.path >> 1 AS path
                         FROM node, random_leaf
                         WHERE (
                             (path % 2 == 0 AND node.hash == random_leaf.left)
                             OR (path % 2 != 0 AND node.hash == random_leaf.right)
                         )
                     )
-                SELECT * FROM random_leaf
+                SELECT hash AS hash FROM random_leaf
                 WHERE node_type == :node_type
                 """,
                 {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL, "path": path},
