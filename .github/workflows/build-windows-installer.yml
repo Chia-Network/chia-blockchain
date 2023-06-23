@@ -62,20 +62,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
-    - name: Get pip cache dir
-      id: pip-cache
-      shell: bash
-      run: |
-        echo "dir=$(pip cache dir)" >>$GITHUB_OUTPUT
-
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python ${{ matrix.python-version }}
       with:
