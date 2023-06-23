@@ -9,6 +9,7 @@
     SINGLETON_MOD_HASH
     SINGLETON_LAUNCHER_PUZHASH
     LOCKUP_MOD_HASH
+    DAO_FINISHED_STATE_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
     ACTIVE_VOTES  ; "active votes" list
@@ -26,8 +27,6 @@
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
   (include *standard-cl-21*)
-
-  (defconstant dao_finished_state 0x7f3cc356732907933a8f9b1ccf16f71735d07340eb38c847aa402e97d75eb40b)
 
   (defun calculate_finished_state (singleton_struct dao_finished_state)
     (puzzle-hash-of-curried-function dao_finished_state
@@ -58,15 +57,15 @@
         (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
             (if (= (f (r (f conditions))) vote_added_puzhash)
                 (if seen_vote  ; assert we haven't already made a coin with the new vote included
-                    (x)
+                    (x "wut")
                     (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
                         (if seen_change  ; assert that we haven't already recreated ourself in some fashion
-                            (x)
+                            (x "butt")
                             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 1))
                         )
                         (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
                             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 seen_change))
-                            (x)
+                            (x "cut")
                         )
                     )
                 )
@@ -76,20 +75,20 @@
                       (= (f (r (r (f conditions)))) (- my_amount vote_amount))
                     )  ; we recreate ourselves with unused voting power
                     (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote 1))
-                    (x)
+                    (x "hut" (f (r (f conditions))) my_inner_puzhash vote_added_puzhash)
                 )
             )
             (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
                 (if (= (f (r (f conditions))) message)
                     (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
-                    (x)
+                    (x "jut")
                 )
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
             )
         )
         (if (all seen_vote seen_change)  ; check all value is accounted for
             ()
-            (x)
+            (x "jart")
         )
     )
   )
@@ -99,6 +98,7 @@
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
       LOCKUP_MOD_HASH
+      DAO_FINISHED_STATE_MOD_HASH
       CAT_MOD_HASH
       CAT_TAIL_HASH
       PROPOSAL_MOD_HASH
@@ -110,11 +110,12 @@
     )
     (if active_votes
         (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
-            (x)
+            (x "fart")
             (check_not_previously_voted
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
+              DAO_FINISHED_STATE_MOD_HASH
               CAT_MOD_HASH
               CAT_TAIL_HASH
               PROPOSAL_MOD_HASH
@@ -129,6 +130,7 @@
             (calculate_proposal_puzzlehash
               PROPOSAL_MOD_HASH
               CAT_MOD_HASH
+              DAO_FINISHED_STATE_MOD_HASH
               LOCKUP_MOD_HASH
               CAT_TAIL_HASH
               (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
@@ -151,6 +153,7 @@
   (defun calculate_proposal_puzzlehash (
       PROPOSAL_MOD_HASH
       CAT_MOD_HASH
+      DAO_FINISHED_STATE_MOD_HASH
       LOCKUP_MOD_HASH
       CAT_TAIL_HASH
       proposal_singleton_struct
@@ -173,6 +176,7 @@
         (sha256 ONE CAT_TAIL_HASH)
         (sha256 ONE LOCKUP_MOD_HASH)
         (sha256 ONE TREASURY_MOD_HASH)
+        (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
         (sha256 ONE PROPOSAL_MOD_HASH)
@@ -185,6 +189,7 @@
   ; SINGLETON_MOD_HASH
   ; SINGLETON_LAUNCHER_PUZHASH
   ; LOCKUP_MOD_HASH
+  ; DAO_FINISHED_STATE_MOD_HASH
   ; CAT_MOD_HASH
   ; CAT_TAIL_HASH
   ; ACTIVE_VOTES  ; "active votes" list
@@ -194,6 +199,7 @@
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
       LOCKUP_MOD_HASH
+      DAO_FINISHED_STATE_MOD_HASH
       CAT_MOD_HASH
       CAT_TAIL_HASH
       active_votes
@@ -204,48 +210,11 @@
       (sha256tree active_votes)
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
       (sha256 ONE LOCKUP_MOD_HASH)
       (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
       (sha256 ONE SINGLETON_MOD_HASH)
       (sha256 ONE PROPOSAL_MOD_HASH)
-    )
-  )
-
-  ; search for an announcement that a proposal is finished and then remove that proposal ID from ACTIVE_VOTES
-  (defun check_for_removal_announcement (
-      PROPOSAL_MOD_HASH
-      SINGLETON_MOD_HASH
-      SINGLETON_LAUNCHER_PUZHASH
-      LOCKUP_MOD_HASH
-      CAT_MOD_HASH
-      CAT_TAIL_HASH
-      ACTIVE_VOTES
-      INNERPUZ
-      removal_id
-      my_amount
-      proposal_curry_vals
-      unused_votes
-    )
-    (if ACTIVE_VOTES
-        (if (= (f ACTIVE_VOTES) removal_id)
-
-
-            (check_for_removal_announcement  ; keep looping through ACTIVE_VOTES to search for removal_id
-              PROPOSAL_MOD_HASH
-              SINGLETON_MOD_HASH
-              SINGLETON_LAUNCHER_PUZHASH
-              LOCKUP_MOD_HASH
-              CAT_MOD_HASH
-              CAT_TAIL_HASH
-              (r ACTIVE_VOTES)
-              INNERPUZ
-              removal_id
-              my_amount
-              proposal_curry_vals
-              (c (f ACTIVE_VOTES) unused_votes)
-            )
-        )
-        (x)  ; proposal ID not found, invalid spend
     )
   )
 
@@ -254,6 +223,7 @@
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
       LOCKUP_MOD_HASH
+      DAO_FINISHED_STATE_MOD_HASH
       CAT_MOD_HASH
       CAT_TAIL_HASH
       ACTIVE_VOTES
@@ -272,10 +242,10 @@
               (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
               (calculate_finished_state
                 (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
-                dao_finished_state
+                DAO_FINISHED_STATE_MOD_HASH
               )
             )
-            'f'
+            0
           )
         )
         (for_every_removal_id
@@ -283,6 +253,7 @@
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
           LOCKUP_MOD_HASH
+          DAO_FINISHED_STATE_MOD_HASH
           CAT_MOD_HASH
           CAT_TAIL_HASH
           ACTIVE_VOTES
@@ -302,6 +273,7 @@
             SINGLETON_MOD_HASH
             SINGLETON_LAUNCHER_PUZHASH
             LOCKUP_MOD_HASH
+            DAO_FINISHED_STATE_MOD_HASH
             CAT_MOD_HASH
             CAT_TAIL_HASH
             (remove_list_one_entries_from_list_two unused_votes ACTIVE_VOTES)
@@ -344,6 +316,7 @@
                     SINGLETON_MOD_HASH
                     SINGLETON_LAUNCHER_PUZHASH
                     LOCKUP_MOD_HASH
+                    DAO_FINISHED_STATE_MOD_HASH
                     CAT_MOD_HASH
                     CAT_TAIL_HASH
                     PROPOSAL_MOD_HASH
@@ -356,13 +329,15 @@
                   (list REMARK)
               )
 
-              (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
+              ; loop over conditions and check that we aren't trying to leave voting state
+              (check_conditions
                 (a INNERPUZ inner_solution)
                 (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
                   PROPOSAL_MOD_HASH
                   SINGLETON_MOD_HASH
                   SINGLETON_LAUNCHER_PUZHASH
                   LOCKUP_MOD_HASH
+                  DAO_FINISHED_STATE_MOD_HASH
                   CAT_MOD_HASH
                   CAT_TAIL_HASH
                   (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
@@ -388,6 +363,7 @@
             SINGLETON_MOD_HASH
             SINGLETON_LAUNCHER_PUZHASH
             LOCKUP_MOD_HASH
+            DAO_FINISHED_STATE_MOD_HASH
             CAT_MOD_HASH
             CAT_TAIL_HASH
             ACTIVE_VOTES

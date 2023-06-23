@@ -187,8 +187,8 @@ class DAOCATWallet:
         if record:
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         else:
-            inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrf")
-            active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrf").as_iter()]
+            inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrrf")
+            active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrrf").as_iter()]
 
         if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
             # shortcut, works for change
