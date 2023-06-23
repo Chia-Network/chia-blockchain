@@ -13,7 +13,7 @@
     Attendance_Required  ; this is passed in as a Truth from above
     Pass_Margin  ; this is a pass in as a Truth from above
     (announcement_source delegated_puzzle_hash announcement_args)
-    (  ; this is the proposal_vaidator solution
+    (
       proposal_id
       total_votes
       yes_votes
@@ -26,6 +26,7 @@
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
   (include utility_macros.clib)
+  (include *standard-cl-21*)
 
   (defconstant TEN_THOUSAND 10000)
 
@@ -99,6 +100,12 @@
         coin_amount
       )
     )
-    (c (list CREATE_COIN PROPOSAL_EXCESS_PAYOUT_PUZ_HASH (- coin_amount 1)) conditions)
+    (c
+      (list CREATE_COIN PROPOSAL_EXCESS_PAYOUT_PUZ_HASH (- coin_amount 1))
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT proposal_id)  ; specify the proposal we're talking about
+        conditions
+      )
+    )
   )
 )
