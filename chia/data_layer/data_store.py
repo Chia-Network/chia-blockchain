@@ -673,7 +673,10 @@ class DataStore:
 
     async def get_node_type(self, node_hash: bytes32) -> NodeType:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
+            cursor = await reader.execute(
+                "SELECT node_type FROM node WHERE hash == :hash LIMIT 1",
+                {"hash": node_hash},
+            )
             raw_node_type = await cursor.fetchone()
 
         if raw_node_type is None:
