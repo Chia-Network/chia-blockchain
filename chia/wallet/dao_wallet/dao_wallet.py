@@ -1191,7 +1191,7 @@ class DAOWallet(WalletProtocol):
         # delegated_solution  ; this is not secure unless the delegated puzzle secures it
         # my_singleton_struct
 
-        inner_sol = Program.to([0, 0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
+        inner_sol = Program.to([0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
@@ -2020,7 +2020,6 @@ class DAOWallet(WalletProtocol):
 
             treasury_solution = Program.to(
                 [
-                    1,
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
                     validator_solution,
                     puzzle_reveal,
@@ -2028,7 +2027,7 @@ class DAOWallet(WalletProtocol):
                 ]
             )
         else:
-            treasury_solution = Program.to([0, 0, 0, 0, 0, 0, 0])
+            treasury_solution = Program.to([0, 0, 0, 0, 0, 0])
 
         assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
@@ -2040,7 +2039,7 @@ class DAOWallet(WalletProtocol):
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ],
-                1,
+                self.dao_info.current_treasury_coin.amount,
                 treasury_solution,
             ]
         )
@@ -2061,7 +2060,6 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        # breakpoint()
 
         if push:
             record = TransactionRecord(

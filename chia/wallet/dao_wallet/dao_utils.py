@@ -438,9 +438,9 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     #     proposal_self_destruct_length,
     #     oracle_spend_delay,
     # ) = curried_args
-    if solution.first() != Program.to(0):
+    if solution.rest().rest().first() != Program.to(0):
         # Proposal Spend
-        mod, curried_args = solution.at("rrrf").uncurry()
+        mod, curried_args = solution.at("rrf").uncurry()
         if mod == DAO_UPDATE_PROPOSAL_MOD:
             (
                 DAO_TREASURY_MOD_HASH,
