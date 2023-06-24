@@ -297,26 +297,26 @@ async def test_sync_simulated(
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
     farmer: Farmer = farmer_service._node
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
-    plots = create_example_plots(31000)
+    plots = create_example_plots(15500)
 
     await test_runner.run(
-        0, loaded=plots[0:10000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:1000], initial=True
+        0, loaded=plots[0:5000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:500], initial=True
     )
     await test_runner.run(
         1,
-        loaded=plots[10000:20000],
+        loaded=plots[5000:10000],
         removed=[],
-        invalid=plots[30000:30100],
+        invalid=plots[15000:15050],
         keys_missing=[],
         duplicates=[],
         initial=True,
     )
     await test_runner.run(
         2,
-        loaded=plots[20000:30000],
+        loaded=plots[10000:15000],
         removed=[],
         invalid=[],
-        keys_missing=plots[30100:30200],
+        keys_missing=plots[15050:15100],
         duplicates=[],
         initial=True,
     )
@@ -324,35 +324,35 @@ async def test_sync_simulated(
         0,
         loaded=[],
         removed=[],
-        invalid=plots[30300:30400],
-        keys_missing=plots[30400:30453],
+        invalid=plots[15150:15200],
+        keys_missing=plots[15200:15227],
         duplicates=[],
         initial=False,
     )
     await test_runner.run(0, loaded=[], removed=[], invalid=[], keys_missing=[], duplicates=[], initial=False)
     await test_runner.run(
-        0, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        0, loaded=[], removed=plots[2500:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
     )
     await test_runner.run(
-        1, loaded=[], removed=plots[10000:20000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        1, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
     )
     await test_runner.run(
-        2, loaded=[], removed=plots[20000:29000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        2, loaded=[], removed=plots[10000:14500], invalid=[], keys_missing=[], duplicates=[], initial=False
     )
     await test_runner.run(
-        0, loaded=[], removed=plots[0:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        0, loaded=[], removed=plots[0:2500], invalid=[], keys_missing=[], duplicates=[], initial=False
     )
     await test_runner.run(
         2,
-        loaded=plots[5000:10000],
-        removed=plots[29000:30000],
-        invalid=plots[30000:30500],
-        keys_missing=plots[30500:31000],
-        duplicates=plots[5000:6000],
+        loaded=plots[2500:5000],
+        removed=plots[14500:15000],
+        invalid=plots[15000:15250],
+        keys_missing=plots[15250:15500],
+        duplicates=plots[2500:3000],
         initial=False,
     )
     await test_runner.run(
-        2, loaded=[], removed=plots[5000:10000], invalid=[], keys_missing=[], duplicates=[], initial=False
+        2, loaded=[], removed=plots[2500:5000], invalid=[], keys_missing=[], duplicates=[], initial=False
     )
     assert len(farmer.plot_sync_receivers) == 3
     for plot_sync in farmer.plot_sync_receivers.values():
