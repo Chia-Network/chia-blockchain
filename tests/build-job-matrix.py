@@ -14,7 +14,7 @@ project_root_path = root_path.parent
 
 
 def skip(path: Path) -> bool:
-    return any(part.startswith(("_", ".")) for part in path.parts)
+    return "plot_sync" not in str(path)
 
 
 def subdirs(per: str) -> List[Path]:
