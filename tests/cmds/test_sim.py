@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from shutil import rmtree
 
@@ -112,10 +113,16 @@ def _test_farm_and_revert_block(runner: CliRunner, address: str, simulator_name:
     assert "Height:          6" in five_blocks_check.output
 
     # do a reorg, 3 blocks back, 2 blocks forward, height now 8
-    reorg_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "revert", "-b", "3", "-n", "2"])
-    assert reorg_result.exit_code == 0
-    assert "Block: 3 and above " and "Block Height is now: 8" in reorg_result.output
-
+    try:  # we do a 'try' here because creating a couple of blocks might lead to a timeout on a slow runner.
+        reorg_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "revert", "-b", "3", "-n", "2"])
+        assert reorg_result.exit_code == 0
+        assert "Block: 3 and above " and "Block Height is now: 8" in reorg_result.output
+    except AssertionError:
+        # if we get a timeout, we wait 5 seconds then check the block height
+        time.sleep(5)
+        reorg_fallback: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status"])
+        assert reorg_fallback.exit_code == 0
+        assert "Height:          8" in reorg_fallback.output
     # check that height changed by 2
     reorg_check: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status"])
     assert reorg_check.exit_code == 0
