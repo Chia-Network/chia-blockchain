@@ -18,6 +18,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
@@ -70,6 +71,7 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            "/get_mempool_item_by_coin_name": self.get_mempool_item_by_coin_name,
             # Fee estimation
             "/get_fee_estimate": self.get_fee_estimate,
         }
@@ -739,6 +741,17 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item.to_json_dict()}
+
+    async def get_mempool_item_by_coin_name(self, request) -> EndpointResult:
+        if "coin_name" not in request:
+            raise ValueError("No coin_name in request")
+
+        coin_name: bytes32 = bytes32.from_hexstr(request["coin_name"])
+        mempool_items: List[MempoolItem] = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
+        if len(mempool_items) == 0:
+            raise ValueError(f"coin name 0x{coin_name.hex()} not in the mempool")
+
+        return {"mempool_item": mempool_items[0].to_json_dict()}
 
     def _get_spendbundle_type_cost(self, name: str) -> uint64:
         """

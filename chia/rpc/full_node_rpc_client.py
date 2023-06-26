@@ -242,6 +242,13 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
+    async def get_mempool_item_by_coin_name(self, coin_name: bytes32) -> Optional[Dict[str, Any]]:
+        try:
+            response = await self.fetch("get_mempool_item_by_coin_name", {"coin_name": coin_name.hex()})
+            return cast(Dict[str, Any], response["mempool_item"])
+        except Exception:
+            return None
+
     async def get_recent_signage_point_or_eos(
         self, sp_hash: Optional[bytes32], challenge_hash: Optional[bytes32]
     ) -> Optional[Any]:
