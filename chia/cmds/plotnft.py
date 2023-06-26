@@ -5,8 +5,6 @@ from typing import Optional
 
 import click
 
-from chia.cmds.cmds_util import execute_with_wallet
-
 MAX_CMDLINE_FEE = Decimal(0.5)
 
 
@@ -40,7 +38,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 
     from .plotnft_funcs import show
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
+    asyncio.run(show(wallet_rpc_port, fingerprint, id))
 
 
 @plotnft_cmd.command("get_login_link", help="Create a login link for a pool. To get the launcher id, use plotnft show.")
@@ -80,7 +78,7 @@ def create_cmd(
     fingerprint: int,
     pool_url: str,
     state: str,
-    fee: int,
+    fee: str,
     yes: bool,
 ) -> None:
     import asyncio
@@ -94,13 +92,7 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    extra_params = {
-        "pool_url": pool_url,
-        "state": valid_initial_states[state],
-        "fee": fee,
-        "yes": yes,
-    }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create))
+    asyncio.run(create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), yes))
 
 
 @plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
@@ -130,8 +122,7 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 
     from .plotnft_funcs import join_pool
 
-    extra_params = {"pool_url": pool_url, "id": id, "fee": fee, "yes": yes}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, join_pool))
+    asyncio.run(join_pool(wallet_rpc_port, fingerprint, pool_url, Decimal(fee), id, yes))
 
 
 @plotnft_cmd.command("leave", help="Leave a pool and return to self-farming")
@@ -160,8 +151,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 
     from .plotnft_funcs import self_pool
 
-    extra_params = {"id": id, "fee": fee, "yes": yes}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, self_pool))
+    asyncio.run(self_pool(wallet_rpc_port, fingerprint, Decimal(fee), id, yes))
 
 
 @plotnft_cmd.command("inspect", help="Get Detailed plotnft information as JSON")
@@ -179,8 +169,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 
     from .plotnft_funcs import inspect_cmd
 
-    extra_params = {"id": id}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, inspect_cmd))
+    asyncio.run(inspect_cmd(wallet_rpc_port, fingerprint, id))
 
 
 @plotnft_cmd.command("claim", help="Claim rewards from a plot NFT")
@@ -208,8 +197,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 
     from .plotnft_funcs import claim_cmd
 
-    extra_params = {"id": id, "fee": fee}
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, claim_cmd))
+    asyncio.run(claim_cmd(wallet_rpc_port, fingerprint, Decimal(fee), id))
 
 
 @plotnft_cmd.command(
