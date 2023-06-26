@@ -77,9 +77,6 @@ class Daemon:
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.is_running(cast(WebSocketServer, self), request)
 
-    async def get_routes_command(self, websocket: Any, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await self.get_routes(request)
-
     async def get_routes(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.get_routes(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request

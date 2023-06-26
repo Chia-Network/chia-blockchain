@@ -93,7 +93,7 @@ def endpoints_cmd(service: str) -> None:
     try:
         routes = get_routes(service, config)
         for route in routes["routes"]:
-            print(route[1:] if route[0] == "/" else route)
+            print(route.lstrip("/"))
     except Exception as e:
         print(e)
 
