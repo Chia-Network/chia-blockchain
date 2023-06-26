@@ -72,14 +72,12 @@ def verify_and_get_quality_string(
     assert (filter_prefix_bits is None) != (height is None), "Expected either height or filter_prefix_bits"
 
     if filter_prefix_bits is not None:
-        if not passes_plot_filter(filter_prefix_bits, plot_id, original_challenge_hash, signage_point):
-            log.error("Did not pass the plot filter")
-            return None
+        prefix_bits = cast(int, filter_prefix_bits)
     elif height is not None:
         prefix_bits = calculate_prefix_bits(constants, height)
-        if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
-            log.error("Did not pass the plot filter")
-            return None
+    if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
+        log.error("Did not pass the plot filter")
+        return None
 
     return get_quality_string(pos, plot_id)
 
