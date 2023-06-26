@@ -615,7 +615,7 @@ class BlockStore:
                         header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
 
-        result: [bytes32, BlockRecord] = {}
+        result: Dict[bytes32, BlockRecord] = {}
         for hh, block_record_db in ret.items():
             plot_filter_info = await self.get_plot_filter_info(hh)
             assert plot_filter_info is not None
@@ -701,7 +701,7 @@ class BlockStore:
                         header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
 
-        result: [bytes32, BlockRecord] = {}
+        result: Dict[bytes32, BlockRecord] = {}
         for hh, block_record_db in ret.items():
             plot_filter_info = await self.get_plot_filter_info(hh)
             assert plot_filter_info is not None
