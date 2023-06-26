@@ -126,6 +126,15 @@ async def test_harvester_handshake(
 async def test_farmer_respond_signatures(
     caplog: pytest.LogCaptureFixture, harvester_farmer_environment: HarvesterFarmerEnvironment, with_sp: bool
 ) -> None:
+    # This test ensures that the farmer correctly rejects invalid RespondSignatures
+    # messages from the harvester.
+    # In this test we're leveraging the fact that the farmer can handle RespondSignatures
+    # messages even though it didn't request them, to cover two scenarios:
+    # 1. One where the farmer knows about the sp_hash, so it passes the challange
+    # hash check and covers the sp_hash to filter size check.
+    # 2. One where the farmer doesn't know about the sp_hash, so it fails earlier
+    # at the sp record check, and it doesn't get to check sp_hash to filter size.
+
     def log_is_ready() -> bool:
         return len(caplog.text) > 0
 
