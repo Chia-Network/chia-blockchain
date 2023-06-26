@@ -365,11 +365,11 @@ class CoinStore:
         min_height: uint32 = uint32(0),
         *,
         max_items: int = 50000,
-    ) -> List[CoinState]:
+    ) -> Set[CoinState]:
         if len(puzzle_hashes) == 0:
-            return []
+            return set()
 
-        coins: List[CoinState] = []
+        coins: Set[CoinState] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
@@ -388,7 +388,7 @@ class CoinStore:
                 ) as cursor:
                     row: sqlite3.Row
                     for row in await cursor.fetchall():
-                        coins.append(self.row_to_coin_state(row))
+                        coins.add(self.row_to_coin_state(row))
 
                 if len(coins) >= max_items:
                     break

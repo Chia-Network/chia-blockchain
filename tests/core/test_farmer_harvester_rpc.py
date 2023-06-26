@@ -9,16 +9,12 @@ from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Tuple, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
-from chia.farmer.farmer_api import FarmerAPI
-from chia.harvester.harvester import Harvester
-from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
@@ -31,9 +27,7 @@ from chia.rpc.farmer_rpc_api import (
     plot_matches_filter,
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.server.start_service import Service
-from chia.simulator.block_tools import BlockTools, get_plot_dir
+from chia.simulator.block_tools import get_plot_dir
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
@@ -42,6 +36,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from tests.conftest import HarvesterFarmerEnvironment
 from tests.plot_sync.test_delta import dummy_plot
 from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
@@ -64,41 +59,6 @@ async def wait_for_synced_receiver(farmer: Farmer, harvester_id: bytes32) -> Non
         )
 
     await time_out_assert(30, wait)
-
-
-HarvesterFarmerEnvironment = Tuple[
-    Service[Farmer, FarmerAPI], FarmerRpcClient, Service[Harvester, HarvesterAPI], HarvesterRpcClient, BlockTools
-]
-
-
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment(
-    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
-    self_hostname: str,
-) -> AsyncIterator[HarvesterFarmerEnvironment]:
-    harvesters, farmer_service, bt = farmer_one_harvester
-    harvester_service = harvesters[0]
-
-    assert farmer_service.rpc_server is not None
-    farmer_rpc_cl = await FarmerRpcClient.create(
-        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
-    )
-    assert harvester_service.rpc_server is not None
-    harvester_rpc_cl = await HarvesterRpcClient.create(
-        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
-    )
-
-    async def have_connections() -> bool:
-        return len(await farmer_rpc_cl.get_connections()) > 0
-
-    await time_out_assert(15, have_connections, True)
-
-    yield farmer_service, farmer_rpc_cl, harvester_service, harvester_rpc_cl, bt
-
-    farmer_rpc_cl.close()
-    harvester_rpc_cl.close()
-    await farmer_rpc_cl.await_closed()
-    await harvester_rpc_cl.await_closed()
 
 
 @pytest.mark.asyncio

@@ -175,6 +175,15 @@ class Err(Enum):
 
     ASSERT_EPHEMERAL_FAILED = 140
     EPHEMERAL_RELATIVE_CONDITION = 141
+    # raised if a SOFTFORK condition invokes an unknown extension in mempool
+    # mode
+    INVALID_SOFTFORK_CONDITION = 142
+    # raised if the first argument to the SOFTFORK condition is not a valid
+    # cost. e.g. negative or > UINT64 MAX
+    INVALID_SOFTFORK_COST = 143
+    # raised if a spend issues too many assert spend, assert puzzle,
+    # assert announcement or create announcement
+    TOO_MANY_ANNOUNCEMENTS = 144
 
 
 class ValidationError(Exception):
