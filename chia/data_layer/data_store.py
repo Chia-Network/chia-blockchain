@@ -723,7 +723,9 @@ class DataStore:
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
-                    return None
+                    # No cover since this is an error state that should be unreachable given the code
+                    # above has already verified that there is a non-empty tree.
+                    raise Exception("No terminal node found for seed")  # pragma: no cover
                 return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
