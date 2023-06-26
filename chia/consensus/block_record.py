@@ -48,6 +48,7 @@ class BlockRecordDB(Streamable):
     This class contains the fields from `BlockRecord` that get stored in the DB.
     Unlike `BlockRecord`, this should never extend with more fields, in order to avoid DB corruption.
     """
+
     header_hash: bytes32
     prev_hash: bytes32
     height: uint32

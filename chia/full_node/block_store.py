@@ -379,6 +379,7 @@ class BlockStore:
             try:
                 return plot_filter_info_from_block(block_bytes)
             except Exception as e:
+                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
                 b = FullBlock.from_bytes(block_bytes)
                 if b.reward_chain_block.challenge_chain_sp_vdf is None:
                     cc_sp_hash = b.reward_chain_block.pos_ss_cc_challenge_hash
@@ -467,7 +468,7 @@ class BlockStore:
                 async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
                     for row in await cursor.fetchall():
                         block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[0])
-                        all_blocks[block_rec.header_hash] = block_rec_db
+                        all_blocks[block_rec_db.header_hash] = block_rec_db
 
         ret: List[BlockRecord] = []
         for hh in header_hashes:

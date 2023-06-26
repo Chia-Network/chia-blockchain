@@ -343,6 +343,6 @@ def plot_filter_info_from_block(buf: memoryview) -> PlotFilterInfo:
     # Optional[challenge_chain_sp_vdf]
     if buf[0] == 0:
         return PlotFilterInfo(pos_ss_cc_challenge_hash, pos_ss_cc_challenge_hash)
-    buf = buf[1 + 32 + 8:] # optional, vdf info challenge, vdf info number_of_iterations
+    buf = buf[1 + 32 + 8 :]  # optional, vdf info challenge, vdf info number_of_iterations
     output = ClassgroupElement.from_bytes(buf[:100])
     return PlotFilterInfo(pos_ss_cc_challenge_hash, output.get_hash())
