@@ -195,10 +195,9 @@ class TestClawbackLifecycle:
                 cost_logger=cost_logger,
                 cost_log_msg="Create Second Clawback",
             )
-            cb_coins = await sim_client.get_coin_records_by_puzzle_hash(cb_puz_hash)
-            new_cb_coin = cb_coins[0].coin
-            if cb_coins[0].spent:
-                new_cb_coin = cb_coins[1].coin
+
+            new_cb_coin = (await sim_client.get_coin_records_by_puzzle_hash(cb_puz_hash))[1].coin
+
             sender_claw_sol = solution_for_conditions([[ConditionOpcode.CREATE_COIN, cold_ph, amount]])
             claw_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_claw_sol)
             coin_spend = CoinSpend(new_cb_coin, cb_puzzle, claw_sol)
