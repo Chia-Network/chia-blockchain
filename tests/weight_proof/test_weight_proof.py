@@ -536,7 +536,7 @@ class TestWeightProof:
         (20643000, 0),
     ],
 )
-def test_calculate_prefix_bits_calmp_zero(height: uint32, expected: int):
+def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int):
     constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=3)
     assert calculate_prefix_bits(constants, height) == expected
 

@@ -97,7 +97,7 @@ def passes_plot_filter(
     challenge_hash: bytes32,
     signage_point: bytes32,
 ) -> bool:
-    # this is possible when using non-mainnet constants (with a low
+    # this is possible when using non-mainnet constants with a low
     # NUMBER_ZERO_BITS_PLOT_FILTER constant and activating sufficient plot
     # filter reductions
     if prefix_bits == 0:
