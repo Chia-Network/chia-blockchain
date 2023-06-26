@@ -717,6 +717,7 @@ class DataStore:
                     )
                 SELECT hash AS hash FROM random_leaf
                 WHERE node_type == :node_type
+                LIMIT 1
                 """,
                 {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL, "path": path},
             ) as cursor:
