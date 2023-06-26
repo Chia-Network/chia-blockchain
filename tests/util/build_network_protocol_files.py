@@ -255,7 +255,7 @@ def test_protocol_json() -> None:
     return result
 
 
-if __name__ == "__main__":
+def main() -> None:
     get_network_protocol_filename().write_bytes(get_protocol_bytes())
 
     name_to_function = {
@@ -275,3 +275,7 @@ if __name__ == "__main__":
             check=True,
             cwd=tests_dir,
         )
+
+
+if __name__ == "__main__":
+    main()

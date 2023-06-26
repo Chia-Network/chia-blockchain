@@ -55,6 +55,10 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_BEFORE_HEIGHT_RELATIVE = bytes([86])
     ASSERT_BEFORE_HEIGHT_ABSOLUTE = bytes([87])
 
+    # to be activated with the 2.0 hard fork.
+    # the first parameter is always the cost of the condition
+    SOFTFORK = bytes([90])
+
     # A condition that is always true and always ignore all arguments
     REMARK = bytes([1])
 

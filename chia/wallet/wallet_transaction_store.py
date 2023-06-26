@@ -309,10 +309,29 @@ class WalletTransactionStore:
 
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
-    async def get_transaction_count_for_wallet(self, wallet_id) -> int:
+    async def get_transaction_count_for_wallet(
+        self,
+        wallet_id: int,
+        confirmed: Optional[bool] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
+    ) -> int:
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
+
+        if type_filter is None:
+            type_filter_str = ""
+        else:
+            type_filter_str = (
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"IN ({','.join([str(x) for x in type_filter.values])})"
+            )
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
-                await conn.execute_fetchall("SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,))
+                await conn.execute_fetchall(
+                    f"SELECT COUNT(*) FROM transaction_record where wallet_id=? {type_filter_str} {confirmed_str}",
+                    (wallet_id,),
+                )
             )
         return 0 if len(rows) == 0 else rows[0][0]
 

@@ -20,10 +20,18 @@ from chia.clvm.spend_sim import CostLogger
 
 # Set spawn after stdlib imports, but before other imports
 from chia.consensus.constants import ConsensusConstants
+from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import full_node_protocol
+from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.seeder.crawler import Crawler
+from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -36,7 +44,7 @@ from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_daemon, setup_introducer, setup_timelord
+from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
@@ -47,6 +55,7 @@ from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
@@ -128,14 +137,14 @@ def self_hostname():
 #       the fixtures below. Just be aware of the filesystem modification during bt fixture creation
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request, blockchain_constants):
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from tests.util.blockchain import create_blockchain
 
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, latest_db_version)
     yield bc1
 
     await db_wrapper.close()
@@ -283,31 +292,31 @@ async def node_with_params(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version, self_hostname, blockchain_constants):
+async def two_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_two_nodes(blockchain_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version):
+async def setup_two_nodes_fixture(db_version: int):
     async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_nodes(db_version, self_hostname, blockchain_constants):
+async def three_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 3, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version, self_hostname, blockchain_constants):
+async def four_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 4, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def five_nodes(db_version, self_hostname, blockchain_constants):
+async def five_nodes(db_version: int, self_hostname, blockchain_constants):
     async for _ in setup_n_nodes(blockchain_constants, 5, db_version=db_version, self_hostname=self_hostname):
         yield _
 
@@ -377,7 +386,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[
-    Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
@@ -582,32 +591,32 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(tmp_path: Path, bt: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_two_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 2, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def farmer_three_harvester_not_started(
-    tmp_path: Path, bt: BlockTools
+    tmp_path: Path, get_b_tools: BlockTools
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
-    async for _ in setup_farmer_multi_harvester(bt, 3, tmp_path, bt.constants, start_services=False):
+    async for _ in setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False):
         yield _
 
 
@@ -819,6 +828,12 @@ async def timelord_service(bt):
         yield _
 
 
+@pytest_asyncio.fixture(scope="function")
+async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
+    async for service in setup_crawler(bt):
+        yield service
+
+
 @pytest.fixture(scope="function")
 def tmp_chia_root(tmp_path):
     """
@@ -881,3 +896,38 @@ async def simulation(consensus_mode, bt):
         pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
+
+
+HarvesterFarmerEnvironment = Tuple[
+    Service[Farmer, FarmerAPI], FarmerRpcClient, Service[Harvester, HarvesterAPI], HarvesterRpcClient, BlockTools
+]
+
+
+@pytest_asyncio.fixture(scope="function")
+async def harvester_farmer_environment(
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    self_hostname: str,
+) -> AsyncIterator[HarvesterFarmerEnvironment]:
+    harvesters, farmer_service, bt = farmer_one_harvester
+    harvester_service = harvesters[0]
+
+    assert farmer_service.rpc_server is not None
+    farmer_rpc_cl = await FarmerRpcClient.create(
+        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+    )
+    assert harvester_service.rpc_server is not None
+    harvester_rpc_cl = await HarvesterRpcClient.create(
+        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
+    )
+
+    async def have_connections() -> bool:
+        return len(await farmer_rpc_cl.get_connections()) > 0
+
+    await time_out_assert(15, have_connections, True)
+
+    yield farmer_service, farmer_rpc_cl, harvester_service, harvester_rpc_cl, bt
+
+    farmer_rpc_cl.close()
+    harvester_rpc_cl.close()
+    await farmer_rpc_cl.await_closed()
+    await harvester_rpc_cl.await_closed()

@@ -16,14 +16,12 @@ chia.plotting.util
 chia.pools.pool_puzzles
 chia.pools.pool_wallet
 chia.pools.pool_wallet_info
-chia.rpc.harvester_rpc_client
 chia.rpc.rpc_client
 chia.rpc.util
 chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
 chia.seeder.crawl_store
 chia.seeder.crawler
-chia.seeder.crawler_api
 chia.seeder.dns_server
 chia.seeder.peer_record
 chia.seeder.start_crawler
@@ -100,9 +98,6 @@ tests.core.custom_types.test_coin
 tests.core.custom_types.test_spend_bundle
 tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
-tests.core.full_node.stores.test_block_store
-tests.core.full_node.stores.test_coin_store
-tests.core.full_node.stores.test_full_node_store
 tests.core.full_node.stores.test_hint_store
 tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
@@ -143,7 +138,6 @@ tests.pools.test_wallet_pool_store
 tests.simulation.test_simulation
 tests.tools.test_run_block
 tests.util.benchmark_cost
-tests.util.db_connection
 tests.util.generator_tools_testing
 tests.util.key_tool
 tests.util.test_full_block_utils
