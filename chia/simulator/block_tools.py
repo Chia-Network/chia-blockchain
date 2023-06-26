@@ -195,7 +195,6 @@ class BlockTools:
         self.log = log
         self.local_keychain = keychain
         self._block_time_residual = 0.0
-        self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self.automated_testing = automated_testing
         self.plot_dir_name = plot_dir
 
@@ -494,17 +493,7 @@ class BlockTools:
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0])
         for plot_info in self.plot_manager.plots.values():
             if plot_pk == plot_info.plot_public_key:
-                ci = os.environ.get("CI")
-                if ci is not None and os.name == "nt":
-                    # Because Windows CI instance has not much memory available, we don't use cache here
-                    pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
-                else:
-                    # Look up local_sk from plot to save locked memory
-                    if plot_info.prover.get_id() in self.local_sk_cache:
-                        local_master_sk, pool_pk_or_ph = self.local_sk_cache[plot_info.prover.get_id()]
-                    else:
-                        pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
-                        self.local_sk_cache[plot_info.prover.get_id()] = (local_master_sk, pool_pk_or_ph)
+                pool_pk_or_ph, _, local_master_sk = parse_plot_info(plot_info.prover.get_memo())
                 if isinstance(pool_pk_or_ph, G1Element):
                     include_taproot = False
                 else:
