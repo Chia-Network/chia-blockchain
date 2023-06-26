@@ -1314,8 +1314,6 @@ def _send_notification(
 ) -> None:
     import asyncio
 
-    from chia.cmds.cmds_util import execute_with_wallet
-
     from .wallet_funcs import send_notification
 
     extra_params = {
@@ -1348,8 +1346,6 @@ def _get_notifications(
 ) -> None:
     import asyncio
 
-    from chia.cmds.cmds_util import execute_with_wallet
-
     from .wallet_funcs import get_notifications
 
     extra_params = {
@@ -1378,8 +1374,6 @@ def _delete_notifications(
     all: bool,
 ) -> None:
     import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
 
     from .wallet_funcs import delete_notifications
 
@@ -1416,8 +1410,6 @@ def _mint_vc(
 ) -> None:  # pragma: no cover
     import asyncio
 
-    from chia.cmds.cmds_util import execute_with_wallet
-
     from .wallet_funcs import mint_vc
 
     extra_params = {
@@ -1450,8 +1442,6 @@ def _get_vcs(
     count: int,
 ) -> None:  # pragma: no cover
     import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
 
     from .wallet_funcs import get_vcs
 
@@ -1498,8 +1488,6 @@ def _spend_vc(
 ) -> None:  # pragma: no cover
     import asyncio
 
-    from chia.cmds.cmds_util import execute_with_wallet
-
     from .wallet_funcs import spend_vc
 
     extra_params = {
@@ -1531,8 +1519,6 @@ def _add_proof_reveal(
 ) -> None:  # pragma: no cover
     import asyncio
 
-    from chia.cmds.cmds_util import execute_with_wallet
-
     from .wallet_funcs import add_proof_reveal
 
     extra_params = {
@@ -1558,8 +1544,6 @@ def _get_proofs_for_root(
     proof_hash: str,
 ) -> None:  # pragma: no cover
     import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
 
     from .wallet_funcs import get_proofs_for_root
 
@@ -1608,8 +1592,6 @@ def _revoke_vc(
     reuse_puzhash: bool,
 ) -> None:  # pragma: no cover
     import asyncio
-
-    from chia.cmds.cmds_util import execute_with_wallet
 
     from .wallet_funcs import revoke_vc
 
