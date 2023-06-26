@@ -1639,16 +1639,23 @@ class FullNode:
         )
 
         if fns_peak_result.new_signage_points is not None and peer is not None:
-            for index, sp in fns_peak_result.new_signage_points:
-                assert (
-                    sp.cc_vdf is not None
-                    and sp.cc_proof is not None
-                    and sp.rc_vdf is not None
-                    and sp.rc_proof is not None
-                )
-                await self.signage_point_post_processing(
-                    RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
-                )
+            # this is protecting the signage point store, to ensure we only
+            # process one at a time and never add the same SP twice
+            async with self.timelord_lock:
+                for index, sp in fns_peak_result.new_signage_points:
+                    assert (
+                        sp.cc_vdf is not None
+                        and sp.cc_proof is not None
+                        and sp.rc_vdf is not None
+                        and sp.rc_proof is not None
+                    )
+                    sphash = sp.cc_vdf.output.get_hash()
+                    if self.full_node_store.get_signage_point(sphash) is not None:
+                        self.log.debug("signage point already processed, skipping: %s", sphash)
+                        continue
+                    await self.signage_point_post_processing(
+                        RespondSignagePoint(index, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer, sub_slots[1]
+                    )
 
         if sub_slots[1] is None:
             assert record.ip_sub_slot_total_iters(self.constants) == 0
