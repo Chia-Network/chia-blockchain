@@ -9,9 +9,10 @@ from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
 
+import pytest
+
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
-import pytest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
