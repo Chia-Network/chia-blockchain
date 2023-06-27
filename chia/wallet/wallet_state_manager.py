@@ -754,11 +754,8 @@ class WalletStateManager:
                 if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
                     await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(derivation_record.puzzle_hash)
                 amount = uint64(amount + coin.amount)
-                memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1].copy()
-                if len(memos) > 1:
-                    memos[0] = b""
-                else:
-                    memos = []
+                # Remove the clawback hint since it is unnecessary for the XCH coin
+                memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
                 inner_solution: Program = self.main_wallet.make_solution(
                     primaries=[

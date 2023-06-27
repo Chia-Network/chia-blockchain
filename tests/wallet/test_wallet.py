@@ -452,6 +452,7 @@ class TestWalletSimulator:
             normal_puzhash,
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+            memos=[b"Test"],
         )
 
         await wallet.push_transaction(tx)
@@ -494,7 +495,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert txs["transactions"][0]["memos"] == {}
+        assert list(txs["transactions"][0]["memos"].values())[0] == b"Test".hex()
 
     @pytest.mark.parametrize(
         "trusted",
