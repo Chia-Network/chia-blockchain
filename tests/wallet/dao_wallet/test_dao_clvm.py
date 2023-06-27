@@ -392,7 +392,7 @@ def test_validator() -> None:
     acs: Program = Program.to(1)
     acs_ph: bytes32 = acs.get_tree_hash()
 
-    p2_singleton = P2_SINGLETON_MOD.curry(treasury_struct)
+    p2_singleton = P2_SINGLETON_MOD.curry(treasury_struct, P2_SINGLETON_AGGREGATOR_MOD)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
     locked_amount = 100000
@@ -467,7 +467,7 @@ def test_validator() -> None:
     )
 
     conds: Program = proposal_validator.run(solution)
-    assert len(conds.as_python()) == 6 + len(conditions)
+    assert len(conds.as_python()) == 7 + len(conditions)
 
     # test update
     proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -496,7 +496,7 @@ def test_validator() -> None:
         ]
     )
     conds: Program = proposal_validator.run(solution)
-    assert len(conds.as_python()) == 2
+    assert len(conds.as_python()) == 3
 
     return
 
@@ -551,7 +551,7 @@ def test_treasury() -> None:
 
     proposal_id: Program = Program.to("singleton_id").get_tree_hash()
     proposal_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
-    p2_singleton = P2_SINGLETON_MOD.curry(treasury_struct)
+    p2_singleton = P2_SINGLETON_MOD.curry(treasury_struct, P2_SINGLETON_AGGREGATOR_MOD)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
     locked_amount = 100000
@@ -596,7 +596,6 @@ def test_treasury() -> None:
         treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
-    spend_p2_singleton_solution = Program.to([[[parent_id, locked_amount]]])
 
     parent_amt_list = [[parent_id, locked_amount]]
     cat_parent_amt_list = []
@@ -628,7 +627,6 @@ def test_treasury() -> None:
     proposal_coin_id = Coin(parent_id, full_proposal.get_tree_hash(), proposal_amt).name()
     solution: Program = Program.to(
         [
-            "p",
             [proposal_coin_id, spend_p2_singleton_puzhash, 0, "s"],
             [proposal_id, 1200, 950, parent_id, proposal_amt],
             spend_p2_singleton,
@@ -757,7 +755,7 @@ def test_proposal_innerpuz() -> None:
     treasury_amount = 1
 
     # setup the p2_singleton
-    p2_singleton = P2_SINGLETON_MOD.curry(treasury_singleton_struct)
+    p2_singleton = P2_SINGLETON_MOD.curry(treasury_singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
     p2_singleton_puzhash = p2_singleton.get_tree_hash()
     parent_id = Program.to("parent").get_tree_hash()
     locked_amount = 100000
@@ -830,7 +828,6 @@ def test_proposal_innerpuz() -> None:
 
     treasury_solution: Program = Program.to(
         [
-            "p",
             [proposal_coin_id, spend_p2_singleton_puzhash, 0, "s"],
             [proposal_id, current_votes, yes_votes, parent_id, proposal_amt],
             spend_p2_singleton,
@@ -877,7 +874,7 @@ def test_proposal_innerpuz() -> None:
         for cond in treasury_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     ]
     proposal_apas = [cond.vars[0] for cond in proposal_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]]
-    assert treasury_cpas[0] == proposal_apas[1]
+    assert treasury_cpas[1] == proposal_apas[1]
 
     # Test Proposal to update treasury
     # Set up new treasury params
@@ -921,7 +918,6 @@ def test_proposal_innerpuz() -> None:
 
     treasury_solution: Program = Program.to(
         [
-            "p",
             [proposal_coin_id, update_proposal_puzhash, 0, "u"],
             [proposal_id, current_votes, yes_votes, parent_id, proposal_amt],
             update_proposal,
@@ -961,4 +957,4 @@ def test_proposal_innerpuz() -> None:
         for cond in treasury_conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     ]
     proposal_apas = [cond.vars[0] for cond in proposal_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]]
-    assert treasury_cpas[0] == proposal_apas[1]
+    assert treasury_cpas[1] == proposal_apas[1]
