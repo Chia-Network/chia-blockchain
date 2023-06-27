@@ -34,7 +34,7 @@ async def general_insert(
     reference_node_hash: bytes32,
     side: Optional[Side],
 ) -> bytes32:
-    return await data_store.insert(
+    node_hash, _ = await data_store.insert(
         key=key,
         value=value,
         tree_id=tree_id,
@@ -42,6 +42,7 @@ async def general_insert(
         side=side,
         status=Status.COMMITTED,
     )
+    return node_hash
 
 
 @dataclass(frozen=True)
