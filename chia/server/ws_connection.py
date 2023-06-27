@@ -21,6 +21,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
+from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -66,7 +67,7 @@ class WSChiaConnection:
     """
 
     ws: WebSocket = field(repr=False)
-    api: Any = field(repr=False)
+    api: ApiProtocol = field(repr=False)
     local_type: NodeType
     local_port: int
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
@@ -100,7 +101,6 @@ class WSChiaConnection:
     inbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     incoming_message_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     outbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
-    active: bool = False  # once handshake is successful this will be changed to True
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
@@ -124,7 +124,7 @@ class WSChiaConnection:
         cls,
         local_type: NodeType,
         ws: WebSocket,
-        api: Any,
+        api: ApiProtocol,
         server_port: int,
         log: logging.Logger,
         is_outbound: bool,
@@ -247,6 +247,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             await self._send_message(outbound_handshake)
+            self.version = Version(inbound_handshake.software_version)
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -372,9 +374,9 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
-            if hasattr(self.api, "api_ready"):
-                if self.api.api_ready is False:
-                    return None
+            if not self.api.ready():
+                self.log.warning(f"API not ready, ignore request: {full_message}")
+                return None
 
             timeout: Optional[int] = 600
             if metadata.execute_task:

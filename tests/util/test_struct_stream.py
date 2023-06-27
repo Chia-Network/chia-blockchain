@@ -41,7 +41,7 @@ class Good:
     size: int
     bits: int
     signed: bool
-    maximum_exclusive: int
+    maximum: int
     minimum: int
 
     @classmethod
@@ -50,7 +50,7 @@ class Good:
         name: str,
         size: int,
         signed: bool,
-        maximum_exclusive: int,
+        maximum: int,
         minimum: int,
     ) -> Good:
         raw_class: Type[StructStream] = type(name, (StructStream,), {})
@@ -61,30 +61,30 @@ class Good:
             size=size,
             bits=size * 8,
             signed=signed,
-            maximum_exclusive=maximum_exclusive,
+            maximum=maximum,
             minimum=minimum,
         )
 
 
 good_classes = [
-    Good.create(name="uint8", size=1, signed=False, maximum_exclusive=0xFF + 1, minimum=0),
-    Good.create(name="int8", size=1, signed=True, maximum_exclusive=0x80, minimum=-0x80),
-    Good.create(name="uint16", size=2, signed=False, maximum_exclusive=0xFFFF + 1, minimum=0),
-    Good.create(name="int16", size=2, signed=True, maximum_exclusive=0x8000, minimum=-0x8000),
-    Good.create(name="uint24", size=3, signed=False, maximum_exclusive=0xFFFFFF + 1, minimum=0),
-    Good.create(name="int24", size=3, signed=True, maximum_exclusive=0x800000, minimum=-0x800000),
+    Good.create(name="uint8", size=1, signed=False, maximum=0xFF, minimum=0),
+    Good.create(name="int8", size=1, signed=True, maximum=0x7F, minimum=-0x80),
+    Good.create(name="uint16", size=2, signed=False, maximum=0xFFFF, minimum=0),
+    Good.create(name="int16", size=2, signed=True, maximum=0x7FFF, minimum=-0x8000),
+    Good.create(name="uint24", size=3, signed=False, maximum=0xFFFFFF, minimum=0),
+    Good.create(name="int24", size=3, signed=True, maximum=0x7FFFFF, minimum=-0x800000),
     Good.create(
         name="uint128",
         size=16,
         signed=False,
-        maximum_exclusive=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF + 1,
+        maximum=0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
         minimum=0,
     ),
     Good.create(
         name="int128",
         size=16,
         signed=True,
-        maximum_exclusive=0x80000000000000000000000000000000,
+        maximum=0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
         minimum=-0x80000000000000000000000000000000,
     ),
 ]
@@ -144,6 +144,9 @@ class TestStructStream:
                 struct.pack(struct_format, lower_boundary - 1)
             with pytest.raises(struct.error):
                 struct.pack(struct_format, upper_boundary + 1)
+
+        assert type(cls.MINIMUM) == cls
+        assert type(cls.MAXIMUM) == cls
 
     def test_int512(self) -> None:
         # int512 is special. it uses 65 bytes to allow positive and negative
@@ -245,7 +248,7 @@ class TestStructStream:
         assert uint32(b"273") == 273
 
     def test_struct_stream_cannot_be_instantiated_directly(self) -> None:
-        with pytest.raises(ValueError, match="does not fit"):
+        with pytest.raises(AttributeError, match="object has no attribute"):
             StructStream(0)
 
     @pytest.mark.parametrize(
@@ -281,7 +284,7 @@ class TestStructStream:
         assert good.cls.SIGNED == good.signed
 
     def test_parse_metadata_from_name_correct_maximum(self, good: Good) -> None:
-        assert good.cls.MAXIMUM_EXCLUSIVE == good.maximum_exclusive
+        assert good.cls.MAXIMUM == good.maximum
 
     def test_parse_metadata_from_name_correct_minimum(self, good: Good) -> None:
         assert good.cls.MINIMUM == good.minimum

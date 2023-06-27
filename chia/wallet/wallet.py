@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -30,9 +31,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_absolute_seconds_exceeds_condition,
     make_assert_coin_announcement,
-    make_assert_my_coin_id_condition,
     make_assert_puzzle_announcement,
     make_create_coin_announcement,
     make_create_coin_condition,
@@ -48,9 +47,11 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
 CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
@@ -58,12 +59,10 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 class Wallet:
     if TYPE_CHECKING:
-        from chia.wallet.wallet_protocol import WalletProtocol
-
         _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
 
     wallet_info: WalletInfo
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
     secret_key_store: SecretKeyStore
@@ -73,10 +72,10 @@ class Wallet:
     async def create(
         wallet_state_manager: Any,
         info: WalletInfo,
-        name: str = None,
-    ):
+        name: str = __name__,
+    ) -> Wallet:
         self = Wallet()
-        self.log = logging.getLogger(name if name else __name__)
+        self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
         self.secret_key_store = SecretKeyStore()
@@ -224,24 +223,18 @@ class Wallet:
     def make_solution(
         self,
         primaries: List[Payment],
-        min_time=0,
-        me=None,
         coin_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         magic_conditions: Optional[List[Any]] = None,
-        fee=0,
+        fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
         condition_list = []
         if len(primaries) > 0:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
-        if min_time > 0:
-            condition_list.append(make_assert_absolute_seconds_exceeds_condition(min_time))
-        if me:
-            condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
         if coin_announcements:
@@ -263,7 +256,7 @@ class Wallet:
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
         python_program = solution.as_python()
         python_program[1].append(condition)
-        return Program.to(python_program)
+        return cast(Program, Program.to(python_program))
 
     async def select_coins(
         self,
@@ -308,18 +301,18 @@ class Wallet:
         amount: uint64,
         newpuzzlehash: bytes32,
         fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
+        origin_id: Optional[bytes32] = None,
+        coins: Optional[Set[Coin]] = None,
         primaries_input: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
-        exclude_coins: Optional[Set[Coin]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[Set[Coin]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> List[CoinSpend]:
@@ -356,17 +349,17 @@ class Wallet:
                 raise ValueError(
                     f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {total_amount} mojos"
                 )
-            exclude_coins_list: Optional[List[Coin]] = None
-            if exclude_coins is not None:
-                exclude_coins_list = list(exclude_coins)
+            excluded_coins_list: Optional[List[Coin]] = None
+            if excluded_coins is not None:
+                excluded_coins_list = list(excluded_coins)
             coins = await self.select_coins(
                 uint64(total_amount),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
-                exclude=exclude_coins_list,
+                excluded_coin_amounts=excluded_coin_amounts,
+                exclude=excluded_coins_list,
             )
-        elif exclude_coins is not None:
+        elif excluded_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
 
         assert len(coins) > 0
@@ -492,21 +485,22 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         fee: uint64 = uint64(0),
-        origin_id: bytes32 = None,
-        coins: Set[Coin] = None,
+        coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Set[Announcement] = None,
-        puzzle_announcements_to_consume: Set[Announcement] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
-        negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        exclude_coin_amounts: Optional[List[uint64]] = None,
-        exclude_coins: Optional[Set[Coin]] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[Set[Coin]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> TransactionRecord:
+        origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
+        negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
         """
         Use this to generate transaction.
         Note: this must be called under a wallet state manager lock
@@ -532,8 +526,8 @@ class Wallet:
             negative_change_allowed,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
-            exclude_coin_amounts=exclude_coin_amounts,
-            exclude_coins=exclude_coins,
+            excluded_coin_amounts=excluded_coin_amounts,
+            excluded_coins=excluded_coins,
             puzzle_decorator_override=puzzle_decorator_override,
             reuse_puzhash=reuse_puzhash,
         )

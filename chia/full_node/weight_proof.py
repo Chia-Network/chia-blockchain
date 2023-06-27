@@ -41,9 +41,9 @@ from chia.types.weight_proof import (
     WeightProof,
 )
 from chia.util.block_cache import BlockCache
-from chia.util.chunks import chunks
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -1670,11 +1670,10 @@ async def validate_weight_proof_inner(
         if vdfs_to_validate is None:
             return False, []
 
-        vdf_chunks = chunks(vdfs_to_validate, num_processes)
         vdf_tasks = []
-        for chunk in vdf_chunks:
+        for batch in to_batches(vdfs_to_validate, num_processes):
             byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in chunk:
+            for vdf_proof, classgroup, vdf_info in batch.entries:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
             vdf_task = asyncio.get_running_loop().run_in_executor(
                 executor,

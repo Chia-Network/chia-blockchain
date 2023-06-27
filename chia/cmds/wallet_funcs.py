@@ -247,7 +247,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
     max_coin_amount = Decimal(args["max_coin_amount"])
-    exclude_coin_ids: List[str] = args["exclude_coin_ids"]
+    excluded_coin_ids: List[str] = args["excluded_coin_ids"]
     memo = args["memo"]
     reuse_puzhash = args["reuse_puzhash"]
     clawback_time_lock = args["clawback_time"]
@@ -289,7 +289,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
             puzzle_decorator_override=[
                 {"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}
@@ -307,7 +307,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             memos,
             final_min_coin_amount,
             final_max_coin_amount,
-            exclude_coin_ids=exclude_coin_ids,
+            excluded_coin_ids=excluded_coin_ids,
             reuse_puzhash=reuse_puzhash,
         )
     else:

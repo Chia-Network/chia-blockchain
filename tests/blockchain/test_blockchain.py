@@ -55,6 +55,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
+from tests.conftest import Mode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -141,7 +142,10 @@ class TestGenesisBlock:
 
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
-    async def test_long_chain(self, empty_blockchain, default_1000_blocks):
+    async def test_long_chain(self, empty_blockchain, default_1000_blocks, consensus_mode: Mode):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         blocks = default_1000_blocks
         for block in blocks:
             if (
@@ -166,6 +170,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
                     block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
                 )
+                assert error
                 assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
 
                 # Also fails calling the outer methods, but potentially with a different error
@@ -189,6 +194,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
                     block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
                 )
+                assert error
                 assert error.code == Err.INVALID_NEW_DIFFICULTY
 
                 # Also fails calling the outer methods, but potentially with a different error
@@ -221,6 +227,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
                     block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
                 )
+                assert error
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
 
                 # Also fails calling the outer methods, but potentially with a different error
@@ -252,6 +259,7 @@ class TestBlockHeaderValidation:
                     block.finished_sub_slots[0].challenge_chain.new_difficulty,
                     block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
                 )
+                assert error
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
 
                 # Also fails calling the outer methods, but potentially with a different error
@@ -1503,10 +1511,10 @@ class TestBlockHeaderValidation:
             # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
             # default for this test
             constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0, MAX_FUTURE_TIME=5 * 60)
-            time_delta = 2 * 60
+            time_delta = 2 * 60 + 1
         else:
             constants = bt.constants.replace(MAX_FUTURE_TIME=5 * 60)
-            time_delta = 5 * 60
+            time_delta = 5 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
 
