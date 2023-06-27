@@ -46,6 +46,8 @@ DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clsp")
 DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
+P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
+P2_SINGLETON_AGGREGATOR_MOD_HASH: bytes32 = P2_SINGLETON_AGGREGATOR_MOD.get_tree_hash()
 DAO_UPDATE_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
 
@@ -500,21 +502,37 @@ def test_validator() -> None:
 
 
 def test_merge_p2_singleton() -> None:
+    # Setup a singleton struct
+    singleton_inner: Program = Program.to(1)
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
-
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
 
-    # Test that p2_singleton_via_delegated_puzzle will run
-    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct)
-    conds = p2_singleton.run(Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), 0]))
-    assert len(conds.as_python()) == 3
+    # Setup p2_singleton_via_delegated puz
+    my_id = bytes32(b"1" * 32)
+    p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
+
+    # Spend to delegated puz
+    delegated_puz = Program.to(1)
+    delegated_sol = Program.to([[51, 0xCAFEF00D, 300]])
+    solution = Program.to([0, singleton_inner, delegated_puz, delegated_sol, my_id])
+
+    conds = p2_singleton.run(solution)
+    assert conds.list_len() == 4
+
+    # Merge Spend (not output creator)
+    merge_sol = Program.to([[my_id, p2_singleton.get_tree_hash(), 0, 300]])
+    conds = p2_singleton.run(merge_sol)
+    assert conds.list_len() == 3
+
+    # Merge Spend (output creator)
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
-    conds = p2_singleton.run(
-        Program.to([0, 0, 0, singleton_id, p2_singleton.get_tree_hash(), [[fake_parent_id, 200]], 100])
-    )
-    assert len(conds.as_python()) == 6
-    assert conds.rest().rest().rest().rest().rest().first().rest().rest().first().as_int() == 300
+    merge_sol = Program.to([[my_id, p2_singleton.get_tree_hash(), [[fake_parent_id, 200]], 100]])
+    conds = p2_singleton.run(merge_sol)
+    assert conds.list_len() == 5
+    assert conds.at("rrrrfrrf").as_int() == 300
     return
+
+    
 
 
 def test_treasury() -> None:
