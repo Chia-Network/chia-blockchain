@@ -59,7 +59,7 @@ dev_dependencies = [
     "twine",
     "isort",
     "flake8",
-    "mypy==1.3.0",
+    "mypy",
     "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
