@@ -34,10 +34,10 @@ def test_filter_prefix_bits_on_blocks(
     assert passed == should_pass
 
 
-@pytest.mark.parametrize(argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, False), (8, True)])
+@pytest.mark.parametrize(argnames=["filter_prefix_bits", "eligible_plots"], argvalues=[(9, 0), (8, 1)])
 @pytest.mark.asyncio
 async def test_filter_prefix_bits_with_farmer_harvester(
-    harvester_farmer_environment: HarvesterFarmerEnvironment, filter_prefix_bits: uint8, should_pass: bool
+    harvester_farmer_environment: HarvesterFarmerEnvironment, filter_prefix_bits: uint8, eligible_plots: int
 ) -> None:
     state_change = None
     state_change_data = None
@@ -69,15 +69,10 @@ async def test_filter_prefix_bits_with_farmer_harvester(
         signage_point_index=uint8(2),
         filter_prefix_bits=filter_prefix_bits,
     )
-    passed = False
     await farmer_api.new_signage_point(sp)
     await time_out_assert(5, state_has_changed, True)
     # We're intercepting the harvester's state changes as we're expecting
-    # a farming_info one. eligible_plots are what passed the plot filter
-    if (
-        state_change == "farming_info"
-        and state_change_data is not None
-        and state_change_data.get("eligible_plots") == 1
-    ):
-        passed = True
-    assert passed == should_pass
+    # a farming_info one.
+    assert state_change == "farming_info"
+    assert state_change_data is not None
+    assert state_change_data.get("eligible_plots") == eligible_plots
