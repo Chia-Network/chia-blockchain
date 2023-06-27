@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from chia.consensus.block_record import BlockRecord
+from chia.consensus.block_record import BlockRecord, BlockRecordDB
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.config import load_config
+from chia.util.full_block_utils import PlotFilterInfo, plot_filter_info_from_block
 from chia.util.path import path_from_root
 
 
@@ -102,8 +103,15 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                     continue
 
                 if validate_blocks:
-                    block = FullBlock.from_bytes(zstd.decompress(row[4]))
-                    block_record = BlockRecord.from_bytes(row[5])
+                    block_bytes = zstd.decompress(row[4])
+                    block = FullBlock.from_bytes(block_bytes)
+                    block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[5])
+                    plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(block_bytes)
+                    block_record = BlockRecord.from_block_record_db(
+                        block_record_db,
+                        plot_filter_info.pos_ss_cc_challenge_hash,
+                        plot_filter_info.cc_sp_hash,
+                    )
                     actual_header_hash = block.header_hash
                     actual_prev_hash = block.prev_header_hash
                     if actual_header_hash != hh:
@@ -128,6 +136,21 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                     if block.height != height:
                         raise RuntimeError(
                             f"Block {hh.hex()} has a mismatching height: {block.height} expected {height}"
+                        )
+                    if block_record.pos_ss_cc_challenge_hash != block.reward_chain_block.pos_ss_cc_challenge_hash:
+                        raise RuntimeError(
+                            f"Did not parse field pos_ss_cc_challenge_hash of block {hh.hex()} correctly: "
+                            f"{block_record.pos_ss_cc_challenge_hash} "
+                            f"expected {block.reward_chain_block.pos_ss_cc_challenge_hash}"
+                        )
+                    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                        expected_cc_sp_hash: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
+                    else:
+                        expected_cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                    if block_record.cc_sp_hash != expected_cc_sp_hash:
+                        raise RuntimeError(
+                            f"Did not parse field cc_sp_hash of block {hh.hex()} correctly: "
+                            f"{block_record.pos_ss_cc_challenge_hash} expected {expected_cc_sp_hash}"
                         )
 
                 if height != current_height:
