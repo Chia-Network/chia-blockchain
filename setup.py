@@ -25,7 +25,7 @@ dependencies = [
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
     "cryptography==41.0.1",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-    "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==24.2.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
