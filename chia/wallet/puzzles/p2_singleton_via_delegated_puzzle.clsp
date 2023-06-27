@@ -6,7 +6,7 @@
 (mod (
     SINGLETON_STRUCT
     AGGREGATOR_PUZZLE
-    aggregator_solution ; (my_id my_puzhash list_of_parent_amounts my_amount)
+    aggregator_solution  ; (my_id my_puzhash list_of_parent_amounts my_amount)
     singleton_inner_puzhash
     delegated_puzzle
     delegated_solution
@@ -44,5 +44,4 @@
         )
       )
   )
-
 )

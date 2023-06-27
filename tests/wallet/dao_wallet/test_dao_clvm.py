@@ -508,31 +508,39 @@ def test_merge_p2_singleton() -> None:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
 
     # Setup p2_singleton_via_delegated puz
-    my_id = bytes32(b"1" * 32)
+    my_id = Program.to("my_id").get_tree_hash()
     p2_singleton = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
+    my_puzhash = p2_singleton.get_tree_hash()
 
     # Spend to delegated puz
     delegated_puz = Program.to(1)
     delegated_sol = Program.to([[51, 0xCAFEF00D, 300]])
-    solution = Program.to([0, singleton_inner, delegated_puz, delegated_sol, my_id])
-
-    conds = p2_singleton.run(solution)
-    assert conds.list_len() == 4
+    solution = Program.to([0, singleton_inner.get_tree_hash(), delegated_puz, delegated_sol, my_id])
+    conds = conditions_dict_for_solution(p2_singleton, solution, INFINITE_COST)
+    apa = std_hash(
+        SINGLETON_MOD.curry(singleton_struct, singleton_inner).get_tree_hash()
+        + Program.to([my_id, delegated_puz.get_tree_hash()]).get_tree_hash()
+    )
+    assert len(conds) == 4
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == apa
+    assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
 
     # Merge Spend (not output creator)
-    merge_sol = Program.to([[my_id, p2_singleton.get_tree_hash(), 0, 300]])
-    conds = p2_singleton.run(merge_sol)
-    assert conds.list_len() == 3
+    merge_sol = Program.to([[my_id, my_puzhash, 300, 0]])
+    conds = conditions_dict_for_solution(p2_singleton, merge_sol, INFINITE_COST)
+    assert len(conds) == 2
+    assert conds[ConditionOpcode.ASSERT_MY_PUZZLEHASH][0].vars[0] == my_puzhash
+    assert conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0] == int_to_bytes(0)
 
     # Merge Spend (output creator)
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
-    merge_sol = Program.to([[my_id, p2_singleton.get_tree_hash(), [[fake_parent_id, 200]], 100]])
-    conds = p2_singleton.run(merge_sol)
-    assert conds.list_len() == 5
-    assert conds.at("rrrrfrrf").as_int() == 300
+    merged_coin_id = Coin(fake_parent_id, my_puzhash, 200).name()
+    merge_sol = Program.to([[my_id, my_puzhash, 100, [[fake_parent_id, my_puzhash, 200]]]])
+    conds = conditions_dict_for_solution(p2_singleton, merge_sol, INFINITE_COST)
+    assert len(conds) == 5
+    assert conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT][0].vars[0] == Program.to([merged_coin_id, 0]).get_tree_hash()
+    assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
     return
-
-    
 
 
 def test_treasury() -> None:
