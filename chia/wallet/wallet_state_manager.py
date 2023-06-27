@@ -1197,6 +1197,8 @@ class WalletStateManager:
             # Add merkle coin
             await self.coin_store.add_coin_record(coin_record)
             # Add tx record
+            # We use confirmed to indicate if a Clawback transaction is claimable
+            # If the Clawback coin is unspent, confirmed should be false
             created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.created_height))
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(coin_state.created_height),
