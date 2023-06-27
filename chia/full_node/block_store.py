@@ -711,7 +711,7 @@ class BlockStore:
                 plot_filter_info.cc_sp_hash,
             )
             result[hh] = block_record
-        return ret, peak[0]
+        return result, peak[0]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
