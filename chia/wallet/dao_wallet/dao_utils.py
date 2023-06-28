@@ -49,6 +49,7 @@ P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
 DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
+P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 
 log = logging.Logger(__name__)
 
@@ -79,6 +80,7 @@ def create_new_proposal_puzzle(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         DAO_TREASURY_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
         cat_tail_hash,
@@ -105,6 +107,7 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         DAO_LOCKUP_MOD_HASH,
         DAO_TREASURY_MOD_HASH,
         cat_tail_hash,
@@ -191,6 +194,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         PROPOSAL_MOD_HASH,
         PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         LOCKUP_MOD_HASH,
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
@@ -229,14 +233,14 @@ def get_spend_p2_singleton_puzzle(
         CAT_MOD_HASH,
         xch_conditions,
         asset_conditions,
-        P2_SINGLETON_MOD.curry(treasury_struct).get_tree_hash(),
+        P2_SINGLETON_MOD.curry(treasury_struct, P2_SINGLETON_AGGREGATOR_MOD).get_tree_hash(),
     )
     return puzzle
 
 
 def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> Program:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
-    inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct)
+    inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
     if asset_id:
         # CAT
         puzzle = CAT_MOD.curry(CAT_MOD_HASH, asset_id, inner_puzzle)
@@ -260,6 +264,7 @@ def get_lockup_puzzle(
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_HASH,
         DAO_LOCKUP_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         CAT_MOD_HASH,
         cat_tail_hash,
         previous_votes_list,  # TODO: maybe format check this in this function
@@ -287,6 +292,7 @@ def add_proposal_to_active_list(
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_PUZHASH,
         LOCKUP_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         CAT_MOD_HASH,
         CAT_TAIL_HASH,
         ACTIVE_VOTES,
@@ -305,6 +311,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         _SINGLETON_MOD_HASH,
         _SINGLETON_LAUNCHER_HASH,
         _LOCKUP_MOD_HASH,
+        _DAO_FINISHED_STATE_HASH,
         _CAT_MOD_HASH,
         _CAT_TAIL_HASH,
         ACTIVE_VOTES,
@@ -320,6 +327,7 @@ def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
         _SINGLETON_MOD_HASH,
         _SINGLETON_LAUNCHER_HASH,
         _LOCKUP_MOD_HASH,
+        _DAO_FINISHED_STATE_HASH,
         _CAT_MOD_HASH,
         _CAT_TAIL_HASH,
         _ACTIVE_VOTES,
@@ -349,6 +357,7 @@ def get_proposal_puzzle(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         DAO_TREASURY_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
         cat_tail_hash,
@@ -370,6 +379,7 @@ def get_proposal_timer_puzzle(
         DAO_PROPOSAL_MOD_HASH,
         DAO_PROPOSAL_TIMER_MOD_HASH,
         DAO_LOCKUP_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         CAT_MOD_HASH,
         cat_tail_hash,
         parent_singleton_struct,
@@ -397,6 +407,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
         PROPOSAL_MOD_HASH,
         PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         LOCKUP_MOD_HASH,
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
@@ -428,9 +439,9 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
     #     proposal_self_destruct_length,
     #     oracle_spend_delay,
     # ) = curried_args
-    if solution.first() != Program.to(0):
+    if solution.rest().rest().first() != Program.to(0):
         # Proposal Spend
-        mod, curried_args = solution.at("rrrf").uncurry()
+        mod, curried_args = solution.at("rrf").uncurry()
         if mod == DAO_UPDATE_PROPOSAL_MOD:
             (
                 DAO_TREASURY_MOD_HASH,
@@ -463,6 +474,9 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
 # This also returns the proposal puzzle and not the full puzzle
 def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
     # Check if soft_close_length is in solution. If not, then add votes, otherwise close proposal
+    if len(solution.as_python()) == 1:
+        return puzzle_reveal  # we're finished, shortcut this function
+
     if solution.at("rrrrrrf") == Program.to(0):
         curried_args = uncurry_proposal(puzzle_reveal)
         (
@@ -470,6 +484,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             TREASURY_MOD_HASH,
             LOCKUP_MOD_HASH,
             CAT_TAIL_HASH,
@@ -493,6 +508,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             DAO_PROPOSAL_MOD_HASH,
             DAO_PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             DAO_TREASURY_MOD_HASH,
             DAO_LOCKUP_MOD_HASH,
             CAT_TAIL_HASH,
@@ -502,7 +518,29 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             INNERPUZ_HASH,
         )
     else:
-        return DAO_FINISHED_STATE
+        # we are in the finished state, puzzle is the same as ever
+        mod, currieds = puzzle_reveal.uncurry()  # singleton
+        if mod == DAO_PROPOSAL_MOD:
+
+            (
+                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+                PROPOSAL_MOD_HASH,
+                PROPOSAL_TIMER_MOD_HASH,
+                CAT_MOD_HASH,
+                DAO_FINISHED_STATE_HASH,
+                TREASURY_MOD_HASH,
+                LOCKUP_MOD_HASH,
+                CAT_TAIL_HASH,
+                TREASURY_ID,
+                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+                TOTAL_VOTES,  # how many people responded
+                INNERPUZ_HASH,
+            ) = currieds.as_iter()
+        else:
+            SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
+
+        assert SINGLETON_STRUCT is not None
+        return get_finished_state_puzzle(SINGLETON_STRUCT.rest().first().as_atom())
 
 
 def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
@@ -530,6 +568,7 @@ def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
         PROPOSAL_MOD_HASH,
         PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         LOCKUP_MOD_HASH,
         TREASURY_MOD_HASH,
         CAT_TAIL_HASH,
@@ -651,6 +690,7 @@ def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Progr
         PROPOSAL_MOD_HASH,
         PROPOSAL_TIMER_MOD_HASH,
         CAT_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
         TREASURY_MOD_HASH,
         LOCKUP_MOD_HASH,
         CAT_TAIL_HASH,
@@ -694,6 +734,24 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
         if mod == SINGLETON_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_PROPOSAL_MOD:
+                return curried_args.as_iter()  # type: ignore[no-any-return]
+    except ValueError:
+        import traceback
+
+        print(f"exception: {traceback.format_exc()}")
+    return None
+
+
+def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
+    """
+    Given a puzzle test if it's a Proposal, if it is, return the curried arguments
+    :param curried_args: Puzzle
+    :return: Curried parameters
+    """
+    try:
+        if mod == SINGLETON_MOD:
+            mod, curried_args = curried_args.rest().first().uncurry()
+            if mod == DAO_FINISHED_STATE:
                 return curried_args.as_iter()  # type: ignore[no-any-return]
     except ValueError:
         import traceback

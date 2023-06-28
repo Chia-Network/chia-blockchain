@@ -263,6 +263,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     # generate the spend successfully
     new_dao_spend = await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, cat_amt)
+    assert new_dao_spend is not None
 
 
 @pytest.mark.parametrize(
@@ -694,6 +695,10 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     assert dao_wallet_0.dao_info.proposals_list[2].amount_voted == dao_cat_1_bal
     assert dao_wallet_0.dao_info.proposals_list[2].timer_coin is not None
 
+    await time_out_assert(20, len, 3, dao_wallet_0.dao_info.proposals_list)
+    await dao_wallet_0.clear_finished_proposals_from_memory()
+    await time_out_assert(20, len, 3, dao_wallet_0.dao_info.proposals_list)
+
     # The  third proposal should be in a "passed" state now, and this will change to "failed"
     # once the treasury update proposal has closed.
     async def check_prop_state(wallet, proposal_id, state):
@@ -830,6 +835,20 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_0, 2])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_1, 2])
     time_out_assert(20, get_proposal_state, (True, True), [dao_wallet_2, 2])
+
+    await time_out_assert(20, len, 4, dao_wallet_0.dao_info.proposals_list)
+    await dao_wallet_0.clear_finished_proposals_from_memory()
+    await time_out_assert(20, len, 4, dao_wallet_0.dao_info.proposals_list)  # we still have coins locked up
+
+    fs = await dao_wallet_0.free_coins_from_finished_proposals()
+    assert fs is not None
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    # Wait a second for the dao cat wallet to update
+    await asyncio.sleep(1)
+    await dao_wallet_0.clear_finished_proposals_from_memory()
+    await time_out_assert(20, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
 
 
 @pytest.mark.parametrize(

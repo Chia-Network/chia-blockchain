@@ -344,6 +344,7 @@ class DAOWallet(WalletProtocol):
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             LOCKUP_MOD_HASH,
             TREASURY_MOD_HASH,
             CAT_TAIL_HASH,
@@ -637,6 +638,21 @@ class DAOWallet(WalletProtocol):
             self.dao_info.current_height,
         )
         await self.save_info(dao_info)
+
+    async def clear_finished_proposals_from_memory(self):
+        new_list = []
+        for prop_info in self.dao_info.proposals_list:
+            if prop_info.closed is False or prop_info.closed is None:
+                new_list.append(prop_info)
+            else:
+                dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+                # this is expensive, but a worthwhile check
+                for lci in dao_cat_wallet.dao_cat_info.locked_coins:
+                    if prop_info.proposal_id in lci.active_votes:
+                        new_list.append(prop_info)  # keep it
+        dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
+        await self.save_info(dao_info)
+        return
 
     async def resync_treasury_state(self) -> None:
         parent_coin_id: bytes32 = self.dao_info.treasury_id
@@ -1175,7 +1191,7 @@ class DAOWallet(WalletProtocol):
         # delegated_solution  ; this is not secure unless the delegated puzzle secures it
         # my_singleton_struct
 
-        inner_sol = Program.to([0, 0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
+        inner_sol = Program.to([0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
@@ -1724,6 +1740,7 @@ class DAOWallet(WalletProtocol):
                 PROPOSAL_MOD_HASH,
                 PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
                 CAT_MOD_HASH,
+                DAO_FINISHED_STATE_HASH,
                 TREASURY_MOD_HASH,
                 LOCKUP_MOD_HASH,
                 CAT_TAIL_HASH,
@@ -1893,13 +1910,11 @@ class DAOWallet(WalletProtocol):
                         xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
                         solution = Program.to(
                             [
+                                0,
                                 treasury_inner_puzhash,
                                 0,
                                 0,
                                 xch_coin.name(),
-                                0,
-                                0,
-                                xch_coin.amount,
                             ]
                         )
                         coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
@@ -2003,7 +2018,6 @@ class DAOWallet(WalletProtocol):
 
             treasury_solution = Program.to(
                 [
-                    1,
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
                     validator_solution,
                     puzzle_reveal,
@@ -2011,7 +2025,7 @@ class DAOWallet(WalletProtocol):
                 ]
             )
         else:
-            treasury_solution = Program.to([0, 0, 0, 0, 0, 0, 0])
+            treasury_solution = Program.to([0, 0, 0, 0, 0, 0])
 
         assert self.dao_info.current_treasury_coin is not None
         parent_info = self.get_parent_for_coin(self.dao_info.current_treasury_coin)
@@ -2023,7 +2037,7 @@ class DAOWallet(WalletProtocol):
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ],
-                1,
+                self.dao_info.current_treasury_coin.amount,
                 treasury_solution,
             ]
         )
@@ -2044,12 +2058,12 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, cat_spend_bundle])
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
-        # breakpoint()
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=DAO_FINISHED_STATE.get_tree_hash(),
+                to_puzzle_hash=get_finished_state_puzzle(proposal_info.proposal_id).get_tree_hash(),
                 amount=uint64(1),
                 fee_amount=fee,
                 confirmed=False,
@@ -2160,8 +2174,11 @@ class DAOWallet(WalletProtocol):
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         full_spend = None
         spends = []
+        closed_list = []
+        finished_puz = None
         for proposal_info in self.dao_info.proposals_list:
             if proposal_info.closed:
+                closed_list.append(proposal_info.proposal_id)
                 inner_solution = Program.to(
                     [
                         proposal_info.current_coin.amount,
@@ -2172,10 +2189,12 @@ class DAOWallet(WalletProtocol):
                 finished_puz = get_finished_state_puzzle(proposal_info.proposal_id)
                 cs = CoinSpend(proposal_info.current_coin, finished_puz, solution)
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
-                sb = await dao_cat_wallet.remove_active_proposal(proposal_info.proposal_id, push=False)
                 spends.append(prop_sb)
-                spends.append(sb)
 
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
+        spends.append(sb)
+        if finished_puz is None:
+            finished_puz = DAO_FINISHED_STATE  # this shouldn't happen
         if not spends:
             raise ValueError("No proposals are available for release")
 
@@ -2184,6 +2203,7 @@ class DAOWallet(WalletProtocol):
             chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -2408,12 +2428,53 @@ class DAOWallet(WalletProtocol):
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
         if singleton_id is None:
             raise ValueError("get_singleton_id_from_puzzle failed")
+        ended = False
+        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
+        current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
+
+        # check if our parent puzzle was the finished state
+        if puzzle.uncurry()[0] == DAO_FINISHED_STATE:
+            ended = True
+            index = 0
+            for current_info in new_dao_info.proposals_list:
+                # Search for current proposal_info
+                if current_info.proposal_id == singleton_id:
+                    new_proposal_info = ProposalInfo(
+                        singleton_id,
+                        puzzle,
+                        current_info.amount_voted,
+                        current_info.yes_votes,
+                        current_coin,
+                        current_innerpuz,
+                        current_info.timer_coin,
+                        block_height,
+                        current_info.passed,
+                        ended,
+                    )
+                    new_dao_info.proposals_list[index] = new_proposal_info
+                    await self.save_info(new_dao_info)
+                    future_parent = LineageProof(
+                        new_state.coin.parent_coin_info,
+                        puzzle.get_tree_hash(),
+                        uint64(new_state.coin.amount),
+                    )
+                    await self.add_parent(new_state.coin.name(), future_parent)
+                    return
+
+        # check if we are the finished state
+        if current_innerpuz == get_finished_state_puzzle(singleton_id):
+            ended = True
+
         curried_args = puzzle.uncurry()[1].as_iter()
+        # if len(puzzle.uncurry()[1].as_python()) == 2:
+        #     breakpoint()
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_HASH,
             TREASURY_MOD_HASH,
             LOCKUP_MOD_HASH,
             CAT_TAIL_HASH,
@@ -2422,32 +2483,23 @@ class DAOWallet(WalletProtocol):
             TOTAL_VOTES,  # how many people responded
             INNERPUZ,
         ) = curried_args
-        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
-        current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+
         if current_coin is None:
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
 
-        ended = False
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
             # we need to add the vote amounts from the solution to get accurate totals
             is_yes_vote = solution.at("rf").as_int()
             votes_added = solution.at("ff").as_int()
-            current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-            if current_innerpuz is None:
-                raise RuntimeError("get_new_puzzle_from_proposal_solution failed")
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
             is_yes_vote = 0
             votes_added = 0
-            current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-            if current_innerpuz == DAO_FINISHED_STATE:
-                ended = True
 
         if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
             # TODO: is this the best way of handling this?
-            # breakpoint()
             raise ValueError("this coin does not meet the minimum requirements and can be ignored")
         new_total_votes = TOTAL_VOTES.as_int() + votes_added
         if new_total_votes < self.dao_info.filter_below_vote_amount:
@@ -2738,7 +2790,7 @@ class DAOWallet(WalletProtocol):
             await self.update_treasury_info(new_state, block_height)
         elif mod == DAO_PROPOSAL_MOD:
             await self.add_or_update_proposal_info(new_state, block_height)
-        elif puzzle == DAO_FINISHED_STATE:
+        elif mod == DAO_FINISHED_STATE:
             await self.update_closed_proposal_coin(new_state, block_height)
         else:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")

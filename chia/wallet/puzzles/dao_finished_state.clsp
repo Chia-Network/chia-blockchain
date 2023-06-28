@@ -29,7 +29,7 @@
       (list ASSERT_MY_PUZZLEHASH (wrap_in_singleton SINGLETON_STRUCT my_inner_puzhash))
       (list ASSERT_MY_AMOUNT my_amount)
       (list CREATE_COIN my_inner_puzhash my_amount)
-      (list CREATE_PUZZLE_ANNOUNCEMENT 'f')
+      (list CREATE_PUZZLE_ANNOUNCEMENT 0)
     )
   )
 )
