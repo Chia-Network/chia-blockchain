@@ -58,7 +58,7 @@ for setuptools_scm/PEP 440 reasons.
 - ~~Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534~~
 - ~~Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475~~
 - ~~Fix typo and duplicate options by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15177~~
-- Fix GENEARATOR_MOD2 to have the same cost as GENERATOR_MOD ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184~~
+- Fix GENERATOR_MOD2 to have the same cost as GENERATOR_MOD ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184~~
 - Subscribe to the change children of CATs ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15176~~
 - ~~Add comment to reconsider_peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15164~~
 - offer shows network's XCH like TXCH on testnet10 (Fixes https://github.com/Chia-Network/chia-blockchain/issues/13393) (Thanks @yyolk) ~~by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15224~~
