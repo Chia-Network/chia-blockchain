@@ -739,6 +739,37 @@ def test_lockup() -> None:
     conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
 
+    new_innerpuz = Program.to("new_inner")
+    new_innerpuzhash = new_innerpuz.get_tree_hash()
+    child_lockup = DAO_LOCKUP_MOD.curry(
+        DAO_PROPOSAL_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_HASH,
+        DAO_LOCKUP_MOD_HASH,
+        DAO_FINISHED_STATE_HASH,
+        CAT_MOD_HASH,
+        CAT_TAIL,
+        previous_votes,
+        new_innerpuz,
+    ).get_tree_hash()
+    message = Program.to([0, 0, 0, my_id]).get_tree_hash()
+    spend_conds = [[51, child_lockup, lockup_coin_amount], [62, message]]
+    transfer_sol = Program.to(
+        [
+         my_id,
+         spend_conds,
+         lockup_coin_amount,
+         0,
+         [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],  # fake proposal curry vals
+         0,
+         0,
+         INNERPUZ.get_tree_hash(),
+         new_innerpuzhash,
+        ]
+    )
+    conds = full_lockup_puz.run(transfer_sol)
+    assert conds.at("rrrrfrf").as_atom() == child_lockup
+
 
 def test_proposal_innerpuz() -> None:
     proposal_pass_percentage: uint64 = uint64(5100)

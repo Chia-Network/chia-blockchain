@@ -340,7 +340,7 @@
                   DAO_FINISHED_STATE_MOD_HASH
                   CAT_MOD_HASH
                   CAT_TAIL_HASH
-                  (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES)
+                  (if new_innerpuzhash ACTIVE_VOTES (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES))
                   (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
                 )
                 my_amount
