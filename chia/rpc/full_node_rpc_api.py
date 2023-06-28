@@ -742,7 +742,7 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item.to_json_dict()}
 
-    async def get_mempool_item_by_coin_name(self, request) -> EndpointResult:
+    async def get_mempool_item_by_coin_name(self, request: Dict[str, Any]) -> EndpointResult:
         if "coin_name" not in request:
             raise ValueError("No coin_name in request")
 
