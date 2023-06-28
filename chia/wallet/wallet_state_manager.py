@@ -1185,6 +1185,8 @@ class WalletStateManager:
         coin_state: CoinState,
         coin_spend: CoinSpend,
     ) -> Optional[WalletIdentifier]:
+        if coin_state.created_height is None:
+            raise ValueError("coin_state argument to handle_dao_finished_proposals cannot have created_height of None")
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
             FINISHED_STATE_MOD_HASH,

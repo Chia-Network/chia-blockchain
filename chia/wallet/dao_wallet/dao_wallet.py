@@ -639,7 +639,7 @@ class DAOWallet(WalletProtocol):
         )
         await self.save_info(dao_info)
 
-    async def clear_finished_proposals_from_memory(self):
+    async def clear_finished_proposals_from_memory(self) -> None:
         new_list = []
         for prop_info in self.dao_info.proposals_list:
             if prop_info.closed is False or prop_info.closed is None:
@@ -2431,6 +2431,8 @@ class DAOWallet(WalletProtocol):
         ended = False
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
+        if current_coin is None:
+            raise ValueError("get_most_recent_singleton_coin_from_coin_spend failed")
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
 
         # check if our parent puzzle was the finished state
