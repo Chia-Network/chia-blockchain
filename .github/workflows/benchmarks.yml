@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    name: Benchmarks
+    name: Benchmarks (${{ matrix.repeat }})
     runs-on: benchmark
     timeout-minutes: 30
     strategy:
@@ -31,6 +31,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [ 3.9 ]
+        repeat: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 ]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
@@ -81,4 +82,4 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark tests
+          pytest -n 0 --capture no -m benchmark tests/core/data_layer/test_data_store.py::test_benchmark_batch_insert_speed
