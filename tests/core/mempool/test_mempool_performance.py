@@ -12,6 +12,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
+from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import assert_runtime
 
@@ -37,8 +38,11 @@ class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, consensus_mode: Mode
     ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run benchmarks in PLAIN mode")
+
         blocks = default_400_blocks
         full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
@@ -62,6 +66,7 @@ class TestMempoolPerformance:
         big_transaction: TransactionRecord = await wallet.generate_signed_transaction(send_amount, ph, fee_amount)
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+        assert big_transaction.spend_bundle
         await full_node_api_1.respond_transaction(
             full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
         )
