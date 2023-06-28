@@ -66,6 +66,7 @@ from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_utils import (
     get_new_puzzle_from_treasury_solution,
     match_dao_cat_puzzle,
+    match_finished_puzzle,
     match_funding_puzzle,
     match_proposal_puzzle,
     match_treasury_puzzle,
@@ -108,6 +109,7 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
     last_change_height_cs,
+    subscribe_to_coin_updates,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -716,6 +718,12 @@ class WalletStateManager:
         dao_curried_args = match_proposal_puzzle(uncurried.mod, uncurried.args)
         if (dao_curried_args is not None) and (coin_state.coin.amount != 0):
             return await self.handle_dao_proposal(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
+        # Check if the coin is a finished proposal
+        dao_curried_args = match_finished_puzzle(uncurried.mod, uncurried.args)
+        if dao_curried_args is not None:
+            return await self.handle_dao_finished_proposals(dao_curried_args, parent_coin_state, coin_state, coin_spend)
+
         # Check if the coin is a DAO CAT
         dao_cat_args = match_dao_cat_puzzle(uncurried)
         if dao_cat_args:
@@ -836,6 +844,8 @@ class WalletStateManager:
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
+                # Update incoming tx to prevent double spend and mark it is pending
+                await self.tx_store.increment_sent(incoming_tx.name, "", MempoolInclusionStatus.PENDING, None)
             except Exception as e:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
         if len(coin_spends) == 0:
@@ -867,9 +877,6 @@ class WalletStateManager:
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.add_pending_transaction(tx_record)
-        # Update incoming tx to prevent double spend and mark it is pending
-        for coin_spend in coin_spends:
-            await self.tx_store.increment_sent(coin_spend.coin.name(), "", MempoolInclusionStatus.PENDING, None)
         return [tx_record.name]
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
@@ -1153,6 +1160,7 @@ class WalletStateManager:
             PROPOSAL_MOD_HASH,
             PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
+            DAO_FINISHED_STATE_MOD_HASH,
             TREASURY_MOD_HASH,
             LOCKUP_MOD_HASH,
             CAT_TAIL_HASH,
@@ -1168,6 +1176,27 @@ class WalletStateManager:
                     assert isinstance(coin_state.created_height, int)
                     await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
                     return WalletIdentifier.create(wallet)
+        return None
+
+    async def handle_dao_finished_proposals(
+        self,
+        uncurried_args: Iterator[Program],
+        parent_coin_state: CoinState,
+        coin_state: CoinState,
+        coin_spend: CoinSpend,
+    ) -> Optional[WalletIdentifier]:
+        (
+            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
+            FINISHED_STATE_MOD_HASH,
+        ) = uncurried_args
+        proposal_id = SINGLETON_STRUCT.rest().first().as_atom()
+        for wallet in self.wallets.values():
+            if wallet.type() == WalletType.DAO:
+                assert isinstance(wallet, DAOWallet)
+                for proposal_info in wallet.dao_info.proposals_list:
+                    if proposal_info.proposal_id == proposal_id:
+                        await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
+                        return WalletIdentifier.create(wallet)
         return None
 
     async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend) -> Optional[WalletIdentifier]:
@@ -1306,7 +1335,7 @@ class WalletStateManager:
             self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
             is_recipient = True
             # For the recipient we need to manually subscribe the merkle coin
-            await self.add_interested_coin_ids([coin_state.coin.name()])
+            await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
@@ -1332,9 +1361,9 @@ class WalletStateManager:
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=False,
+                confirmed=True,
                 sent=uint32(0),
-                spend_bundle=None,
+                spend_bundle=spend_bundle,
                 additions=[coin_state.coin],
                 removals=[coin_spend.coin],
                 wallet_id=uint32(1),
@@ -1599,23 +1628,13 @@ class WalletStateManager:
                                     await self.tx_store.add_transaction_record(tx_record)
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
-                            if record.coin_type == CoinType.CLAWBACK:
-                                await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
-                            confirmed_tx_records: List[TransactionRecord] = []
+                            rem_tx_records: List[TransactionRecord] = []
                             for tx_record in all_unconfirmed:
-                                if tx_record.type in {
-                                    TransactionType.INCOMING_CLAWBACK_SEND.value,
-                                    TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
-                                }:
-                                    for add_coin in tx_record.additions:
-                                        if add_coin == coin_state.coin:
-                                            confirmed_tx_records.append(tx_record)
-                                else:
-                                    for rem_coin in tx_record.removals:
-                                        if rem_coin == coin_state.coin:
-                                            confirmed_tx_records.append(tx_record)
+                                for rem_coin in tx_record.removals:
+                                    if rem_coin == coin_state.coin:
+                                        rem_tx_records.append(tx_record)
 
-                            for tx_record in confirmed_tx_records:
+                            for tx_record in rem_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         for unconfirmed_record in all_unconfirmed:
                             for rem_coin in unconfirmed_record.removals:
