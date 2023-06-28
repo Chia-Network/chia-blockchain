@@ -49,6 +49,7 @@ P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
 DAO_UPDATE_PROPOSAL_MOD_HASH: bytes32 = DAO_UPDATE_PROPOSAL_MOD.get_tree_hash()
 DAO_CAT_EVE: Program = load_clvm("dao_cat_eve.clsp")
+P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 
 log = logging.Logger(__name__)
 
@@ -232,14 +233,14 @@ def get_spend_p2_singleton_puzzle(
         CAT_MOD_HASH,
         xch_conditions,
         asset_conditions,
-        P2_SINGLETON_MOD.curry(treasury_struct).get_tree_hash(),
+        P2_SINGLETON_MOD.curry(treasury_struct, P2_SINGLETON_AGGREGATOR_MOD).get_tree_hash(),
     )
     return puzzle
 
 
 def get_p2_singleton_puzzle(treasury_id: bytes32, asset_id: Optional[bytes32] = None) -> Program:
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
-    inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct)
+    inner_puzzle = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD)
     if asset_id:
         # CAT
         puzzle = CAT_MOD.curry(CAT_MOD_HASH, asset_id, inner_puzzle)
