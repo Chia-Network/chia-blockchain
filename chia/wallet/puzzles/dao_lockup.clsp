@@ -57,15 +57,15 @@
         (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
             (if (= (f (r (f conditions))) vote_added_puzhash)
                 (if seen_vote  ; assert we haven't already made a coin with the new vote included
-                    (x "wut")
+                    (x)
                     (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
                         (if seen_change  ; assert that we haven't already recreated ourself in some fashion
-                            (x "butt")
+                            (x)
                             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 1))
                         )
                         (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
                             (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 seen_change))
-                            (x "cut")
+                            (x)
                         )
                     )
                 )
@@ -75,20 +75,20 @@
                       (= (f (r (r (f conditions)))) (- my_amount vote_amount))
                     )  ; we recreate ourselves with unused voting power
                     (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote 1))
-                    (x "hut" (f (r (f conditions))) my_inner_puzhash vote_added_puzhash)
+                    (x)
                 )
             )
             (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
                 (if (= (f (r (f conditions))) message)
                     (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
-                    (x "jut")
+                    (x)
                 )
                 (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
             )
         )
         (if (all seen_vote seen_change)  ; check all value is accounted for
             ()
-            (x "jart")
+            (x)
         )
     )
   )
@@ -110,7 +110,7 @@
     )
     (if active_votes
         (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
-            (x "fart")
+            (x)
             (check_not_previously_voted
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
@@ -340,7 +340,7 @@
                   DAO_FINISHED_STATE_MOD_HASH
                   CAT_MOD_HASH
                   CAT_TAIL_HASH
-                  (if new_innerpuzhash ACTIVE_VOTES (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES))
+                  (if new_proposal_vote_id_or_removal_id (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES) ACTIVE_VOTES)
                   (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
                 )
                 my_amount
