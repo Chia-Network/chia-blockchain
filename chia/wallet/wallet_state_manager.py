@@ -104,7 +104,7 @@ from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
@@ -1335,7 +1335,7 @@ class WalletStateManager:
             self.log.info("Found Clawback merkle coin %s as the recipient.", coin_state.coin.name().hex())
             is_recipient = True
             # For the recipient we need to manually subscribe the merkle coin
-            await subscribe_to_coin_updates([coin_state.coin.name()], peer, uint32(0))
+            await self.add_interested_coin_ids([coin_state.coin.name()])
         if is_recipient is not None:
             spend_bundle = SpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
@@ -1361,9 +1361,9 @@ class WalletStateManager:
                 to_puzzle_hash=metadata.recipient_puzzle_hash,
                 amount=uint64(coin_state.coin.amount),
                 fee_amount=uint64(0),
-                confirmed=True,
+                confirmed=False,
                 sent=uint32(0),
-                spend_bundle=spend_bundle,
+                spend_bundle=None,
                 additions=[coin_state.coin],
                 removals=[coin_spend.coin],
                 wallet_id=uint32(1),
@@ -1628,13 +1628,21 @@ class WalletStateManager:
                                     await self.tx_store.add_transaction_record(tx_record)
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
-                            rem_tx_records: List[TransactionRecord] = []
-                            for tx_record in all_unconfirmed:
-                                for rem_coin in tx_record.removals:
-                                    if rem_coin == coin_state.coin:
-                                        rem_tx_records.append(tx_record)
+                            if record.coin_type == CoinType.CLAWBACK:
+                                await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
+                            confirmed_tx_records: List[TransactionRecord] = []
 
-                            for tx_record in rem_tx_records:
+                            for tx_record in all_unconfirmed:
+                                if tx_record.type in CLAWBACK_TRANSACTION_TYPES:
+                                    for add_coin in tx_record.additions:
+                                        if add_coin == coin_state.coin:
+                                            confirmed_tx_records.append(tx_record)
+                                else:
+                                    for rem_coin in tx_record.removals:
+                                        if rem_coin == coin_state.coin:
+                                            confirmed_tx_records.append(tx_record)
+
+                            for tx_record in confirmed_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         for unconfirmed_record in all_unconfirmed:
                             for rem_coin in unconfirmed_record.removals:
@@ -1706,7 +1714,7 @@ class WalletStateManager:
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
                                 continue
-                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):  # xxx
+                            if await self.have_a_pool_wallet_with_launched_id(child.coin.name()):
                                 continue
                             if child.spent_height is None:
                                 # TODO handle spending launcher later block
@@ -1744,7 +1752,7 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            pool_wallet = await PoolWallet.create(  # xxx TODO ctrl-f pool_wallet
+                            pool_wallet = await PoolWallet.create(
                                 self,
                                 self.main_wallet,
                                 child.coin.name(),
