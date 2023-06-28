@@ -1910,13 +1910,11 @@ class DAOWallet(WalletProtocol):
                         xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
                         solution = Program.to(
                             [
+                                0,
                                 treasury_inner_puzhash,
                                 0,
                                 0,
                                 xch_coin.name(),
-                                0,
-                                0,
-                                xch_coin.amount,
                             ]
                         )
                         coin_spends.append(CoinSpend(xch_coin, p2_singleton_puzzle, solution))
