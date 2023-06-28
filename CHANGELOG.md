@@ -9,25 +9,31 @@ for setuptools_scm/PEP 440 reasons.
 ## 1.8.2 Chia blockchain 2023-06-28
 
 ### Added
-- Add filters for get_transaction_count API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15502
-- Add CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15483
-- Add `-l` to `vcs revoke` command by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15468
-- Add DID CLI by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15065
-- Wallet: Implement `WalletCoinRecord.to_json_dict_parsed_metadata` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15108
-- Implement get_items_by_coin_ids() for the mempool by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/15069
-- Wallet: Implement `WalletNFTStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15128
-- Comment chialisp assert macro by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15189
-- Wallet: Implement `WalletCoinStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15127
-- Wallet: Implement `WalletPoolStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15126
-- Wallet: Implement `WalletPuzzleStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15125
-- Introduce Verifiable Credentials Primitive by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15059
-- Add type filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15196
-- Add notification for VC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15353
-- Wallet: Implement `/get_coin_records` RPC command by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15100
-- Add timelord_launcher to the pyinstaller.spec by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15094
-- Get_wallet_balances  by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/15367
-- Add confirmed filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15374
-- Clawback Integration by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14348
+- Add `chia wallet vcs` command for Verifiable Credential operations
+- Add `chia wallet clawback` command for clawback operations
+- Add `chia wallet did` commands `get_details`, `update_metadata`, `find_lost`, `message_spend`, `transfer`
+- Add wallet RPC `get_coin_records`
+- Add wallet RPC `get_wallet_balances`
+- Add `type_filter` to wallet RPCs `get_transaction_count` and `get_transactions` ~~API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15502~~
+- Add `confirmed` boolean to wallet RPC `get_transactions`
+- ~~Add CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15483~~
+- ~~Add `-l` to `vcs revoke` command by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15468~~
+- ~~Add DID CLI by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15065~~
+- ~~Wallet: Implement `WalletCoinRecord.to_json_dict_parsed_metadata` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15108~~
+- ~~Implement get_items_by_coin_ids() for the mempool by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/15069~~
+- ~~Wallet: Implement `WalletNFTStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15128~~
+- ~~Comment chialisp assert macro by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15189~~
+- ~~Wallet: Implement `WalletCoinStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15127~~
+- ~~Wallet: Implement `WalletPoolStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15126~~
+- ~~Wallet: Implement `WalletPuzzleStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15125~~
+- ~~Introduce Verifiable Credentials Primitive by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15059~~
+- ~~Add type filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15196~~
+- ~~Add notification for VC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15353~~
+- ~~Wallet: Implement `/get_coin_records` RPC command by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15100~~
+- ~~Add timelord_launcher to the pyinstaller.spec by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15094~~
+- ~~Get_wallet_balances  by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/15367~~
+- ~~Add confirmed filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15374~~
+- ~~Clawback Integration by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14348~~
 
 ### Changed
 - Add generator2 to the repository by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15152
