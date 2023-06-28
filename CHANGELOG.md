@@ -36,23 +36,24 @@ for setuptools_scm/PEP 440 reasons.
 - ~~Clawback Integration by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14348~~
 
 ### Changed
-- Add generator2 to the repository by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15152
-- Hint to CAT change by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15179
-- Move to Discord in docs and install scripts by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/15193
-- Fix chia wallet make_offer short-option collision on -r by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15182
-- Data_layer: Avoid redundant coin state fetching by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15212
-- Changed: output plotid when we find an invalid proof of space by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15257
-- Identical spend aggregation by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/13799
-- Improve help text for deprecated 'chia show' commands. by @notpeter in https://github.com/Chia-Network/chia-blockchain/pull/15297
-- Have simulator not rely on chia_root as originally implemented. & fix simulator tests by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15157
-- Fork infrastructure by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15299
-- Update --fee options to indicate units are in XCH by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15327
-- Wording change for fix ssl - Update ssl_check.py by @roybotbot in https://github.com/Chia-Network/chia-blockchain/pull/15358
-- Check all peers when subscribing/tracking to new DL singleton by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15427
-- cherry-pick #5423 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15626
-- bump version of chiavdf to 1.0.9 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15647
+- Identical spend aggregation ~~by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/13799~~
+- ~~Add generator2 to the repository by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15152~~
+- CAT wallet now will hint to CAT change ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15179~~
+- Move to Discord in docs and install scripts ~~by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/15193~~
+- ~~Fix chia wallet make_offer short-option collision on -r by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15182~~
+- Data_layer: Avoid redundant coin state fetching ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15212~~
+- Output plotid when we find an invalid proof of space ~~by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15257~~
+- Improve help text for deprecated 'chia show' commands. Thanks (@notpeter) ~~by @notpeter in https://github.com/Chia-Network/chia-blockchain/pull/15297~~
+- Have the simulator not rely on `chia_root` as originally implemented. ~~& fix simulator tests by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15157~~
+- Fork infrastructure ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15299~~
+- Update --fee options to indicate units are in XCH ~~by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15327~~
+- Wording change for fix ssl - Update ssl_check.py ~~by @roybotbot in https://github.com/Chia-Network/chia-blockchain/pull/15358~~
+- Check all peers when subscribing/tracking to new DL singleton ~~by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15427~~
+- ~~cherry-pick #5423 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15626~~
+- updated chiavdf to 1.0.9 by ~~@wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15647~~
 
 ### Fixed
+- Fix chia wallet make_offer short-option collision on -r (Fixes https://github.com/Chia-Network/chia-blockchain/issues/14874) (Thanks @yyolk)
 - Fix get transactions CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15541
 - Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534
 - Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475
