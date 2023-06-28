@@ -14,62 +14,34 @@ for setuptools_scm/PEP 440 reasons.
 - Add `chia wallet did` commands `get_details`, `update_metadata`, `find_lost`, `message_spend`, `transfer`
 - Add wallet RPC `get_coin_records`
 - Add wallet RPC `get_wallet_balances`
-- Add `type_filter` to wallet RPCs `get_transaction_count` and `get_transactions` ~~API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15502~~
+- Add `type_filter` to wallet RPCs `get_transaction_count` and `get_transactions`
 - Add `confirmed` boolean to wallet RPC `get_transactions`
-- ~~Add CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15483~~
-- ~~Add `-l` to `vcs revoke` command by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15468~~
-- ~~Add DID CLI by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15065~~
-- ~~Wallet: Implement `WalletCoinRecord.to_json_dict_parsed_metadata` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15108~~
-- ~~Implement get_items_by_coin_ids() for the mempool by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/15069~~
-- ~~Wallet: Implement `WalletNFTStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15128~~
-- ~~Comment chialisp assert macro by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15189~~
-- ~~Wallet: Implement `WalletCoinStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15127~~
-- ~~Wallet: Implement `WalletPoolStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15126~~
-- ~~Wallet: Implement `WalletPuzzleStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15125~~
-- ~~Introduce Verifiable Credentials Primitive by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15059~~
-- ~~Add type filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15196~~
-- ~~Add notification for VC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15353~~
-- ~~Wallet: Implement `/get_coin_records` RPC command by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15100~~
-- ~~Add timelord_launcher to the pyinstaller.spec by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15094~~
-- ~~Get_wallet_balances  by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/15367~~
-- ~~Add confirmed filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15374~~
-- ~~Clawback Integration by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14348~~
 
 ### Changed
-- Identical spend aggregation ~~by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/13799~~
-- ~~Add generator2 to the repository by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15152~~
-- CAT wallet now will hint to CAT change ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15179~~
-- Move to Discord in docs and install scripts ~~by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/15193~~
-- ~~Fix chia wallet make_offer short-option collision on -r by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15182~~
-- Data_layer: Avoid redundant coin state fetching ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15212~~
-- Output plotid when we find an invalid proof of space ~~by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15257~~
-- Improve help text for deprecated 'chia show' commands. Thanks (@notpeter) ~~by @notpeter in https://github.com/Chia-Network/chia-blockchain/pull/15297~~
-- Have the simulator not rely on `chia_root` as originally implemented. ~~& fix simulator tests by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15157~~
-- Fork infrastructure ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15299~~
-- Update --fee options to indicate units are in XCH ~~by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15327~~
-- Wording change for fix ssl - Update ssl_check.py ~~by @roybotbot in https://github.com/Chia-Network/chia-blockchain/pull/15358~~
-- Check all peers when subscribing/tracking to new DL singleton ~~by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15427~~
-- ~~cherry-pick #5423 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15626~~
-- updated chiavdf to 1.0.9 by ~~@wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15647~~
+- Identical spend aggregation
+- CAT wallet now will hint to CAT change
+- Move to Discord in docs and install scripts
+- Data_layer: Avoid redundant coin state fetching
+- Output `plotid` when we find an invalid proof of space
+- Improve help text for deprecated `chia show` commands. Thanks (@notpeter)
+- Have the simulator not rely on `chia_root` as originally implemented.
+- Fork infrastructure
+- Update `--fee` options to indicate units are in XCH
+- Made the CLI instructions for `--fix-ssl-permissions` more user friendly
+- Check all peers when subscribing/tracking to new DL singleton
+- Updated `chiavdf` to `1.0.9`
 
 ### Fixed
-- Fix chia wallet make_offer short-option collision on -r (Fixes https://github.com/Chia-Network/chia-blockchain/issues/14874) (Thanks @yyolk)
-- ~~Fix get transactions CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15541~~
-- ~~Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534~~
-- ~~Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475~~
-- ~~Fix typo and duplicate options by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15177~~
-- Fix GENERATOR_MOD2 to have the same cost as GENERATOR_MOD ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184~~
-- Subscribe to the change children of CATs ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15176~~
-- ~~Add comment to reconsider_peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15164~~
-- offer shows network's XCH like TXCH on testnet10 (Fixes https://github.com/Chia-Network/chia-blockchain/issues/13393) (Thanks @yyolk) ~~by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15224~~
-- Wallet: Move `WalletPeers` init to the end of `_start_with_fingerprint` (Fixes https://github.com/Chia-Network/chia-blockchain/issues/15142) ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15150~~
-- Wallet: Fix coin state sorting ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15124~~
-- Refactor mutiproc prevalidation ~~by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15166~~
-- ~~Pass VC fee parameter all the way through and check balances in tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15286~~
-- ~~Enable signing for PRs that have secret access by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15331~~
-- Use spendable instead of confirmed balance for offers ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15352~~
-- Remove unnecessary filtering of state_changed messages for the UI ~~by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15437~~
-- Eos challenge optimization ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15642~~
+- Fix `chia wallet make_offer` short-option collision on `-r` (Fixes #14874) (Thanks @yyolk)
+- Fix `GENERATOR_MOD2` to have the same cost as `GENERATOR_MOD`
+- Subscribe to the change children of CATs
+- Offer shows network's XCH like TXCH on `testnet10` (Fixes #13393) (Thanks @yyolk)
+- Move `WalletPeers` init to the end of `_start_with_fingerprint` (Fixes #15142)
+- Fix coin state sorting
+- Refactor mutiproc prevalidation
+- Use spendable instead of confirmed balance for offers
+- Remove unnecessary filtering of `state_changed` messages for the UI
+- End-of-slot challenge optimization
 
 ## 1.8.1 Chia blockchain 2023-05-17
 
