@@ -1994,8 +1994,6 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
-    wallet_node: WalletNode = env.wallet_1.node
-    wallet_node_2: WalletNode = env.wallet_2.node
     await generate_funds(full_node_api, env.wallet_1)
     wc = env.wallet_1.rpc_client
     await wc.create_new_did_wallet(1, 0)
@@ -2012,6 +2010,9 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
     await time_out_assert(20, wc.get_synced)
+
+    wallet_node: WalletNode = env.wallet_1.node
+    wallet_node_2: WalletNode = env.wallet_2.node
     # Test Clawback resync
     tx = await wc.send_transaction(
         wallet_id=1,
