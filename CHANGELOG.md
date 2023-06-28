@@ -54,22 +54,22 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 - Fix chia wallet make_offer short-option collision on -r (Fixes https://github.com/Chia-Network/chia-blockchain/issues/14874) (Thanks @yyolk)
-- Fix get transactions CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15541
-- Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534
-- Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475
-- Fix typo and duplicate options by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15177
-- Fix GENEARATOR_MOD2 to have the same cost as GENERATOR_MOD by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184
-- Subscribe to the change children of CATs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15176
-- Add comment to reconsider_peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15164
-- Fix #13393 offer shows network's XCH like TXCH on testnet10 by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15224
-- Wallet: Move `WalletPeers` init to the end of `_start_with_fingerprint` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15150
-- Wallet: Fix coin state sorting by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15124
-- Refactor mutiproc prevalidation by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15166
-- Pass VC fee parameter all the way through and check balances in tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15286
-- Enable signing for PRs that have secret access by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15331
-- Use spendable instead of confirmed balance for offers by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15352
-- Remove unnecessary filtering of state_changed messages for the UI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15437
-- Eos challenge optimization by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15642
+- ~~Fix get transactions CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15541~~
+- ~~Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534~~
+- ~~Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475~~
+- ~~Fix typo and duplicate options by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15177~~
+- Fix GENEARATOR_MOD2 to have the same cost as GENERATOR_MOD ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184~~
+- Subscribe to the change children of CATs ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15176~~
+- ~~Add comment to reconsider_peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15164~~
+- offer shows network's XCH like TXCH on testnet10 (Fixes https://github.com/Chia-Network/chia-blockchain/issues/13393) (Thanks @yyolk) ~~by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15224~~
+- Wallet: Move `WalletPeers` init to the end of `_start_with_fingerprint` (Fixes https://github.com/Chia-Network/chia-blockchain/issues/15142) ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15150~~
+- Wallet: Fix coin state sorting ~~by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15124~~
+- Refactor mutiproc prevalidation ~~by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15166~~
+- ~~Pass VC fee parameter all the way through and check balances in tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15286~~
+- ~~Enable signing for PRs that have secret access by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15331~~
+- Use spendable instead of confirmed balance for offers ~~by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15352~~
+- Remove unnecessary filtering of state_changed messages for the UI ~~by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15437~~
+- Eos challenge optimization ~~by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15642~~
 
 ## 1.8.1 Chia blockchain 2023-05-17
 
