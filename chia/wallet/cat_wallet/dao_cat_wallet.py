@@ -255,9 +255,7 @@ class DAOCATWallet:
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
-    async def advanced_select_coins(
-        self, amount: uint64, proposal_id: bytes32
-    ) -> List[LockedCoinInfo]:
+    async def advanced_select_coins(self, amount: uint64, proposal_id: bytes32) -> List[LockedCoinInfo]:
         coins = []
         s = 0
         for coin in self.dao_cat_info.locked_coins:

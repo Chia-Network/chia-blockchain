@@ -109,7 +109,6 @@ from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
     last_change_height_cs,
-    subscribe_to_coin_updates,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential

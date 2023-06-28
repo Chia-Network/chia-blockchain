@@ -521,7 +521,6 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
         # we are in the finished state, puzzle is the same as ever
         mod, currieds = puzzle_reveal.uncurry()  # singleton
         if mod == DAO_PROPOSAL_MOD:
-
             (
                 SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
                 PROPOSAL_MOD_HASH,

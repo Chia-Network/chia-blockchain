@@ -756,15 +756,15 @@ def test_lockup() -> None:
     spend_conds = [[51, child_lockup, lockup_coin_amount], [62, message]]
     transfer_sol = Program.to(
         [
-         my_id,
-         spend_conds,
-         lockup_coin_amount,
-         0,
-         [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],  # fake proposal curry vals
-         0,
-         0,
-         INNERPUZ.get_tree_hash(),
-         new_innerpuzhash,
+            my_id,
+            spend_conds,
+            lockup_coin_amount,
+            0,
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],  # fake proposal curry vals
+            0,
+            0,
+            INNERPUZ.get_tree_hash(),
+            new_innerpuzhash,
         ]
     )
     conds = full_lockup_puz.run(transfer_sol)
