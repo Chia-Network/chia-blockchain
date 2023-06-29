@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 from random import randrange
@@ -19,6 +20,7 @@ from chia.wallet.coin_selection import (
     select_smallest_coin_over_target,
     sum_largest_coins,
 )
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -87,7 +89,7 @@ class TestCoinSelection:
         for target_amount in coin_amounts[:100]:  # select the first 100 values
             result: Set[Coin] = await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -116,7 +118,7 @@ class TestCoinSelection:
             print("Target amount: ", target_amount)
             result: Set[Coin] = await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -136,7 +138,7 @@ class TestCoinSelection:
         for target_amount in [50000, 25000, 15000, 10000, 9000, 3000]:  # select the first 100 values
             dusty_result: Set[Coin] = await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -167,7 +169,7 @@ class TestCoinSelection:
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
             dusty_below_target: Set[Coin] = await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 new_coin_list,
                 {},
                 logging.getLogger("test"),
@@ -198,7 +200,7 @@ class TestCoinSelection:
         for target_amount in [50000, 10001, 10000, 9999]:
             dusty_below_target: Set[Coin] = await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 new_coin_list,
                 {},
                 logging.getLogger("test"),
@@ -224,7 +226,7 @@ class TestCoinSelection:
             for target_amount in [10000, 9999]:
                 await select_coins(
                     spendable_amount,
-                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                    DEFAULT_COIN_SELECTION_CONFIG,
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -235,7 +237,7 @@ class TestCoinSelection:
             for target_amount in [10001, 20000]:
                 await select_coins(
                     spendable_amount,
-                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                    DEFAULT_COIN_SELECTION_CONFIG,
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -255,7 +257,7 @@ class TestCoinSelection:
         target_amount = uint128(40)
         exact_match_result: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -269,7 +271,7 @@ class TestCoinSelection:
         target_amount = uint128(153)
         match_2: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -282,7 +284,7 @@ class TestCoinSelection:
         target_amount = uint128(541)
         match_3: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -296,7 +298,7 @@ class TestCoinSelection:
         target_amount = spendable_amount
         match_all: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -316,7 +318,7 @@ class TestCoinSelection:
         target_amount = uint128(625)
         smallest_result: Set[Coin] = await select_coins(
             greater_spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -334,7 +336,7 @@ class TestCoinSelection:
         target_amount = uint128(50000)
         single_greater_result: Set[Coin] = await select_coins(
             single_greater_spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             single_greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -354,7 +356,7 @@ class TestCoinSelection:
         target_amount = uint128(70000)
         multiple_greater_result: Set[Coin] = await select_coins(
             multiple_greater_spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             multiple_greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -384,7 +386,7 @@ class TestCoinSelection:
         target_amount = spendable_amount - 1
         result: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -450,12 +452,11 @@ class TestCoinSelection:
             for min_coin_amount in [10, 100, 200, 300, 1000]:
                 result: Set[Coin] = await select_coins(
                     spendable_amount,
-                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                    dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, min_coin_amount=uint64(min_coin_amount)),
                     coin_list,
                     {},
                     logging.getLogger("test"),
                     uint128(target_amount),
-                    min_coin_amount=uint64(min_coin_amount),
                 )
                 assert result is not None  # this should never happen
                 assert sum(coin.amount for coin in result) >= target_amount
@@ -483,12 +484,11 @@ class TestCoinSelection:
         # test that excluded coins are not included in the result
         selected_coins: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_coins]),
             spendable_wallet_coin_records,
             {},
             logging.getLogger("test"),
             amount=target_amount,
-            exclude=excluded_coins,
         )
 
         assert selected_coins is not None
@@ -501,12 +501,13 @@ class TestCoinSelection:
         with pytest.raises(ValueError):
             await select_coins(
                 spendable_amount,
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                dataclasses.replace(
+                    DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_all_coins]
+                ),
                 spendable_wallet_coin_records,
                 {},
                 logging.getLogger("test"),
                 amount=target_amount,
-                exclude=excluded_all_coins,
             )
 
     @pytest.mark.asyncio
@@ -522,7 +523,7 @@ class TestCoinSelection:
         target_amount = uint128(0)
         zero_amount_result: Set[Coin] = await select_coins(
             spendable_amount,
-            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            DEFAULT_COIN_SELECTION_CONFIG,
             coin_list,
             {},
             logging.getLogger("test"),
@@ -535,7 +536,7 @@ class TestCoinSelection:
         with pytest.raises(ValueError):
             await select_coins(
                 uint128(0),
-                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                DEFAULT_COIN_SELECTION_CONFIG,
                 [],
                 {},
                 logging.getLogger("test"),

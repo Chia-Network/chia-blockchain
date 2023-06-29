@@ -63,7 +63,7 @@ def list_cmd(
     min_amount: str,
     max_amount: str,
     coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[int],
+    amounts_to_exclude: Sequence[str],
     paginate: Optional[bool],
 ) -> None:
     from .coin_funcs import async_list

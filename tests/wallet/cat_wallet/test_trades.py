@@ -27,6 +27,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 
 buffer_blocks = 4
 
@@ -76,16 +77,26 @@ class TestCATTrades:
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
+        tx_config: TXConfig = dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=reuse_puzhash)
+
         # Create two new CATs, one in each wallet
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                tx_config,
             )
             await asyncio.sleep(1)
 
         async with wallet_node_taker.wallet_state_manager.lock:
             new_cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_taker.wallet_state_manager, wallet_taker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_taker.wallet_state_manager,
+                wallet_taker,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                tx_config,
             )
             await asyncio.sleep(1)
 
@@ -177,7 +188,7 @@ class TestCATTrades:
         else:
             # chia_for_cat
             success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                chia_for_cat, fee=uint64(1), reuse_puzhash=reuse_puzhash
+                chia_for_cat, tx_config, fee=uint64(1)
             )
             await asyncio.sleep(1)
             assert error is None
@@ -188,8 +199,8 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            tx_config,
             fee=uint64(1),
-            reuse_puzhash=reuse_puzhash,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -285,7 +296,7 @@ class TestCATTrades:
                 )
             await trade_manager_maker.save_trade(*create_tr_for_offer(old_maker_offer))
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, tx_config)
             assert error is None
             assert success is True
             assert trade_make is not None
@@ -293,6 +304,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            tx_config,
         )
         assert trade_take is not None
         assert tx_records is not None
@@ -349,9 +361,7 @@ class TestCATTrades:
                 )
             await trade_manager_maker.save_trade(*create_tr_for_offer(old_maker_offer))
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                cat_for_cat, reuse_puzhash=reuse_puzhash
-            )
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat, tx_config)
             await asyncio.sleep(1)
             assert error is None
             assert success is True
@@ -359,7 +369,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
-            reuse_puzhash=reuse_puzhash,
+            tx_config,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -443,6 +453,7 @@ class TestCATTrades:
         else:
             success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
                 chia_for_multiple_cat,
+                tx_config,
                 driver_dict=driver_dict,
             )
             await asyncio.sleep(1)
@@ -453,6 +464,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            tx_config,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -502,7 +514,7 @@ class TestCATTrades:
             await trade_manager_maker.save_trade(*create_tr_for_offer(old_maker_offer))
         else:
             success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                multiple_cat_for_chia,
+                multiple_cat_for_chia, tx_config
             )
             await asyncio.sleep(1)
             assert error is None
@@ -511,6 +523,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            tx_config,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -559,9 +572,7 @@ class TestCATTrades:
                 )
             await trade_manager_maker.save_trade(*create_tr_for_offer(old_maker_offer))
         else:
-            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-                chia_and_cat_for_cat,
-            )
+            success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_and_cat_for_cat, tx_config)
             await asyncio.sleep(1)
             assert error is None
             assert success is True
@@ -570,6 +581,7 @@ class TestCATTrades:
         trade_take, tx_records = await trade_manager_taker.respond_to_offer(
             old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
             peer,
+            tx_config,
         )
         await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert trade_take is not None
@@ -625,7 +637,11 @@ class TestCATTrades:
 
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                xch_to_cat_amount,
+                DEFAULT_TX_CONFIG,
             )
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -654,7 +670,7 @@ class TestCATTrades:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, DEFAULT_TX_CONFIG)
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -682,7 +698,7 @@ class TestCATTrades:
 
         fee = uint64(2_000_000_000_000)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=fee)
+        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, DEFAULT_TX_CONFIG, fee=fee)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -705,10 +721,10 @@ class TestCATTrades:
 
         peer = wallet_node_taker.get_full_node_peer()
         with pytest.raises(ValueError, match="This offer is no longer valid"):
-            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
+            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG)
 
         # Now we're going to create the other way around for test coverage sake
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -718,9 +734,11 @@ class TestCATTrades:
             ValueError,
             match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
         ):
-            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
+            await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
+        txs = await trade_manager_maker.cancel_pending_offer_safely(
+            trade_make.trade_id, DEFAULT_TX_CONFIG, fee=uint64(0)
+        )
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -739,7 +757,11 @@ class TestCATTrades:
 
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                xch_to_cat_amount,
+                DEFAULT_TX_CONFIG,
             )
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -762,12 +784,14 @@ class TestCATTrades:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
         assert trade_make is not None
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
+        txs = await trade_manager_maker.cancel_pending_offer_safely(
+            trade_make.trade_id, DEFAULT_TX_CONFIG, fee=uint64(0)
+        )
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -786,7 +810,11 @@ class TestCATTrades:
 
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                xch_to_cat_amount,
+                DEFAULT_TX_CONFIG,
             )
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -813,20 +841,20 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
         assert trade_make is not None
         peer = wallet_node_taker.get_full_node_peer()
         offer = Offer.from_bytes(trade_make.offer)
-        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
         # we shouldn't be able to respond to a duplicate offer
         with pytest.raises(ValueError):
-            await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+            await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
         # pushing into mempool while already in it should fail
-        tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, fee=uint64(10))
+        tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
         assert await trade_manager_trader.get_coins_of_interest()
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
@@ -844,7 +872,11 @@ class TestCATTrades:
 
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                xch_to_cat_amount,
+                DEFAULT_TX_CONFIG,
             )
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -870,7 +902,7 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
@@ -879,7 +911,7 @@ class TestCATTrades:
         offer = Offer.from_bytes(trade_make.offer)
         bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
         offer = dataclasses.replace(offer, _bundle=bundle)
-        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
+        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
         wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
         for _ in range(10):
             print(await wallet_node_taker._resend_queue())
@@ -899,7 +931,11 @@ class TestCATTrades:
 
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
+                wallet_node_maker.wallet_state_manager,
+                wallet_maker,
+                {"identifier": "genesis_by_id"},
+                xch_to_cat_amount,
+                DEFAULT_TX_CONFIG,
             )
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -925,13 +961,15 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
         assert trade_make is not None
         peer = wallet_node_taker.get_full_node_peer()
         offer = Offer.from_bytes(trade_make.offer)
-        tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(1000000000000))
+        tr1, txs1 = await trade_manager_taker.respond_to_offer(
+            offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1000000000000)
+        )
         await full_node.process_transaction_records(records=txs1)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)

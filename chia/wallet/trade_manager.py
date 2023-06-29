@@ -30,6 +30,7 @@ from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -221,7 +222,7 @@ class TradeManager:
         self.wallet_state_manager.state_changed("offer_failed")
 
     async def cancel_pending_offer_safely(
-        self, trade_id: bytes32, fee: uint64 = uint64(0)
+        self, trade_id: bytes32, tx_config: TXConfig, fee: uint64 = uint64(0)
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
         self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
@@ -246,7 +247,10 @@ class TradeManager:
                 if fee_to_pay > coin.amount:
                     selected_coins: Set[Coin] = await wallet.select_coins(
                         uint64(fee_to_pay - coin.amount),
-                        exclude=[coin],
+                        dataclasses.replace(
+                            tx_config.coin_selection_config,
+                            exculded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
+                        ),
                     )
                     selected_coins.add(coin)
                 else:
@@ -254,6 +258,12 @@ class TradeManager:
                 tx = await wallet.generate_signed_transaction(
                     uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                     new_ph,
+                    dataclasses.replace(
+                        tx_config,
+                        coin_selection_config=dataclasses.replace(
+                            tx_config.coin_selection_config, excluded_coin_ids=[]
+                        ),
+                    ),
                     fee=fee_to_pay,
                     coins=selected_coins,
                     ignore_max_send_amount=True,
@@ -262,7 +272,17 @@ class TradeManager:
             else:
                 # ATTENTION: new_wallets
                 txs = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    [coin.amount],
+                    [new_ph],
+                    dataclasses.replace(
+                        tx_config,
+                        coin_selection_config=dataclasses.replace(
+                            tx_config.coin_selection_config, excluded_coin_ids=[]
+                        ),
+                    ),
+                    fee=fee_to_pay,
+                    coins={coin},
+                    ignore_max_send_amount=True,
                 )
                 all_txs.extend(txs)
             fee_to_pay = uint64(0)
@@ -297,7 +317,7 @@ class TradeManager:
         return all_txs
 
     async def cancel_pending_offers(
-        self, trades: List[TradeRecord], fee: uint64 = uint64(0), secure: bool = True
+        self, trades: List[TradeRecord], tx_config: TXConfig, fee: uint64 = uint64(0), secure: bool = True
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
 
@@ -325,7 +345,10 @@ class TradeManager:
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
-                            exclude=[coin],
+                            dataclasses.replace(
+                                tx_config.coin_selection_config,
+                                exculded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
+                            ),
                         )
                         selected_coins.add(coin)
                     else:
@@ -333,6 +356,12 @@ class TradeManager:
                     tx: TransactionRecord = await wallet.generate_signed_transaction(
                         uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                         new_ph,
+                        dataclasses.replace(
+                            tx_config,
+                            coin_selection_config=dataclasses.replace(
+                                tx_config.coin_selection_config, excluded_coin_ids=[]
+                            ),
+                        ),
                         fee=fee_to_pay,
                         coins=selected_coins,
                         ignore_max_send_amount=True,
@@ -343,7 +372,17 @@ class TradeManager:
                 else:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
-                        [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                        [coin.amount],
+                        [new_ph],
+                        dataclasses.replace(
+                            tx_config,
+                            coin_selection_config=dataclasses.replace(
+                                tx_config.coin_selection_config, excluded_coin_ids=[]
+                            ),
+                        ),
+                        fee=fee_to_pay,
+                        coins={coin},
+                        ignore_max_send_amount=True,
                     )
                     for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
@@ -406,13 +445,11 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
+        tx_config: TXConfig,
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
@@ -420,12 +457,10 @@ class TradeManager:
             solver = Solver({})
         result = await self._create_offer_for_ids(
             offer,
+            tx_config,
             driver_dict,
             solver,
             fee=fee,
-            min_coin_amount=min_coin_amount,
-            max_coin_amount=max_coin_amount,
-            reuse_puzhash=reuse_puzhash,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -455,13 +490,11 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
+        tx_config: TXConfig,
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
         old: bool = False,
-        reuse_puzhash: Optional[bool] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -470,14 +503,6 @@ class TradeManager:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
-        if reuse_puzhash is None:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
-                )
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -492,7 +517,7 @@ class TradeManager:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
-                        p2_ph: bytes32 = await wallet.get_puzzle_hash(new=not reuse_puzhash)
+                        p2_ph: bytes32 = await wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
                         if wallet.type() != WalletType.STANDARD_WALLET:
                             if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
                                 asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
@@ -502,7 +527,9 @@ class TradeManager:
                                     f"Cannot request assets from wallet id {wallet.id()} without more information"
                                 )
                     else:
-                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(new=not reuse_puzhash)
+                        p2_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(
+                            new=not tx_config.reuse_puzhash
+                        )
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                         memos = [p2_ph]
@@ -529,7 +556,7 @@ class TradeManager:
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         amount_to_select += fee
                     coins_to_offer[id] = await wallet.get_coins_to_offer(
-                        asset_id, uint64(amount_to_select), min_coin_amount, max_coin_amount
+                        asset_id, uint64(amount_to_select), tx_config.coin_selection_config
                     )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -554,7 +581,7 @@ class TradeManager:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints, driver_dict, solver, fee, min_coin_amount, max_coin_amount, old
+                offer_dict_no_ints, driver_dict, tx_config, solver, fee, old
             )
 
             if potential_special_offer is not None:
@@ -581,10 +608,10 @@ class TradeManager:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
                         OFFER_MOD_OLD_HASH if old else Offer.ph(),
+                        tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
-                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -595,10 +622,10 @@ class TradeManager:
                         # [abs(offer_dict[id])],
                         amounts,
                         [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
-                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
                 else:
@@ -606,10 +633,10 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[id])],
                         [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
-                        reuse_puzhash=reuse_puzhash,
                     )
                     all_transactions.extend(txs)
 
@@ -744,11 +771,9 @@ class TradeManager:
         self,
         offer: Offer,
         peer: WSChiaConnection,
+        tx_config: TXConfig,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-        reuse_puzhash: Optional[bool] = None,
     ) -> Tuple[TradeRecord, List[TransactionRecord]]:
         if solver is None:
             solver = Solver({})
@@ -776,13 +801,11 @@ class TradeManager:
             raise ValueError("This offer is no longer valid")
         result = await self._create_offer_for_ids(
             take_offer_dict,
+            tx_config,
             offer.driver_dict,
             solver,
             fee=fee,
-            min_coin_amount=min_coin_amount,
-            max_coin_amount=max_coin_amount,
             old=offer.old,
-            reuse_puzhash=reuse_puzhash,
         )
         if not result[0] or result[1] is None:
             raise ValueError(result[2])
@@ -842,10 +865,9 @@ class TradeManager:
         self,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
+        tx_config: TXConfig,
         solver: Solver,
         fee: uint64 = uint64(0),
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
         old: bool = False,
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
@@ -856,7 +878,7 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, fee, min_coin_amount, max_coin_amount, old
+                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee, old
                 )
             elif (
                 puzzle_info.check_type(
@@ -868,7 +890,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee, old
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee, old
                 )
         return None
 

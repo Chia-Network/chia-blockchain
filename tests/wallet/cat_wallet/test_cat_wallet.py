@@ -32,6 +32,7 @@ from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
@@ -913,7 +914,7 @@ class TestCATWallet:
         cat_amount_0 = uint64(100)
         cat_amount_1 = uint64(5)
 
-        tx = await client_0.send_transaction(1, cat_amount_0, addr)
+        tx = await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)
         spend_bundle = tx.spend_bundle
         assert spend_bundle is not None
 

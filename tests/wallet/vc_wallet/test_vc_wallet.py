@@ -12,6 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 
@@ -86,6 +87,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     proof_root: bytes32 = proofs.root()
     txs = await client_0.vc_spend(
         vc_record.vc.launcher_id,
+        DEFAULT_TX_CONFIG,
         new_proof_hash=proof_root,
         fee=uint64(100),
     )
@@ -99,7 +101,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    txs = await client_0.vc_spend(vc_record.vc.launcher_id)
+    txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -128,7 +130,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
 
     # Revoke VC
-    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, uint64(1))
+    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
     confirmed_balance -= 1
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
