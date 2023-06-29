@@ -348,7 +348,7 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
 
 @pytest.mark.asyncio
-async def test_get_plot_filer_info(default_1000_blocks, tmp_dir: Path, db_version: int, bt: BlockTools):
+async def test_get_plot_filer_info(default_1000_blocks, tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
     assert sqlite3.threadsafety >= 1
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
@@ -381,9 +381,10 @@ async def test_get_plot_filer_info(default_1000_blocks, tmp_dir: Path, db_versio
                 assert block_record.pos_ss_cc_challenge_hash == full_b.reward_chain_block.pos_ss_cc_challenge_hash
                 assert block_record.cc_sp_hash == expected_cc_sp
 
-            block_record = await store.get_block_record(block.header_hash)
-            assert block_record.pos_ss_cc_challenge_hash == block.reward_chain_block.pos_ss_cc_challenge_hash
-            assert block_record.cc_sp_hash == expected_cc_sp_hashes[-1]
+            opt_block_record = await store.get_block_record(block.header_hash)
+            assert opt_block_record is not None
+            assert opt_block_record.pos_ss_cc_challenge_hash == block.reward_chain_block.pos_ss_cc_challenge_hash
+            assert opt_block_record.cc_sp_hash == expected_cc_sp_hashes[-1]
 
             block_records_dict = await store.get_block_records_in_range(max(0, block.height - 4), block.height)
             for full_b, expected_cc_sp in zip(blocks, expected_cc_sp_hashes):
