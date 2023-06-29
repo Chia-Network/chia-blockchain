@@ -3,14 +3,15 @@ from __future__ import annotations
 import itertools
 import logging
 import re
+import sqlite3
 import statistics
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, Type
 
 import pytest
 
-from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import FileDownloadError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -1234,6 +1235,39 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         current_root = await data_store.get_tree_root(tree_id=tree_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
+
+
+@pytest.mark.parametrize(
+    argnames=["test_bytes", "exception", "exception_string"],
+    argvalues=[
+        [b"\x00\x00\x00", FileDownloadError, "Incomplete read of length"],
+        [b"\x00\x00\x00\x01", FileDownloadError, "Incomplete read of blob"],
+        [
+            b"\x00\x00\x00\x0b\x01\x00\x00\x00\x012\x00\x00\x00\x012",
+            sqlite3.IntegrityError,
+            "FOREIGN KEY constraint failed",
+        ],
+        [b"\x00\x00\x00\x01\0x01", AssertionError, ""],
+    ],
+    ids=["bad file length", "bad blob length", "integrity error", "bad node serialization"],
+)
+@pytest.mark.asyncio
+async def test_unreadable_files(
+    data_store: DataStore,
+    tree_id: bytes32,
+    tmp_path: Path,
+    test_bytes: bytes,
+    exception: Type[Exception],
+    exception_string: str,
+) -> None:
+    fake_file = tmp_path.joinpath("fake.dat")
+    with open(fake_file, "wb") as binary_file:
+        binary_file.write(test_bytes)
+
+    fake_root_hash = bytes32.from_hexstr("7e2ce962061b5b4d17abba02468ebb39e1382ad21ffb12ed18b95e32f5d07dc2")
+
+    with pytest.raises(exception, match=exception_string):
+        await insert_into_data_store_from_file(data_store, tree_id, fake_root_hash, fake_file)
 
 
 @pytest.mark.asyncio

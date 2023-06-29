@@ -9,6 +9,10 @@ class IntegrityError(Exception):
     pass
 
 
+class FileDownloadError(Exception):
+    pass
+
+
 def build_message_with_hashes(message: str, bytes_objects: Iterable[bytes]) -> str:
     return "\n".join([message, *[f"    {b.hex()}" for b in bytes_objects]])
 

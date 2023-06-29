@@ -11,6 +11,7 @@ from typing import List, Optional
 import aiohttp
 from typing_extensions import Literal
 
+from chia.data_layer.data_layer_errors import FileDownloadError
 from chia.data_layer.data_layer_util import NodeType, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -65,7 +66,8 @@ async def insert_into_data_store_from_file(
                 cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
                     if size_to_read < 4:
-                        raise Exception("Incomplete read of length.")
+                        # Treat as download error instead of integrity error
+                        raise FileDownloadError("Incomplete read of length.")
                     break
                 chunk += cur_chunk
             if chunk == b"":
@@ -77,7 +79,8 @@ async def insert_into_data_store_from_file(
                 size_to_read = size - len(serialize_nodes_bytes)
                 cur_chunk = reader.read(size_to_read)
                 if cur_chunk is None or cur_chunk == b"":
-                    raise Exception("Incomplete read of blob.")
+                    # Treat as download error instead of integrity error
+                    raise FileDownloadError("Incomplete read of blob.")
                 serialize_nodes_bytes += cur_chunk
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
@@ -155,7 +158,8 @@ async def insert_from_delta_file(
         if downloader is None:
             # use http downloader
             if not await http_download(client_foldername, filename, proxy_url, server_info, timeout, log):
-                break
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
+                return False
         else:
             log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
             async with aiohttp.ClientSession() as session:
@@ -163,7 +167,8 @@ async def insert_from_delta_file(
                     res_json = await response.json()
                     if not res_json["downloaded"]:
                         log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")
-                        break
+                        await data_store.server_misses_file(tree_id, server_info, timestamp)
+                        return False
 
         log.info(f"Successfully downloaded delta file {filename}.")
         try:
@@ -188,10 +193,13 @@ async def insert_from_delta_file(
             await data_store.received_correct_file(tree_id, server_info)
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except Exception as e:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
-            await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+            if isinstance(e, FileDownloadError):
+                await data_store.server_misses_file(tree_id, server_info, timestamp)
+            else:
+                await data_store.received_incorrect_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 
