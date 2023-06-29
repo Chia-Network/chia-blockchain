@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
 import pytest
+from aiohttp.web_ws import WebSocketResponse
 
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
@@ -59,14 +60,27 @@ class Daemon:
     services: Dict[str, Union[List[Service], Service]]
     connections: Dict[str, Optional[List[Any]]]
 
+    def get_command_mapping(self) -> Dict[str, Any]:
+        return {
+            "get_routes": None,
+            "example_one": None,
+            "example_two": None,
+            "example_three": None,
+        }
+
     def is_service_running(self, service_name: str) -> bool:
         return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
 
-    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.running_services(cast(WebSocketServer, self), request)
+    async def running_services(self) -> Dict[str, Any]:
+        return await WebSocketServer.running_services(cast(WebSocketServer, self))
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.is_running(cast(WebSocketServer, self), request)
+
+    async def get_routes(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.get_routes(
+            cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
+        )
 
 
 test_key_data = KeyData.from_mnemonic(
@@ -392,14 +406,14 @@ def test_is_service_running_with_services_and_connections(
 @pytest.mark.asyncio
 async def test_running_services_no_services(mock_lonely_daemon):
     daemon = mock_lonely_daemon
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(response, {"success": True, "running_services": []})
 
 
 @pytest.mark.asyncio
 async def test_running_services_with_services(mock_daemon_with_services):
     daemon = mock_daemon_with_services
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(
         response, {"success": True, "running_services": ["my_refrigerator", "the_river", service_plotter]}
     )
@@ -408,10 +422,20 @@ async def test_running_services_with_services(mock_daemon_with_services):
 @pytest.mark.asyncio
 async def test_running_services_with_services_and_connections(mock_daemon_with_services_and_connections):
     daemon = mock_daemon_with_services_and_connections
-    response = await daemon.running_services({})
+    response = await daemon.running_services()
     assert_running_services_response(
         response, {"success": True, "running_services": ["my_refrigerator", "apple", "banana", service_plotter]}
     )
+
+
+@pytest.mark.asyncio
+async def test_get_routes(mock_lonely_daemon):
+    daemon = mock_lonely_daemon
+    response = await daemon.get_routes({})
+    assert response == {
+        "success": True,
+        "routes": ["get_routes", "example_one", "example_two", "example_three"],
+    }
 
 
 @pytest.mark.asyncio

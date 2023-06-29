@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from chia_rs import compute_merkle_set_root
 
@@ -318,7 +318,7 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
-def sort_coin_states(coin_states: List[CoinState]) -> List[CoinState]:
+def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
     return sorted(
         coin_states,
         key=lambda coin_state: (
