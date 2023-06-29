@@ -106,7 +106,7 @@ class VCWallet:
             return  # pragma: no cover
         try:
             vc = VerifiedCredential.get_next_from_coin_spend(cs)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             self.log.debug(
                 f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}"
             )
