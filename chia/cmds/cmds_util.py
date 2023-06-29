@@ -4,7 +4,7 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiohttp import ClientConnectorError
 
@@ -221,15 +221,3 @@ async def get_wallet_client(
                 yield None, 0, config
             else:
                 yield wallet_client, new_fp, config
-
-
-async def execute_with_wallet(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    extra_params: Dict[str, Any],
-    function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
-) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, new_fp, _):
-        if wallet_client is None:
-            return None
-        await function(extra_params, wallet_client, new_fp)
