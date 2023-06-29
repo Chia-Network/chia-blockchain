@@ -574,7 +574,9 @@ class WebSocketServer:
         non_observer_derivation = request.get("non_observer_derivation", False)
 
         # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
-        if fingerprints is not None:
+        if fingerprints is None:
+            keys = all_keys
+        else:
             keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
             keys = []
             missing_fingerprints = set()
@@ -586,8 +588,6 @@ class WebSocketServer:
 
             if len(keys) != len(fingerprints):
                 return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
-        else:
-            keys = all_keys
 
         selected = self.net_config["selected_network"]
         prefix = self.net_config["network_overrides"]["config"][selected]["address_prefix"]
