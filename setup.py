@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
@@ -90,47 +90,7 @@ kwargs = dict(
         upnp=upnp_dependencies,
         legacy_keyring=legacy_keyring_dependencies,
     ),
-    packages=[
-        "build_scripts",
-        "chia",
-        "chia.cmds",
-        "chia.clvm",
-        "chia.consensus",
-        "chia.daemon",
-        "chia.data_layer",
-        "chia.full_node",
-        "chia.timelord",
-        "chia.farmer",
-        "chia.harvester",
-        "chia.introducer",
-        "chia.plot_sync",
-        "chia.plotters",
-        "chia.plotting",
-        "chia.pools",
-        "chia.protocols",
-        "chia.rpc",
-        "chia.seeder",
-        "chia.server",
-        "chia.simulator",
-        "chia.types.blockchain_format",
-        "chia.types",
-        "chia.util",
-        "chia.wallet",
-        "chia.wallet.db_wallet",
-        "chia.wallet.puzzles",
-        "chia.wallet.puzzles.clawback",
-        "chia.wallet.puzzles.prefarm",
-        "chia.wallet.cat_wallet",
-        "chia.wallet.did_wallet",
-        "chia.wallet.nft_wallet",
-        "chia.wallet.trading",
-        "chia.wallet.util",
-        "chia.wallet.vc_wallet",
-        "chia.wallet.vc_wallet.vc_puzzles",
-        "chia.wallet.vc_wallet.cr_puzzles",
-        "chia.ssl",
-        "mozilla-ca",
-    ],
+    packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
     entry_points={
         "console_scripts": [
             "chia = chia.cmds.chia:main",
