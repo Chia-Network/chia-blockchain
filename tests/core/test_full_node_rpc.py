@@ -455,13 +455,8 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             for block in blocks:
-                if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
-                    finished_ss = block.finished_sub_slots[:-1]
-                else:
-                    finished_ss = block.finished_sub_slots
-
                 unf = UnfinishedBlock(
-                    finished_ss,
+                    block.finished_sub_slots,
                     block.reward_chain_block.get_unfinished(),
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
@@ -538,13 +533,8 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             for block in blocks:
-                if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
-                    finished_ss = block.finished_sub_slots[:-1]
-                else:
-                    finished_ss = block.finished_sub_slots
-
                 unf = UnfinishedBlock(
-                    finished_ss,
+                    block.finished_sub_slots,
                     block.reward_chain_block.get_unfinished(),
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
@@ -593,6 +583,29 @@ class TestRpc:
             spend_bundle = SpendBundle.from_json_dict(mempool_item["spend_bundle"])
             assert coin_to_spend.name() in [cs.coin.name() for cs in spend_bundle.coin_spends]
 
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_not_in_request(self, one_node, empty_blockchain):
+        full_node_services, _, bt = one_node
+        full_node_service = full_node_services[0]
+
+        config = bt.config
+        self_hostname = config["self_hostname"]
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+            with pytest.raises(ValueError) as exc_info:
+                await client.fetch("get_mempool_item_by_coin_name", {})
+            assert "No coin_name in request" in str(exc_info.value)
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
