@@ -348,7 +348,9 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
 
 @pytest.mark.asyncio
-async def test_get_plot_filer_info(default_1000_blocks, tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
+async def test_get_plot_filer_info(
+    default_1000_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools
+) -> None:
     assert sqlite3.threadsafety >= 1
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
