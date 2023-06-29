@@ -2777,7 +2777,7 @@ class DAOWallet(WalletProtocol):
             # TODO: Add check for pending transaction on our behalf in here
             # if we have pending transaction that is now invalidated, then:
             # check if we should auto re-create spend or flash error to use (should we have a failed tx db?)
-            await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
+            await self.wallet_state_manager.singleton_store.add_spend(self.id(), new_state, block_height)
 
         # Consume new DAOBlockchainInfo
         # Determine if this is a treasury spend or a proposal spend
