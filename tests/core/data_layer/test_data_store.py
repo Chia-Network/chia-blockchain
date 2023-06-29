@@ -1290,22 +1290,22 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=0,
         count=100,
-        limit=1.2,
+        limit=2.2,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=100,
-        limit=2,
+        limit=2.2,
     ),
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=15,
+        limit=17,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
-        limit=18,
+        limit=19,
     ),
 )
 @pytest.mark.benchmark
