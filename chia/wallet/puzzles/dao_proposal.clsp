@@ -183,51 +183,53 @@
       my_amount
     )
     (if coin_id_list
-        (c
-          (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
+        (assert (> (f vote_amount_list) 0)
           (c
-            (list
-              ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
-              (sha256
-                (wrap_in_cat_layer
-                  CAT_MOD_HASH
-                  CAT_TAIL_HASH
-                  (calculate_lockup_puzzlehash  ; because the message comes from
-                    PROPOSAL_MOD_HASH
-                    (f SINGLETON_STRUCT)
-                    (r (r SINGLETON_STRUCT))
-                    LOCKUP_MOD_HASH
-                    DAO_FINISHED_STATE_MOD_HASH
+            (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
+            (c
+              (list
+                ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
+                (sha256
+                  (wrap_in_cat_layer
                     CAT_MOD_HASH
                     CAT_TAIL_HASH
-                    (f previous_votes)
-                    (f lockup_innerpuzhashes)
+                    (calculate_lockup_puzzlehash  ; because the message comes from
+                      PROPOSAL_MOD_HASH
+                      (f SINGLETON_STRUCT)
+                      (r (r SINGLETON_STRUCT))
+                      LOCKUP_MOD_HASH
+                      DAO_FINISHED_STATE_MOD_HASH
+                      CAT_MOD_HASH
+                      CAT_TAIL_HASH
+                      (f previous_votes)
+                      (f lockup_innerpuzhashes)
+                    )
                   )
+                  (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
                 )
-                (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
               )
-            )
-            (loop_over_vote_coins
-              SINGLETON_STRUCT
-              CAT_MOD_HASH
-              CAT_TAIL_HASH
-              PROPOSAL_MOD_HASH
-              PROPOSAL_TIMER_MOD_HASH
-              TREASURY_MOD_HASH
-              LOCKUP_MOD_HASH
-              DAO_FINISHED_STATE_MOD_HASH
-              TREASURY_ID
-              YES_VOTES
-              TOTAL_VOTES
-              PROPOSED_PUZ_HASH
-              (r coin_id_list)
-              (r vote_amount_list)
-              (r previous_votes)
-              (r lockup_innerpuzhashes)
-              vote_info
-              (+ (f vote_amount_list) sum)
-              output
-              my_amount
+              (loop_over_vote_coins
+                SINGLETON_STRUCT
+                CAT_MOD_HASH
+                CAT_TAIL_HASH
+                PROPOSAL_MOD_HASH
+                PROPOSAL_TIMER_MOD_HASH
+                TREASURY_MOD_HASH
+                LOCKUP_MOD_HASH
+                DAO_FINISHED_STATE_MOD_HASH
+                TREASURY_ID
+                YES_VOTES
+                TOTAL_VOTES
+                PROPOSED_PUZ_HASH
+                (r coin_id_list)
+                (r vote_amount_list)
+                (r previous_votes)
+                (r lockup_innerpuzhashes)
+                vote_info
+                (+ (f vote_amount_list) sum)
+                output
+                my_amount
+              )
             )
           )
         )
