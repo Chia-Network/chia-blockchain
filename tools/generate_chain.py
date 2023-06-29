@@ -23,12 +23,12 @@ from tools.test_constants import test_constants
 
 @contextmanager
 def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
-
     if not profile:
         yield
         return
+
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         yield
