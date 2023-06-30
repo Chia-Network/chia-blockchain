@@ -650,8 +650,6 @@ class CATWallet:
                 uint64(starting_amount),
                 tx_config.coin_selection_config,
             )
-        elif tx_config.coin_selection_config.excluded_coin_ids != []:
-            raise ValueError("Can't exclude coins when also specifically including coins")
         else:
             cat_coins = coins
 

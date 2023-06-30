@@ -1014,7 +1014,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
                 coin_selection_config=dataclasses.replace(
                     DEFAULT_COIN_SELECTION_CONFIG,
                     excluded_coin_amounts=[uint64(20)],
-                    excluded_coin_ids=[bytes32([0] * 32).hex()],
+                    excluded_coin_ids=[bytes32([0] * 32)],
                 ),
             ),
             uint64(4),
@@ -1656,12 +1656,16 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         await client_2.select_coins(
             amount=5000,
             wallet_id=1,
-            coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coins=min_coins),
+            coin_selection_config=dataclasses.replace(
+                DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in min_coins]
+            ),
         )
     excluded_test = await client_2.select_coins(
         amount=1300,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coins=coin_300),
+        coin_selection_config=dataclasses.replace(
+            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in coin_300]
+        ),
     )
     assert len(excluded_test) == 2
     for coin in excluded_test:
@@ -1671,7 +1675,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
         coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name().hex() for c in excluded_amt_coins]
+            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_amt_coins]
         ),
     )
     assert excluded_amt_coins not in all_coins
@@ -1688,7 +1692,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(
             wallet_id=1,
-            coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=["a"]),
+            coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[b"a"]),
         )
 
 

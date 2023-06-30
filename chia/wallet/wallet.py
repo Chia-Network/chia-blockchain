@@ -355,11 +355,6 @@ class Wallet:
                 uint64(total_amount),
                 tx_config.coin_selection_config,
             )
-        elif (
-            len(tx_config.coin_selection_config.excluded_coin_ids) > 0
-            or len(tx_config.coin_selection_config.excluded_coin_amounts) > 0
-        ):
-            raise ValueError("Can't exclude coins when also specifically including coins")
 
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")

@@ -894,7 +894,7 @@ class TestCATWallet:
         await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
 
         cat_hash = await cat_wallet.get_new_inner_hash()
-        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], DEFAULT_TX_CONFIG, [cat_hash])
+        tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG)
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 

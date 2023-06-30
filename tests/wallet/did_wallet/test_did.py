@@ -897,14 +897,14 @@ class TestDIDWallet:
         assert response["metadata"]["twitter"] == "twitter"
         assert (
             response["latest_coin"]
-            == (await did_wallet_1.select_coins(uint64(1, DEFAULT_COIN_SELECTION_CONFIG))).pop().name().hex()
+            == (await did_wallet_1.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)).pop().name().hex()
         )
         assert response["num_verification"] == 0
         assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
         assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
 
         # Test non-singleton coin
-        coin = (await wallet.select_coins(uint64(1, DEFAULT_COIN_SELECTION_CONFIG))).pop()
+        coin = (await wallet.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)).pop()
         assert coin.amount % 2 == 1
         response = await api_0.did_get_info({"coin_id": coin.name().hex()})
         assert not response["success"]
@@ -920,8 +920,13 @@ class TestDIDWallet:
         tx = await wallet.generate_signed_transaction(
             odd_amount,
             ph1,
+            dataclasses.replace(
+                DEFAULT_TX_CONFIG,
+                coin_selection_config=dataclasses.replace(
+                    DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[coin.name()]
+                ),
+            ),
             fee,
-            excluded_coins=set([coin]),
         )
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])

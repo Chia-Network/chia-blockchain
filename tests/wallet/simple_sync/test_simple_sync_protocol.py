@@ -270,7 +270,9 @@ class TestSimpleSyncProtocol:
 
         coins = set()
         coins.add(coin_to_spend)
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0), coins=coins)
+        tx_record = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0), coins=coins
+        )
         await standard_wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -290,7 +292,9 @@ class TestSimpleSyncProtocol:
         # Test getting notification for coin that is about to be created
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        tx_record = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0)
+        )
 
         tx_record.spend_bundle.additions()
 
