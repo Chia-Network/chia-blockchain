@@ -239,7 +239,7 @@ def assert_running_services_response(response_dict: Dict[str, Any], expected_res
 @pytest.fixture(scope="session")
 def mock_lonely_daemon():
     # Mock daemon server without any registered services/connections
-    return Daemon(services={}, connections={})
+    return Daemon(services={}, connections={}, net_config={})
 
 
 @pytest.fixture(scope="session")
@@ -253,6 +253,7 @@ def mock_daemon_with_services():
             "chia_plotter": [Service(True), Service(True)],
         },
         connections={},
+        net_config={},
     )
 
 
@@ -269,6 +270,7 @@ def mock_daemon_with_services_and_connections():
             "apple": [1],
             "banana": [1, 2],
         },
+        net_config={},
     )
 
 
