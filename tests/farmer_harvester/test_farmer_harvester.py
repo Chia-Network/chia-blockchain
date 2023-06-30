@@ -18,7 +18,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
-from chia.util.ints import uint8, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
 from tests.conftest import HarvesterFarmerEnvironment
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
@@ -155,7 +155,7 @@ async def test_farmer_respond_signatures(
             difficulty=uint64(1),
             sub_slot_iters=uint64(1000000),
             signage_point_index=uint8(2),
-            filter_prefix_bits=uint8(8),
+            peak_height=uint32(5496000),
         )
         await farmer_api.new_signage_point(sp)
     else:

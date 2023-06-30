@@ -10,7 +10,7 @@ new_signage_point_json: Dict[str, Any] = {
     "difficulty": 2329045448547720842,
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
-    "filter_prefix_bits": 9,
+    "peak_height": 1,
 }
 
 declare_proof_of_space_json: Dict[str, Any] = {
