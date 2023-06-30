@@ -2522,6 +2522,7 @@ class WalletRpcApi:
                 proposal_timelock=prop.get("proposal_timelock") or rules.proposal_timelock,
                 soft_close_length=prop.get("soft_close_length") or rules.soft_close_length,
                 attendance_required=prop.get("attendance_required") or rules.attendance_required,
+                proposal_minimum_amount=prop.get("proposal_minimum_amount") or rules.proposal_minimum_amount,
                 pass_percentage=prop.get("pass_percentage") or rules.pass_percentage,
                 self_destruct_length=prop.get("self_destruct_length") or rules.self_destruct_length,
                 oracle_spend_delay=prop.get("oracle_spend_delay") or rules.oracle_spend_delay,
