@@ -33,16 +33,14 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
 
 
 @pytest.mark.parametrize(
-    "trusted",
-    [False],
-)
-@pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
-)
-@pytest.mark.parametrize(
-    "reuse_puzhash",
-    [True, False],
+    "trusted,forwards_compat,reuse_puzhash",
+    [
+        [True, True, False],
+        [True, False, True],
+        [True, False, False],
+        [False, False, True],
+        [False, False, False],
+    ],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_with_fee(
@@ -370,7 +368,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     cancel_fee = uint64(10)
 
-    txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=cancel_fee)
+    txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, DEFAULT_TX_CONFIG, fee=cancel_fee)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node_api.process_transaction_records(records=txs)

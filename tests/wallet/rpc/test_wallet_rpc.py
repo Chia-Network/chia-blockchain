@@ -522,7 +522,7 @@ async def test_create_signed_transaction(
             DEFAULT_TX_CONFIG,
             coin_selection_config=dataclasses.replace(
                 DEFAULT_COIN_SELECTION_CONFIG,
-                excluded_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
+                excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
             ),
         ),
     )
@@ -1013,7 +1013,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
                 DEFAULT_TX_CONFIG,
                 coin_selection_config=dataclasses.replace(
                     DEFAULT_COIN_SELECTION_CONFIG,
-                    excluded_amounts=[uint64(20)],
+                    excluded_coin_amounts=[uint64(20)],
                     excluded_coin_ids=[bytes32([0] * 32).hex()],
                 ),
             ),
@@ -1643,7 +1643,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     excluded_amt_coins: List[Coin] = await client_2.select_coins(
         amount=non_1000_amt,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_amounts=[uint64(1000)]),
+        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_amounts=[uint64(1000)]),
     )
     assert excluded_amt_coins is not None
     assert (
@@ -1677,7 +1677,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert excluded_amt_coins not in all_coins
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_amounts=[uint64(1000)]),
+        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_amounts=[uint64(1000)]),
     )
     assert excluded_amt_coins not in all_coins
     all_coins_2, _, _ = await client_2.get_spendable_coins(

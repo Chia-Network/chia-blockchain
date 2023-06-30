@@ -98,6 +98,8 @@ class TXConfigLoader(Streamable):
                 reuse_puzhash = False
             else:
                 reuse_puzhash = reuse_puzhash_config.get(str(logged_in_fingerprint), False)
+        else:
+            reuse_puzhash = self.reuse_puzhash
 
         return TXConfig(
             CoinSelectionConfig(

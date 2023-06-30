@@ -21,6 +21,7 @@ from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 
@@ -195,7 +196,7 @@ class TestDIDWallet:
             did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
                 wallet_node_2.wallet_state_manager, wallet_2, backup_data
             )
-        coins = await did_wallet_1.select_coins(1)
+        coins = await did_wallet_1.select_coins(1, DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.copy().pop()
         assert did_wallet_2.did_info.temp_coin == coin
         newpuzhash = await did_wallet_2.get_new_did_inner_hash()
@@ -203,7 +204,7 @@ class TestDIDWallet:
             (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
         )
         message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
-            did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey
+            did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, DEFAULT_TX_CONFIG
         )
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_0.id()
@@ -239,7 +240,7 @@ class TestDIDWallet:
             assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
         some_ph = 32 * b"\2"
-        await did_wallet_2.create_exit_spend(some_ph)
+        await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG)
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
@@ -347,7 +348,7 @@ class TestDIDWallet:
         assert did_wallet_3.did_info.backup_ids == recovery_list
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 201)
-        coins = await did_wallet_3.select_coins(1)
+        coins = await did_wallet_3.select_coins(1, DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
 
         backup_data = did_wallet_3.create_backup()
@@ -364,12 +365,16 @@ class TestDIDWallet:
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
         new_ph = did_wallet_4.did_info.temp_puzhash
-        message_spend_bundle, attest1 = await did_wallet.create_attestment(coin.name(), new_ph, pubkey)
+        message_spend_bundle, attest1 = await did_wallet.create_attestment(
+            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
+        )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(coin.name(), new_ph, pubkey)
+        message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
+            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
+        )
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
         )
@@ -448,7 +453,7 @@ class TestDIDWallet:
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
-        coins = await did_wallet.select_coins(1)
+        coins = await did_wallet.select_coins(1, DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
@@ -503,7 +508,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         # Delete the coin and wallet
-        coins = await did_wallet.select_coins(uint64(1))
+        coins = await did_wallet.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
@@ -526,7 +531,7 @@ class TestDIDWallet:
         recovery_list = [bytes32.fromhex(did_wallet.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        await did_wallet.create_update_spend()
+        await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -535,7 +540,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         # Delete the coin and change inner puzzle
-        coins = await did_wallet.select_coins(uint64(1))
+        coins = await did_wallet.select_coins(uint64(1), DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
@@ -607,7 +612,7 @@ class TestDIDWallet:
         recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        await did_wallet.create_update_spend()
+        await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -629,13 +634,13 @@ class TestDIDWallet:
                 backup_data,
             )
         new_ph = await did_wallet_3.get_new_did_inner_hash()
-        coins = await did_wallet_2.select_coins(1)
+        coins = await did_wallet_2.select_coins(1, DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
-        attest_data = (await did_wallet.create_attestment(coin.name(), new_ph, pubkey))[1]
+        attest_data = (await did_wallet.create_attestment(coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG))[1]
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -668,13 +673,13 @@ class TestDIDWallet:
                 wallet2,
                 backup_data,
             )
-        coins = await did_wallet.select_coins(1)
+        coins = await did_wallet.select_coins(1, DEFAULT_COIN_SELECTION_CONFIG)
         coin = coins.pop()
         new_ph = await did_wallet_4.get_new_did_inner_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey
-        attest1 = (await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey))[1]
+        attest1 = (await did_wallet_3.create_attestment(coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG))[1]
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
         )
@@ -762,7 +767,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
-        await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery)
+        await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, DEFAULT_TX_CONFIG)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -832,7 +837,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         await did_wallet_1.update_recovery_list([bytes(ph)], 1)
-        await did_wallet_1.create_update_spend()
+        await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
@@ -890,20 +895,27 @@ class TestDIDWallet:
             did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
         )
         assert response["metadata"]["twitter"] == "twitter"
-        assert response["latest_coin"] == (await did_wallet_1.select_coins(uint64(1))).pop().name().hex()
+        assert (
+            response["latest_coin"]
+            == (await did_wallet_1.select_coins(uint64(1, DEFAULT_COIN_SELECTION_CONFIG))).pop().name().hex()
+        )
         assert response["num_verification"] == 0
         assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
         assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
 
         # Test non-singleton coin
-        coin = (await wallet.select_coins(uint64(1))).pop()
+        coin = (await wallet.select_coins(uint64(1, DEFAULT_COIN_SELECTION_CONFIG))).pop()
         assert coin.amount % 2 == 1
         response = await api_0.did_get_info({"coin_id": coin.name().hex()})
         assert not response["success"]
 
         # Test multiple odd coins
         odd_amount = uint64(1)
-        coin_1 = (await wallet.select_coins(odd_amount, exclude=[coin])).pop()
+        coin_1 = (
+            await wallet.select_coins(
+                odd_amount, dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[coin.name()])
+            )
+        ).pop()
         assert coin_1.amount % 2 == 0
         tx = await wallet.generate_signed_transaction(
             odd_amount,
@@ -1032,7 +1044,7 @@ class TestDIDWallet:
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
-        await did_wallet_1.create_update_spend(fee)
+        await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, fee)
         transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )

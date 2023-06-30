@@ -75,7 +75,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
             # The next 2 lines are basically a noop, it just adds test coverage
             cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
@@ -137,10 +141,18 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet_1: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
             cat_wallet_2: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(200)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(200),
+                DEFAULT_TX_CONFIG,
             )
 
         proofs_1 = await cat_wallet_1.lineage_store.get_all_lineage_proofs()
@@ -190,7 +202,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
@@ -297,7 +313,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
@@ -396,7 +416,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
 
         for i in range(1, num_blocks):
@@ -454,7 +478,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         await full_node_api.process_transaction_records(records=tx_records)
@@ -544,7 +572,11 @@ class TestCATWallet:
 
         async with wallet_node_0.wallet_state_manager.lock:
             cat_wallet_0: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_0.wallet_state_manager,
+                wallet_0,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
         tx_records: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
         await full_node_api.process_transaction_records(records=tx_records)
@@ -665,7 +697,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100000),
+                DEFAULT_TX_CONFIG,
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         await full_node_api.process_transaction_records(records=tx_records)
@@ -777,7 +813,11 @@ class TestCATWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node.wallet_state_manager,
+                wallet,
+                {"identifier": "genesis_by_id"},
+                uint64(100),
+                DEFAULT_TX_CONFIG,
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         await full_node_api.process_transaction_records(records=tx_records)
