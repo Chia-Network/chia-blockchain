@@ -110,6 +110,7 @@ class VCWallet:
             self.log.debug(
                 f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}"
             )
+            return
         vc_record: VCRecord = VCRecord(vc, height)
         self.wallet_state_manager.state_changed(
             "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
