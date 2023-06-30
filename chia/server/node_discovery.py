@@ -40,6 +40,7 @@ NETWORK_ID_DEFAULT_PORTS = {
 
 class FullNodeDiscovery:
     resolver: Optional[dns.asyncresolver.Resolver]
+    enable_private_networks: bool
 
     def __init__(
         self,
@@ -64,6 +65,9 @@ class FullNodeDiscovery:
         self.introducer_info: Optional[UnresolvedPeerInfo] = None
         if introducer_info is not None:
             self.introducer_info = UnresolvedPeerInfo(introducer_info["host"], introducer_info["port"])
+            self.enable_private_networks = introducer_info.get("enable_private_networks", False)
+        else:
+            self.enable_private_networks = False
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue: Optional[asyncio.Queue[Tuple[TimestampedPeerInfo, int]]] = None
@@ -112,6 +116,8 @@ class FullNodeDiscovery:
 
     async def initialize_address_manager(self) -> None:
         self.address_manager = await AddressManagerStore.create_address_manager(self.peers_file_path)
+        if self.enable_private_networks:
+            self.address_manager.make_private_subnets_valid()
         self.server.set_received_message_callback(self.update_peer_timestamp_on_message)
 
     async def start_tasks(self) -> None:

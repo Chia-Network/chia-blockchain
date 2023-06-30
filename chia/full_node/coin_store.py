@@ -365,11 +365,11 @@ class CoinStore:
         min_height: uint32 = uint32(0),
         *,
         max_items: int = 50000,
-    ) -> List[CoinState]:
+    ) -> Set[CoinState]:
         if len(puzzle_hashes) == 0:
-            return []
+            return set()
 
-        coins: List[CoinState] = []
+        coins: Set[CoinState] = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
@@ -388,7 +388,7 @@ class CoinStore:
                 ) as cursor:
                     row: sqlite3.Row
                     for row in await cursor.fetchall():
-                        coins.append(self.row_to_coin_state(row))
+                        coins.add(self.row_to_coin_state(row))
 
                 if len(coins) >= max_items:
                     break
@@ -432,6 +432,7 @@ class CoinStore:
         coin_ids: Set[bytes32],
         min_height: uint32 = uint32(0),
         *,
+        max_height: uint32 = uint32.MAXIMUM,
         max_items: int = 50000,
     ) -> List[CoinState]:
         if len(coin_ids) == 0:
@@ -445,10 +446,15 @@ class CoinStore:
                     coin_ids_db = tuple(batch.entries)
                 else:
                     coin_ids_db = tuple([pid.hex() for pid in batch.entries])
+
+                max_height_sql = ""
+                if max_height != uint32.MAXIMUM:
+                    max_height_sql = f"AND confirmed_index<={max_height} AND spent_index<={max_height}"
+
                 async with conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp "
                     f'FROM coin_record WHERE coin_name in ({"?," * (len(batch.entries) - 1)}?) '
-                    f"AND (confirmed_index>=? OR spent_index>=?)"
+                    f"AND (confirmed_index>=? OR spent_index>=?) {max_height_sql}"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
                     " LIMIT ?",
                     coin_ids_db + (min_height, min_height, max_items - len(coins)),

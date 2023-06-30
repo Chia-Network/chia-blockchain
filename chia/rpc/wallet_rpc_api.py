@@ -72,10 +72,10 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -899,12 +899,11 @@ class WalletRpcApi:
         )
         tx_list = []
         # Format for clawback transactions
-        clawback_types = {TransactionType.INCOMING_CLAWBACK_RECEIVE.value, TransactionType.INCOMING_CLAWBACK_SEND.value}
         for tr in transactions:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in clawback_types or tx["spend_bundle"] is None:
+                if tx["type"] not in CLAWBACK_TRANSACTION_TYPES:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
@@ -914,8 +913,8 @@ class WalletRpcApi:
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
                 tx["metadata"]["coin_id"] = coin.name().hex()
                 tx["metadata"]["spent"] = record.spent
-            except Exception as e:
-                log.error(f"Failed to get transaction {tr.name}: {e}")
+            except Exception:
+                log.exception(f"Failed to get transaction {tr.name}.")
         return {
             "transactions": tx_list,
             "wallet_id": wallet_id,
@@ -923,7 +922,12 @@ class WalletRpcApi:
 
     async def get_transaction_count(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
-        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(wallet_id)
+        type_filter = None
+        if "type_filter" in request:
+            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        count = await self.service.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
+            wallet_id, confirmed=request.get("confirmed", None), type_filter=type_filter
+        )
         return {
             "count": count,
             "wallet_id": wallet_id,
@@ -1977,27 +1981,25 @@ class WalletRpcApi:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
-        hint_list = compute_coin_hints(coin_spend)
-        derivation_record = None
+        hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        is_invalid = len(hint_list) == 0
-        for hint in hint_list:
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    bytes32(hint)
-                )
-            )
-            if derivation_record is not None:
-                is_invalid = False
+        hint: Optional[bytes32] = None
+        for hinted_coin in hinted_coins.values():
+            if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+                hint = hinted_coin.hint
                 break
-            is_invalid = True
-        if is_invalid:
+        if hint is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
             )
+        else:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+            )
+
         launcher_id = singleton_struct.rest().first().as_python()
         if derivation_record is None:
             return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
@@ -2926,10 +2928,7 @@ class WalletRpcApi:
     async def get_coin_records(self, request: Dict[str, Any]) -> EndpointResult:
         parsed_request = GetCoinRecords.from_json_dict(request)
 
-        if (
-            parsed_request.limit != uint32.MAXIMUM_EXCLUSIVE - 1
-            and parsed_request.limit > self.max_get_coin_records_limit
-        ):
+        if parsed_request.limit != uint32.MAXIMUM and parsed_request.limit > self.max_get_coin_records_limit:
             raise ValueError(f"limit of {self.max_get_coin_records_limit} exceeded: {parsed_request.limit}")
 
         for filter_name, filter in {
