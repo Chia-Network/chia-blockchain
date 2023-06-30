@@ -33,6 +33,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import (
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     get_plot_id,
@@ -40,7 +41,7 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 
 
 def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
@@ -101,8 +102,7 @@ class FarmerAPI:
                 self.farmer.constants,
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
-                height=None,
-                filter_prefix_bits=sp.filter_prefix_bits,
+                height=sp.peak_height,
             )
             if computed_quality_string is None:
                 plotid: bytes32 = get_plot_id(new_proof_of_space.proof)
@@ -137,7 +137,9 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.sp_hash_to_filter_size[new_proof_of_space.sp_hash] = sp.filter_prefix_bits
+                self.farmer.sp_hash_to_filter_size[new_proof_of_space.sp_hash] = uint8(
+                    calculate_prefix_bits(self.farmer.constants, sp.peak_height)
+                )
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
@@ -315,6 +317,7 @@ class FarmerAPI:
             return None
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
+        peak_height = sps[0].peak_height
         signage_point_index = sps[0].signage_point_index
         found_sp_hash_debug = False
         for sp_candidate in sps:
@@ -333,12 +336,7 @@ class FarmerAPI:
         include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
 
         computed_quality_string = verify_and_get_quality_string(
-            pospace,
-            self.farmer.constants,
-            response.challenge_hash,
-            response.sp_hash,
-            height=None,
-            filter_prefix_bits=filter_prefix_bits,
+            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -495,7 +493,7 @@ class FarmerAPI:
                 new_signage_point.signage_point_index,
                 new_signage_point.challenge_chain_sp,
                 pool_difficulties,
-                new_signage_point.filter_prefix_bits,
+                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
             )
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
