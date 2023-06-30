@@ -193,7 +193,7 @@ jobs:
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
       - name: Checkout test blocks and plots (macOS, Ubuntu)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -202,7 +202,7 @@ jobs:
           mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
       - name: Checkout test blocks and plots (Windows)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
+        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
