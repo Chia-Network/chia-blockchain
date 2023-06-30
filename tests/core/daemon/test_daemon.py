@@ -579,7 +579,7 @@ async def test_get_wallet_addresses(
     original_get_keys = Keychain.get_keys
 
     # monkeypatch Keychain.get_keys() to always call get_keys() with include_secrets=False
-    def mock_get_keys(self, include_secrets=False) -> List[KeyData]:
+    def mock_get_keys(self, include_secrets=False):
         def wrapper(self, include_secrets):
             return original_get_keys(self, include_secrets=False)
 
