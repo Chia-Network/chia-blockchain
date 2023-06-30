@@ -8,6 +8,8 @@ from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
     CancelOfferResponse,
+    ClearPendingRootsRequest,
+    ClearPendingRootsResponse,
     MakeOfferRequest,
     MakeOfferResponse,
     Side,
@@ -100,6 +102,7 @@ class DataLayerRpcApi:
             "/cancel_offer": self.cancel_offer,
             "/get_sync_status": self.get_sync_status,
             "/check_plugins": self.check_plugins,
+            "/clear_pending_roots": self.clear_pending_roots,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -436,3 +439,9 @@ class DataLayerRpcApi:
         plugin_status = await self.service.check_plugins()
 
         return plugin_status.marshal()
+
+    @marshal()  # type: ignore[arg-type]
+    async def clear_pending_roots(self, request: ClearPendingRootsRequest) -> ClearPendingRootsResponse:
+        root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
+
+        return ClearPendingRootsResponse(success=root is not None, root=root)
