@@ -64,7 +64,8 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         coin_name = coin.name()
 
         print(f"consuming coin {dump_coin(coin)}")
-        print(f"  with id {coin_name.hex()}")
+        print(f"  with id {coin_name}")
+        print(f"  ID in hex is {coin_name.hex()}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
 

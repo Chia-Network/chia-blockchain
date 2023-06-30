@@ -176,6 +176,7 @@ class CATWallet:
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
         await self.standard_wallet.push_transaction(cat_record)
+        # breakpoint()
         return self
 
     @staticmethod
@@ -304,7 +305,7 @@ class CATWallet:
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
-            txs = await self.generate_signed_transaction(
+            txs = await self.generate_signed_transactions(
                 [uint64(coin.amount)], [coin.puzzle_hash], coins={coin}, ignore_max_send_amount=True
             )
             assert txs[0].spend_bundle
@@ -806,7 +807,7 @@ class CATWallet:
             chia_tx,
         )
 
-    async def generate_signed_transaction(
+    async def generate_signed_transactions(
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
@@ -820,6 +821,7 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
+        override_memos: Optional[bool] = None,
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         excluded_cat_coins: Optional[Set[Coin]] = kwargs.get("excluded_cat_coins", None)
@@ -833,15 +835,18 @@ class CATWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
-            memos_with_hint.extend(memo_list)
+            if override_memos:
+                memos_with_hint: List[bytes] = memo_list
+            else:
+                memos_with_hint = [puzhash]
+                memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
+                raise ValueError(f" Insufficient funds. Your max amount is {max_send} mojos in a single transaction.")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -899,7 +904,6 @@ class CATWallet:
                     memos=[],
                 )
             )
-
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

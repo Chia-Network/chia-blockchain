@@ -1,0 +1,27 @@
+; The function of this file is to force the DAO CAT underneath it to stay in locked voting mode for TIMELOCK period of time
+
+(mod (
+    TIMELOCK  ; absolute block height for when this coin should unlock
+    INNERPUZ
+    (@ inner_sol
+      (
+        my_id
+        inner_solution
+        my_amount
+        new_proposal_vote_id_or_removal_id  ; this is enforced as being empty if we're trying to leave locked state
+        proposal_curry_vals
+        vote_info
+      )
+    )
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+
+  ; uncurry innerpuz and add the new vote procedure
+  (if new_proposal_vote_id_or_removal_id
+      (a INNERPUZ inner_sol)  ; not trying to exit
+      (c (list ASSERT_HEIGHT_ABSOLUTE TIMELOCK) (a INNERPUZ inner_sol))  ; trying to exit
+  )
+)

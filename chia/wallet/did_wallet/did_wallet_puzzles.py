@@ -187,7 +187,7 @@ def metadata_to_program(metadata: Dict) -> Program:
     return Program.to(kv_list)
 
 
-def program_to_metadata(program: Program) -> Dict:
+def did_program_to_metadata(program: Program) -> Dict:
     """
     Convert a program to a metadata dict
     :param program: Chialisp program contains the metadata

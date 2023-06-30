@@ -259,6 +259,12 @@ class TradeManager:
                     ignore_max_send_amount=True,
                 )
                 all_txs.append(tx)
+            elif wallet.type() == WalletType.CAT:
+                # ATTENTION: new_wallets
+                txs = await wallet.generate_signed_transactions(
+                    [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                )
+                all_txs.extend(txs)
             else:
                 # ATTENTION: new_wallets
                 txs = await wallet.generate_signed_transaction(
@@ -340,6 +346,15 @@ class TradeManager:
                     if tx is not None and tx.spend_bundle is not None:
                         bundles.append(tx.spend_bundle)
                         all_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                elif wallet.type() == WalletType.CAT:
+                    # ATTENTION: new_wallets
+                    txs = await wallet.generate_signed_transactions(
+                        [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    )
+                    for tx in txs:
+                        if tx is not None and tx.spend_bundle is not None:
+                            bundles.append(tx.spend_bundle)
+                            all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 else:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
@@ -594,6 +609,17 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         # [abs(offer_dict[id])],
                         amounts,
+                        [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        fee=fee_left_to_pay,
+                        coins=set(selected_coins),
+                        puzzle_announcements_to_consume=announcements_to_assert,
+                        reuse_puzhash=reuse_puzhash,
+                    )
+                    all_transactions.extend(txs)
+                elif wallet.type() == WalletType.CAT:
+                    # ATTENTION: new_wallets
+                    txs = await wallet.generate_signed_transactions(
+                        [abs(offer_dict[id])],
                         [OFFER_MOD_OLD_HASH if old else Offer.ph()],
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),

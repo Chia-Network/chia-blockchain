@@ -233,7 +233,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
