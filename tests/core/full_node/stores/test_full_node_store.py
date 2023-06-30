@@ -569,6 +569,7 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         peak = blockchain.get_peak()
+        assert peak is not None
         for slot in blocks_3[-1].finished_sub_slots:
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
                 blockchain.constants, True, peak, blockchain
