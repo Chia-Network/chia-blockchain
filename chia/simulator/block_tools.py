@@ -142,7 +142,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "MAX_FUTURE_TIME": 3600 * 24 * 10,
-        "MAX_FUTURE_TIME2": 3600 * 24 * 10, # After the Fork
+        "MAX_FUTURE_TIME2": 3600 * 24 * 10,  # After the Fork
         "MEMPOOL_BLOCK_BUFFER": 6,
     }
 )
