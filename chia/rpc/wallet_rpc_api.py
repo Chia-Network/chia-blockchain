@@ -72,7 +72,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
@@ -1981,27 +1981,25 @@ class WalletRpcApi:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
-        hint_list = compute_coin_hints(coin_spend)
-        derivation_record = None
+        hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        is_invalid = len(hint_list) == 0
-        for hint in hint_list:
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    bytes32(hint)
-                )
-            )
-            if derivation_record is not None:
-                is_invalid = False
+        hint: Optional[bytes32] = None
+        for hinted_coin in hinted_coins.values():
+            if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+                hint = hinted_coin.hint
                 break
-            is_invalid = True
-        if is_invalid:
+        if hint is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
             )
+        else:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+            )
+
         launcher_id = singleton_struct.rest().first().as_python()
         if derivation_record is None:
             return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
