@@ -89,3 +89,8 @@ def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optio
         if coin.amount % 2 == 1:
             return coin
     return None
+
+
+def get_singleton_struct_for_id(id: bytes32) -> Program:
+    singleton_struct: Program = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+    return singleton_struct

@@ -14,7 +14,7 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_pu
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_struct_for_id
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -54,13 +54,8 @@ P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 log = logging.Logger(__name__)
 
 
-def singleton_struct_for_id(id: bytes32) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (id, SINGLETON_LAUNCHER_HASH)))
-    return singleton_struct
-
-
 def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
-    singleton_struct = singleton_struct_for_id(id)
+    singleton_struct = get_singleton_struct_for_id(id)
     return DAO_CAT_LAUNCHER.curry(singleton_struct)
 
 

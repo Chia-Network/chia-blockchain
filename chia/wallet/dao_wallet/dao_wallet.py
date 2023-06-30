@@ -65,7 +65,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
     get_update_proposal_puzzle,
-    singleton_struct_for_id,
     uncurry_proposal,
     uncurry_proposal_validator,
     uncurry_treasury,
@@ -77,6 +76,7 @@ from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
     get_singleton_id_from_puzzle,
+    get_singleton_struct_for_id,
 )
 from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
@@ -947,7 +947,7 @@ class DAOWallet(WalletProtocol):
             return None
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
 
-        inner_sol = Program.to([0, 0, 0, 0, 0, singleton_struct_for_id(launcher_coin.name())])
+        inner_sol = Program.to([0, 0, 0, 0, 0, get_singleton_struct_for_id(launcher_coin.name())])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
@@ -1191,7 +1191,7 @@ class DAOWallet(WalletProtocol):
         # delegated_solution  ; this is not secure unless the delegated puzzle secures it
         # my_singleton_struct
 
-        inner_sol = Program.to([0, 0, 0, 0, singleton_struct_for_id(launcher_id)])
+        inner_sol = Program.to([0, 0, 0, 0, get_singleton_struct_for_id(launcher_id)])
         fullsol = Program.to(
             [
                 launcher_proof.to_program(),
