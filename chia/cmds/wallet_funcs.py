@@ -199,21 +199,25 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     except LookupError as e:
         print(e.args[0])
         return
-
+    skipped = 0
     num_per_screen = 5 if paginate else len(txs)
     for i in range(0, len(txs), num_per_screen):
         for j in range(0, num_per_screen):
-            if i + j >= len(txs):
+            if i + j + skipped >= len(txs):
                 break
             coin_record: Optional[Dict[str, Any]] = None
-            if txs[i + j].type in CLAWBACK_TRANSACTION_TYPES:
-                coin_record = (
-                    await wallet_client.get_coin_records(
-                        GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j].additions[0].name()]))
-                    )
-                )["coin_records"][0]
+            if txs[i + j + skipped].type in CLAWBACK_TRANSACTION_TYPES:
+                coin_records = await wallet_client.get_coin_records(
+                    GetCoinRecords(coin_id_filter=HashFilter.include([txs[i + j + skipped].additions[0].name()]))
+                )
+                if len(coin_records["coin_records"]) > 0:
+                    coin_record = coin_records["coin_records"][0]
+                else:
+                    j -= 1
+                    skipped += 1
+                    continue
             print_transaction(
-                txs[i + j],
+                txs[i + j + skipped],
                 verbose=(args["verbose"] > 0),
                 name=name,
                 address_prefix=address_prefix,

@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
 
 
@@ -222,3 +223,16 @@ async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
         if client is not None:
             res = await client.check_plugins()
             print(json.dumps(res, indent=4, sort_keys=True))
+
+
+async def clear_pending_roots(
+    store_id: bytes32,
+    rpc_port: Optional[int],
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> Dict[str, Any]:
+    async with get_any_service_client(DataLayerRpcClient, rpc_port, root_path=root_path) as (client, _):
+        if client is not None:
+            result = await client.clear_pending_roots(store_id=store_id)
+            print(json.dumps(result, indent=4, sort_keys=True))
+
+    return result

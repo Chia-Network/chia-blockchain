@@ -8,8 +8,18 @@ import pytest
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side
+from chia.data_layer.data_layer_util import (
+    ClearPendingRootsRequest,
+    ClearPendingRootsResponse,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
+    Root,
+    Side,
+    Status,
+)
+from chia.rpc.data_layer_rpc_util import MarshallableProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
+from tests.util.misc import Marks, datacases
 
 pytestmark = pytest.mark.data_layer
 
@@ -77,3 +87,47 @@ def test_proof_of_inclusion_is_valid(valid_proof_of_inclusion: ProofOfInclusion)
 
 def test_proof_of_inclusion_is_invalid(invalid_proof_of_inclusion: ProofOfInclusion) -> None:
     assert not invalid_proof_of_inclusion.valid()
+
+
+@dataclasses.dataclass()
+class RoundTripCase:
+    id: str
+    instance: MarshallableProtocol
+    marks: Marks = ()
+
+
+@datacases(
+    RoundTripCase(
+        id="Root",
+        instance=Root(
+            tree_id=bytes32(b"\x00" * 32),
+            node_hash=bytes32(b"\x01" * 32),
+            generation=3,
+            status=Status.PENDING,
+        ),
+    ),
+    RoundTripCase(
+        id="ClearPendingRootsRequest",
+        instance=ClearPendingRootsRequest(store_id=bytes32(b"\x12" * 32)),
+    ),
+    RoundTripCase(
+        id="ClearPendingRootsResponse success",
+        instance=ClearPendingRootsResponse(
+            success=True,
+            root=Root(
+                tree_id=bytes32(b"\x00" * 32),
+                node_hash=bytes32(b"\x01" * 32),
+                generation=3,
+                status=Status.PENDING,
+            ),
+        ),
+    ),
+    RoundTripCase(
+        id="ClearPendingRootsResponse failure",
+        instance=ClearPendingRootsResponse(success=False, root=None),
+    ),
+)
+def test_marshalling_round_trip(case: RoundTripCase) -> None:
+    marshalled = case.instance.marshal()
+    unmarshalled = type(case.instance).unmarshal(marshalled)
+    assert case.instance == unmarshalled
