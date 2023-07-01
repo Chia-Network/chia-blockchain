@@ -985,6 +985,10 @@ class WalletStateManager:
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
                         return WalletIdentifier.create(wallet)
+            if coin_state.spent_height is not None:
+                # The first coin we received for DID wallet is spent.
+                # This means the wallet is in a resync process, skip the coin
+                return None
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,
