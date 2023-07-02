@@ -85,7 +85,7 @@ class TestCostCalculation:
 
         coin_spend = spend_bundle.coin_spends[0]
         assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-        spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
+        spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin, 0)
         assert spend_info.puzzle == coin_spend.puzzle_reveal
         assert spend_info.solution == coin_spend.solution
 
@@ -155,7 +155,7 @@ class TestCostCalculation:
             bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
             300,
         )
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin)
+        spend_info = get_puzzle_and_solution_for_coin(generator, coin, 0)
         assert spend_info.puzzle.to_program() == puzzle
 
     @pytest.mark.asyncio
@@ -273,5 +273,5 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     with assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
-                spend_info = get_puzzle_and_solution_for_coin(generator, c)
+                spend_info = get_puzzle_and_solution_for_coin(generator, c, 0)
                 assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash

@@ -12,7 +12,9 @@ from secrets import token_bytes
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import ALLOW_BACKREFS
 from chiabip158 import PyBIP158
+from packaging.version import Version
 
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
@@ -1279,8 +1281,10 @@ class FullNodeAPI:
                     response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @api_request()
-    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+    @api_request(peer_required=True)
+    async def request_puzzle_solution(
+        self, request: wallet_protocol.RequestPuzzleSolution, peer: WSChiaConnection
+    ) -> Optional[Message]:
         coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
@@ -1301,8 +1305,13 @@ class FullNodeAPI:
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
         try:
+            flags = 0
+            # allow backrefs in puzzle and solution serializations in the next
+            # version of the full node protocol
+            if peer.protocol_version > Version("0.0.34"):
+                flags |= ALLOW_BACKREFS
             spend_info = await asyncio.get_running_loop().run_in_executor(
-                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin
+                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin, flags
             )
         except ValueError:
             return reject_msg
