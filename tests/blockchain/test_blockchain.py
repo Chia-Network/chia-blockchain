@@ -2446,7 +2446,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
     @pytest.mark.asyncio
-    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt):
+    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: Mode):
         # No generator should have [1]s for the root
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2485,7 +2485,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
         wt: WalletTool = bt.get_pool_wallet_tool()
         tx: SpendBundle = wt.generate_signed_transaction(
-            10, wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+            uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
         )
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
         for block in blocks[-5:]:
@@ -2496,7 +2496,12 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        assert generator_arg is not None
+        if consensus_mode == Mode.HARD_FORK_2_0:
+            # once the hard for activates, we don't use this form of block
+            # compression anymore
+            assert generator_arg is None
+        else:
+            assert generator_arg is not None
 
         blocks = bt.get_consecutive_blocks(
             1,
@@ -2506,7 +2511,14 @@ class TestBodyValidation:
             previous_generator=generator_arg,
         )
         block = blocks[-1]
-        assert len(block.transactions_generator_ref_list) > 0
+        if consensus_mode == Mode.HARD_FORK_2_0:
+            # once the hard for activates, we don't use this form of block
+            # compression anymore
+            assert len(block.transactions_generator_ref_list) == 0
+            # the remaining tests assume a reflist
+            return
+        else:
+            assert len(block.transactions_generator_ref_list) > 0
 
         block_2 = recursive_replace(block, "transactions_info.generator_refs_root", bytes([1] * 32))
         block_2 = recursive_replace(
