@@ -7,9 +7,9 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
-    "blspy==2.0.1",  # Signature library
     "anyio==3.7.0",
-    "boto3==1.26.148",  # AWS S3 for DL s3 plugin
+    "blspy==2.0.2",  # Signature library
+    "boto3==1.26.161",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
@@ -63,7 +63,7 @@ dev_dependencies = [
     "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.11.0",
+    "pyinstaller==5.13.0",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",
