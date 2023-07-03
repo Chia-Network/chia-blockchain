@@ -9,7 +9,6 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
@@ -28,6 +27,7 @@ from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
+from ..util.chia_version import chia_version_str
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -88,7 +88,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
-        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
+        self._log.info(f"chia-blockchain version: {chia_version_str()}")
 
         self.service_config = self.config[service_name]
 

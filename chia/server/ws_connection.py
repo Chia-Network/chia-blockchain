@@ -14,7 +14,7 @@ from aiohttp.web import WebSocketResponse
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia import __version__
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -30,6 +30,7 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
+from chia.util.chia_version import chia_version_str_from_str
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
@@ -198,7 +199,7 @@ class WSChiaConnection:
             Handshake(
                 network_id,
                 protocol_version,
-                chia_full_version_str(),
+                __version__,
                 uint16(server_port),
                 uint8(local_type.value),
                 self.local_capabilities_for_handshake,
@@ -697,8 +698,8 @@ class WSChiaConnection:
         return None
 
     # Used by the Chia Seeder.
-    def get_version(self) -> str:
-        return self.version
+    def get_chia_version_str(self) -> str:
+        return chia_version_str_from_str(self.version) or self.version
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

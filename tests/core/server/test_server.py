@@ -7,7 +7,7 @@ from typing import Callable, Tuple, cast
 import pytest
 from packaging.version import Version
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia import __version__
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -22,6 +22,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import api_request
+from chia.util.chia_version import chia_version_str_from_str
 from chia.util.errors import ApiError, Err
 from chia.util.ints import int16, uint32
 from tests.connection_utils import connect_and_get_peer
@@ -79,8 +80,8 @@ async def test_connection_versions(
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version)
-        assert connection.version == chia_full_version_str()
-        assert connection.get_version() == chia_full_version_str()
+        assert connection.version == __version__
+        assert connection.get_chia_version_str() == chia_version_str_from_str(connection.version)
 
 
 @pytest.mark.asyncio
