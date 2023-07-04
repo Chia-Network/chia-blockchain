@@ -267,7 +267,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Opti
     is_flag=True,
     default=False,
 )
-def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_address: bool) -> None:
+def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, new_address: bool) -> None:
     from .wallet_funcs import get_address
 
     asyncio.run(get_address(wallet_rpc_port, fingerprint, id, new_address))
@@ -298,7 +298,9 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
-def clawback(wallet_rpc_port: Optional[int], id, fingerprint: int, tx_ids: str, fee: str) -> None:  # pragma: no cover
+def clawback(
+    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str
+) -> None:  # pragma: no cover
     from .wallet_funcs import spend_clawback
 
     asyncio.run(spend_clawback(wallet_rpc_port, fingerprint, Decimal(fee), tx_ids))  # Wallet ID is not Used.
@@ -314,7 +316,7 @@ def clawback(wallet_rpc_port: Optional[int], id, fingerprint: int, tx_ids: str, 
 )
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int) -> None:
+def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int) -> None:
     from .wallet_funcs import delete_unconfirmed_transactions
 
     asyncio.run(delete_unconfirmed_transactions(wallet_rpc_port, fingerprint, id))
@@ -571,7 +573,7 @@ def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
 
 
 @wallet_cmd.group("did", help="DID related actions")
-def did_cmd():
+def did_cmd() -> None:
     pass
 
 
@@ -848,7 +850,7 @@ def did_transfer_did(
 
 
 @wallet_cmd.group("nft", help="NFT related actions")
-def nft_cmd():
+def nft_cmd() -> None:
     pass
 
 
@@ -1174,7 +1176,7 @@ wallet_cmd.add_command(coins_cmd)
 
 
 @wallet_cmd.group("notifications", help="Send/Manage notifications")
-def notification_cmd():
+def notification_cmd() -> None:
     pass
 
 
@@ -1259,7 +1261,7 @@ def delete_notifications_cmd(
 
 
 @wallet_cmd.group("vcs", short_help="Verifiable Credential related actions")
-def vcs_cmd():  # pragma: no cover
+def vcs_cmd() -> None:  # pragma: no cover
     pass
 
 

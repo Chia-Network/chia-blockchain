@@ -56,7 +56,7 @@ def transaction_description_from_type(tx: TransactionRecord) -> str:
 def print_transaction(
     tx: TransactionRecord,
     verbose: bool,
-    name,
+    name: str,
     address_prefix: str,
     mojo_per_unit: int,
     coin_record: Optional[Dict[str, Any]] = None,
@@ -115,14 +115,14 @@ async def get_unit_name_for_wallet_id(
     wallet_type: WalletType,
     wallet_id: int,
     wallet_client: WalletRpcClient,
-):
+) -> str:
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
     }:  # pragma: no cover
-        name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
+        name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
     else:
@@ -244,7 +244,7 @@ async def get_transactions(
                     break
 
 
-def check_unusual_transaction(amount: Decimal, fee: Decimal):
+def check_unusual_transaction(amount: Decimal, fee: Decimal) -> bool:
     return fee >= amount
 
 
@@ -418,7 +418,7 @@ async def make_offer(
             return
         fee: int = int(d_fee * units["chia"])
 
-        if [] in [offers, requests]:
+        if len(offers) == 0 or len(requests) == 0:
             print("Not creating offer: Must be offering and requesting at least one asset")
         else:
             offer_dict: Dict[Union[uint32, str], int] = {}
@@ -569,13 +569,13 @@ async def make_offer(
                             print("Error creating offer")
 
 
-def timestamp_to_time(timestamp):
+def timestamp_to_time(timestamp: int) -> str:
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
 async def print_offer_summary(
-    cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch="XCH"
-):
+    cat_name_resolver: CATNameResolver, sum_dict: Dict[str, int], has_fee: bool = False, network_xch: str = "XCH"
+) -> None:
     for asset_id, amount in sum_dict.items():
         description: str = ""
         unit: int = units["chia"]
@@ -608,7 +608,7 @@ async def print_offer_summary(
         print(output)
 
 
-async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
+async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
     print()
     print(f"Record with id: {record.trade_id}")
     print("---------------")
@@ -904,7 +904,7 @@ async def print_balances(
                 print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
         print(" ")
-        trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
+        trusted_peers: dict[str, str] = config["wallet"].get("trusted_peers", {})
         await print_connections(wallet_client, trusted_peers)
 
 
