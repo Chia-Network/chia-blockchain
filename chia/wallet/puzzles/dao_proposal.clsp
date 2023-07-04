@@ -286,6 +286,23 @@
               0  ; the arguments are secured implicitly in the puzzle of the treasury
             )
           )
+	  (list
+	    ASSERT_PUZZLE_ANNOUNCEMENT
+	    (sha256  ; external timer
+	      (calculate_timer_puzhash
+		PROPOSAL_MOD_HASH
+		PROPOSAL_TIMER_MOD_HASH
+		LOCKUP_MOD_HASH
+		DAO_FINISHED_STATE_MOD_HASH
+		CAT_MOD_HASH
+		CAT_TAIL_HASH
+		SINGLETON_STRUCT
+		TREASURY_ID
+	      )
+	      (f (r SINGLETON_STRUCT))
+	    )
+	  )
+	  (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_ids_or_proposal_timelock_length)
         )
       )
       ; We're not trying to self destruct
@@ -363,7 +380,7 @@
                           )
                           0  ; the arguments are secured implicitly in the puzzle of the treasury
                         )
-                      )
+		      )
                     )
                   )
                 )
