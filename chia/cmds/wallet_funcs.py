@@ -131,7 +131,9 @@ async def get_unit_name_for_wallet_id(
     return name
 
 
-async def get_transaction(wallet_rpc_port: Optional[int], fingerprint: Optional[int], tx_id: str, verbose: int) -> None:
+async def get_transaction(
+    *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], tx_id: str, verbose: int
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if wallet_client is None:
             return
@@ -1037,6 +1039,7 @@ async def transfer_did(
 
 
 async def find_lost_did(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     coin_id: str,
@@ -1448,7 +1451,7 @@ async def sign_message(
 
 
 async def spend_clawback(
-    wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str
+    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         if wallet_client is None:

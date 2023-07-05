@@ -328,7 +328,7 @@ async def join_pool(
 
 
 async def self_pool(
-    wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int, prompt: bool
+    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int, prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         if wallet_client is None:
@@ -354,7 +354,7 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_i
         )
 
 
-async def claim_cmd(wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int) -> None:
+async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         if wallet_client is None:
             return None

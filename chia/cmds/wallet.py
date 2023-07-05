@@ -36,7 +36,11 @@ def wallet_cmd(ctx: click.Context) -> None:
 def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
     from .wallet_funcs import get_transaction
 
-    asyncio.run(get_transaction(wallet_rpc_port, fingerprint, tx_id, verbose))  # Wallet ID is not used.
+    asyncio.run(
+        get_transaction(  # Wallet ID is not used.
+            wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint, tx_id=tx_id, verbose=verbose
+        )
+    )
 
 
 @wallet_cmd.command("get_transactions", help="Get all transactions")
@@ -313,7 +317,11 @@ def clawback(
 ) -> None:  # pragma: no cover
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(spend_clawback(wallet_rpc_port, fingerprint, Decimal(fee), tx_ids))  # Wallet ID is not Used.
+    asyncio.run(
+        spend_clawback(  # Wallet ID is not Used.
+            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids
+        )
+    )
 
 
 @wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
@@ -774,7 +782,16 @@ def did_find_lost_cmd(
 ) -> None:
     from .wallet_funcs import find_lost_did
 
-    asyncio.run(find_lost_did(wallet_rpc_port, fingerprint, coin_id, metadata, recovery_list_hash, num_verification))
+    asyncio.run(
+        find_lost_did(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            coin_id=coin_id,
+            metadata=metadata,
+            recovery_list_hash=recovery_list_hash,
+            num_verification=num_verification,
+        )
+    )
 
 
 @did_cmd.command("message_spend", help="Generate a DID spend bundle for announcements")

@@ -162,7 +162,15 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 
     from .plotnft_funcs import self_pool
 
-    asyncio.run(self_pool(wallet_rpc_port, fingerprint, Decimal(fee), id, dont_prompt))
+    asyncio.run(
+        self_pool(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            fee=Decimal(fee),
+            wallet_id=id,
+            prompt=dont_prompt,
+        )
+    )
 
 
 @plotnft_cmd.command("inspect", help="Get Detailed plotnft information as JSON")
@@ -208,7 +216,14 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
 
     from .plotnft_funcs import claim_cmd
 
-    asyncio.run(claim_cmd(wallet_rpc_port, fingerprint, Decimal(fee), id))
+    asyncio.run(
+        claim_cmd(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            fee=Decimal(fee),
+            wallet_id=id,
+        )
+    )
 
 
 @plotnft_cmd.command(
