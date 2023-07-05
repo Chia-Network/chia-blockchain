@@ -12,6 +12,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
 from tests.util.db_connection import DBConnection
@@ -282,6 +283,24 @@ async def test_transaction_count_for_wallet() -> None:
 
         assert await store.get_transaction_count_for_wallet(1) == 5
         assert await store.get_transaction_count_for_wallet(2) == 2
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, True, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
+            == 0
+        )
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
+            )
+            == 0
+        )
+        assert (
+            await store.get_transaction_count_for_wallet(
+                1, False, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_TX])
+            )
+            == 5
+        )
 
 
 @pytest.mark.asyncio
@@ -442,16 +461,23 @@ async def test_get_transactions_between_confirmed() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(1))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(2))
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3))
-        tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4))
+        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))
+        tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2))
+        tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(3))
+        tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(4))
+        tr6 = dataclasses.replace(
+            tr1, name=token_bytes(32), confirmed_at_height=uint32(5), type=uint32(TransactionType.COINBASE_REWARD.value)
+        )
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
         await store.add_transaction_record(tr3)
         await store.add_transaction_record(tr4)
         await store.add_transaction_record(tr5)
+
+        # Test confirmed filter
+        assert await store.get_transactions_between(1, 0, 100, confirmed=True) == [tr2, tr3, tr4, tr5]
+        assert await store.get_transactions_between(1, 0, 100, confirmed=False) == [tr1]
 
         # test different limits
         assert await store.get_transactions_between(1, 0, 1) == [tr1]
@@ -479,6 +505,36 @@ async def test_get_transactions_between_confirmed() -> None:
         assert await store.get_transactions_between(1, 1, 100, reverse=True) == [tr4, tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 2, 100, reverse=True) == [tr3, tr2, tr1]
         assert await store.get_transactions_between(1, 3, 100, reverse=True) == [tr2, tr1]
+
+        # test type filter (coinbase reward)
+        await store.add_transaction_record(tr6)
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
+        ) == [tr6]
+        assert await store.get_transactions_between(
+            1, 0, 1, reverse=True, type_filter=TransactionTypeFilter.exclude([TransactionType.COINBASE_REWARD])
+        ) == [tr5]
+        assert (
+            await store.get_transactions_between(1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.include([]))
+            == []
+        )
+        assert await store.get_transactions_between(
+            1, 0, 100, reverse=True, type_filter=TransactionTypeFilter.exclude([])
+        ) == [
+            tr6,
+            tr5,
+            tr4,
+            tr3,
+            tr2,
+            tr1,
+        ]
+        assert await store.get_transactions_between(
+            1,
+            0,
+            100,
+            reverse=True,
+            type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD, TransactionType.OUTGOING_TX]),
+        ) == [tr6, tr5, tr4, tr3, tr2, tr1]
 
 
 @pytest.mark.asyncio

@@ -31,7 +31,7 @@ def create_timelord_service(
     config: Dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service[Timelord]:
+) -> Service[Timelord, TimelordAPI]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = {

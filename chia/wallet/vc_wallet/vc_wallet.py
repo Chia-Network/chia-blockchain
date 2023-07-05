@@ -3,9 +3,11 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
+import traceback
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
+from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -30,6 +32,7 @@ from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -103,8 +106,17 @@ class VCWallet:
                 f"Cannot get verified credential coin: {coin.name().hex()} puzzle and solution"
             )  # pragma: no cover
             return  # pragma: no cover
-        vc = VerifiedCredential.get_next_from_coin_spend(cs)
+        try:
+            vc = VerifiedCredential.get_next_from_coin_spend(cs)
+        except Exception as e:  # pragma: no cover
+            self.log.debug(
+                f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}"
+            )
+            return
         vc_record: VCRecord = VCRecord(vc, height)
+        self.wallet_state_manager.state_changed(
+            "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+        )
         await self.store.add_or_replace_vc_record(vc_record)
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
@@ -117,6 +129,9 @@ class VCWallet:
         vc_record: Optional[VCRecord] = await self.store.get_vc_record_by_coin_id(coin.name())
         if vc_record is not None:
             await self.store.delete_vc_record(vc_record.vc.launcher_id)
+            self.wallet_state_manager.state_changed(
+                "vc_coin_removed", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
+            )
 
     async def get_vc_record_for_launcher_id(self, launcher_id: bytes32) -> VCRecord:
         """
@@ -160,6 +175,7 @@ class VCWallet:
             provider_did,
             inner_puzzle_hash,
             [inner_puzzle_hash],
+            fee=fee,
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
@@ -204,10 +220,13 @@ class VCWallet:
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        new_proof_hash: Optional[bytes32] = None,  # Requires that this key posesses the DID to update the specified VC
-        provider_inner_puzhash: Optional[bytes32] = None,
         reuse_puzhash: Optional[bool] = None,
+        **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
+        new_proof_hash: Optional[bytes32] = kwargs.get(
+            "new_proof_hash", None
+        )  # Requires that this key posesses the DID to update the specified VC
+        provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
         """
         Entry point for two standard actions:
          - Cycle the singleton and make an announcement authorizing something
@@ -446,6 +465,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    from chia.wallet.wallet_protocol import WalletProtocol  # pragma: no cover
-
     _dummy: WalletProtocol = VCWallet()  # pragma: no cover

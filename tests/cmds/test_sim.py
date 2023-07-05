@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from shutil import rmtree
 
 from click.testing import CliRunner, Result
@@ -15,11 +16,24 @@ fingerprint = 2640131813
 std_farming_address = "txch1mh4qanzyawn3v4uphgaj2cg6hrjazwyp0sx653fhn9apg6mfajlqtj0ztp"
 burn_address = "txch1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqm6ksh7qddh"  # 0x0...dead
 
+SIMULATOR_ROOT_PATH.mkdir(parents=True, exist_ok=True)  # this simplifies code later
+
+
+def get_profile_path(starting_string: str) -> str:
+    """
+    Returns the name of a profile that does not exist yet.
+    """
+    i = 0
+    while Path(SIMULATOR_ROOT_PATH / (starting_string + str(i))).exists():
+        i += 1
+    return starting_string + str(i)
+
 
 def test_every_simulator_command() -> None:
+    starting_str = "ci_test"
+    simulator_name = get_profile_path(starting_str)
     runner: CliRunner = CliRunner()
     address = std_farming_address
-    simulator_name = "ci_test"
     start_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic])
     assert start_result.exit_code == 0
     assert f"Farming & Prefarm reward address: {address}" in start_result.output
@@ -35,7 +49,8 @@ def test_every_simulator_command() -> None:
 def test_custom_farming_address() -> None:
     runner: CliRunner = CliRunner()
     address = burn_address
-    simulator_name = "ci_address_test"
+    starting_str = "ci_address_test"
+    simulator_name = get_profile_path(starting_str)
     start_result: Result = runner.invoke(
         cli, ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic, "--reward-address", address]
     )
@@ -70,9 +85,14 @@ def _test_sim_status(runner: CliRunner, address: str, simulator_name: str) -> No
     result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status", "--show-key", "-cia"])
     assert result.exit_code == 0
     # asserts are grouped by arg
-    assert f"Fingerprint: {fingerprint}" and f"Mnemonic seed (24 secret words):\n{mnemonic}" in result.output  # -k
+    assert (
+        f"Fingerprint: {fingerprint}" in result.output
+        and f"Mnemonic seed (24 secret words):\n{mnemonic}" in result.output
+    )  # -k
 
-    assert "Network: simulator0" and "Current Blockchain Status: Full Node Synced" in result.output  # default
+    assert (
+        "Network: simulator0" in result.output and "Current Blockchain Status: Full Node Synced" in result.output
+    )  # default
     assert "Height:          1" in result.output  # default
     assert f"Current Farming address: {address}, with a balance of: 21000000.0 TXCH." in result.output  # default
 
@@ -99,7 +119,7 @@ def _test_farm_and_revert_block(runner: CliRunner, address: str, simulator_name:
     # do a reorg, 3 blocks back, 2 blocks forward, height now 8
     reorg_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "revert", "-b", "3", "-n", "2"])
     assert reorg_result.exit_code == 0
-    assert "Block: 3 and above " and "Block Height is now: 8" in reorg_result.output
+    assert "Block: 3 and above " in reorg_result.output and "Block Height is now: 8" in reorg_result.output
 
     # check that height changed by 2
     reorg_check: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status"])
@@ -109,7 +129,10 @@ def _test_farm_and_revert_block(runner: CliRunner, address: str, simulator_name:
     # do a forceful reorg 4 blocks back
     forced_reorg_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "revert", "-b", "4", "-fd"])
     assert forced_reorg_result.exit_code == 0
-    assert "Block: 8 and above were successfully deleted" and "Block Height is now: 4" in forced_reorg_result.output
+    assert (
+        "Block: 8 and above were successfully deleted" in forced_reorg_result.output
+        and "Block Height is now: 4" in forced_reorg_result.output
+    )
 
     # check that height changed by 4
     forced_reorg_check: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status"])
@@ -119,7 +142,10 @@ def _test_farm_and_revert_block(runner: CliRunner, address: str, simulator_name:
     # test chain reset to genesis
     genesis_reset_result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "revert", "-fd", "--reset"])
     assert genesis_reset_result.exit_code == 0
-    assert "Block: 2 and above were successfully deleted" and "Block Height is now: 1" in genesis_reset_result.output
+    assert (
+        "Block: 2 and above were successfully deleted" in genesis_reset_result.output
+        and "Block Height is now: 1" in genesis_reset_result.output
+    )
 
     # check that height changed to 1
     genesis_reset_check: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "status"])

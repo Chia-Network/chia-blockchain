@@ -40,3 +40,7 @@ class KeyNotFoundError(Exception):
 
 class OfferIntegrityError(Exception):
     pass
+
+
+class LauncherCoinNotFoundError(Exception):
+    pass

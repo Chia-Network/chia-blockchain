@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.8.1 Chia blockchain 2023-05-17
+
+### Changed
+- Updated testnet softfork height so softfork rules take effect on testnet immediately
+- Move to Discord in docs and install scripts (#15193)
+- Optimize compact proofs
+
+### Fixed
+- Issue where CLI only listed first 50 NFTs by hardcoding `num` param when listing NFTs from CLI
+- Issue where wallet might display `RuntimeError: dictionary changed size during iteration` by avoiding dict changes while iterating in `handle_nft`
+- Issue where node had trouble keeping peers with `assert self.peak is not None` error by not adding transactions to the mempool before it has a valid peak (fixes #15217)
+
 ## 1.8.0 Chia blockchain 2023-05-03
 
 ### Added

@@ -140,7 +140,7 @@ def default_call(
         # create hash_key list for aggsig check
         pairs_pks: List[bytes48] = []
         pairs_msgs: List[bytes] = []
-        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA, soft_fork=False)
+        pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
         pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
         assert block.transactions_info is not None
         assert block.transactions_info.aggregated_signature is not None

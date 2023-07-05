@@ -32,8 +32,14 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
+
+# Creates a directory of licenses
+echo "Building pip and NPM license directory"
+pwd
+bash ./build_license_directory.sh
+
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 
@@ -52,6 +58,8 @@ if [ "$NOTARIZE" == true ]; then
 	echo "Setting credentials for signing"
 	export CSC_LINK=$APPLE_DEV_ID_APP
 	export CSC_KEY_PASSWORD=$APPLE_DEV_ID_APP_PASS
+	export PUBLISH_FOR_PULL_REQUEST=true
+	export CSC_FOR_PULL_REQUEST=true
 else
 	echo "Not on ci or no secrets so not signing"
 	export CSC_IDENTITY_AUTO_DISCOVERY=false

@@ -6,7 +6,6 @@ import pytest
 
 from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
-from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.weight_proof import WeightProof
 from chia.util.generator_tools import get_block_header
@@ -48,7 +47,7 @@ class TestWalletBlockchain:
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
-            chain = await WalletBlockchain.create(store, test_constants)
+            chain = await WalletBlockchain.create(store, bt.constants)
 
             assert (await chain.get_peak_block()) is None
             assert chain.get_latest_timestamp() == 0

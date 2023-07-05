@@ -1,26 +1,25 @@
 from __future__ import annotations
 
+import logging
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import PeerPeak, WalletNode
 
 
 class WalletNodeAPI:
+    log: logging.Logger
     wallet_node: WalletNode
 
     def __init__(self, wallet_node) -> None:
+        self.log = logging.getLogger(__name__)
         self.wallet_node = wallet_node
 
-    @property
-    def log(self):
-        return self.wallet_node.log
-
-    @property
-    def api_ready(self):
+    def ready(self) -> bool:
         return self.wallet_node.logged_in
 
     @api_request(peer_required=True)
@@ -45,7 +44,7 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        self.wallet_node.node_peaks[peer.peer_node_id] = PeerPeak(peak.height, peak.header_hash)
         # For trusted peers check if there are untrusted peers, if so make sure to disconnect them if the trusted node
         # is synced.
         if self.wallet_node.is_trusted(peer):

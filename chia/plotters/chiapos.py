@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from argparse import Namespace
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -22,7 +23,7 @@ def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 
-def plot_chia(args, root_path):
+def plot_chia(args: Namespace, root_path: Path) -> None:
     try:
         validate_plot_size(root_path, args.size, args.override)
     except ValueError as e:

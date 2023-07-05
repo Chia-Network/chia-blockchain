@@ -13,6 +13,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, U
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
+from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia.cmds.init_funcs import chia_full_version_str
@@ -20,6 +21,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
 from chia.protocols.shared_protocol import Capability, Handshake
+from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -65,7 +67,7 @@ class WSChiaConnection:
     """
 
     ws: WebSocket = field(repr=False)
-    api: Any = field(repr=False)
+    api: ApiProtocol = field(repr=False)
     local_type: NodeType
     local_port: Optional[int]
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
@@ -99,7 +101,6 @@ class WSChiaConnection:
     inbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     incoming_message_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     outbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
-    active: bool = False  # once handshake is successful this will be changed to True
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
@@ -110,8 +111,8 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: str = field(default_factory=str)
-    protocol_version: str = field(default_factory=str)
+    version: Version = field(default_factory=lambda: Version("0"))
+    protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
         default_factory=create_default_last_message_time_dict,
@@ -123,7 +124,7 @@ class WSChiaConnection:
         cls,
         local_type: NodeType,
         ws: WebSocket,
-        api: Any,
+        api: ApiProtocol,
         server_port: Optional[int],
         log: logging.Logger,
         is_outbound: bool,
@@ -218,8 +219,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = inbound_handshake.software_version
-            self.protocol_version = inbound_handshake.protocol_version
+            self.version = Version(inbound_handshake.software_version)
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -246,6 +247,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             await self._send_message(outbound_handshake)
+            self.version = Version(inbound_handshake.software_version)
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -371,9 +374,9 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
-            if hasattr(self.api, "api_ready"):
-                if self.api.api_ready is False:
-                    return None
+            if not self.api.ready():
+                self.log.warning(f"API not ready, ignore request: {full_message}")
+                return None
 
             timeout: Optional[int] = 600
             if metadata.execute_task:
@@ -672,7 +675,7 @@ class WSChiaConnection:
 
     # Used by the Chia Seeder.
     def get_version(self) -> str:
-        return self.version
+        return str(self.version)
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

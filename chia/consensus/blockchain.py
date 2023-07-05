@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import enum
 import logging
 import multiprocessing
 import traceback
@@ -49,6 +50,7 @@ from chia.util.generator_tools import get_block_header, tx_removals_and_addition
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -77,6 +79,12 @@ class StateChangeSummary:
     new_rewards: List[Coin]
 
 
+class BlockchainMutexPriority(enum.IntEnum):
+    # lower values are higher priority
+    low = 1
+    high = 0
+
+
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
 
@@ -102,7 +110,7 @@ class Blockchain(BlockchainInterface):
     _shut_down: bool
 
     # Lock to prevent simultaneous reads and writes
-    lock: asyncio.Lock
+    priority_mutex: PriorityMutex[BlockchainMutexPriority]
     compact_proof_lock: asyncio.Lock
 
     @staticmethod
@@ -122,7 +130,9 @@ class Blockchain(BlockchainInterface):
         in the consensus constants config.
         """
         self = Blockchain()
-        self.lock = asyncio.Lock()  # External lock handled by full node
+        # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
+        # be validated first.
+        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()
