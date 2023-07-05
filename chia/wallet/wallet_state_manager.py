@@ -988,6 +988,7 @@ class WalletStateManager:
             if coin_state.spent_height is not None:
                 # The first coin we received for DID wallet is spent.
                 # This means the wallet is in a resync process, skip the coin
+                print("test")
                 return None
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
