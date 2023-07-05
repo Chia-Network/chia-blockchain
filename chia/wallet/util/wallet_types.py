@@ -26,11 +26,14 @@ class WalletType(IntEnum):
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
     VC = 13
+    CRCAT = 57
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
+    CRCAT_PENDING = 2
+    CRCAT = 3
 
 
 class RemarkDataType(IntEnum):

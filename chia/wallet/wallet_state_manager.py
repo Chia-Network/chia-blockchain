@@ -8,7 +8,20 @@ import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional, Set, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import aiosqlite
 from blspy import G1Element, G2Element, PrivateKey
@@ -47,6 +60,7 @@ from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_info import CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
@@ -94,12 +108,14 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
-from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
@@ -271,6 +287,12 @@ class WalletStateManager:
                 wallet = await DataLayerWallet.create(self, wallet_info)
             elif wallet_type == WalletType.VC:  # pragma: no cover
                 wallet = await VCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
+            elif wallet_type == WalletType.CRCAT:  # pragma: no cover
+                wallet = await CRCATWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
@@ -625,7 +647,11 @@ class WalletStateManager:
         """
         # lock only if unspent_coin_records is None
         if unspent_coin_records is None:
-            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            if self.wallets[uint32(wallet_id)].type() == WalletType.CRCAT:
+                coin_type = CoinType.CRCAT
+            else:
+                coin_type = CoinType.NORMAL
+            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, coin_type)
         return uint128(sum(cr.coin.amount for cr in unspent_coin_records))
 
     async def get_unconfirmed_balance(
@@ -638,7 +664,13 @@ class WalletStateManager:
         # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
         # and this method is called only for the unspent_coin_records==None case.
         if unspent_coin_records is None:
-            unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            wallet_type: WalletType = self.wallets[uint32(wallet_id)].type()
+            if wallet_type == WalletType.CRCAT:
+                unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, CoinType.CRCAT)
+                pending_crcat = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, CoinType.CRCAT_PENDING)
+                unspent_coin_records = unspent_coin_records.union(pending_crcat)
+            else:
+                unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         all_unspent_coins: Set[Coin] = {cr.coin for cr in unspent_coin_records}
@@ -748,7 +780,8 @@ class WalletStateManager:
         )
         for coin in unspent_coins.records:
             try:
-                metadata: ClawbackMetadata = coin.parsed_metadata()
+                metadata: MetadataTypes = coin.parsed_metadata()
+                assert isinstance(metadata, ClawbackMetadata)
                 if await metadata.is_recipient(self.puzzle_store):
                     coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
@@ -906,14 +939,65 @@ class WalletStateManager:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
+            is_crcat: bool = False
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                return None
+                # Check if it is a CRCAT
+                if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
+                    is_crcat = True
+                else:
+                    return None  # pragma: no cover
+            if is_crcat:
+                # Since CRCAT wallet doesn't have derivation path, every CRCAT will go through this code path
+                crcat: CRCAT = next(
+                    crc for crc in CRCAT.get_next_from_coin_spend(coin_spend) if crc.coin == coin_state.coin
+                )
+
+                # Make sure we control the inner puzzle or we control it if it's wrapped in the pending state
+                if (
+                    await self.puzzle_store.get_derivation_record_for_puzzle_hash(crcat.inner_puzzle_hash) is None
+                    and crcat.inner_puzzle_hash
+                    != construct_pending_approval_state(
+                        hinted_coin.hint,
+                        uint64(coin_state.coin.amount),
+                    ).get_tree_hash()
+                ):
+                    self.log.error(f"Unknown CRCAT inner puzzle, coin ID:{crcat.coin.name().hex()}")  # pragma: no cover
+                    return None  # pragma: no cover
+
+                # Check if we already have a wallet
+                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT):
+                    crcat_info: CRCATInfo = CRCATInfo.from_bytes(bytes.fromhex(wallet_info.data))
+                    if crcat_info.limitations_program_hash == asset_id:
+                        return WalletIdentifier(wallet_info.id, WalletType(wallet_info.type))
+
+                # We didn't find a matching CR-CAT wallet, but maybe we have a matching CAT wallet that we can convert
+                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.CAT):
+                    cat_info: CATInfo = CATInfo.from_bytes(bytes.fromhex(wallet_info.data))
+                    found_cat_wallet = self.wallets[wallet_info.id]
+                    assert isinstance(found_cat_wallet, CATWallet)
+                    if cat_info.limitations_program_hash == crcat.tail_hash:
+                        await CRCATWallet.convert_to_cr(
+                            found_cat_wallet,
+                            crcat.authorized_providers,
+                            ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                        )
+                        self.state_changed("converted cat wallet to cr", wallet_info.id)
+                        return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
             if bytes(tail_hash).hex()[2:] in self.default_cats or self.config.get(
                 "automatically_add_unknown_cats", False
             ):
-                cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
-                    self, self.main_wallet, bytes(tail_hash).hex()[2:]
-                )
+                if is_crcat:
+                    cat_wallet: Union[CATWallet, CRCATWallet] = await CRCATWallet.get_or_create_wallet_for_cat(
+                        self,
+                        self.main_wallet,
+                        crcat.tail_hash.hex(),
+                        authorized_providers=crcat.authorized_providers,
+                        proofs_checker=ProofsChecker.from_program(uncurry_puzzle(crcat.proofs_checker)),
+                    )
+                else:
+                    cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+                        self, self.main_wallet, bytes(tail_hash).hex()[2:]
+                    )
                 return WalletIdentifier.create(cat_wallet)
             else:
                 # Found unacknowledged CAT, save it in the database.
@@ -1987,9 +2071,9 @@ class WalletStateManager:
 
     async def get_wallet_for_asset_id(self, asset_id: str) -> Optional[WalletProtocol]:
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() == WalletType.CAT:
+            if wallet.type() in (WalletType.CAT, WalletType.CRCAT):
                 assert isinstance(wallet, CATWallet)
-                if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
+                if wallet.get_asset_id() == asset_id:
                     return wallet
             elif wallet.type() == WalletType.DATA_LAYER:
                 assert isinstance(wallet, DataLayerWallet)
@@ -2017,6 +2101,9 @@ class WalletStateManager:
                 self.main_wallet,
                 puzzle_driver,
                 name,
+                potential_subclasses={
+                    AssetType.CR: CRCATWallet,
+                },
             )
 
     async def add_new_wallet(self, wallet: WalletProtocol) -> None:
@@ -2027,8 +2114,12 @@ class WalletStateManager:
     async def get_spendable_coins_for_wallet(
         self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None
     ) -> Set[WalletCoinRecord]:
+        wallet_type = self.wallets[uint32(wallet_id)].type()
         if records is None:
-            records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
+            if wallet_type == WalletType.CRCAT:
+                records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, CoinType.CRCAT)
+            else:
+                records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
         # Coins that are currently part of a transaction
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
@@ -2082,7 +2173,7 @@ class WalletStateManager:
     async def convert_puzzle_hash(self, wallet_id: uint32, puzzle_hash: bytes32) -> bytes32:
         wallet = self.wallets[wallet_id]
         # This should be general to wallets but for right now this is just for CATs so we'll add this if
-        if wallet.type() == WalletType.CAT.value:
+        if wallet.type() in (WalletType.CAT.value, WalletType.CRCAT.value):
             assert isinstance(wallet, CATWallet)
             return await wallet.convert_puzzle_hash(puzzle_hash)
 

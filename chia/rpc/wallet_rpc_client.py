@@ -1284,3 +1284,27 @@ class WalletRpcClient(RpcClient):
             "vc_revoke", {"vc_parent_id": vc_parent_id.hex(), "fee": fee, "reuse_puzhash": reuse_puzhash}
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def crcat_approve_pending(
+        self,
+        wallet_id: uint32,
+        min_amount_to_claim: uint64,
+        fee: uint64 = uint64(0),
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
+        reuse_puzhash: Optional[bool] = None,
+    ) -> List[TransactionRecord]:
+        response = await self.fetch(
+            "crcat_approve_pending",
+            {
+                "wallet_id": wallet_id,
+                "min_amount_to_claim": min_amount_to_claim,
+                "fee": fee,
+                "min_coin_amount": min_coin_amount,
+                "max_coin_amount": max_coin_amount,
+                "exclude_coin_amounts": exclude_coin_amounts,
+                "reuse_puzhash": reuse_puzhash,
+            },
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
