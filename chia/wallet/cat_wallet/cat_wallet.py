@@ -569,7 +569,7 @@ class CATWallet:
         self,
         fee: uint64,
         amount_to_claim: uint64,
-        announcement_to_assert: Optional[Announcement] = None,
+        announcements_to_assert: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
@@ -604,7 +604,7 @@ class CATWallet:
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
                 negative_change_allowed=False,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
                 reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
@@ -632,7 +632,7 @@ class CATWallet:
                 (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
                 coins=chia_coins,
                 negative_change_allowed=True,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
                 reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
@@ -737,7 +737,7 @@ class CATWallet:
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
-                            announcement_to_assert=announcement,
+                            announcements_to_assert={announcement},
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
                             excluded_coin_amounts=excluded_coin_amounts,
