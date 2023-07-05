@@ -48,7 +48,7 @@ new_signage_point = farmer_protocol.NewSignagePoint(
     uint64(2329045448547720842),
     uint64(8265724497259558930),
     uint8(194),
-    uint8(9),
+    uint32(1),
 )
 
 proof_of_space = ProofOfSpace(
