@@ -584,17 +584,14 @@ async def test_get_wallet_addresses(
 
     original_get_keys = Keychain.get_keys
 
-    # monkeypatch Keychain.get_keys() to always call get_keys() with include_secrets=False
-    def mock_get_keys(self, include_secrets=False):
-        def wrapper(self, include_secrets):
-            return original_get_keys(self, include_secrets=False)
-
-        return wrapper
+    def get_keys_no_secrets(self, include_secrets):
+        return original_get_keys(self, include_secrets=False)
 
     # in the pubkeys_only case, we're ensuring that only pubkeys are returned by get_keys,
     # which will have the effect of causing get_wallet_addresses to raise an exception
     if case.pubkeys_only:
-        monkeypatch.setattr(Keychain, "get_keys", mock_get_keys(original_get_keys))
+        # monkeypatch Keychain.get_keys() to always call get_keys() with include_secrets=False
+        monkeypatch.setattr(Keychain, "get_keys", get_keys_no_secrets)
 
     assert case.response == await daemon.get_wallet_addresses(case.request)
 
