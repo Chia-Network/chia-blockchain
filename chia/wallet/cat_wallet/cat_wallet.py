@@ -238,7 +238,19 @@ class CATWallet:
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
-    ) -> CATWallet:
+        # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
+        potential_subclasses: Dict[AssetType, Any] = {},
+    ) -> Any:
+        next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
+        if next_layer is not None:
+            if AssetType(next_layer.type()) in potential_subclasses:
+                return await potential_subclasses[AssetType(next_layer.type())].create_from_puzzle_info(
+                    wallet_state_manager,
+                    wallet,
+                    puzzle_driver,
+                    name,
+                    potential_subclasses,
+                )
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
