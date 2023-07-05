@@ -99,20 +99,6 @@ class TestSSL:
         await establish_connection(full_node_server, self_hostname, ssl_context)
 
     @pytest.mark.asyncio
-    async def test_wallet(self, simulator_and_wallet):
-        full_nodes, wallets, bt = simulator_and_wallet
-        wallet_node, wallet_server = wallets[0]
-
-        assert wallet_server.webserver is None
-
-    @pytest.mark.asyncio
-    async def test_harvester(self, farmer_one_harvester):
-        harvesters, _, bt = farmer_one_harvester
-        harvester_server = harvesters[0]._server
-
-        assert harvester_server.webserver is None
-
-    @pytest.mark.asyncio
     async def test_introducer(self, introducer_service, self_hostname):
         introducer_server = introducer_service._node.server
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(introducer_service.root_path, introducer_service.config)
@@ -128,8 +114,3 @@ class TestSSL:
         )
         ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, pub_crt, pub_key)
         await establish_connection(introducer_server, self_hostname, ssl_context)
-
-    @pytest.mark.asyncio
-    async def test_timelord(self, timelord_service):
-        timelord_server = timelord_service._node.server
-        assert timelord_server.webserver is None

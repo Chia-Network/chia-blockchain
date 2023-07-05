@@ -111,3 +111,13 @@ async def test_harvester_handshake(
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)
+
+
+@pytest.mark.asyncio
+async def test_harvester_has_no_server(
+    farmer_one_harvester: Tuple[List[Service[Farmer, FarmerAPI]], Service[Harvester, HarvesterAPI], BlockTools],
+) -> None:
+    harvesters, _, bt = farmer_one_harvester
+    harvester_server = harvesters[0]._server
+
+    assert harvester_server.webserver is None

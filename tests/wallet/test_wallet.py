@@ -1506,3 +1506,13 @@ def test_get_wallet_db_path_testnet() -> None:
     wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
 
     assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")
+
+
+@pytest.mark.asyncio
+async def test_wallet_has_no_server(
+    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+) -> None:
+    full_nodes, wallets, bt = simulator_and_wallet
+    wallet_node, wallet_server = wallets[0]
+
+    assert wallet_server.webserver is None

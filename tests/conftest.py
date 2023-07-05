@@ -47,6 +47,8 @@ from chia.simulator.setup_nodes import (
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint64
@@ -591,7 +593,10 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+async def farmer_one_harvester(
+    tmp_path: Path,
+    get_b_tools: BlockTools,
+) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
     async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 
@@ -823,7 +828,7 @@ async def timelord(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def timelord_service(bt):
+async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
     async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
         yield _
 
