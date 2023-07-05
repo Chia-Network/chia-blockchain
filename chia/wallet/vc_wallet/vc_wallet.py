@@ -449,6 +449,9 @@ class VCWallet:
     def get_name(self) -> str:
         return self.wallet_info.name  # pragma: no cover
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        return False
+
 
 if TYPE_CHECKING:
     _dummy: WalletProtocol = VCWallet()  # pragma: no cover

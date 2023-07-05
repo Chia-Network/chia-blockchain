@@ -42,7 +42,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -590,3 +590,12 @@ class Wallet:
 
     def get_name(self) -> str:
         return "Standard Wallet"
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        if hint == coin.puzzle_hash:
+            wallet_identifier: Optional[
+                WalletIdentifier
+            ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+            if wallet_identifier is not None and wallet_identifier.id == self.id():
+                return True
+        return False

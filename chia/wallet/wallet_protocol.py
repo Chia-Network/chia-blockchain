@@ -67,6 +67,9 @@ class WalletProtocol(Protocol):
     def get_name(self) -> str:
         ...
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        ...
+
     wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
