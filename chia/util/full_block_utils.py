@@ -342,6 +342,7 @@ def plot_filter_info_from_block(buf: memoryview) -> PlotFilterInfo:
     buf = skip_proof_of_space(buf)  # proof_of_space
     # Optional[challenge_chain_sp_vdf]
     if buf[0] == 0:
+        # This corresponds to the edge case of first sp (start of slot), where sp_iters == 0
         return PlotFilterInfo(pos_ss_cc_challenge_hash, pos_ss_cc_challenge_hash)
     buf = buf[1 + 32 + 8 :]  # optional, vdf info challenge, vdf info number_of_iterations
     output = ClassgroupElement.from_bytes(buf[:100])

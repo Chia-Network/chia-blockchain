@@ -21,7 +21,6 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.full_block_utils import (
     GeneratorBlockInfo,
-    PlotFilterInfo,
     block_info_from_block,
     generator_from_block,
     plot_filter_info_from_block,
@@ -458,36 +457,6 @@ class BlockStore:
                     b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
                 )
 
-    async def get_plot_filter_info(self, header_hash: bytes32) -> Optional[PlotFilterInfo]:
-        cached = self.block_cache.get(header_hash)
-        if cached is not None:
-            if cached.reward_chain_block.challenge_chain_sp_vdf is None:
-                cc_sp_hash: bytes32 = cached.reward_chain_block.pos_ss_cc_challenge_hash
-            else:
-                cc_sp_hash = cached.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            return PlotFilterInfo(cached.reward_chain_block.pos_ss_cc_challenge_hash, cc_sp_hash)
-
-        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
-            if row is None:
-                return None
-            if self.db_wrapper.db_version == 2:
-                block_bytes = zstd.decompress(row[0])
-            else:
-                block_bytes = row[0]
-
-            try:
-                return plot_filter_info_from_block(block_bytes)
-            except Exception as e:
-                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
-                b = FullBlock.from_bytes(block_bytes)
-                if b.reward_chain_block.challenge_chain_sp_vdf is None:
-                    cc_sp_hash = b.reward_chain_block.pos_ss_cc_challenge_hash
-                else:
-                    cc_sp_hash = b.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-                return PlotFilterInfo(b.reward_chain_block.pos_ss_cc_challenge_hash, cc_sp_hash)
-
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
@@ -553,16 +522,18 @@ class BlockStore:
             return []
 
         all_blocks: Dict[bytes32, BlockRecordDB] = {}
+        all_block_bytes: Dict[bytes32, memoryview] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash,block_record FROM full_blocks "
+                    "SELECT header_hash,block_record,block FROM full_blocks "
                     f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                     header_hashes,
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
                         all_blocks[header_hash] = BlockRecordDB.from_bytes(row[1])
+                        all_block_bytes[header_hash] = zstd.decompress(row[2])
         else:
             formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
             async with self.db_wrapper.reader_no_transaction() as conn:
@@ -571,12 +542,21 @@ class BlockStore:
                         block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[0])
                         all_blocks[block_rec_db.header_hash] = block_rec_db
 
+            formatted_str = (
+                f'SELECT header_hash,block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
+            )
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
+                    for row in await cursor.fetchall():
+                        header_hash = bytes32.fromhex(row[0])
+                        all_block_bytes[header_hash] = row[1]
+
         ret: List[BlockRecord] = []
         for hh in header_hashes:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
-            plot_filter_info = await self.get_plot_filter_info(hh)
-            assert plot_filter_info is not None
+            assert hh in all_block_bytes
+            plot_filter_info = plot_filter_info_from_block(all_block_bytes[hh])
             block_record = all_blocks[hh].to_block_record(
                 plot_filter_info.pos_ss_cc_challenge_hash,
                 plot_filter_info.cc_sp_hash,
@@ -655,12 +635,13 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT block_record FROM full_blocks WHERE header_hash=?",
+                    "SELECT block_record,block FROM full_blocks WHERE header_hash=?",
                     (header_hash,),
                 ) as cursor:
                     row = await cursor.fetchone()
             if row is not None:
                 block_record_db = BlockRecordDB.from_bytes(row[0])
+                block_bytes = zstd.decompress(row[1])
             else:
                 return None
 
@@ -676,8 +657,17 @@ class BlockStore:
             else:
                 return None
 
-        plot_filter_info = await self.get_plot_filter_info(header_hash)
-        assert plot_filter_info is not None
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(
+                    "SELECT block from full_blocks WHERE header_hash=?",
+                    (header_hash.hex(),),
+                ) as cursor:
+                    row = await cursor.fetchone()
+
+            assert row is not None
+            block_bytes = row[0]
+
+        plot_filter_info = plot_filter_info_from_block(block_bytes)
         block_record = block_record_db.to_block_record(
             plot_filter_info.pos_ss_cc_challenge_hash,
             plot_filter_info.cc_sp_hash,
@@ -695,15 +685,17 @@ class BlockStore:
         """
 
         ret: Dict[bytes32, BlockRecordDB] = {}
+        all_block_bytes: Dict[bytes32, memoryview] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND height <= ?",
+                    "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ? AND height <= ?",
                     (start, stop),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
+                        all_block_bytes[header_hash] = zstd.decompress(row[2])
 
         else:
             formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
@@ -714,10 +706,18 @@ class BlockStore:
                         header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
 
+            formatted_str = f"SELECT header_hash, block from full_blocks WHERE height >= {start} and height <= {stop}"
+
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with await conn.execute(formatted_str) as cursor:
+                    for row in await cursor.fetchall():
+                        header_hash = self.maybe_from_hex(row[0])
+                        all_block_bytes[header_hash] = row[1]
+
         result: Dict[bytes32, BlockRecord] = {}
         for hh, block_record_db in ret.items():
-            plot_filter_info = await self.get_plot_filter_info(hh)
-            assert plot_filter_info is not None
+            assert hh in all_block_bytes
+            plot_filter_info = plot_filter_info_from_block(all_block_bytes[hh])
             block_record = block_record_db.to_block_record(
                 plot_filter_info.pos_ss_cc_challenge_hash,
                 plot_filter_info.cc_sp_hash,
@@ -781,15 +781,17 @@ class BlockStore:
             return {}, None
 
         ret: Dict[bytes32, BlockRecordDB] = {}
+        all_block_bytes: Dict[bytes32, memoryview] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
+                    "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ?",
                     (peak[1] - blocks_n,),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
+                        all_block_bytes[header_hash] = zstd.decompress(row[2])
 
         else:
             formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak[1] - blocks_n}"
@@ -799,10 +801,17 @@ class BlockStore:
                         header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecordDB.from_bytes(row[1])
 
+            formatted_str = f"SELECT header_hash,block  from full_blocks WHERE height >= {peak[1] - blocks_n}"
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str) as cursor:
+                    for row in await cursor.fetchall():
+                        header_hash = self.maybe_from_hex(row[0])
+                        all_block_bytes[header_hash] = row[1]
+
         result: Dict[bytes32, BlockRecord] = {}
         for hh, block_record_db in ret.items():
-            plot_filter_info = await self.get_plot_filter_info(hh)
-            assert plot_filter_info is not None
+            assert hh in all_block_bytes
+            plot_filter_info = plot_filter_info_from_block(all_block_bytes[hh])
             block_record = block_record_db.to_block_record(
                 plot_filter_info.pos_ss_cc_challenge_hash,
                 plot_filter_info.cc_sp_hash,
