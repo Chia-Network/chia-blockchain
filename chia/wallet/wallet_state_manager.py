@@ -606,11 +606,13 @@ class WalletStateManager:
 
         return spendable_amount
 
-    async def does_coin_belong_to_wallet(self, coin: Coin, wallet_id: int) -> bool:
+    async def does_coin_belong_to_wallet(
+        self, coin: Coin, wallet_id: int, hint_dict: Dict[bytes32, bytes32] = {}
+    ) -> bool:
         """
         Returns true if we have the key for this coin.
         """
-        wallet_identifier = await self.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+        wallet_identifier = await self.get_wallet_identifier_for_coin(coin, hint_dict)
         return wallet_identifier is not None and wallet_identifier.id == wallet_id
 
     async def get_confirmed_balance_for_wallet(
@@ -644,11 +646,14 @@ class WalletStateManager:
         for record in unconfirmed_tx:
             for addition in record.additions:
                 # This change or a self transaction
-                if await self.does_coin_belong_to_wallet(addition, wallet_id):
+                if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
                     all_unspent_coins.add(addition)
 
             for removal in record.removals:
-                if await self.does_coin_belong_to_wallet(removal, wallet_id) and removal in all_unspent_coins:
+                if (
+                    await self.does_coin_belong_to_wallet(removal, wallet_id, record.hint_dict())
+                    and removal in all_unspent_coins
+                ):
                     all_unspent_coins.remove(removal)
 
         return uint128(sum(coin.amount for coin in all_unspent_coins))
@@ -1731,6 +1736,29 @@ class WalletStateManager:
             return WalletIdentifier(uint32(wallet_id), self.wallets[uint32(wallet_id)].type())
         return None
 
+    async def get_wallet_identifier_for_coin(
+        self, coin: Coin, hint_dict: Dict[bytes32, bytes32] = {}
+    ) -> Optional[WalletIdentifier]:
+        wallet_identifier = await self.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
+        if (
+            wallet_identifier is None
+            and coin.name() in hint_dict
+            and await self.puzzle_store.puzzle_hash_exists(hint_dict[coin.name()])
+        ):
+            wallet_identifier = await self.get_wallet_identifier_for_hinted_coin(coin, hint_dict[coin.name()])
+        if wallet_identifier is None:
+            coin_record = await self.coin_store.get_coin_record(coin.name())
+            if coin_record is not None:
+                wallet_identifier = WalletIdentifier(uint32(coin_record.wallet_id), coin_record.wallet_type)
+
+        return wallet_identifier
+
+    async def get_wallet_identifier_for_hinted_coin(self, coin: Coin, hint: bytes32) -> Optional[WalletIdentifier]:
+        for wallet in self.wallets.values():
+            if await wallet.match_hinted_coin(coin, hint):
+                return WalletIdentifier(wallet.id(), wallet.type())
+        return None
+
     async def coin_added(
         self,
         coin: Coin,
@@ -2008,7 +2036,7 @@ class WalletStateManager:
         for tx in unconfirmed_tx:
             for coin in tx.removals:
                 # TODO, "if" might not be necessary once unconfirmed tx doesn't contain coins for other wallets
-                if await self.does_coin_belong_to_wallet(coin, wallet_id):
+                if await self.does_coin_belong_to_wallet(coin, wallet_id, tx.hint_dict()):
                     removal_dict[coin.name()] = coin
 
         # Coins that are part of the trade
