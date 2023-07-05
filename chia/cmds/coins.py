@@ -40,12 +40,14 @@ def coins_cmd(ctx: click.Context) -> None:
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
+    default=[],
     help="prevent this coin from being included.",
 )
 @click.option(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
+    default=[],
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -70,15 +72,15 @@ def list_cmd(
 
     asyncio.run(
         async_list(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            Decimal(max_amount),
-            Decimal(min_amount),
-            amounts_to_exclude,
-            coins_to_exclude,
-            show_unconfirmed,
-            paginate,
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            max_coin_amount=Decimal(max_amount),
+            min_coin_amount=Decimal(min_amount),
+            excluded_amounts=amounts_to_exclude,
+            excluded_coin_ids=coins_to_exclude,
+            show_unconfirmed=show_unconfirmed,
+            paginate=paginate,
         )
     )
 
@@ -111,6 +113,7 @@ def list_cmd(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
+    default=[],
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -140,6 +143,7 @@ def list_cmd(
     "--input-coin",
     "input_coins",
     multiple=True,
+    default=[],
     help="Only combine coins with these ids.",
 )
 @click.option(
@@ -165,17 +169,17 @@ def combine_cmd(
 
     asyncio.run(
         async_combine(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            Decimal(fee),
-            Decimal(max_amount),
-            Decimal(min_amount),
-            amounts_to_exclude,
-            number_of_coins,
-            Decimal(target_amount),
-            list(input_coins),
-            largest_first,
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            max_coin_amount=Decimal(max_amount),
+            min_coin_amount=Decimal(min_amount),
+            excluded_amounts=amounts_to_exclude,
+            number_of_coins=number_of_coins,
+            target_coin_amount=Decimal(target_amount),
+            target_coin_ids_str=input_coins,
+            largest_first=largest_first,
         )
     )
 
@@ -227,6 +231,12 @@ def split_cmd(
 
     asyncio.run(
         async_split(
-            wallet_rpc_port, fingerprint, id, Decimal(fee), number_of_coins, Decimal(amount_per_coin), target_coin_id
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            number_of_coins=number_of_coins,
+            amount_per_coin=Decimal(amount_per_coin),
+            target_coin_id_str=target_coin_id,
         )
     )

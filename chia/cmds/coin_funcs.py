@@ -18,6 +18,7 @@ from chia.wallet.util.wallet_types import WalletType
 
 
 async def async_list(
+    *,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
@@ -115,6 +116,7 @@ def print_coins(
 
 
 async def async_combine(
+    *,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
@@ -199,6 +201,7 @@ async def async_combine(
 
 
 async def async_split(
+    *,
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,

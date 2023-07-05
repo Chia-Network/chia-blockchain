@@ -116,7 +116,16 @@ def get_transactions_cmd(
 
     asyncio.run(
         get_transactions(
-            wallet_rpc_port, fingerprint, id, verbose, paginate, offset, limit, sort_key, reverse, clawback
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            verbose=verbose,
+            paginate=paginate,
+            offset=offset,
+            limit=limit,
+            sort_key=sort_key,
+            reverse=reverse,
+            clawback=clawback,
         )
     )
 
@@ -174,6 +183,7 @@ def get_transactions_cmd(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
+    default=[],
     help="Exclude this coin from being spent.",
 )
 @click.option(
@@ -200,7 +210,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    coins_to_exclude: Tuple[str],
+    coins_to_exclude: list[str],
     reuse: bool,
     clawback_time: int,
 ) -> None:  # pragma: no cover
@@ -208,19 +218,19 @@ def send_cmd(
 
     asyncio.run(
         send(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            Decimal(amount),
-            memo,
-            Decimal(fee),
-            address,
-            override,
-            Decimal(min_coin_amount),
-            Decimal(max_coin_amount),
-            list(coins_to_exclude),
-            True if reuse else None,
-            clawback_time,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            amount=Decimal(amount),
+            memo=memo,
+            fee=Decimal(fee),
+            address=address,
+            override=override,
+            min_coin_amount=Decimal(min_coin_amount),
+            max_coin_amount=Decimal(max_coin_amount),
+            excluded_coin_ids=coins_to_exclude,
+            reuse_puzhash=True if reuse else None,
+            clawback_time_lock=clawback_time,
         )
     )
 
@@ -352,7 +362,13 @@ def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, addre
     from .wallet_funcs import sign_message
 
     asyncio.run(
-        sign_message(wallet_rpc_port, fingerprint, addr_type=AddressType.XCH, message=hex_message, address=address)
+        sign_message(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            addr_type=AddressType.XCH,
+            message=hex_message,
+            address=address,
+        )
     )
 
 
@@ -453,7 +469,15 @@ def make_offer_cmd(
     from .wallet_funcs import make_offer
 
     asyncio.run(
-        make_offer(wallet_rpc_port, fingerprint, Decimal(fee), offer, request, filepath, True if reuse else None)
+        make_offer(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            d_fee=Decimal(fee),
+            offers=offer,
+            requests=request,
+            filepath=filepath,
+            reuse_puzhash=True if reuse else None,
+        )
     )
 
 
@@ -492,15 +516,15 @@ def get_offers_cmd(
 
     asyncio.run(
         get_offers(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            filepath,
-            exclude_my_offers,
-            exclude_taken_offers,
-            include_completed,
-            summaries,
-            reverse,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            offer_id=id,
+            filepath=filepath,
+            exclude_my_offers=exclude_my_offers,
+            exclude_taken_offers=exclude_taken_offers,
+            include_completed=include_completed,
+            summaries=summaries,
+            reverse=reverse,
         )
     )
 
@@ -627,7 +651,13 @@ def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: s
     from .wallet_funcs import sign_message
 
     asyncio.run(
-        sign_message(wallet_rpc_port, fingerprint, addr_type=AddressType.DID, message=hex_message, did_id=did_id)
+        sign_message(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            addr_type=AddressType.DID,
+            message=hex_message,
+            did_id=did_id,
+        )
     )
 
 
@@ -888,7 +918,13 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     from .wallet_funcs import sign_message
 
     asyncio.run(
-        sign_message(wallet_rpc_port, fingerprint, addr_type=AddressType.NFT, message=hex_message, nft_id=nft_id)
+        sign_message(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            addr_type=AddressType.NFT,
+            message=hex_message,
+            nft_id=nft_id,
+        )
     )
 
 
@@ -969,23 +1005,23 @@ def nft_mint_cmd(
 
     asyncio.run(
         mint_nft(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            royalty_address,
-            target_address,
-            no_did_ownership,
-            hash,
-            [u.strip() for u in uris.split(",")],
-            metadata_hash,
-            metadata_uris_list,
-            license_hash,
-            license_uris_list,
-            edition_total,
-            edition_number,
-            Decimal(fee),
-            royalty_percentage_fraction,
-            True if reuse else None,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            royalty_address=royalty_address,
+            target_address=target_address,
+            no_did_ownership=no_did_ownership,
+            hash=hash,
+            uris=[u.strip() for u in uris.split(",")],
+            metadata_hash=metadata_hash,
+            metadata_uris=metadata_uris_list,
+            license_hash=license_hash,
+            license_uris=license_uris_list,
+            edition_total=edition_total,
+            edition_number=edition_number,
+            d_fee=Decimal(fee),
+            royalty_percentage=royalty_percentage_fraction,
+            reuse_puzhash=True if reuse else None,
         )
     )
 
@@ -1034,15 +1070,15 @@ def nft_add_uri_cmd(
 
     asyncio.run(
         add_uri_to_nft(
-            wallet_rpc_port,
-            fingerprint,
-            id,
-            Decimal(fee),
-            nft_coin_id,
-            uri,
-            metadata_uri,
-            license_uri,
-            True if reuse else None,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            d_fee=Decimal(fee),
+            nft_coin_id=nft_coin_id,
+            uri=uri,
+            metadata_uri=metadata_uri,
+            license_uri=license_uri,
+            reuse_puzhash=True if reuse else None,
         )
     )
 
@@ -1087,7 +1123,13 @@ def nft_transfer_cmd(
 
     asyncio.run(
         transfer_nft(
-            wallet_rpc_port, fingerprint, id, Decimal(fee), nft_coin_id, target_address, True if reuse else None
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            d_fee=Decimal(fee),
+            nft_coin_id=nft_coin_id,
+            target_address=target_address,
+            reuse_puzhash=True if reuse else None,
         )
     )
 
@@ -1147,7 +1189,15 @@ def nft_set_did_cmd(
     from .wallet_funcs import set_nft_did
 
     asyncio.run(
-        set_nft_did(wallet_rpc_port, fingerprint, id, Decimal(fee), nft_coin_id, did_id, True if reuse else None)
+        set_nft_did(
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            wallet_id=id,
+            d_fee=Decimal(fee),
+            nft_coin_id=nft_coin_id,
+            did_id=did_id,
+            reuse_puzhash=True if reuse else None,
+        )
     )
 
 
@@ -1247,7 +1297,7 @@ def get_notifications_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
+@click.option("-i", "--id", help="A specific notification ID to delete", type=str, default=[], multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 def delete_notifications_cmd(
     wallet_rpc_port: Optional[int],
@@ -1355,13 +1405,13 @@ def spend_vc_cmd(
 
     asyncio.run(
         spend_vc(
-            wallet_rpc_port,
-            fingerprint,
-            vc_id,
-            Decimal(fee),
-            new_puzhash,
-            new_proof_hash,
-            reuse_puzhash,
+            wallet_rpc_port=wallet_rpc_port,
+            fp=fingerprint,
+            vc_id=vc_id,
+            d_fee=Decimal(fee),
+            new_puzhash=new_puzhash,
+            new_proof_hash=new_proof_hash,
+            reuse_puzhash=reuse_puzhash,
         )
     )
 
@@ -1375,7 +1425,7 @@ def spend_vc_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
+@click.option("-p", "--proof", help="A flag to add as a proof", type=str, default=[], multiple=True)
 @click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
 def add_proof_reveal_cmd(
     wallet_rpc_port: Optional[int],

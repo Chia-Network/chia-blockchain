@@ -164,6 +164,7 @@ async def get_transaction(wallet_rpc_port: Optional[int], fingerprint: Optional[
 
 
 async def get_transactions(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -249,6 +250,7 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal) -> bool:
 
 
 async def send(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -405,6 +407,7 @@ async def add_token(wallet_rpc_port: Optional[int], fp: Optional[int], asset_id:
 
 
 async def make_offer(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     d_fee: Decimal,
@@ -634,6 +637,7 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
 
 
 async def get_offers(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     offer_id: Optional[str],
@@ -1073,6 +1077,7 @@ async def create_nft_wallet(
 
 
 async def mint_nft(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -1144,6 +1149,7 @@ async def mint_nft(
 
 
 async def add_uri_to_nft(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -1180,6 +1186,7 @@ async def add_uri_to_nft(
 
 
 async def transfer_nft(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -1258,6 +1265,7 @@ async def list_nfts(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id
 
 
 async def set_nft_did(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     wallet_id: int,
@@ -1402,6 +1410,7 @@ async def delete_notifications(
 
 
 async def sign_message(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     addr_type: AddressType,
@@ -1514,6 +1523,7 @@ async def get_vcs(
 
 
 async def spend_vc(
+    *,
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     vc_id: str,

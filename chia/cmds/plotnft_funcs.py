@@ -275,6 +275,7 @@ async def submit_tx_with_confirmation(
 
 
 async def join_pool(
+    *,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     pool_url: str,
