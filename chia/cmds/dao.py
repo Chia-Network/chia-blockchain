@@ -124,6 +124,14 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
+    "-pm",
+    "--proposal-minimum",
+    help="The minimum amount (in mojos) that a proposal must use to be created",
+    type=int,
+    default=1,
+    show_default=True,
+)
+@click.option(
     "-fa",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
@@ -162,6 +170,7 @@ def dao_create_cmd(
     pass_percentage: int,
     self_destruct: int,
     oracle_delay: int,
+    proposal_minimum: int,
     filter_amount: int,
     cat_amount: int,
     name: Optional[str],
@@ -183,6 +192,7 @@ def dao_create_cmd(
         "pass_percentage": pass_percentage,
         "self_destruct_length": self_destruct,
         "oracle_spend_delay": oracle_delay,
+        "proposal_minimum_amount": proposal_minimum,
         "filter_amount": filter_amount,
         "amount_of_cats": cat_amount,
         "reuse_puzhash": True if reuse else None,

@@ -49,6 +49,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
         "pass_percentage": args["pass_percentage"],
         "self_destruct_length": args["self_destruct_length"],
         "oracle_spend_delay": args["oracle_spend_delay"],
+        "proposal_minimum_amount": args["proposal_minimum_amount"],
     }
     amount_of_cats = args["amount_of_cats"]
     filter_amount = args["filter_amount"]
