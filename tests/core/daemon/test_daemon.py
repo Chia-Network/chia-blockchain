@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
@@ -46,6 +46,15 @@ class RouteCase:
         return f"{self.route}: {self.description}"
 
 
+@dataclass
+class WalletAddressCase:
+    id: str
+    request: Dict[str, Any]
+    response: Dict[str, Any]
+    pubkeys_only: bool = field(default=False)
+    marks: Marks = ()
+
+
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
 @dataclass
 class Service:
@@ -63,7 +72,7 @@ class Daemon:
     connections: Dict[str, Optional[List[Any]]]
 
     # Instance variables used by WebSocketServer.get_wallet_addresses()
-    net_config: Dict[str, Any]
+    net_config: Dict[str, Any] = field(default_factory=dict)
 
     def get_command_mapping(self) -> Dict[str, Any]:
         return {
@@ -476,105 +485,100 @@ async def test_get_routes(mock_lonely_daemon):
     }
 
 
-@pytest.mark.parametrize(
-    "rpc_request, pubkeys_only, expected_result",
-    [
-        # default case with no params -- returns first wallet address for each key
-        (
-            {},
-            False,
-            {
-                "success": True,
-                "wallet_addresses": {
-                    test_key_data.fingerprint: [
-                        {
-                            "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
-                            "hd_path": "m/12381/8444/2/0",
-                        },
-                    ],
-                    test_key_data_2.fingerprint: [
-                        {
-                            "address": "xch1fra5h0qnsezrxenjyslyxx7y4l268gq52m0rgenh58vn8f577uzswzvk4v",
-                            "hd_path": "m/12381/8444/2/0",
-                        }
-                    ],
-                },
+@datacases(
+    WalletAddressCase(
+        id="no params",
+        request={},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+                test_key_data_2.fingerprint: [
+                    {
+                        "address": "xch1fra5h0qnsezrxenjyslyxx7y4l268gq52m0rgenh58vn8f577uzswzvk4v",
+                        "hd_path": "m/12381/8444/2/0",
+                    }
+                ],
             },
-        ),
-        # specifying a list of fingerprints will return the first wallet address for each listed key
-        (
-            {"fingerprints": [test_key_data.fingerprint]},
-            False,
-            {
-                "success": True,
-                "wallet_addresses": {
-                    test_key_data.fingerprint: [
-                        {
-                            "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
-                            "hd_path": "m/12381/8444/2/0",
-                        },
-                    ],
-                },
+        },
+    ),
+    WalletAddressCase(
+        id="list of fingerprints",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
             },
-        ),
-        # specifying count and index should return the correct wallet addresses
-        (
-            {"fingerprints": [test_key_data.fingerprint], "count": 2, "index": 1},
-            False,
-            {
-                "success": True,
-                "wallet_addresses": {
-                    test_key_data.fingerprint: [
-                        {
-                            "address": "xch16jqcaguq27z8xvpu89j7eaqfzn6k89hdrrlm0rffku85n8n7m7sqqmmahh",
-                            "hd_path": "m/12381/8444/2/1",
-                        },
-                        {
-                            "address": "xch1955vj0gx5tqe7v5tceajn2p4z4pup8d4g2exs0cz4xjqses8ru6qu8zp3y",
-                            "hd_path": "m/12381/8444/2/2",
-                        },
-                    ]
-                },
+        },
+    ),
+    WalletAddressCase(
+        id="count and index",
+        request={"fingerprints": [test_key_data.fingerprint], "count": 2, "index": 1},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch16jqcaguq27z8xvpu89j7eaqfzn6k89hdrrlm0rffku85n8n7m7sqqmmahh",
+                        "hd_path": "m/12381/8444/2/1",
+                    },
+                    {
+                        "address": "xch1955vj0gx5tqe7v5tceajn2p4z4pup8d4g2exs0cz4xjqses8ru6qu8zp3y",
+                        "hd_path": "m/12381/8444/2/2",
+                    },
+                ]
             },
-        ),
-        # specifying non_observer_derivation=True should return addresses for hardened derivations
-        (
-            {"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
-            False,
-            {
-                "success": True,
-                "wallet_addresses": {
-                    test_key_data.fingerprint: [
-                        {
-                            "address": "xch1k996a7h3agygjhqtrf0ycpa7wfd6k5ye2plkf54ukcmdj44gkqkq880l7n",
-                            "hd_path": "m/12381n/8444n/2n/0n",
-                        }
-                    ]
-                },
+        },
+    ),
+    WalletAddressCase(
+        id="hardened derivations",
+        request={"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1k996a7h3agygjhqtrf0ycpa7wfd6k5ye2plkf54ukcmdj44gkqkq880l7n",
+                        "hd_path": "m/12381n/8444n/2n/0n",
+                    }
+                ]
             },
-        ),
-        # specifying a list of fingerprints with one invalid fingerprint will return an error
-        (
-            {"fingerprints": [999999]},
-            False,
-            {
-                "success": False,
-                "error": "key(s) not found for fingerprint(s) {999999}",
-            },
-        ),
-        (
-            {"fingerprints": [test_key_data.fingerprint]},
-            True,
-            {
-                "success": False,
-                "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
-            },
-        ),
-    ],
+        },
+    ),
+    WalletAddressCase(
+        id="invalid fingerprint",
+        request={"fingerprints": [999999]},
+        response={
+            "success": False,
+            "error": "key(s) not found for fingerprint(s) {999999}",
+        },
+    ),
+    WalletAddressCase(
+        id="missing private key",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": False,
+            "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
+        },
+        pubkeys_only=True,
+    ),
 )
 @pytest.mark.asyncio
 async def test_get_wallet_addresses(
-    mock_daemon_with_config_and_keys, monkeypatch, rpc_request, pubkeys_only, expected_result
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: WalletAddressCase,
 ):
     daemon = mock_daemon_with_config_and_keys
 
@@ -587,10 +591,12 @@ async def test_get_wallet_addresses(
 
         return wrapper
 
-    if pubkeys_only:
+    # in the pubkeys_only case, we're ensuring that only pubkeys are returned by get_keys,
+    # which will have the effect of causing get_wallet_addresses to raise an exception
+    if case.pubkeys_only:
         monkeypatch.setattr(Keychain, "get_keys", mock_get_keys(original_get_keys))
 
-    assert expected_result == await daemon.get_wallet_addresses(rpc_request)
+    assert case.response == await daemon.get_wallet_addresses(case.request)
 
 
 @pytest.mark.asyncio
