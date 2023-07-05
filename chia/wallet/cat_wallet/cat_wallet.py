@@ -608,6 +608,24 @@ class CATWallet:
                 reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
+        else:
+            chia_coins = await self.standard_wallet.select_coins(
+                fee,
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
+            )
+            origin_id = list(chia_coins)[0].name()
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(selected_amount + amount_to_claim - fee),
+                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
+                coins=chia_coins,
+                negative_change_allowed=True,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
+                reuse_puzhash=reuse_puzhash,
+            )
+            assert chia_tx.spend_bundle is not None
 
             message = None
             for spend in chia_tx.spend_bundle.coin_spends:
@@ -619,23 +637,6 @@ class CATWallet:
 
             assert message is not None
             announcement = Announcement(origin_id, message)
-        else:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
-            )
-            selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
-                coins=chia_coins,
-                negative_change_allowed=True,
-                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
-                reuse_puzhash=reuse_puzhash,
-            )
-            assert chia_tx.spend_bundle is not None
 
         return chia_tx, announcement
 
