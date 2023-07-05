@@ -411,8 +411,8 @@ async def make_offer(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     d_fee: Decimal,
-    offers: Tuple[str],
-    requests: Tuple[str],
+    offers: list[str],
+    requests: list[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
 ) -> None:
@@ -421,7 +421,7 @@ async def make_offer(
             return
         fee: int = int(d_fee * units["chia"])
 
-        if len(offers) == 0 or len(requests) == 0:
+        if offers == [] or requests == []:
             print("Not creating offer: Must be offering and requesting at least one asset")
         else:
             offer_dict: Dict[Union[uint32, str], int] = {}

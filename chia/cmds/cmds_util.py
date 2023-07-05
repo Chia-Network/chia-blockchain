@@ -208,7 +208,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
 
 @asynccontextmanager
 async def get_wallet_client(
-    wallet_rpc_port: Optional[int],
+    wallet_rpc_port: Optional[int] = None,
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
 ) -> AsyncIterator[Tuple[Optional[WalletRpcClient], int, Dict[str, Any]]]:

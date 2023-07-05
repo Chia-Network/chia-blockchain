@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from decimal import Decimal
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import click
 
@@ -439,6 +439,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     help="A wallet id to offer and the amount to offer (formatted like wallet_id:amount)",
     required=True,
     multiple=True,
+    default=[],
 )
 @click.option(
     "-r",
@@ -446,6 +447,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
     required=True,
     multiple=True,
+    default=[],
 )
 @click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option(
@@ -460,8 +462,8 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    offer: Tuple[str],
-    request: Tuple[str],
+    offer: list[str],
+    request: list[str],
     filepath: str,
     fee: str,
     reuse: bool,
