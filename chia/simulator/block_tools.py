@@ -848,7 +848,7 @@ class BlockTools:
                     True,
                 )
             # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch
-            # update the difficulty and sub_slot_iters, and include the hash in the next sub-slot
+            # include the hash in the next sub-slot
             sub_epoch_summary: Optional[SubEpochSummary] = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
@@ -861,6 +861,7 @@ class BlockTools:
             if sub_epoch_summary is not None:
                 pending_ses = True
                 ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
+                # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
@@ -870,7 +871,6 @@ class BlockTools:
                 ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
-                self.log.debug(f"No sub epoch summary for block {latest_block.height+1}")
 
             if icc_eos_vdf is not None:
                 # Icc vdf (Deficit of latest block is <= 4)
@@ -947,7 +947,7 @@ class BlockTools:
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
-            # Handle overflows: No overflows on new epoch
+            # Handle overflows: No overflows on new epoch or sub-epoch
             if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and not pending_ses:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
@@ -1087,9 +1087,7 @@ class BlockTools:
             if num_blocks < prev_num_of_blocks:
                 num_empty_slots_added += 1
 
-            if pending_ses:
-                assert new_sub_slot_iters is not None
-                assert new_difficulty is not None
+            if new_sub_slot_iters is not None and new_difficulty is not None:  # new epoch
                 sub_slot_iters = new_sub_slot_iters
                 difficulty = new_difficulty
 
