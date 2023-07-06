@@ -30,17 +30,14 @@ def wallet_cmd(ctx: click.Context) -> None:
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+# TODO: Remove unused wallet id option
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-tx", "--tx_id", help="transaction id to search for", type=str, required=True)
 @click.option("--verbose", "-v", count=True, type=int)
 def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, tx_id: str, verbose: int) -> None:
     from .wallet_funcs import get_transaction
 
-    asyncio.run(
-        get_transaction(  # Wallet ID is not used.
-            wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint, tx_id=tx_id, verbose=verbose
-        )
-    )
+    asyncio.run(get_transaction(wallet_rpc_port=wallet_rpc_port, fingerprint=fingerprint, tx_id=tx_id, verbose=verbose))
 
 
 @wallet_cmd.command("get_transactions", help="Get all transactions")
@@ -299,6 +296,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     type=int,
     default=None,
 )
+# TODO: Remove unused wallet id option
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option(
@@ -317,11 +315,7 @@ def clawback(
 ) -> None:  # pragma: no cover
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(
-        spend_clawback(  # Wallet ID is not Used.
-            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids
-        )
-    )
+    asyncio.run(spend_clawback(wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids))
 
 
 @wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")

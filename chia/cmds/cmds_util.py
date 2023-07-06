@@ -4,7 +4,7 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 from aiohttp import ClientConnectorError
 
