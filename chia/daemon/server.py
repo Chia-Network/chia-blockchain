@@ -23,15 +23,18 @@ from typing_extensions import Protocol
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
+from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
@@ -39,6 +42,7 @@ from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
+from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -389,6 +393,7 @@ class WebSocketServer:
             "get_version": self.get_version,
             "get_plotters": self.get_plotters,
             "get_routes": self.get_routes,
+            "get_wallet_addresses": self.get_wallet_addresses,
         }
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -559,6 +564,58 @@ class WebSocketServer:
     async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         routes = list(self.get_command_mapping().keys())
         response: Dict[str, Any] = {"success": True, "routes": routes}
+        return response
+
+    async def get_wallet_addresses(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        all_keys = Keychain().get_keys(include_secrets=True)
+        fingerprints = request.get("fingerprints", None)
+        index = request.get("index", 0)
+        count = request.get("count", 1)
+        non_observer_derivation = request.get("non_observer_derivation", False)
+
+        # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
+        if fingerprints is None:
+            keys = all_keys
+        else:
+            keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
+            keys = []
+            missing_fingerprints = set()
+            for fingerprint in fingerprints:
+                if fingerprint not in keys_by_fingerprint:
+                    missing_fingerprints.add(fingerprint)
+                else:
+                    keys.append(keys_by_fingerprint[fingerprint])
+
+            if len(keys) != len(fingerprints):
+                return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
+
+        selected = self.net_config["selected_network"]
+        prefix = self.net_config["network_overrides"]["config"][selected]["address_prefix"]
+
+        wallet_addresses_by_fingerprint = {}
+        for key in keys:
+            address_entries = []
+
+            # we require access to the private key to generate wallet addresses
+            if key.secrets is None:
+                return {"success": False, "error": f"missing private key for key with fingerprint {key.fingerprint}"}
+
+            for i in range(index, index + count):
+                if non_observer_derivation:
+                    sk = master_sk_to_wallet_sk(key.secrets.private_key, uint32(i))
+                else:
+                    sk = master_sk_to_wallet_sk_unhardened(key.secrets.private_key, uint32(i))
+                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
+                if non_observer_derivation:
+                    hd_path = f"m/12381n/8444n/2n/{i}n"
+                else:
+                    hd_path = f"m/12381/8444/2/{i}"
+
+                address_entries.append({"address": wallet_address, "hd_path": hd_path})
+
+            wallet_addresses_by_fingerprint[key.fingerprint] = address_entries
+
+        response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):

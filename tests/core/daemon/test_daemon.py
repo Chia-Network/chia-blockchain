@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
@@ -20,12 +20,14 @@ from chia.daemon.keychain_server import (
 from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.keyring import TempKeyring
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
@@ -44,6 +46,15 @@ class RouteCase:
         return f"{self.route}: {self.description}"
 
 
+@dataclass
+class WalletAddressCase:
+    id: str
+    request: Dict[str, Any]
+    response: Dict[str, Any]
+    pubkeys_only: bool = field(default=False)
+    marks: Marks = ()
+
+
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
 @dataclass
 class Service:
@@ -59,6 +70,9 @@ class Daemon:
     # Instance variables used by WebSocketServer.is_running()
     services: Dict[str, Union[List[Service], Service]]
     connections: Dict[str, Optional[List[Any]]]
+
+    # Instance variables used by WebSocketServer.get_wallet_addresses()
+    net_config: Dict[str, Any] = field(default_factory=dict)
 
     def get_command_mapping(self) -> Dict[str, Any]:
         return {
@@ -82,6 +96,11 @@ class Daemon:
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
+    async def get_wallet_addresses(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.get_wallet_addresses(
+            cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
+        )
+
 
 test_key_data = KeyData.from_mnemonic(
     "grief lock ketchup video day owner torch young work "
@@ -90,6 +109,11 @@ test_key_data = KeyData.from_mnemonic(
 )
 test_key_data_no_secrets = replace(test_key_data, secrets=None)
 
+test_key_data_2 = KeyData.from_mnemonic(
+    "banana boat fragile ghost fortune beyond aerobic access "
+    "hammer stable page grunt venture purse canyon discover "
+    "egg vivid spare immune awake code announce message"
+)
 
 success_response_data = {
     "success": True,
@@ -224,7 +248,7 @@ def assert_running_services_response(response_dict: Dict[str, Any], expected_res
 @pytest.fixture(scope="session")
 def mock_lonely_daemon():
     # Mock daemon server without any registered services/connections
-    return Daemon(services={}, connections={})
+    return Daemon(services={}, connections={}, net_config={})
 
 
 @pytest.fixture(scope="session")
@@ -238,6 +262,7 @@ def mock_daemon_with_services():
             "chia_plotter": [Service(True), Service(True)],
         },
         connections={},
+        net_config={},
     )
 
 
@@ -254,7 +279,29 @@ def mock_daemon_with_services_and_connections():
             "apple": [1],
             "banana": [1, 2],
         },
+        net_config={},
     )
+
+
+@pytest.fixture(scope="function")
+def get_keychain_for_function():
+    with TempKeyring() as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
+
+
+@pytest.fixture(scope="function")
+def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_populated_with_config):
+    root_path = root_path_populated_with_config
+    config = load_config(root_path, "config.yaml")
+    keychain = Keychain()
+
+    # populate the keychain with some test keys
+    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_private_key(test_key_data_2.mnemonic_str())
+
+    # Mock daemon server with net_config set for mainnet
+    return Daemon(services={}, connections={}, net_config=config)
 
 
 @pytest.mark.asyncio
@@ -436,6 +483,117 @@ async def test_get_routes(mock_lonely_daemon):
         "success": True,
         "routes": ["get_routes", "example_one", "example_two", "example_three"],
     }
+
+
+@datacases(
+    WalletAddressCase(
+        id="no params",
+        request={},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+                test_key_data_2.fingerprint: [
+                    {
+                        "address": "xch1fra5h0qnsezrxenjyslyxx7y4l268gq52m0rgenh58vn8f577uzswzvk4v",
+                        "hd_path": "m/12381/8444/2/0",
+                    }
+                ],
+            },
+        },
+    ),
+    WalletAddressCase(
+        id="list of fingerprints",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1zze67l3jgxuvyaxhjhu7326sezxxve7lgzvq0497ddggzhff7c9s2pdcwh",
+                        "hd_path": "m/12381/8444/2/0",
+                    },
+                ],
+            },
+        },
+    ),
+    WalletAddressCase(
+        id="count and index",
+        request={"fingerprints": [test_key_data.fingerprint], "count": 2, "index": 1},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch16jqcaguq27z8xvpu89j7eaqfzn6k89hdrrlm0rffku85n8n7m7sqqmmahh",
+                        "hd_path": "m/12381/8444/2/1",
+                    },
+                    {
+                        "address": "xch1955vj0gx5tqe7v5tceajn2p4z4pup8d4g2exs0cz4xjqses8ru6qu8zp3y",
+                        "hd_path": "m/12381/8444/2/2",
+                    },
+                ]
+            },
+        },
+    ),
+    WalletAddressCase(
+        id="hardened derivations",
+        request={"fingerprints": [test_key_data.fingerprint], "non_observer_derivation": True},
+        response={
+            "success": True,
+            "wallet_addresses": {
+                test_key_data.fingerprint: [
+                    {
+                        "address": "xch1k996a7h3agygjhqtrf0ycpa7wfd6k5ye2plkf54ukcmdj44gkqkq880l7n",
+                        "hd_path": "m/12381n/8444n/2n/0n",
+                    }
+                ]
+            },
+        },
+    ),
+    WalletAddressCase(
+        id="invalid fingerprint",
+        request={"fingerprints": [999999]},
+        response={
+            "success": False,
+            "error": "key(s) not found for fingerprint(s) {999999}",
+        },
+    ),
+    WalletAddressCase(
+        id="missing private key",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": False,
+            "error": f"missing private key for key with fingerprint {test_key_data.fingerprint}",
+        },
+        pubkeys_only=True,
+    ),
+)
+@pytest.mark.asyncio
+async def test_get_wallet_addresses(
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: WalletAddressCase,
+):
+    daemon = mock_daemon_with_config_and_keys
+
+    original_get_keys = Keychain.get_keys
+
+    def get_keys_no_secrets(self, include_secrets):
+        return original_get_keys(self, include_secrets=False)
+
+    # in the pubkeys_only case, we're ensuring that only pubkeys are returned by get_keys,
+    # which will have the effect of causing get_wallet_addresses to raise an exception
+    if case.pubkeys_only:
+        # monkeypatch Keychain.get_keys() to always call get_keys() with include_secrets=False
+        monkeypatch.setattr(Keychain, "get_keys", get_keys_no_secrets)
+
+    assert case.response == await daemon.get_wallet_addresses(case.request)
 
 
 @pytest.mark.asyncio
