@@ -535,7 +535,7 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
 
     if chiapos is not None:
         plotters["chiapos"] = chiapos
-    if bladebit and bladebit.get("version") is not None:
+    if bladebit is not None:
         plotters["bladebit"] = bladebit
     if madmax is not None:
         plotters["madmax"] = madmax
