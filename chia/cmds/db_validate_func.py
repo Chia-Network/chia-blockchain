@@ -102,8 +102,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
                     continue
 
                 if validate_blocks:
-                    block_bytes = zstd.decompress(row[4])
-                    block = FullBlock.from_bytes(block_bytes)
+                    block = FullBlock.from_bytes(zstd.decompress(row[4]))
                     block_record: BlockRecordDB = BlockRecordDB.from_bytes(row[5])
                     actual_header_hash = block.header_hash
                     actual_prev_hash = block.prev_header_hash
