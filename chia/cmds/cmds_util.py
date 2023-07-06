@@ -4,9 +4,10 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from aiohttp import ClientConnectorError
+from typing_extensions import Literal
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
