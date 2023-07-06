@@ -238,17 +238,13 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            # cursor = await writer.execute(
-            #     "SELECT hash,node_type,left,right,key,value FROM node
-            #      "WHERE hash == :hash LIMIT 1", {"hash": node_hash}
-            # )
-            # result = await cursor.fetchone()
-            result = None
+            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            result = await cursor.fetchone()
 
             if result is None:
                 await writer.execute(
                     """
-                    INSERT OR REPLACE INTO node(hash, node_type, left, right, key, value)
+                    INSERT INTO node(hash, node_type, left, right, key, value)
                     VALUES(:hash, :node_type, :left, :right, :key, :value)
                     """,
                     values,
