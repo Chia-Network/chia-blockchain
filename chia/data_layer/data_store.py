@@ -47,9 +47,7 @@ class DataStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(
-        cls, database: Union[str, Path], uri: bool = False, log_path: Optional[Path] = None
-    ) -> "DataStore":
+    async def create(cls, database: Union[str, Path], uri: bool = False) -> "DataStore":
         db_wrapper = await DBWrapper2.create(
             database=database,
             uri=uri,
@@ -61,7 +59,6 @@ class DataStore:
             # methods and enable foreign key checking in the tests.
             foreign_keys=True,
             row_factory=aiosqlite.Row,
-            log_path=log_path,
         )
         self = cls(db_wrapper=db_wrapper)
 
