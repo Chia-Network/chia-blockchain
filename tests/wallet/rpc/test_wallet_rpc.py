@@ -1159,6 +1159,31 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
             },
         )
     ###
+    ###
+    # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+    # There's also temp code in wallet_rpc_api.py
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "get_offer_summary",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "check_offer_validity",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "take_offer",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    ###
 
 
 @pytest.mark.asyncio
