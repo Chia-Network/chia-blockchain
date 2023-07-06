@@ -2313,9 +2313,12 @@ class DAOWallet(WalletProtocol):
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         # TODO: Pull coins from DB once they're being stored
+        wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([record.coin.amount for record in records if not record.spent]))
+        latest = await wallet_node.get_coin_state([cr.coin.name() for cr in records if not cr.spent], peer)
+        return uint128(sum([cr.coin.amount for cr in latest]))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
