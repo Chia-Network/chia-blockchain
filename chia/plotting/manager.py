@@ -8,8 +8,8 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
+import chiapos
 from blspy import G1Element
-from chiapos import DiskProver
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
@@ -38,6 +38,7 @@ class PlotManager:
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
+    max_compression_level_allowed: int
 
     def __init__(
         self,
@@ -66,12 +67,26 @@ class PlotManager:
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback
         self._initial = True
+        self.max_compression_level_allowed = 0
 
     def __enter__(self):
         self._lock.acquire()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
+
+    def configure_decompresser(
+        self,
+        context_count: int,
+        thread_count: int,
+        disable_cpu_affinity: bool,
+        max_compression_level_allowed: int,
+    ) -> None:
+        decompresser_context_queue = getattr(chiapos, "decompresser_context_queue")
+        decompresser_context_queue.init(
+            context_count, thread_count, disable_cpu_affinity, max_compression_level_allowed
+        )
+        self.max_compression_level_allowed = max_compression_level_allowed
 
     def reset(self) -> None:
         with self:
@@ -271,7 +286,7 @@ class PlotManager:
                 cache_entry = self.cache.get(file_path)
                 cache_hit = cache_entry is not None
                 if not cache_hit:
-                    prover = DiskProver(str(file_path))
+                    prover = chiapos.DiskProver(str(file_path))
 
                     log.debug(f"process_file {str(file_path)}")
 
@@ -280,10 +295,21 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                    if (
+                        prover.get_size() >= 30
+                        and stat_info.st_size < 0.98 * expected_size
+                        and prover.get_compresion_level() == 0
+                    ):
                         log.warning(
                             f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
                             f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                        )
+                        return None
+
+                    if prover.get_compresion_level() > self.max_compression_level_allowed:
+                        log.warning(
+                            f"Not farming plot {file_path}. Plot compression level: {prover.get_compresion_level()}, "
+                            f"max compression level allowed: {self.max_compression_level_allowed}."
                         )
                         return None
 
