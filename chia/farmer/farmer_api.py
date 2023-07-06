@@ -137,9 +137,6 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
-                self.farmer.sp_hash_to_filter_size[new_proof_of_space.sp_hash] = uint8(
-                    calculate_prefix_bits(self.farmer.constants, sp.peak_height)
-                )
                 self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
                 self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                     new_proof_of_space.plot_identifier,
@@ -311,10 +308,7 @@ class FarmerAPI:
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return None
-        filter_prefix_bits = self.farmer.sp_hash_to_filter_size.get(response.sp_hash)
-        if filter_prefix_bits is None:
-            self.farmer.log.warning(f"Do not have filter size for sp hash {response.sp_hash}")
-            return None
+
         is_sp_signatures: bool = False
         sps = self.farmer.sps[response.sp_hash]
         peak_height = sps[0].peak_height

@@ -22,8 +22,7 @@ class ProofOfSpaceCase:
     plot_public_key: G1Element
     pool_public_key: Optional[G1Element] = None
     pool_contract_puzzle_hash: Optional[bytes32] = None
-    height: Optional[uint32] = None
-    filter_prefix_bits: Optional[uint8] = None
+    height: uint32 = uint32(0)
     expected_error: Optional[str] = None
     marks: Marks = ()
 
@@ -70,32 +69,6 @@ class ProofOfSpaceCase:
         expected_error="Calculated pos challenge doesn't match the provided one",
     ),
     ProofOfSpaceCase(
-        id="Neither height nor filter prefix bits",
-        pos_challenge=bytes32.from_hexstr("3e46235f4b78237763f4ac2ed59515e7aae9c5b6e40c5c9ccec406bfbc30ed2e"),
-        plot_size=uint8(42),
-        pool_public_key=G1Element(),
-        plot_public_key=G1Element(),
-        expected_error="Expected either height or filter_prefix_bits",
-    ),
-    ProofOfSpaceCase(
-        id="No height, not passing the plot filter",
-        pos_challenge=bytes32.from_hexstr("3e46235f4b78237763f4ac2ed59515e7aae9c5b6e40c5c9ccec406bfbc30ed2e"),
-        plot_size=uint8(42),
-        pool_public_key=G1Element(),
-        plot_public_key=G1Element(),
-        filter_prefix_bits=uint8(9),
-        expected_error="Did not pass the plot filter",
-    ),
-    ProofOfSpaceCase(
-        id="No filter prefix bits, not passing the plot filter",
-        pos_challenge=bytes32.from_hexstr("3e46235f4b78237763f4ac2ed59515e7aae9c5b6e40c5c9ccec406bfbc30ed2e"),
-        plot_size=uint8(42),
-        pool_public_key=G1Element(),
-        plot_public_key=G1Element(),
-        height=uint32(1),
-        expected_error="Did not pass the plot filter",
-    ),
-    ProofOfSpaceCase(
         id="Not passing the plot filter with size 9",
         pos_challenge=bytes32.from_hexstr("08b23cc2844dfb92d2eedaa705a1ce665d571ee753bd81cbb67b92caa6d34722"),
         plot_size=uint8(42),
@@ -109,7 +82,7 @@ class ProofOfSpaceCase:
                 "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
             )
         ),
-        filter_prefix_bits=uint8(9),
+        height=uint32(5495999),
         expected_error="Did not pass the plot filter",
     ),
     ProofOfSpaceCase(
@@ -126,7 +99,7 @@ class ProofOfSpaceCase:
                 "b17d368f5400230b2b01464807825bf4163c5c159bd7d4465f935912e538ac9fb996dd9a9c479bd8aa6256bdca1fed96"
             )
         ),
-        filter_prefix_bits=uint8(8),
+        height=uint32(5496000),
     ),
 )
 def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: ProofOfSpaceCase) -> None:
@@ -147,7 +120,6 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
             ),
             signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
             height=case.height,
-            filter_prefix_bits=case.filter_prefix_bits,
         )
     except AssertionError as e:
         assert str(e) == case.expected_error
