@@ -1231,7 +1231,7 @@ class TestDIDWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_clawback_resync(self, self_hostname, two_wallet_nodes, trusted) -> None:
+    async def test_did_resync(self, self_hostname, two_wallet_nodes, trusted) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
