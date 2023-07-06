@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import traceback
-from typing import Callable
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 import aiohttp
 
+from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
+from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
 
@@ -31,3 +34,48 @@ def wrap_http_handler(f) -> Callable:
         return obj_to_response(res_object)
 
     return inner
+
+
+def potentially_inside_lock(
+    func: Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
+) -> Callable[..., Coroutine[Any, Any, Dict[str, Any]]]:
+    async def rpc_endpoint(self, *args, hold_lock=True, **kwargs) -> Dict[str, Any]:
+        return await func(self, *args, hold_lock, **kwargs)
+
+    return rpc_endpoint
+
+
+def tx_endpoint(
+    func: Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
+) -> Callable[..., Coroutine[Any, Any, Dict[str, Any]]]:
+    async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+        assert self.service.logged_in_fingerprint is not None
+        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
+
+        # Some backwards compat fill-ins
+        if tx_config_loader.excluded_coin_ids is None:
+            tx_config_loader = dataclasses.replace(
+                tx_config_loader,
+                excluded_coin_ids=request.get("exclude_coin_ids"),
+            )
+        if tx_config_loader.excluded_coin_amounts is None:
+            tx_config_loader = dataclasses.replace(
+                tx_config_loader,
+                excluded_coin_amounts=request.get("exclude_coin_amounts"),
+            )
+        if tx_config_loader.excluded_coin_ids is None:
+            excluded_coins: Optional[List[Coin]] = request.get("exclude_coins", request.get("excluded_coins"))
+            if excluded_coins is not None:
+                tx_config_loader = dataclasses.replace(
+                    tx_config_loader,
+                    excluded_coin_amounts=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                )
+
+        tx_config: TXConfig = tx_config_loader.autofill(
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
+        )
+        return await func(self, request, tx_config, *args, **kwargs)
+
+    return rpc_endpoint
