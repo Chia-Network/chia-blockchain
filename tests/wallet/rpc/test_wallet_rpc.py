@@ -313,11 +313,8 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         memos=["this is a basic tx"],
         tx_config=dataclasses.replace(
             DEFAULT_TX_CONFIG,
-            coin_selection_config=dataclasses.replace(
-                DEFAULT_COIN_SELECTION_CONFIG,
-                excluded_coin_amounts=[uint64(250000000000)],
-                excluded_coin_ids=[bytes32([0] * 32)],
-            ),
+            excluded_coin_amounts=[uint64(250000000000)],
+            excluded_coin_ids=[bytes32([0] * 32)],
         ),
     )
     transaction_id = tx.name
@@ -520,10 +517,7 @@ async def test_create_signed_transaction(
         # shouldn't actually block it
         tx_config=dataclasses.replace(
             DEFAULT_TX_CONFIG,
-            coin_selection_config=dataclasses.replace(
-                DEFAULT_COIN_SELECTION_CONFIG,
-                excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
-            ),
+            excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
         ),
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
@@ -637,9 +631,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
             outputs,
             dataclasses.replace(
                 DEFAULT_TX_CONFIG,
-                coin_selection_config=dataclasses.replace(
-                    DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in selected_coins]
-                ),
+                excluded_coin_ids=[c.name() for c in selected_coins],
             ),
         )
 
@@ -660,9 +652,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
                 outputs,
                 dataclasses.replace(
                     DEFAULT_TX_CONFIG,
-                    coin_selection_config=dataclasses.replace(
-                        DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in selected_coins]
-                    ),
+                    excluded_coin_ids=[c.name() for c in selected_coins],
                 ),
             )
 
@@ -1011,11 +1001,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             cat_0_id,
             dataclasses.replace(
                 DEFAULT_TX_CONFIG,
-                coin_selection_config=dataclasses.replace(
-                    DEFAULT_COIN_SELECTION_CONFIG,
-                    excluded_coin_amounts=[uint64(20)],
-                    excluded_coin_ids=[bytes32([0] * 32)],
-                ),
+                excluded_coin_amounts=[uint64(20)],
+                excluded_coin_ids=[bytes32([0] * 32)],
             ),
             uint64(4),
             addr_1,

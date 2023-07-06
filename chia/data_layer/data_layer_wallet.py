@@ -992,9 +992,11 @@ class DataLayerWallet:
                                     launcher_id,
                                     singleton.root,
                                     TXConfigLoader().autofill(
-                                        self.wallet_state_manager.config,
-                                        self.wallet_state_manager.wallet_node.logged_in_fingerprint,
-                                        self.wallet_state_manager.constants,
+                                        constants=self.wallet_state_manager.constants,
+                                        config=self.wallet_state_manager.config,
+                                        logged_in_fingerprint=(
+                                            self.wallet_state_manager.wallet_node.logged_in_fingerprint
+                                        ),
                                     ),
                                     fee=fee,
                                 )

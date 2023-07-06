@@ -617,9 +617,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         if request["wallet_type"] == "cat_wallet":
@@ -1017,9 +1017,9 @@ class WalletRpcApi:
             )
 
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         async with self.service.wallet_state_manager.lock:
@@ -1090,9 +1090,9 @@ class WalletRpcApi:
             try:
                 tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
                 tx_config: TXConfig = tx_config_loader.autofill(
-                    self.service.wallet_state_manager.config,
-                    self.service.logged_in_fingerprint,
-                    self.service.wallet_state_manager.constants,
+                    constants=self.service.wallet_state_manager.constants,
+                    config=self.service.wallet_state_manager.config,
+                    logged_in_fingerprint=self.service.logged_in_fingerprint,
                 )
 
                 coins[coin_record.coin] = coin_record.parsed_metadata()
@@ -1143,9 +1143,9 @@ class WalletRpcApi:
             )
 
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -1355,9 +1355,9 @@ class WalletRpcApi:
         assert self.service.logged_in_fingerprint is not None
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
         tx: TransactionRecord = await self.service.wallet_state_manager.notification_manager.send_new_notification(
             bytes32.from_hexstr(request["target"]),
@@ -1467,9 +1467,9 @@ class WalletRpcApi:
 
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1), tx_config.coin_selection_config)
@@ -1582,9 +1582,9 @@ class WalletRpcApi:
             )
 
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         cat_discrepancy_params: Tuple[Optional[int], Optional[str], Optional[str]] = (
@@ -1692,9 +1692,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
@@ -1777,9 +1777,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             peer = self.service.get_full_node_peer()
@@ -1852,9 +1852,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             if secure:
@@ -1905,9 +1905,9 @@ class WalletRpcApi:
             async with self.service.wallet_state_manager.lock:
                 tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
                 tx_config: TXConfig = tx_config_loader.autofill(
-                    self.service.wallet_state_manager.config,
-                    self.service.logged_in_fingerprint,
-                    self.service.wallet_state_manager.constants,
+                    constants=self.service.wallet_state_manager.constants,
+                    config=self.service.wallet_state_manager.config,
+                    logged_in_fingerprint=self.service.logged_in_fingerprint,
                 )
 
                 await trade_mgr.cancel_pending_offers(records, tx_config, batch_fee, secure)
@@ -1950,9 +1950,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
@@ -1976,9 +1976,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         spend_bundle = await wallet.create_message_spend(tx_config, coin_announcements, puzzle_announcements)
@@ -2197,9 +2197,9 @@ class WalletRpcApi:
             try:
                 tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
                 tx_config: TXConfig = tx_config_loader.autofill(
-                    self.service.wallet_state_manager.config,
-                    self.service.logged_in_fingerprint,
-                    self.service.wallet_state_manager.constants,
+                    constants=self.service.wallet_state_manager.constants,
+                    config=self.service.wallet_state_manager.config,
+                    logged_in_fingerprint=self.service.logged_in_fingerprint,
                 )
 
                 coins = await did_wallet.select_coins(uint64(1), tx_config.coin_selection_config)
@@ -2230,9 +2230,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             update_success = await wallet.update_metadata(metadata)
@@ -2254,9 +2254,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             try:
@@ -2340,9 +2340,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             info = await wallet.get_info_for_recovery(tx_config.coin_selection_config)
@@ -2392,9 +2392,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         did_coin_threeple = await did_wallet.get_info_for_recovery(tx_config.coin_selection_config)
@@ -2424,9 +2424,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
             txs: TransactionRecord = await did_wallet.transfer_did(
                 puzzle_hash,
@@ -2499,9 +2499,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         spend_bundle = await nft_wallet.generate_new_nft(
@@ -2578,9 +2578,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         fee = uint64(request.get("fee", 0))
@@ -2611,9 +2611,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         nft_wallet: NFTWallet
@@ -2703,9 +2703,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         nft_wallet: NFTWallet
@@ -2839,9 +2839,9 @@ class WalletRpcApi:
 
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             fee = uint64(request.get("fee", 0))
@@ -2949,9 +2949,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         fee = uint64(request.get("fee", 0))
@@ -3050,9 +3050,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         if mint_from_did:
@@ -3221,9 +3221,9 @@ class WalletRpcApi:
             )
 
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         coins = None
@@ -3335,9 +3335,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         async with self.service.wallet_state_manager.lock:
@@ -3358,9 +3358,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         async with self.service.wallet_state_manager.lock:
@@ -3379,9 +3379,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         assert isinstance(wallet, PoolWallet)
@@ -3422,9 +3422,9 @@ class WalletRpcApi:
             async with self.service.wallet_state_manager.lock:
                 tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
                 tx_config: TXConfig = tx_config_loader.autofill(
-                    self.service.wallet_state_manager.config,
-                    self.service.logged_in_fingerprint,
-                    self.service.wallet_state_manager.constants,
+                    constants=self.service.wallet_state_manager.constants,
+                    config=self.service.wallet_state_manager.config,
+                    logged_in_fingerprint=self.service.logged_in_fingerprint,
                 )
 
                 dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
@@ -3510,9 +3510,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             records = await wallet.create_update_state_spend(
@@ -3535,9 +3535,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             # TODO: This method should optionally link the singletons with announcements.
@@ -3612,9 +3612,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             txs = await dl_wallet.create_new_mirror(
@@ -3642,9 +3642,9 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
             tx_config: TXConfig = tx_config_loader.autofill(
-                self.service.wallet_state_manager.config,
-                self.service.logged_in_fingerprint,
-                self.service.wallet_state_manager.constants,
+                constants=self.service.wallet_state_manager.constants,
+                config=self.service.wallet_state_manager.config,
+                logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
             txs = await dl_wallet.delete_mirror(
@@ -3689,9 +3689,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
@@ -3775,9 +3775,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         txs = await vc_wallet.generate_signed_transaction(
@@ -3847,9 +3847,9 @@ class WalletRpcApi:
 
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.service.wallet_state_manager.config,
-            self.service.logged_in_fingerprint,
-            self.service.wallet_state_manager.constants,
+            constants=self.service.wallet_state_manager.constants,
+            config=self.service.wallet_state_manager.config,
+            logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
 
         txs = await vc_wallet.revoke_vc(

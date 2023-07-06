@@ -260,9 +260,7 @@ class TradeManager:
                     new_ph,
                     dataclasses.replace(
                         tx_config,
-                        coin_selection_config=dataclasses.replace(
-                            tx_config.coin_selection_config, excluded_coin_ids=[]
-                        ),
+                        excluded_coin_ids=[],
                     ),
                     fee=fee_to_pay,
                     coins=selected_coins,
@@ -276,9 +274,7 @@ class TradeManager:
                     [new_ph],
                     dataclasses.replace(
                         tx_config,
-                        coin_selection_config=dataclasses.replace(
-                            tx_config.coin_selection_config, excluded_coin_ids=[]
-                        ),
+                        excluded_coin_ids=[],
                     ),
                     fee=fee_to_pay,
                     coins={coin},
@@ -358,9 +354,7 @@ class TradeManager:
                         new_ph,
                         dataclasses.replace(
                             tx_config,
-                            coin_selection_config=dataclasses.replace(
-                                tx_config.coin_selection_config, excluded_coin_ids=[]
-                            ),
+                            excluded_coin_ids=[],
                         ),
                         fee=fee_to_pay,
                         coins=selected_coins,
@@ -376,9 +370,7 @@ class TradeManager:
                         [new_ph],
                         dataclasses.replace(
                             tx_config,
-                            coin_selection_config=dataclasses.replace(
-                                tx_config.coin_selection_config, excluded_coin_ids=[]
-                            ),
+                            excluded_coin_ids=[],
                         ),
                         fee=fee_to_pay,
                         coins={coin},

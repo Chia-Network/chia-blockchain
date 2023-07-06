@@ -714,9 +714,9 @@ class WalletStateManager:
         assert self.wallet_node.logged_in_fingerprint is not None
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(self.config.get("auto_claim", {}))
         tx_config: TXConfig = tx_config_loader.autofill(
-            self.config,
-            self.wallet_node.logged_in_fingerprint,
-            self.constants,
+            constants=self.constants,
+            config=self.config,
+            logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
         )
         if tx_config_loader.min_coin_amount is None:
             tx_config_loader = dataclasses.replace(

@@ -922,9 +922,7 @@ class TestDIDWallet:
             ph1,
             dataclasses.replace(
                 DEFAULT_TX_CONFIG,
-                coin_selection_config=dataclasses.replace(
-                    DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[coin.name()]
-                ),
+                excluded_coin_ids=[coin.name()],
             ),
             fee,
         )
