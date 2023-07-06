@@ -111,21 +111,17 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
         size=case.plot_size,
         proof=b"1",
     )
-    try:
-        quality_string = verify_and_get_quality_string(
-            pos=pos,
-            constants=DEFAULT_CONSTANTS,
-            original_challenge_hash=bytes32.from_hexstr(
-                "0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"
-            ),
-            signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
-            height=case.height,
-        )
-    except AssertionError as e:
-        assert str(e) == case.expected_error
-    else:
-        assert quality_string is None
-        assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
+    quality_string = verify_and_get_quality_string(
+        pos=pos,
+        constants=DEFAULT_CONSTANTS,
+        original_challenge_hash=bytes32.from_hexstr(
+            "0x73490e166d0b88347c37d921660b216c27316aae9a3450933d3ff3b854e5831a"
+        ),
+        signage_point=bytes32.from_hexstr("0x7b3e23dbd438f9aceefa9827e2c5538898189987f49b06eceb7a43067e77b531"),
+        height=case.height,
+    )
+    assert quality_string is None
+    assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
 class TestProofOfSpace:
