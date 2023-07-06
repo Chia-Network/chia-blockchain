@@ -211,7 +211,7 @@ async def get_wallet_client(
     wallet_rpc_port: Optional[int] = None,
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
-) -> AsyncIterator[Tuple[Optional[WalletRpcClient], int, Dict[str, Any]]]:
+) -> AsyncIterator[Union[Tuple[WalletRpcClient, int, Dict[str, Any]], Tuple[None, Literal[0], Dict[str, Any]]]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
         if wallet_client is None:
             yield None, 0, config

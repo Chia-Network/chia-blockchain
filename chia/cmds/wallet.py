@@ -214,7 +214,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    coins_to_exclude: list[str],
+    coins_to_exclude: List[str],
     reuse: bool,
     clawback_time: int,
 ) -> None:  # pragma: no cover
@@ -470,8 +470,8 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    offer: list[str],
-    request: list[str],
+    offer: List[str],
+    request: List[str],
     filepath: str,
     fee: str,
     reuse: bool,
