@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import itertools
 import logging
+import random
 import re
 import statistics
+from dataclasses import dataclass
 from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
 
 import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -40,6 +45,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
+from tests.util.misc import Marks, assert_runtime, datacases
 
 log = logging.getLogger(__name__)
 
@@ -1285,3 +1291,74 @@ async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: 
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
     cleared_root = await data_store.clear_pending_roots(tree_id=tree_id)
     assert cleared_root == pending_root
+
+
+@dataclass
+class BatchInsertBenchmarkCase:
+    pre: int
+    count: int
+    limit: float
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"pre={self.pre},count={self.count}"
+
+
+@datacases(
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=100,
+        limit=2.2,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=100,
+        limit=2.2,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=1_000,
+        limit=17,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=1_000,
+        limit=19,
+    ),
+)
+@pytest.mark.benchmark
+@pytest.mark.asyncio
+async def test_benchmark_batch_insert_speed(
+    data_store: DataStore,
+    tree_id: bytes32,
+    request: SubRequest,
+    case: BatchInsertBenchmarkCase,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(case.pre + case.count)
+    ]
+
+    pre = changelist[: case.pre]
+    batch = changelist[case.pre : case.pre + case.count]
+
+    if case.pre > 0:
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=pre,
+            status=Status.COMMITTED,
+        )
+
+    with assert_runtime(seconds=case.limit, label=request.node.name):
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=batch,
+        )
