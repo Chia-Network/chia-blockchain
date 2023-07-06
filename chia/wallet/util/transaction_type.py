@@ -13,3 +13,9 @@ class TransactionType(IntEnum):
     INCOMING_CLAWBACK_RECEIVE = 6
     INCOMING_CLAWBACK_SEND = 7
     OUTGOING_CLAWBACK = 8
+
+
+CLAWBACK_TRANSACTION_TYPES = {
+    TransactionType.INCOMING_CLAWBACK_SEND.value,
+    TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
+}

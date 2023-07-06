@@ -70,17 +70,15 @@ class PriorityMutex(Generic[_T_Priority]):
         deque = self._deques[priority]
         deque.append(element)
         try:
-            try:
-                if self._active is None:
-                    self._active = element
-                else:
-                    await element.ready_event.wait()
-                yield
-            finally:
-                # another element might be active if the wait is cancelled
-                if self._active is element:
-                    self._active = None
+            if self._active is None:
+                self._active = element
+            else:
+                await element.ready_event.wait()
+            yield
         finally:
+            # another element might be active if the wait is cancelled
+            if self._active is element:
+                self._active = None
             deque.remove(element)
 
             if self._active is None:

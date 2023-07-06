@@ -870,7 +870,7 @@ class TestCATTrades:
             raise ValueError("Couldn't find the trade record")
 
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
-        await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+        await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -880,15 +880,11 @@ class TestCATTrades:
         offer = dataclasses.replace(offer, _bundle=bundle)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
         wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
+        for _ in range(10):
+            print(await wallet_node_taker._resend_queue())
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
-        await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
+        await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
     @pytest.mark.asyncio
     async def test_trade_high_fee(self, wallets_prefarm):

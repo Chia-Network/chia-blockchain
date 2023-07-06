@@ -439,6 +439,7 @@ full_node:
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
+    enable_private_networks: False
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -551,6 +552,7 @@ wallet:
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
+    enable_private_networks: False
 
   ssl:
     private_crt: "config/ssl/wallet/private_wallet.crt"
