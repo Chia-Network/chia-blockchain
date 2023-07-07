@@ -683,8 +683,7 @@ class BlockStore:
         if present.
         """
 
-        result: Dict[bytes32, BlockRecord] = {}
-
+        ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
@@ -699,17 +698,17 @@ class BlockStore:
                             plot_filter_info.pos_ss_cc_challenge_hash,
                             plot_filter_info.cc_sp_hash,
                         )
-                        result[header_hash] = block_record
+                        ret[header_hash] = block_record
         else:
             formatted_str = f"""
-                SELECT 
-                    block_records.header_hash AS header_hash_br, 
-                    full_blocks.header_hash AS header_hash_fb, 
-                    block_records.block AS block_br, 
-                    full_blocks.block AS block_fb 
-                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash 
-                WHERE 
-                    block_records.height >= {start} and block_records.height <= {stop} 
+                SELECT
+                    block_records.header_hash AS header_hash_br,
+                    full_blocks.header_hash AS header_hash_fb,
+                    block_records.block AS block_br,
+                    full_blocks.block AS block_fb
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                WHERE
+                    block_records.height >= {start} and block_records.height <= {stop}
                     and full_blocks.height >= {start} and full_blocks.height <= {stop}
             """
 
@@ -723,9 +722,9 @@ class BlockStore:
                             plot_filter_info.pos_ss_cc_challenge_hash,
                             plot_filter_info.cc_sp_hash,
                         )
-                        result[header_hash] = block_record
+                        ret[header_hash] = block_record
 
-        return result
+        return ret
 
     async def get_block_bytes_in_range(
         self,
@@ -803,14 +802,14 @@ class BlockStore:
             height = peak[1] - blocks_n
 
             formatted_str = f"""
-                SELECT 
-                    block_records.header_hash, 
-                    full_blocks.header_hash, 
-                    block_records.block, 
-                    full_blocks.block 
-                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash 
-                WHERE 
-                    block_records.height >= {height} 
+                SELECT
+                    block_records.header_hash,
+                    full_blocks.header_hash,
+                    block_records.block,
+                    full_blocks.block
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                WHERE
+                    block_records.height >= {height}
                     AND full_blocks.height >= {height}
             """
 
