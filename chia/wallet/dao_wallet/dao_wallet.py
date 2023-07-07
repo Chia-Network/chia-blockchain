@@ -1413,6 +1413,7 @@ class DAOWallet(WalletProtocol):
                 memos=[],
             )
             await self.wallet_state_manager.add_pending_transaction(record)
+            return record
         return full_spend
 
     async def generate_proposal_eve_spend(

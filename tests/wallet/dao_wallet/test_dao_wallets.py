@@ -576,7 +576,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         [proposal_amount_1],
         [None],
     )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -661,7 +662,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     )
     update_inner = await dao_wallet_0.generate_update_proposal_innerpuz(new_dao_rules)
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
-    proposal_sb = await dao_wallet_0.generate_new_proposal(update_inner, dao_cat_0_bal, uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(update_inner, dao_cat_0_bal, uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -682,7 +684,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     xch_proposal_inner = dao_wallet_1.generate_simple_proposal_innerpuz(
         [recipient_puzzle_hash], [proposal_amount_2], [None]
     )
-    proposal_sb = await dao_wallet_1.generate_new_proposal(xch_proposal_inner, dao_cat_1_bal, fee=uint64(1000))
+    proposal_tx = await dao_wallet_1.generate_new_proposal(xch_proposal_inner, dao_cat_1_bal, fee=uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -804,7 +807,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
     proposal_amount_3 = 5000
     xch_proposal_inner = Program.to(["x"])
-    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -1018,7 +1022,8 @@ async def test_dao_proposal_partial_vote(
     #     [proposal_amount],
     #     [None],
     # )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 
@@ -1798,7 +1803,8 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
         [proposal_amount],
         [None],
     )
-    proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
+    proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
 

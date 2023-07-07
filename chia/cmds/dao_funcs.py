@@ -359,6 +359,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
     )
     if res["success"]:
         print("Successfully created proposal.")
+        print("Proposal ID: {}".format(res["proposal_id"]))
     else:
         print("Failed to create proposal.")
 

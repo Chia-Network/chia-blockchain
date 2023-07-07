@@ -181,7 +181,10 @@ def dao_create_cmd(
 
     from .dao_funcs import create_dao_wallet
 
-    print("Creating new DAO")
+    if proposal_minimum % 2 == 0:
+        raise ValueError("Please use an odd mojo amount for proposal minimum amount")
+    else:
+        print("Creating new DAO")
 
     extra_params = {
         "fee": fee,
@@ -213,11 +216,11 @@ def dao_create_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option("-i", "--wallet-id", help="ID of the DAO wallet which will receive the funds", type=int, required=True)
 @click.option(
     "-f",
     "--funding-wallet-id",
-    help="The ID of the wallet to send funds from",
+    help="ID of the wallet to send funds from",
     type=int,
     required=True,
 )
