@@ -1510,7 +1510,7 @@ class TestBlockHeaderValidation:
             # enable softfork2 at height 0, to make it apply to this test
             # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
             # default for this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0, MAX_FUTURE_TIME=5 * 60)
+            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0, MAX_FUTURE_TIME=5 * 60, MAX_FUTURE_TIME2=2 * 60)
             time_delta = 2 * 60 + 1
         else:
             constants = bt.constants.replace(MAX_FUTURE_TIME=5 * 60)
