@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import click
 
@@ -184,7 +184,6 @@ def get_transactions_cmd(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
-    default=[],
     help="Exclude this coin from being spent.",
 )
 @click.option(
@@ -211,7 +210,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    coins_to_exclude: List[str],
+    coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,
 ) -> None:  # pragma: no cover
@@ -441,7 +440,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     help="A wallet id to offer and the amount to offer (formatted like wallet_id:amount)",
     required=True,
     multiple=True,
-    default=[],
 )
 @click.option(
     "-r",
@@ -449,7 +447,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
     required=True,
     multiple=True,
-    default=[],
 )
 @click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option(
@@ -464,8 +461,8 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    offer: List[str],
-    request: List[str],
+    offer: Sequence[str],
+    request: Sequence[str],
     filepath: str,
     fee: str,
     reuse: bool,
@@ -1286,13 +1283,13 @@ def send_notification_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="The specific notification ID to show", type=str, default=[], multiple=True)
+@click.option("-i", "--id", help="The specific notification ID to show", type=str, multiple=True)
 @click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
 @click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
 def get_notifications_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    id: List[str],
+    id: Sequence[str],
     start: Optional[int],
     end: Optional[int],
 ) -> None:
@@ -1310,12 +1307,12 @@ def get_notifications_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--id", help="A specific notification ID to delete", type=str, default=[], multiple=True)
+@click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
 @click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
 def delete_notifications_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    id: List[str],
+    id: Sequence[str],
     all: bool,
 ) -> None:
     from .wallet_funcs import delete_notifications
@@ -1438,12 +1435,12 @@ def spend_vc_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-p", "--proof", help="A flag to add as a proof", type=str, default=[], multiple=True)
+@click.option("-p", "--proof", help="A flag to add as a proof", type=str, multiple=True)
 @click.option("-r", "--root-only", help="Do not add the proofs to the DB, just output the root", is_flag=True)
 def add_proof_reveal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    proof: List[str],
+    proof: Sequence[str],
     root_only: bool,
 ) -> None:  # pragma: no cover
     from .wallet_funcs import add_proof_reveal

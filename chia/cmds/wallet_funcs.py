@@ -8,7 +8,7 @@ import sys
 import time
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.peer_funcs import print_connections
@@ -263,7 +263,7 @@ async def send(
     override: bool,
     min_coin_amount: Decimal,
     max_coin_amount: Decimal,
-    excluded_coin_ids: List[str],
+    excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
 ) -> None:  # pragma: no cover
@@ -413,8 +413,8 @@ async def make_offer(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     d_fee: Decimal,
-    offers: list[str],
-    requests: list[str],
+    offers: Sequence[str],
+    requests: Sequence[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
 ) -> None:
@@ -1381,7 +1381,7 @@ async def send_notification(
 
 
 async def get_notifications(
-    wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: list[str], start: Optional[int], end: Optional[int]
+    wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: Sequence[str], start: Optional[int], end: Optional[int]
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if wallet_client is None:
@@ -1399,7 +1399,7 @@ async def get_notifications(
 
 
 async def delete_notifications(
-    wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: list[str], delete_all: bool
+    wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: Sequence[str], delete_all: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if wallet_client is None:
@@ -1560,7 +1560,7 @@ async def spend_vc(
 
 
 async def add_proof_reveal(
-    wallet_rpc_port: Optional[int], fp: Optional[int], proofs: list[str], root_only: bool
+    wallet_rpc_port: Optional[int], fp: Optional[int], proofs: Sequence[str], root_only: bool
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if wallet_client is None:

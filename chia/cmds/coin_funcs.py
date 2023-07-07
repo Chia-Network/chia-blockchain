@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.cmds.cmds_util import get_wallet_client
 from chia.cmds.units import units
@@ -24,8 +24,8 @@ async def async_list(
     wallet_id: int,
     max_coin_amount: Decimal,
     min_coin_amount: Decimal,
-    excluded_amounts: list[int],
-    excluded_coin_ids: List[str],
+    excluded_amounts: Sequence[int],
+    excluded_coin_ids: Sequence[str],
     show_unconfirmed: bool,
     paginate: Optional[bool],
 ) -> None:
@@ -123,10 +123,10 @@ async def async_combine(
     fee: Decimal,
     max_coin_amount: Decimal,
     min_coin_amount: Decimal,
-    excluded_amounts: list[str],
+    excluded_amounts: Sequence[str],
     number_of_coins: int,
     target_coin_amount: Decimal,
-    target_coin_ids_str: List[str],
+    target_coin_ids_str: Sequence[str],
     largest_first: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):

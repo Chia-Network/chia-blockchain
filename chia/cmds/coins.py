@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional, Sequence
 
 import click
 
@@ -40,14 +40,12 @@ def coins_cmd(ctx: click.Context) -> None:
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
-    default=[],
     help="prevent this coin from being included.",
 )
 @click.option(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    default=[],
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -64,8 +62,8 @@ def list_cmd(
     show_unconfirmed: bool,
     min_amount: str,
     max_amount: str,
-    coins_to_exclude: List[str],
-    amounts_to_exclude: List[int],
+    coins_to_exclude: Sequence[str],
+    amounts_to_exclude: Sequence[int],
     paginate: Optional[bool],
 ) -> None:
     from .coin_funcs import async_list
@@ -113,7 +111,6 @@ def list_cmd(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
-    default=[],
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -143,7 +140,6 @@ def list_cmd(
     "--input-coin",
     "input_coins",
     multiple=True,
-    default=[],
     help="Only combine coins with these ids.",
 )
 @click.option(
@@ -158,11 +154,11 @@ def combine_cmd(
     id: int,
     target_amount: str,
     min_amount: str,
-    amounts_to_exclude: List[str],
+    amounts_to_exclude: Sequence[str],
     number_of_coins: int,
     max_amount: str,
     fee: str,
-    input_coins: List[str],
+    input_coins: Sequence[str],
     largest_first: bool,
 ) -> None:
     from .coin_funcs import async_combine

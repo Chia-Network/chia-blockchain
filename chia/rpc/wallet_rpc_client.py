@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -189,7 +189,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
@@ -394,7 +394,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
     ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
@@ -734,7 +734,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
