@@ -1,4 +1,5 @@
 (mod (
+    ; first hash
     SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH  ; proposal timer needs to know which proposal created it, AND
@@ -8,9 +9,11 @@
     LOCKUP_SELF_HASH
     CAT_TAIL_HASH
     TREASURY_ID
+    PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
+    ; second hash
     YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     TOTAL_VOTES  ; how many people responded
-    PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
+    ; solution
     vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
     vote_info  ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
     vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -92,9 +95,10 @@
       PROPOSED_PUZ_HASH
     )
     (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-      (sha256 ONE PROPOSED_PUZ_HASH)
+
       (sha256 ONE TOTAL_VOTES)
       (sha256 ONE YES_VOTES)
+      (sha256 ONE PROPOSED_PUZ_HASH)
       (sha256 ONE TREASURY_ID)
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE LOCKUP_SELF_HASH)
@@ -171,7 +175,7 @@
       my_amount
     )
     (if coin_id_list
-        (assert (> (f vote_amount_list) 0)
+        (if (> (f vote_amount_list) 0)
           (c
             (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
             (c
@@ -214,6 +218,7 @@
               )
             )
           )
+          (x "test 2")
         )
         (c
           (list
@@ -248,7 +253,7 @@
   (if self_destruct_flag
       ; assert self_destruct_time > proposal_timelock_length
       ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
-      (assert (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
+      (if (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
         (list
           (list CREATE_COIN (calculate_finished_state SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH) ONE (list TREASURY_ID))
           (list ASSERT_HEIGHT_RELATIVE self_destruct_time)
@@ -269,6 +274,7 @@
             )
           )
         )
+        (x "test 3")
       )
       ; We're not trying to self destruct
       ; Check whether we have a soft close to either try closing the proposal or adding votes
@@ -393,7 +399,7 @@
                   )
                   (if (= (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH)  ; reveal the proposed code on chain with the first vote
                       ()
-                      (x)
+                      (x (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH innerpuz_reveal)
                   )
                 )
             )

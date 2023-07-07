@@ -1745,9 +1745,9 @@ class DAOWallet(WalletProtocol):
                 LOCKUP_MOD_HASH,
                 CAT_TAIL_HASH,
                 TREASURY_ID,
+                PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
                 YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
                 TOTAL_VOTES,  # how many people responded
-                PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
             ) = curried_args.as_iter()
 
             if TOTAL_VOTES.as_int() < attendance_required.as_int():
@@ -2481,9 +2481,9 @@ class DAOWallet(WalletProtocol):
             LOCKUP_SELF_HASH,
             CAT_TAIL_HASH,
             TREASURY_ID,
+            INNERPUZ,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            INNERPUZ,
         ) = curried_args
 
         if current_coin is None:

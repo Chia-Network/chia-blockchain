@@ -96,7 +96,6 @@ def create_new_proposal_puzzle(
         treasury_id,
         0,
         0,
-        "s",
         proposed_puzzle_hash,
     )
     return puzzle
@@ -401,9 +400,9 @@ def get_proposal_puzzle(
         lockup_puzzle.get_tree_hash(),
         cat_tail_hash,
         treasury_id,
+        proposed_puzzle_hash,
         votes_sum,
         total_votes,
-        proposed_puzzle_hash,
     )
     return puzzle
 
@@ -537,9 +536,10 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             LOCKUP_SELF_HASH,
             CAT_TAIL_HASH,
             TREASURY_ID,
+            INNERPUZ_HASH,
             YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
             TOTAL_VOTES,  # how many people responded
-            INNERPUZ_HASH,
+
         ) = curried_args.as_iter()
 
         added_votes = solution.at("ff").as_int()
@@ -561,9 +561,9 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             LOCKUP_SELF_HASH,
             CAT_TAIL_HASH,
             TREASURY_ID,
+            INNERPUZ_HASH,
             new_yes_votes,
             new_total_votes,
-            INNERPUZ_HASH,
         )
     else:
         # we are in the finished state, puzzle is the same as ever
@@ -579,9 +579,10 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
                 LOCKUP_SELF_HASH,
                 CAT_TAIL_HASH,
                 TREASURY_ID,
+                INNERPUZ_HASH,
                 YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
                 TOTAL_VOTES,  # how many people responded
-                INNERPUZ_HASH,
+
             ) = currieds.as_iter()
         else:
             SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
@@ -746,9 +747,9 @@ def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Progr
         LOCKUP_SELF_HASH,
         CAT_TAIL_HASH,
         TREASURY_ID,
+        PROPOSED_PUZ_HASH,
         YES_VOTES,
         TOTAL_VOTES,
-        PROPOSED_PUZ_HASH,
     ) = curried_args.as_iter()
     return YES_VOTES, TOTAL_VOTES, PROPOSED_PUZ_HASH
 
