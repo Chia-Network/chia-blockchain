@@ -21,6 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint16
 from chia.util.keychain import KeyData
 from chia.wallet.transaction_record import TransactionRecord
@@ -79,7 +80,7 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     consume_errors: bool = True,
-) -> AsyncIterator[Tuple[Optional[_T_RpcClient], Dict[str, Any]]]:
+) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
@@ -103,9 +104,9 @@ async def get_any_service_client(
         if connected:
             yield node_client, config
         else:
-            yield None, config
+            raise CliRpcConnectionError
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors:
+        if not consume_errors or isinstance(e, CliRpcConnectionError):
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
