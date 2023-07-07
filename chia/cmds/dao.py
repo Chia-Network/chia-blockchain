@@ -518,7 +518,7 @@ def dao_close_proposal_cmd(
 @click.option(
     "-a",
     "--amount",
-    help="The amount of new cats the proposal will mint",
+    help="The amount of CATs (not mojos) to lock in voting mode",
     type=str,
     required=True,
 )

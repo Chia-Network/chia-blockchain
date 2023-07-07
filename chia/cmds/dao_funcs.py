@@ -15,6 +15,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
+from chia.wallet.util.wallet_types import WalletType
 
 
 async def add_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -128,9 +129,11 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_client: WalletRpcCli
 
     for asset_id, balance in balances.items():
         if asset_id == "null":
-            print(f"XCH: {balance}")
+            mojos = get_mojo_per_unit(WalletType.STANDARD_WALLET)
+            print(f"XCH: {balance / mojos}")
         else:
-            print(f"{asset_id}: {balance}")
+            mojos = get_mojo_per_unit(WalletType.CAT)
+            print(f"{asset_id}: {balance / mojos}")
 
 
 async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -347,14 +350,17 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         vote_amount = args["vote_amount"]
     else:
         vote_amount = None
+    wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+    mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+    final_amount: uint64 = uint64(int(Decimal(fee) * mojo_per_unit))
     res = await wallet_client.dao_create_proposal(
         wallet_id=wallet_id,
         proposal_type="spend",
         additions=additions,
-        amount=amount,
+        amount=final_amount,
         inner_address=address,
         vote_amount=vote_amount,
-        fee=final_fee,
+        fee=final_fees,
         reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:
