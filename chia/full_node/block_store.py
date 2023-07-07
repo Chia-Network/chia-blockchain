@@ -640,11 +640,10 @@ class BlockStore:
                     (header_hash,),
                 ) as cursor:
                     row = await cursor.fetchone()
-            if row is not None:
-                block_record_db = BlockRecordDB.from_bytes(row[0])
-                block_bytes = zstd.decompress(row[1])
-            else:
+            if row is None:
                 return None
+            block_record_db = BlockRecordDB.from_bytes(row[0])
+            block_bytes = zstd.decompress(row[1])
 
         else:
             async with self.db_wrapper.reader_no_transaction() as conn:
@@ -653,11 +652,10 @@ class BlockStore:
                     (header_hash.hex(),),
                 ) as cursor:
                     row = await cursor.fetchone()
-            if row is not None:
-                block_record_db = BlockRecordDB.from_bytes(row[0])
-            else:
+            if row is None:
                 return None
 
+            block_record_db = BlockRecordDB.from_bytes(row[0])
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT block from full_blocks WHERE header_hash=?",
@@ -685,8 +683,8 @@ class BlockStore:
         if present.
         """
 
-        ret: Dict[bytes32, BlockRecordDB] = {}
-        all_blocks_plot_filters: Dict[bytes32, PlotFilterInfo] = {}
+        result: Dict[bytes32, BlockRecord] = {}
+
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
@@ -695,35 +693,38 @@ class BlockStore:
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        ret[header_hash] = BlockRecordDB.from_bytes(row[1])
-                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(zstd.decompress(row[2]))
-
+                        block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        result[header_hash] = block_record
         else:
-            formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
+            formatted_str = f"""
+                SELECT 
+                    block_records.header_hash AS header_hash_br, 
+                    full_blocks.header_hash AS header_hash_fb, 
+                    block_records.block AS block_br, 
+                    full_blocks.block AS block_fb 
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash 
+                WHERE 
+                    block_records.height >= {start} and block_records.height <= {stop} 
+                    and full_blocks.height >= {start} and full_blocks.height <= {stop}
+            """
 
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with await conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
-                        ret[header_hash] = BlockRecordDB.from_bytes(row[1])
+                        block_record_db = BlockRecordDB.from_bytes(row[2])
+                        plot_filter_info = plot_filter_info_from_block(row[3])
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        result[header_hash] = block_record
 
-            formatted_str = f"SELECT header_hash, block from full_blocks WHERE height >= {start} and height <= {stop}"
-
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with await conn.execute(formatted_str) as cursor:
-                    for row in await cursor.fetchall():
-                        header_hash = self.maybe_from_hex(row[0])
-                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(row[1])
-
-        result: Dict[bytes32, BlockRecord] = {}
-        for hh, block_record_db in ret.items():
-            assert hh in all_blocks_plot_filters
-            plot_filter_info = all_blocks_plot_filters[hh]
-            block_record = block_record_db.to_block_record(
-                plot_filter_info.pos_ss_cc_challenge_hash,
-                plot_filter_info.cc_sp_hash,
-            )
-            result[hh] = block_record
         return result
 
     async def get_block_bytes_in_range(
@@ -781,8 +782,7 @@ class BlockStore:
         if peak is None:
             return {}, None
 
-        ret: Dict[bytes32, BlockRecordDB] = {}
-        all_blocks_plot_filters: Dict[bytes32, PlotFilterInfo] = {}
+        ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
@@ -791,34 +791,42 @@ class BlockStore:
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        ret[header_hash] = BlockRecordDB.from_bytes(row[1])
-                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
 
         else:
-            formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak[1] - blocks_n}"
+            height = peak[1] - blocks_n
+
+            formatted_str = f"""
+                SELECT 
+                    block_records.header_hash, 
+                    full_blocks.header_hash, 
+                    block_records.block, 
+                    full_blocks.block 
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash 
+                WHERE 
+                    block_records.height >= {height} 
+                    AND full_blocks.height >= {height}
+            """
+
             async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(formatted_str) as cursor:
+                async with await conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
-                        ret[header_hash] = BlockRecordDB.from_bytes(row[1])
+                        block_record_db = BlockRecordDB.from_bytes(row[2])
+                        plot_filter_info = plot_filter_info_from_block(row[3])
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
 
-            formatted_str = f"SELECT header_hash,block  from full_blocks WHERE height >= {peak[1] - blocks_n}"
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(formatted_str) as cursor:
-                    for row in await cursor.fetchall():
-                        header_hash = self.maybe_from_hex(row[0])
-                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(row[1])
-
-        result: Dict[bytes32, BlockRecord] = {}
-        for hh, block_record_db in ret.items():
-            assert hh in all_blocks_plot_filters
-            plot_filter_info = all_blocks_plot_filters[hh]
-            block_record = block_record_db.to_block_record(
-                plot_filter_info.pos_ss_cc_challenge_hash,
-                plot_filter_info.cc_sp_hash,
-            )
-            result[hh] = block_record
-        return result, peak[0]
+        return ret, peak[0]
 
     async def set_peak(self, header_hash: bytes32) -> None:
         # We need to be in a sqlite transaction here.
