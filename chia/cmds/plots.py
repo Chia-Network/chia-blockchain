@@ -27,7 +27,7 @@ def show_plots(root_path: Path):
         print(f"{str_path}")
 
 
-@click.group("plots", short_help="Manage your plots")
+@click.group("plots", help="Manage your plots")
 @click.pass_context
 def plots_cmd(ctx: click.Context):
     """Create, add, remove and check your plots"""
@@ -39,7 +39,7 @@ def plots_cmd(ctx: click.Context):
     initialize_logging("", {"log_level": "INFO", "log_stdout": True}, root_path)
 
 
-@plots_cmd.command("create", short_help="Create plots")
+@plots_cmd.command("create", help="Create plots")
 @click.option("-k", "--size", help="Plot size", type=int, default=32, show_default=True)
 @click.option("--override-k", help="Force size smaller than 32", default=False, show_default=True, is_flag=True)
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=1, show_default=True)
@@ -159,7 +159,7 @@ def create_cmd(
             print(e)
 
 
-@plots_cmd.command("check", short_help="Checks plots")
+@plots_cmd.command("check", help="Checks plots")
 @click.option("-n", "--num", help="Number of plots or challenges", type=int, default=None)
 @click.option(
     "-g",
@@ -180,7 +180,7 @@ def check_cmd(
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
 
 
-@plots_cmd.command("add", short_help="Adds a directory of plots")
+@plots_cmd.command("add", help="Adds a directory of plots")
 @click.option(
     "-d",
     "--final_dir",
@@ -200,7 +200,7 @@ def add_cmd(ctx: click.Context, final_dir: str):
         print(e)
 
 
-@plots_cmd.command("remove", short_help="Removes a directory of plots from config.yaml")
+@plots_cmd.command("remove", help="Removes a directory of plots from config.yaml")
 @click.option(
     "-d",
     "--final_dir",
@@ -216,7 +216,7 @@ def remove_cmd(ctx: click.Context, final_dir: str):
     remove_plot_directory(ctx.obj["root_path"], final_dir)
 
 
-@plots_cmd.command("show", short_help="Shows the directory of current plots")
+@plots_cmd.command("show", help="Shows the directory of current plots")
 @click.pass_context
 def show_cmd(ctx: click.Context):
     show_plots(ctx.obj["root_path"])

@@ -23,7 +23,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64
-from chia.util.network import get_host_addr
+from chia.util.network import resolve
 from chia.util.path import path_from_root
 
 log = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 class Crawler:
     sync_store: Any
     coin_store: CoinStore
-    connection: aiosqlite.Connection
+    connection: Optional[aiosqlite.Connection]
     config: Dict
     _server: Optional[ChiaServer]
     crawl_store: Optional[CrawlStore]
@@ -63,6 +63,7 @@ class Crawler:
         self.initialized = False
         self.root_path = root_path
         self.config = config
+        self.connection = None
         self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
@@ -127,9 +128,7 @@ class Crawler:
 
         try:
             connected = await self.create_client(
-                PeerInfo(
-                    str(get_host_addr(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False))), peer.port
-                ),
+                PeerInfo(await resolve(peer.ip_address, prefer_ipv6=self.config.get("prefer_ipv6", False)), peer.port),
                 peer_action,
             )
             if not connected:
@@ -374,4 +373,5 @@ class Crawler:
         self._shut_down = True
 
     async def _await_closed(self):
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()

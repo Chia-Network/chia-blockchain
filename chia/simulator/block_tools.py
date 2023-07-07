@@ -11,7 +11,7 @@ import ssl
 import sys
 import tempfile
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -45,12 +45,11 @@ from chia.full_node.bundle_tools import (
     detect_potential_template_generator,
     simple_solution_generator,
 )
-from chia.full_node.generator import setup_generator_args
 from chia.full_node.signage_point import SignagePoint
-from chia.plotters.chiapos import Params
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    Params,
     PlotRefreshEvents,
     PlotRefreshResult,
     PlotsRefreshParameter,
@@ -114,6 +113,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
+from chia.util.ssl_check import fix_ssl
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
@@ -121,9 +121,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
+from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -142,9 +140,9 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "MAX_FUTURE_TIME": 3600
-        * 24
-        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        "MAX_FUTURE_TIME": 3600 * 24 * 10,
+        "MAX_FUTURE_TIME2": 3600 * 24 * 10,  # After the Fork
         "MEMPOOL_BLOCK_BUFFER": 6,
     }
 )
@@ -180,13 +178,13 @@ class BlockTools:
         self,
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
-        const_dict=None,
+        const_dict: Optional[Dict[str, int]] = None,
         keychain: Optional[Keychain] = None,
-        config_overrides: Optional[Dict] = None,
+        config_overrides: Optional[Dict[str, Any]] = None,
         automated_testing: bool = True,
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
-    ):
+    ) -> None:
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
@@ -217,6 +215,7 @@ class BlockTools:
                 private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
                 node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
+            fix_ssl(root_path)
             with lock_config(root_path=root_path, filename="config.yaml"):
                 path = config_path_for_filename(root_path=root_path, filename="config.yaml")
                 path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
@@ -258,7 +257,7 @@ class BlockTools:
         self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
 
-        def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult):
+        def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
             assert update_result.duration < 15
             if event == PlotRefreshEvents.started:
                 self.total_result = PlotRefreshResult()
@@ -284,7 +283,7 @@ class BlockTools:
             match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
-    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
+    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
         keychain_proxy: Optional[KeychainProxy]
         try:
             if self.local_keychain:
@@ -338,7 +337,7 @@ class BlockTools:
             if keychain_proxy is not None:
                 await keychain_proxy.close()  # close the keychain proxy
 
-    def change_config(self, new_config: Dict):
+    def change_config(self, new_config: Dict[str, Any]) -> None:
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = self.constants.replace_str_to_bytes(**overrides)
@@ -358,37 +357,45 @@ class BlockTools:
         num_non_keychain_plots: int = 3,
         plot_size: int = 20,
         bitfield: bool = True,
-    ):
+    ) -> bool:
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
+        existing_plots: bool = True
         # OG Plots
         for i in range(num_og_plots):
-            await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Pool Plots
         for i in range(num_pool_plots):
-            await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            plot = await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
+            if plot.new_plot:
+                existing_plots = False
         # Some plots with keys that are not in the keychain
         for i in range(num_non_keychain_plots):
-            await self.new_plot(
+            plot = await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
                 plot_size=plot_size,
                 bitfield=bitfield,
             )
+            if plot.new_plot:
+                existing_plots = False
         await self.refresh_plots()
         assert len(self.plot_manager.plots) == len(self.expected_plots)
+        return existing_plots
 
     async def new_plot(
         self,
         pool_contract_puzzle_hash: Optional[bytes32] = None,
-        path: Path = None,
-        tmp_dir: Path = None,
+        path: Optional[Path] = None,
+        tmp_dir: Optional[Path] = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
         bitfield: bool = True,
-    ) -> Optional[bytes32]:
+    ) -> BlockToolsNewPlotResult:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
@@ -432,6 +439,7 @@ class BlockTools:
 
             plot_id_new: Optional[bytes32] = None
             path_new: Optional[Path] = None
+            new_plot: bool = True
 
             if len(created):
                 assert len(existed) == 0
@@ -440,13 +448,14 @@ class BlockTools:
             if len(existed):
                 assert len(created) == 0
                 plot_id_new, path_new = list(existed.items())[0]
+                new_plot = False
             assert plot_id_new is not None
             assert path_new is not None
 
             if not exclude_plots:
                 self.expected_plots[plot_id_new] = path_new
 
-            return plot_id_new
+            return BlockToolsNewPlotResult(plot_id_new, new_plot)
 
         except KeyboardInterrupt:
             shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -463,14 +472,14 @@ class BlockTools:
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
-    async def delete_plot(self, plot_id: bytes32):
+    async def delete_plot(self, plot_id: bytes32) -> None:
         assert plot_id in self.expected_plots
         self.expected_plots[plot_id].unlink()
         del self.expected_plots[plot_id]
         await self.refresh_plots()
 
     @property
-    def config(self) -> Dict:
+    def config(self) -> Dict[str, Any]:
         return copy.deepcopy(self._config)
 
     def get_daemon_ssl_context(self) -> ssl.SSLContext:
@@ -532,7 +541,7 @@ class BlockTools:
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: List[FullBlock] = None,
+        block_list_input: Optional[List[FullBlock]] = None,
         *,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
@@ -1652,8 +1661,8 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
-    overflow_cc_challenge: bytes32 = None,
-    overflow_rc_challenge: bytes32 = None,
+    overflow_cc_challenge: Optional[bytes32] = None,
+    overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
     block_time_residual: float = 0.0,
@@ -1718,8 +1727,8 @@ def get_full_block_and_block_record(
 
 def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
     try:
-        block_program, block_program_args = setup_generator_args(generator)
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, block_program, block_program_args)
+        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
@@ -2000,7 +2009,7 @@ def create_test_unfinished_block(
     additions: Optional[List[Coin]] = None,
     removals: Optional[List[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
+    finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
 ) -> UnfinishedBlock:
     """
     Creates a new unfinished block using all the information available at the signage point. This will have to be
@@ -2121,6 +2130,12 @@ def create_test_unfinished_block(
     )
 
 
+@dataclass
+class BlockToolsNewPlotResult:
+    plot_id: bytes32
+    new_plot: bool
+
+
 # Remove these counters when `create_block_tools` and `create_block_tools_async` are removed
 create_block_tools_async_count = 0
 create_block_tools_count = 0
@@ -2137,9 +2152,9 @@ create_block_tools_count = 0
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict=None,
+    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
-    config_overrides: Optional[Dict] = None,
+    config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
@@ -2154,9 +2169,9 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict] = None,
+    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
-    config_overrides: Optional[Dict] = None,
+    config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1

@@ -6,7 +6,6 @@ import pytest
 
 from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
-from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.weight_proof import WeightProof
 from chia.util.generator_tools import get_block_header
@@ -40,19 +39,15 @@ class TestWalletBlockchain:
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
-        success, _, records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
+        records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
-        success, _, records_short = await wallet_node._weight_proof_handler.validate_weight_proof(
-            weight_proof_short, True
-        )
+        records_short = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof_short, True)
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
-        success, _, records_long = await wallet_node._weight_proof_handler.validate_weight_proof(
-            weight_proof_long, True
-        )
+        records_long = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof_long, True)
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
-            chain = await WalletBlockchain.create(store, test_constants)
+            chain = await WalletBlockchain.create(store, bt.constants)
 
             assert (await chain.get_peak_block()) is None
             assert chain.get_latest_timestamp() == 0

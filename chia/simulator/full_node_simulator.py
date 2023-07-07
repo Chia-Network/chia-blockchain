@@ -9,6 +9,7 @@ import anyio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
@@ -24,8 +25,8 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -144,7 +145,7 @@ class FullNodeSimulator(FullNodeAPI):
         While reorgs are preferred, this is also an option
         Note: This does not broadcast the changes, and all wallets will need to be wiped.
         """
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
                 raise ValueError("We can't revert without any blocks.")
@@ -179,7 +180,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -228,7 +229,7 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -598,10 +599,10 @@ class FullNodeSimulator(FullNodeAPI):
             if len(amounts) == 0:
                 return set()
 
-            outputs: List[AmountWithPuzzlehash] = []
+            outputs: List[Payment] = []
             for amount in amounts:
                 puzzle_hash = await wallet.get_new_puzzlehash()
-                outputs.append({"puzzlehash": puzzle_hash, "amount": uint64(amount), "memos": []})
+                outputs.append(Payment(puzzle_hash, amount))
 
             transaction_records: List[TransactionRecord] = []
             outputs_iterator = iter(outputs)
@@ -613,8 +614,8 @@ class FullNodeSimulator(FullNodeAPI):
                 if len(outputs_group) > 0:
                     async with wallet.wallet_state_manager.lock:
                         tx = await wallet.generate_signed_transaction(
-                            amount=outputs_group[0]["amount"],
-                            puzzle_hash=outputs_group[0]["puzzlehash"],
+                            amount=outputs_group[0].amount,
+                            puzzle_hash=outputs_group[0].puzzle_hash,
                             primaries=outputs_group[1:],
                         )
                     await wallet.push_transaction(tx=tx)
@@ -625,7 +626,7 @@ class FullNodeSimulator(FullNodeAPI):
             await self.process_transaction_records(records=transaction_records, timeout=None)
 
             output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
-            puzzle_hashes = {output["puzzlehash"] for output in outputs}
+            puzzle_hashes = {output.puzzle_hash for output in outputs}
             change_coins = {coin for coin in output_coins if coin.puzzle_hash not in puzzle_hashes}
             coins_to_receive = output_coins - change_coins
             await wait_for_coins_in_wallet(coins=coins_to_receive, wallet=wallet)

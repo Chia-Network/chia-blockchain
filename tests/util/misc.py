@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import enum
+import functools
 import gc
 import math
 import os
@@ -13,11 +14,17 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
 
 import pytest
-from typing_extensions import final
+from chia_rs import Coin
+from typing_extensions import Protocol, final
 
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.hash import std_hash
+from chia.util.ints import uint64
+from chia.wallet.util.compute_hints import HintedCoin
 from tests.core.data_layer.util import ChiaRoot
 
 
@@ -303,3 +310,60 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[su
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+
+
+# https://github.com/pytest-dev/pytest/blob/7.3.1/src/_pytest/mark/__init__.py#L45
+Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytest.Mark]]]
+
+
+class DataCase(Protocol):
+    marks: Marks
+
+    @property
+    def id(self) -> str:
+        ...
+
+
+def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+    return pytest.mark.parametrize(
+        argnames=_name,
+        argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
+    )
+
+
+class DataCasesDecorator(Protocol):
+    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+        ...
+
+
+def named_datacases(name: str) -> DataCasesDecorator:
+    return functools.partial(datacases, _name=name)
+
+
+@dataclasses.dataclass
+class CoinGenerator:
+    _seed: int = -1
+
+    def _get_hash(self) -> bytes32:
+        self._seed += 1
+        return std_hash(self._seed)
+
+    def _get_amount(self) -> uint64:
+        self._seed += 1
+        return uint64(self._seed)
+
+    def get(self, parent_coin_id: Optional[bytes32] = None, include_hint: bool = True) -> HintedCoin:
+        if parent_coin_id is None:
+            parent_coin_id = self._get_hash()
+        hint = None
+        if include_hint:
+            hint = self._get_hash()
+        return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), hint)
+
+
+def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
+    if hinted_coin.hint is not None:
+        memos = [hinted_coin.hint]
+    else:
+        memos = []
+    return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]

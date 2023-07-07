@@ -6,7 +6,9 @@ from typing import Optional
 
 from chia.protocols import timelord_protocol
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.timelord.timelord import Chain, IterationType, Timelord, iters_from_block
+from chia.timelord.iters_from_block import iters_from_block
+from chia.timelord.timelord import Timelord
+from chia.timelord.types import Chain, IterationType
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint64
 
@@ -14,10 +16,15 @@ log = logging.getLogger(__name__)
 
 
 class TimelordAPI:
+    log: logging.Logger
     timelord: Timelord
 
     def __init__(self, timelord) -> None:
+        self.log = logging.getLogger(__name__)
         self.timelord = timelord
+
+    def ready(self) -> bool:
+        return True
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
@@ -29,6 +36,7 @@ class TimelordAPI:
         async with self.timelord.lock:
             if self.timelord.bluebox_mode:
                 return None
+            self.timelord.max_allowed_inactivity_time = 60
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(

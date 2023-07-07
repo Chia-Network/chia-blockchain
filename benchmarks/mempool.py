@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
@@ -20,6 +21,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.ints import uint32, uint64
+from chia.util.misc import to_batches
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -30,6 +32,9 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     if not profile:
         yield
         return
+
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         yield
@@ -89,6 +94,10 @@ async def run_mempool_benchmark() -> None:
     # these spend the same coins as spend_bundles but with a higher fee
     replacement_spend_bundles: List[List[SpendBundle]] = []
 
+    # these spend the same coins as spend_bundles, but they are organized in
+    # much larger bundles
+    large_spend_bundles: List[List[SpendBundle]] = []
+
     timestamp = uint64(1631794488)
 
     height = uint32(1)
@@ -133,6 +142,19 @@ async def run_mempool_benchmark() -> None:
             bundles.append(tx)
         replacement_spend_bundles.append(bundles)
 
+        bundles = []
+        print("     large spend bundles")
+        for batch in to_batches(unspent, 200):
+            print(f"{len(batch.entries)} coins")
+            tx = SpendBundle.aggregate(
+                [
+                    wt.generate_signed_transaction(uint64(c.amount // 2), wt.get_new_puzzlehash(), c, fee=peer + idx)
+                    for c in batch.entries
+                ]
+            )
+            bundles.append(tx)
+        large_spend_bundles.append(bundles)
+
     start_height = height
     for single_threaded in [False, True]:
         if single_threaded:
@@ -156,6 +178,25 @@ async def run_mempool_benchmark() -> None:
                 assert error is None
 
         suffix = "st" if single_threaded else "mt"
+
+        print("\nProfiling add_spend_bundle() with large bundles")
+        total_bundles = 0
+        tasks = []
+        with enable_profiler(True, f"add-large-{suffix}"):
+            start = monotonic()
+            for peer in range(NUM_PEERS):
+                total_bundles += len(large_spend_bundles[peer])
+                tasks.append(asyncio.create_task(add_spend_bundles(large_spend_bundles[peer])))
+            await asyncio.gather(*tasks)
+            stop = monotonic()
+        print(f"  time: {stop - start:0.4f}s")
+        print(f"  per call: {(stop - start) / total_bundles * 1000:0.2f}ms")
+
+        mempool = MempoolManager(get_coin_record, DEFAULT_CONSTANTS, single_threaded=single_threaded)
+
+        height = start_height
+        rec = fake_block_record(height, timestamp)
+        await mempool.new_peak(rec, None)
 
         print("\nProfiling add_spend_bundle()")
         total_bundles = 0

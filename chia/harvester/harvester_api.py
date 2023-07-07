@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -29,10 +30,15 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    log: logging.Logger
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):
+        self.log = logging.getLogger(__name__)
         self.harvester = harvester
+
+    def ready(self) -> bool:
+        return True
 
     @api_request(peer_required=True)
     async def harvester_handshake(
@@ -205,13 +211,12 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > 5:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
-                    f"to minimize risk of losing rewards."
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f" to minimize risk of losing rewards."
                 )
             else:
                 pass
-                # If you want additional logs, uncomment the following line
-                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
+                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
             for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)

@@ -4,7 +4,7 @@ from typing import Optional
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.util.byte_types import hexstr_to_bytes
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.misc import format_bytes
 
 
@@ -12,8 +12,7 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
     """
     Calculates the estimated space on the network given two block header hashes.
     """
-    async with get_any_service_client(FullNodeRpcClient, rpc_port) as node_config_fp:
-        client, _, _ = node_config_fp
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
         if client is not None:
             if delta_block_height:
                 if start == "":
@@ -24,7 +23,7 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
 
                     newer_block_height = blockchain_state["peak"].height
                 else:
-                    newer_block = await client.get_block_record(hexstr_to_bytes(start))
+                    newer_block = await client.get_block_record(bytes32.from_hexstr(start))
                     if newer_block is None:
                         print("Block header hash", start, "not found.")
                         return None
@@ -39,7 +38,6 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
                 network_space_bytes_estimate = await client.get_network_space(
                     newer_block_header.header_hash, older_block_header.header_hash
                 )
-                assert network_space_bytes_estimate is not None
                 print(
                     "Older Block\n"
                     f"Block Height: {older_block_header.height}\n"

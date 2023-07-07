@@ -16,13 +16,13 @@ if shell is not None:
 
 
 @click.group(
-    short_help="Generate shell completion",
+    help="Generate shell completion",
 )
 def completion() -> None:
     pass
 
 
-@completion.command(short_help="Generate shell completion code")
+@completion.command(help="Generate shell completion code")
 @click.option(
     "-s",
     "--shell",

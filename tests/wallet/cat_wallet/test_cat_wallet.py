@@ -1,24 +1,40 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
+from pathlib import Path
 from typing import List
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
-from chia.types.blockchain_format.coin import Coin
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
-from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet_sk_unhardened_intermediate
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 
 class TestCATWallet:
@@ -204,7 +220,7 @@ class TestCATWallet:
 
         await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
         memos = await api_0.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
+        assert len(memos[tx_id]) == 2  # One for tx, one for change
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
         for i in range(1, num_blocks):
@@ -222,7 +238,7 @@ class TestCATWallet:
         coin = coins.pop()
         tx_id = coin.name().hex()
         memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
+        assert len(memos[tx_id]) == 2
         assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
         cat_hash = await cat_wallet.get_new_inner_hash()
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
@@ -605,7 +621,7 @@ class TestCATWallet:
         for tx in txs:
             if tx.amount == 30:
                 memos = tx.get_memos()
-                assert len(memos) == 1
+                assert len(memos) == 2  # One for tx, one for change
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
                 assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
@@ -827,3 +843,209 @@ class TestCATWallet:
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 35)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 35)
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_cat_change_detection(
+        self, self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool
+    ) -> None:
+        num_blocks = 1
+        full_nodes, wallets, bt = one_wallet_and_one_simulator_services
+        full_node_api: FullNodeSimulator = full_nodes[0]._api
+        full_node_server = full_node_api.full_node.server
+        wallet_service_0 = wallets[0]
+        wallet_node_0 = wallet_service_0._node
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+        assert wallet_service_0.rpc_server is not None
+
+        client_0 = await WalletRpcClient.create(
+            bt.config["self_hostname"],
+            wallet_service_0.rpc_server.listen_port,
+            wallet_service_0.root_path,
+            wallet_service_0.config,
+        )
+        wallet_node_0.config["automatically_add_unknown_cats"] = True
+
+        if trusted:
+            wallet_node_0.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node_0.config["trusted_peers"] = {}
+
+        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
+        # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
+        # We should pick up this coin as balance even though it is unhinted because it is "change"
+        intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(
+            wallet_node_0.wallet_state_manager.private_key
+        )
+        pubkey_unhardened = _derive_path_unhardened(intermediate_sk_un, [100000000]).get_g1()
+        inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
+        puzzlehash_unhardened = construct_cat_puzzle(
+            CAT_MOD,
+            Program.to(None).get_tree_hash(),
+            inner_puzhash,  # type: ignore[arg-type]
+        ).get_tree_hash_precalc(inner_puzhash)
+        change_derivation = DerivationRecord(
+            uint32(0),
+            puzzlehash_unhardened,
+            pubkey_unhardened,
+            WalletType.CAT,
+            uint32(2),
+            False,
+        )
+        # Insert the derivation record before the wallet exists so that it is not subscribed to
+        await wallet_node_0.wallet_state_manager.puzzle_store.add_derivation_paths([change_derivation])
+        our_puzzle: Program = await wallet_0.get_new_puzzle()
+        cat_puzzle: Program = construct_cat_puzzle(
+            CAT_MOD,
+            Program.to(None).get_tree_hash(),
+            Program.to(1),
+        )
+        addr = encode_puzzle_hash(cat_puzzle.get_tree_hash(), "txch")
+        cat_amount_0 = uint64(100)
+        cat_amount_1 = uint64(5)
+
+        tx = await client_0.send_transaction(1, cat_amount_0, addr)
+        spend_bundle = tx.spend_bundle
+        assert spend_bundle is not None
+
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
+        # Do the eve spend back to our wallet and add the CR layer
+        cat_coin = next(c for c in spend_bundle.additions() if c.amount == cat_amount_0)
+        next_coin = Coin(
+            cat_coin.name(),
+            construct_cat_puzzle(
+                CAT_MOD,
+                Program.to(None).get_tree_hash(),
+                our_puzzle,
+            ).get_tree_hash(),
+            cat_amount_0,
+        )
+        eve_spend = await wallet_node_0.wallet_state_manager.main_wallet.sign_transaction(
+            [
+                CoinSpend(
+                    cat_coin,
+                    cat_puzzle,
+                    Program.to(
+                        [
+                            Program.to(
+                                [
+                                    [
+                                        51,
+                                        our_puzzle.get_tree_hash(),
+                                        cat_amount_0,
+                                        [our_puzzle.get_tree_hash()],
+                                    ],
+                                    [51, None, -113, None, None],
+                                ]
+                            ),
+                            None,
+                            cat_coin.name(),
+                            coin_as_list(cat_coin),
+                            [cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_coin.amount],
+                            0,
+                            0,
+                        ]
+                    ),
+                ),
+                CoinSpend(
+                    next_coin,
+                    construct_cat_puzzle(
+                        CAT_MOD,
+                        Program.to(None).get_tree_hash(),
+                        our_puzzle,
+                    ),
+                    Program.to(
+                        [
+                            [
+                                None,
+                                (
+                                    1,
+                                    [
+                                        [51, inner_puzhash, cat_amount_1],
+                                        [51, bytes32([0] * 32), cat_amount_0 - cat_amount_1],
+                                    ],
+                                ),
+                                None,
+                            ],
+                            LineageProof(
+                                cat_coin.parent_coin_info, Program.to(1).get_tree_hash(), cat_amount_0
+                            ).to_program(),
+                            next_coin.name(),
+                            coin_as_list(next_coin),
+                            [next_coin.parent_coin_info, our_puzzle.get_tree_hash(), next_coin.amount],
+                            0,
+                            0,
+                        ]
+                    ),
+                ),
+            ],
+        )
+        await client_0.push_tx(eve_spend)
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
+        async def check_wallets(node):
+            return len(node.wallet_state_manager.wallets.keys())
+
+        await time_out_assert(20, check_wallets, 2, wallet_node_0)
+        cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
+        await time_out_assert(20, cat_wallet.get_confirmed_balance, cat_amount_1)
+        assert not full_node_api.full_node.subscriptions.has_ph_subscription(puzzlehash_unhardened)
+
+
+@pytest.mark.asyncio
+async def test_unacknowledged_cat_table() -> None:
+    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
+    db_name.parent.mkdir(parents=True, exist_ok=True)
+    db_wrapper = await DBWrapper2.create(
+        database=db_name,
+    )
+    try:
+        interested_store = await WalletInterestedStore.create(db_wrapper)
+
+        def asset_id(i: int) -> bytes32:
+            return bytes32([i] * 32)
+
+        def coin_state(i: int) -> CoinState:
+            return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
+
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(0),
+            coin_state(0),
+            None,
+        )
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(1),
+            coin_state(1),
+            100,
+        )
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        await interested_store.add_unacknowledged_coin_state(
+            asset_id(0),
+            coin_state(0),
+            None,
+        )
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
+        await interested_store.rollback_to_block(50)
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
+        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
+        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
+    finally:
+        await db_wrapper.close()

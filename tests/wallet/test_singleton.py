@@ -8,11 +8,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp")
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -118,8 +118,7 @@ def test_p2_singleton():
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])
     cost, result = p2_singleton_full.run_with_cost(INFINITE_COST, solution)
-    err, conditions = parse_sexp_to_conditions(result)
-    assert err is None
+    conditions = parse_sexp_to_conditions(result)
 
     p2_singleton_full = p2_singleton_puzzle(launcher_id, LAUNCHER_PUZZLE_HASH)
     solution = Program.to([innerpuz.get_tree_hash(), p2_singleton_coin_id])

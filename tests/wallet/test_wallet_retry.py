@@ -36,7 +36,7 @@ def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 
 def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
-    mempool_item = node.full_node.mempool_manager.mempool.get_spend_by_id(sb.name())
+    mempool_item = node.full_node.mempool_manager.mempool.get_item_by_id(sb.name())
     assert mempool_item is not None
     node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name], MempoolRemoveReason.CONFLICT)
     node.full_node.mempool_manager.remove_seen(sb.name())

@@ -63,7 +63,7 @@ class FarmerRpcClient(RpcClient):
     async def get_harvesters(self) -> Dict[str, Any]:
         return await self.fetch("get_harvesters", {})
 
-    async def get_harvesters_summary(self) -> Dict[str, object]:
+    async def get_harvesters_summary(self) -> Dict[str, Any]:
         return await self.fetch("get_harvesters_summary", {})
 
     async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> Dict[str, Any]:
