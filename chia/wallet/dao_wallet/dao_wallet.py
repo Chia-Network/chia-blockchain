@@ -1728,52 +1728,52 @@ class DAOWallet(WalletProtocol):
         # proposal_innerpuzhash
         # proposal_timelock
         # parent_parent  this is the parent of the timer's parent
+        if not self_destruct:
+            timer_puzzle = get_proposal_timer_puzzle(
+                self.get_cat_tail_hash(),
+                proposal_info.proposal_id,
+                self.dao_info.treasury_id,
+            )
+            curried_args = uncurry_proposal(proposal_info.current_innerpuz)
+            (
+                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+                PROPOSAL_MOD_HASH,
+                PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
+                CAT_MOD_HASH,
+                DAO_FINISHED_STATE_HASH,
+                TREASURY_MOD_HASH,
+                LOCKUP_MOD_HASH,
+                CAT_TAIL_HASH,
+                TREASURY_ID,
+                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
+                TOTAL_VOTES,  # how many people responded
+                PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
+            ) = curried_args.as_iter()
 
-        timer_puzzle = get_proposal_timer_puzzle(
-            self.get_cat_tail_hash(),
-            proposal_info.proposal_id,
-            self.dao_info.treasury_id,
-        )
-        curried_args = uncurry_proposal(proposal_info.current_innerpuz)
-        (
-            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
-            PROPOSAL_MOD_HASH,
-            PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
-            CAT_MOD_HASH,
-            DAO_FINISHED_STATE_HASH,
-            TREASURY_MOD_HASH,
-            LOCKUP_MOD_HASH,
-            CAT_TAIL_HASH,
-            TREASURY_ID,
-            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-            TOTAL_VOTES,  # how many people responded
-            PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
-        ) = curried_args.as_iter()
+            if TOTAL_VOTES.as_int() < attendance_required.as_int():
+                raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
 
-        if TOTAL_VOTES.as_int() < attendance_required.as_int():
-            raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
+            if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
+                raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
 
-        if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
-            raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
-
-        # treasury_mod_hash
-        # proposal_yes_votes
-        # proposal_total_votes
-        # proposal_innerpuzhash
-        # proposal_timelock
-        # parent_parent
-        timer_solution = Program.to(
-            [
-                DAO_TREASURY_MOD_HASH,
-                YES_VOTES,
-                TOTAL_VOTES,
-                PROPOSED_PUZ_HASH,
-                proposal_timelock,
-                proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
-                proposal_info.current_coin.amount,  # amount should never change
-            ]
-        )
-        timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
+            # treasury_mod_hash
+            # proposal_yes_votes
+            # proposal_total_votes
+            # proposal_innerpuzhash
+            # proposal_timelock
+            # parent_parent
+            timer_solution = Program.to(
+                [
+                    DAO_TREASURY_MOD_HASH,
+                    YES_VOTES,
+                    TOTAL_VOTES,
+                    PROPOSED_PUZ_HASH,
+                    proposal_timelock,
+                    proposal_id,  # TODO: our parent is the eve so our parent's parent is always the launcher coin ID, right?
+                    proposal_info.current_coin.amount,  # amount should never change
+                ]
+            )
+            timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
         full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
         # proposal_flag
@@ -2044,7 +2044,10 @@ class DAOWallet(WalletProtocol):
 
         treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
 
-        spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
+        if self_destruct:
+            spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
+        else:
+            spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
@@ -2056,9 +2059,6 @@ class DAOWallet(WalletProtocol):
         if delegated_puzzle_sb is not None:
             full_spend = full_spend.aggregate([full_spend, delegated_puzzle_sb])
 
-        timer_sb = SpendBundle([timer_cs], AugSchemeMPL.aggregate([]))
-        tsy_sb = SpendBundle([treasury_cs], AugSchemeMPL.aggregate([]))
-        prop_sb = SpendBundle([proposal_cs], AugSchemeMPL.aggregate([]))
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
