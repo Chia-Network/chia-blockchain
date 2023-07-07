@@ -1725,7 +1725,35 @@ def get_full_block_and_block_record(
     return full_block, block_record, block_time_residual
 
 
-def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
+# these are the costs of unknown conditions, as defined chia_rs here:
+# https://github.com/Chia-Network/chia_rs/pull/181
+def compute_cost_table() -> List[int]:
+    A = 17
+    B = 16
+    s = []
+    NUM = 100
+    DEN = 1
+    MAX = 1 << 59
+    for i in range(256):
+        v = str(NUM // DEN)
+        v1 = v[:3] + ("0" * (len(v) - 3))
+        s.append(int(v1))
+        NUM *= A
+        DEN *= B
+        assert NUM < 1 << 64
+        assert DEN < 1 << 64
+        if NUM > MAX:
+            NUM >>= 5
+            DEN >>= 5
+    return s
+
+
+CONDITION_COSTS = compute_cost_table()
+
+
+def compute_cost_test(
+    generator: BlockGenerator, cost_per_byte: int, hard_fork: bool = False
+) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
         clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
@@ -1742,6 +1770,13 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Op
                     condition_cost += ConditionCost.AGG_SIG.value
                 elif condition == ConditionOpcode.CREATE_COIN:
                     condition_cost += ConditionCost.CREATE_COIN.value
+                # after the 2.0 hard fork, two byte conditions (with no leading 0)
+                # have costs. Account for that.
+                elif hard_fork and len(condition) == 2 and condition[0] != 0:
+                    condition_cost += CONDITION_COSTS[condition[1]]
+                elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
+                    arg = cond.rest().first().as_int()
+                    condition_cost += arg * 10000
         return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
@@ -1839,7 +1874,9 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
+            err, cost = compute_cost_test(
+                block_generator, constants.COST_PER_BYTE, hard_fork=height >= constants.HARD_FORK_HEIGHT
+            )
             assert err is None
 
             removal_amount = 0

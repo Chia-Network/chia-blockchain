@@ -3,7 +3,20 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import ENABLE_ASSERT_BEFORE, MEMPOOL_MODE, NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+from chia_rs import (
+    AGG_SIG_ARGS,
+    ALLOW_BACKREFS,
+    ENABLE_ASSERT_BEFORE,
+    ENABLE_BLS_OPS,
+    ENABLE_BLS_OPS_OUTSIDE_GUARD,
+    ENABLE_FIXED_DIV,
+    ENABLE_SECP_OPS,
+    ENABLE_SOFTFORK_CONDITION,
+    LIMIT_ANNOUNCES,
+    LIMIT_OBJECTS,
+    MEMPOOL_MODE,
+    NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
+)
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_chia_program
 from clvm.casts import int_from_bytes
@@ -44,6 +57,39 @@ def get_name_puzzle_conditions(
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+
+    if height >= constants.SOFT_FORK3_HEIGHT:
+        # the soft-fork initiated with 2.0. To activate end of October 2023
+        # * the number of announces created and asserted are limited per spend
+        # * the total number of CLVM objects (atoms or pairs) are limited
+        # * BLS operators enabled, behind the softfork op. This set of operators
+        #   also includes coinid, % and modpow
+        # * secp operators enabled
+        flags = flags | LIMIT_ANNOUNCES | LIMIT_OBJECTS | ENABLE_BLS_OPS | ENABLE_SECP_OPS
+
+    if height >= constants.HARD_FORK_HEIGHT:
+        # the hard-fork initiated with 2.0. To activate June 2024
+        # * costs are ascribed to some unknown condition codes, to allow for
+        #    soft-forking in new conditions with cost
+        # * a new condition, SOFTFORK, is added which takes a first parameter to
+        #   specify its cost. This allows soft-forks similar to the softfork
+        #   operator
+        # * BLS operators introduced in the soft-fork (behind the softfork
+        #   guard) are made available outside of the guard.
+        # * division with negative numbers are allowed, and round toward
+        #   negative infinity
+        # * AGG_SIG_* conditions are allowed to have unknown additional
+        #   arguments
+        # * Allow the block generator to be serialized with the improved clvm
+        #   serialization format (with back-references)
+        flags = (
+            flags
+            | ENABLE_SOFTFORK_CONDITION
+            | ENABLE_BLS_OPS_OUTSIDE_GUARD
+            | ENABLE_FIXED_DIV
+            | AGG_SIG_ARGS
+            | ALLOW_BACKREFS
+        )
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]

@@ -12,6 +12,7 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -2004,6 +2005,11 @@ class TestGeneratorConditions:
             mempool_mode=mempool,
             height=softfork_height,
         )
+
+        # with the 2.0 hard fork, division with negative numbers is allowed
+        if operand < 0 and softfork_height >= DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+            expected = None
+
         assert npc_result.error == expected
 
     def test_invalid_condition_list_terminator(self, softfork_height):
@@ -2195,14 +2201,50 @@ class TestGeneratorConditions:
         assert coins == [(puzzle_hash_1.encode("ascii"), 5, hint.encode("ascii"))]
 
     @pytest.mark.parametrize("mempool", [True, False])
-    def test_unknown_condition(self, mempool: bool, softfork_height: uint32):
-        for c in ['(2 100 "foo" "bar")', "(100)", "(4 1) (2 2) (3 3)", '("foobar")']:
-            npc_result = generator_condition_tester(c, mempool_mode=mempool, height=softfork_height)
-            print(npc_result)
-            if mempool:
-                assert npc_result.error == Err.INVALID_CONDITION.value
-            else:
-                assert npc_result.error is None
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            '(2 100 "foo" "bar")',
+            "(100)",
+            "(4 1) (2 2) (3 3)",
+            '("foobar")',
+            '(0x100 "foobar")',
+            '(0x1ff "foobar")',
+        ],
+    )
+    def test_unknown_condition(self, mempool: bool, condition: str, softfork_height: uint32):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+        if mempool:
+            assert npc_result.error == Err.INVALID_CONDITION.value
+        else:
+            assert npc_result.error is None
+
+    @pytest.mark.parametrize("mempool", [True, False])
+    @pytest.mark.parametrize(
+        "condition, expect_error",
+        [
+            # the softfork condition must include at least 1 argument to
+            # indicate its cost
+            ("(90)", Err.INVALID_CONDITION.value),
+            ("(90 1000000)", None),
+        ],
+    )
+    def test_softfork_condition(
+        self, mempool: bool, condition: str, expect_error: Optional[int], softfork_height: uint32
+    ):
+        npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
+        print(npc_result)
+
+        # in mempool all unknown conditions are always a failure
+        if mempool:
+            expect_error = Err.INVALID_CONDITION.value
+        # the SOFTFORK condition is only activated with the hard fork, so
+        # before then there are no errors
+        elif softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+            expect_error = None
+
+        assert npc_result.error == expect_error
 
 
 # the tests below are malicious generator programs
@@ -2442,7 +2484,12 @@ class TestMaliciousGenerators:
     )
     @pytest.mark.benchmark
     def test_duplicate_coin_announces(self, request, opcode, softfork_height):
-        condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
+        # with soft-fork3, we only allow 1024 create- or assert announcements
+        # per spend
+        if softfork_height >= DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT:
+            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
+        else:
+            condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
         with assert_runtime(seconds=9, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
