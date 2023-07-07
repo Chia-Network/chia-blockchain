@@ -274,15 +274,15 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
 @streamable
 @dataclasses.dataclass(frozen=True)
 class CMDCoinSelectionConfigLoader(Streamable):
-    min_coin_amount: Optional[Decimal] = None
-    max_coin_amount: Optional[Decimal] = None
+    min_coin_amount: Optional[str] = None
+    max_coin_amount: Optional[str] = None
     excluded_coin_amounts: Optional[List[str]] = None
     excluded_coin_ids: Optional[List[str]] = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
-            uint64(int(self.min_coin_amount * mojo_per_unit)) if self.min_coin_amount is not None else None,
-            uint64(int(self.max_coin_amount * mojo_per_unit)) if self.max_coin_amount is not None else None,
+            uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
+            uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
             [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
             if self.excluded_coin_amounts is not None
             else None,
