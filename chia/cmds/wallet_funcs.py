@@ -998,8 +998,8 @@ async def did_message_spend(
     wallet_rpc_port: Optional[int],
     fp: Optional[int],
     did_wallet_id: int,
-    puzzle_announcements: list[str],
-    coin_announcements: list[str],
+    puzzle_announcements: List[str],
+    coin_announcements: List[str],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if wallet_client is None:
@@ -1088,11 +1088,11 @@ async def mint_nft(
     target_address: Optional[str],
     no_did_ownership: bool,
     hash: str,
-    uris: list[str],
+    uris: List[str],
     metadata_hash: Optional[str],
-    metadata_uris: list[str],
+    metadata_uris: List[str],
     license_hash: Optional[str],
-    license_uris: list[str],
+    license_uris: List[str],
     edition_total: Optional[int],
     edition_number: Optional[int],
     d_fee: Decimal,
