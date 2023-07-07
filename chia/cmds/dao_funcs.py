@@ -355,7 +355,6 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
     wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
     mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
     final_amount: uint64 = uint64(int(Decimal(amount) * mojo_per_unit))
-    breakpoint()
     res = await wallet_client.dao_create_proposal(
         wallet_id=wallet_id,
         proposal_type="spend",
