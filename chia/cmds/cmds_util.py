@@ -4,10 +4,9 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiohttp import ClientConnectorError
-from typing_extensions import Literal
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -213,13 +212,10 @@ async def get_wallet_client(
     wallet_rpc_port: Optional[int] = None,
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
-) -> AsyncIterator[Union[Tuple[WalletRpcClient, int, Dict[str, Any]], Tuple[None, Literal[0], Dict[str, Any]]]]:
+) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
-        if wallet_client is None:
-            yield None, 0, config
+        new_fp = await get_wallet(root_path, wallet_client, fingerprint)
+        if new_fp is not None:
+            yield wallet_client, new_fp, config
         else:
-            new_fp = await get_wallet(root_path, wallet_client, fingerprint)
-            if new_fp is None:
-                yield None, 0, config
-            else:
-                yield wallet_client, new_fp, config
+            raise CliRpcConnectionError  # this is caught by the main cli function
