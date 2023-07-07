@@ -30,7 +30,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
@@ -759,7 +759,7 @@ class TestWalletSync:
         log.info(f"all_unspent is {all_unspent}")
         small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance, DEFAULT_COIN_SELECTION_CONFIG))
 
         log.info(f"Small coin count is {small_unspent_count}")
         log.info(f"Wallet balance is {balance}")
@@ -1132,7 +1132,7 @@ class TestWalletSync:
                 ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
-        farm_sb = await farm_nft_wallet.generate_new_nft(metadata)
+        farm_sb = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
         assert farm_sb
 
         # ensure hints are generated
