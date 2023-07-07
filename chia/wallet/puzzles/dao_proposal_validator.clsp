@@ -5,7 +5,7 @@
     PROPOSAL_TIMER_MOD_HASH
     CAT_MOD_HASH
     DAO_FINISHED_STATE_MOD_HASH
-    LOCKUP_MOD_HASH
+    LOCKUP_SELF_HASH
     TREASURY_MOD_HASH
     CAT_TAIL_HASH
     PROPOSAL_MINIMUM_AMOUNT
@@ -48,7 +48,7 @@
       CAT_MOD_HASH
       DAO_FINISHED_STATE_MOD_HASH
       TREASURY_MOD_HASH
-      LOCKUP_MOD_HASH
+      LOCKUP_SELF_HASH
       CAT_TAIL_HASH
       TREASURY_ID
       proposal_yes_votes
@@ -61,7 +61,7 @@
       (sha256 ONE proposal_yes_votes)
       (sha256 ONE TREASURY_ID)
       (sha256 ONE CAT_TAIL_HASH)
-      (sha256 ONE LOCKUP_MOD_HASH)
+      (sha256 ONE LOCKUP_SELF_HASH)
       (sha256 ONE TREASURY_MOD_HASH)
       (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
       (sha256 ONE CAT_MOD_HASH)
@@ -89,7 +89,7 @@
             CAT_MOD_HASH
             DAO_FINISHED_STATE_MOD_HASH
             TREASURY_MOD_HASH
-            LOCKUP_MOD_HASH
+            LOCKUP_SELF_HASH
             CAT_TAIL_HASH
             (f (r SINGLETON_STRUCT))
             yes_votes  ; this is where we validate the yes votes and total votes

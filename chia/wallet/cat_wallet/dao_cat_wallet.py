@@ -180,15 +180,15 @@ class DAOCATWallet:
         parent_spend = await fetch_coin_spend(height, parent_coin.coin, peer)
         uncurried = parent_spend.puzzle_reveal.uncurry()
         cat_inner = uncurried[1].at("rrf")
-        lockup_puz, lockup_args = cat_inner.uncurry()
         active_votes_list: List[Optional[bytes32]] = []
 
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record:
             inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         else:
-            inner_puzzle = cat_inner.uncurry()[1].at("rrrrrrrrf")
-            active_votes_list = [bytes32(prop.as_atom()) for prop in lockup_args.at("rrrrrrrf").as_iter()]
+            inner_puzzle = get_innerpuz_from_lockup_puzzle(cat_inner)
+            active_votes_list = get_active_votes_from_lockup_puzzle(cat_inner)
+            active_votes_list = [x.as_atom() for x in active_votes_list.as_iter()]
 
         if parent_spend.coin.puzzle_hash == coin.puzzle_hash:
             # shortcut, works for change
@@ -422,7 +422,6 @@ class DAOCATWallet:
                     0,
                 ]
             )
-            # breakpoint()
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             assert lineage_proof is not None
             new_spendable_cat = SpendableCAT(

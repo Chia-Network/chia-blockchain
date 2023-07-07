@@ -5,7 +5,7 @@
     CAT_MOD_HASH
     DAO_FINISHED_STATE_MOD_HASH
     TREASURY_MOD_HASH
-    LOCKUP_MOD_HASH
+    LOCKUP_SELF_HASH
     CAT_TAIL_HASH
     TREASURY_ID
     YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
@@ -46,7 +46,7 @@
   (defun calculate_timer_puzhash (
       PROPOSAL_MOD_HASH
       PROPOSAL_TIMER_MOD_HASH
-      LOCKUP_MOD_HASH
+      LOCKUP_SELF_HASH
       DAO_FINISHED_STATE_MOD_HASH
       CAT_MOD_HASH
       CAT_TAIL_HASH
@@ -59,33 +59,21 @@
       (sha256 ONE CAT_TAIL_HASH)
       (sha256 ONE CAT_MOD_HASH)
       (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
-      (sha256 ONE LOCKUP_MOD_HASH)
+      (sha256 ONE LOCKUP_SELF_HASH)
       (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
       (sha256 ONE PROPOSAL_MOD_HASH)
     )
   )
 
   (defun calculate_lockup_puzzlehash (
-      PROPOSAL_MOD_HASH
-      SINGLETON_MOD_HASH
-      SINGLETON_LAUNCHER_PUZHASH
-      LOCKUP_MOD_HASH
-      DAO_FINISHED_STATE_MOD_HASH
-      CAT_MOD_HASH
-      CAT_TAIL_HASH
+      LOCKUP_SELF_HASH
       previous_votes
       lockup_innerpuzhash
     )
-    (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
+    (puzzle-hash-of-curried-function LOCKUP_SELF_HASH
       lockup_innerpuzhash
       (sha256tree previous_votes)
-      (sha256 ONE CAT_TAIL_HASH)
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
-      (sha256 ONE LOCKUP_MOD_HASH)
-      (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
-      (sha256 ONE SINGLETON_MOD_HASH)
-      (sha256 ONE PROPOSAL_MOD_HASH)
+      (sha256 ONE LOCKUP_SELF_HASH)
     )
   )
 
@@ -96,7 +84,7 @@
       CAT_MOD_HASH
       DAO_FINISHED_STATE_MOD_HASH
       TREASURY_MOD_HASH
-      LOCKUP_MOD_HASH
+      LOCKUP_SELF_HASH
       CAT_TAIL_HASH
       TREASURY_ID
       YES_VOTES
@@ -109,7 +97,7 @@
       (sha256 ONE YES_VOTES)
       (sha256 ONE TREASURY_ID)
       (sha256 ONE CAT_TAIL_HASH)
-      (sha256 ONE LOCKUP_MOD_HASH)
+      (sha256 ONE LOCKUP_SELF_HASH)
       (sha256 ONE TREASURY_MOD_HASH)
       (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
       (sha256 ONE CAT_MOD_HASH)
@@ -167,7 +155,7 @@
       PROPOSAL_MOD_HASH
       PROPOSAL_TIMER_MOD_HASH
       TREASURY_MOD_HASH
-      LOCKUP_MOD_HASH
+      LOCKUP_SELF_HASH
       DAO_FINISHED_STATE_MOD_HASH
       TREASURY_ID
       YES_VOTES
@@ -194,13 +182,7 @@
                     CAT_MOD_HASH
                     CAT_TAIL_HASH
                     (calculate_lockup_puzzlehash  ; because the message comes from
-                      PROPOSAL_MOD_HASH
-                      (f SINGLETON_STRUCT)
-                      (r (r SINGLETON_STRUCT))
-                      LOCKUP_MOD_HASH
-                      DAO_FINISHED_STATE_MOD_HASH
-                      CAT_MOD_HASH
-                      CAT_TAIL_HASH
+                      LOCKUP_SELF_HASH
                       (f previous_votes)
                       (f lockup_innerpuzhashes)
                     )
@@ -215,7 +197,7 @@
                 PROPOSAL_MOD_HASH
                 PROPOSAL_TIMER_MOD_HASH
                 TREASURY_MOD_HASH
-                LOCKUP_MOD_HASH
+                LOCKUP_SELF_HASH
                 DAO_FINISHED_STATE_MOD_HASH
                 TREASURY_ID
                 YES_VOTES
@@ -243,7 +225,7 @@
               CAT_MOD_HASH
               DAO_FINISHED_STATE_MOD_HASH
               TREASURY_MOD_HASH
-              LOCKUP_MOD_HASH
+              LOCKUP_SELF_HASH
               CAT_TAIL_HASH
               TREASURY_ID
               (if vote_info (+ YES_VOTES sum) YES_VOTES)
@@ -307,7 +289,7 @@
                     (calculate_timer_puzhash
                       PROPOSAL_MOD_HASH
                       PROPOSAL_TIMER_MOD_HASH
-                      LOCKUP_MOD_HASH
+                      LOCKUP_SELF_HASH
                       DAO_FINISHED_STATE_MOD_HASH
                       CAT_MOD_HASH
                       CAT_TAIL_HASH
@@ -380,7 +362,7 @@
             PROPOSAL_MOD_HASH
             PROPOSAL_TIMER_MOD_HASH
             TREASURY_MOD_HASH
-            LOCKUP_MOD_HASH
+            LOCKUP_SELF_HASH
             DAO_FINISHED_STATE_MOD_HASH
             TREASURY_ID
             YES_VOTES
@@ -400,7 +382,7 @@
                     (calculate_timer_puzhash
                       PROPOSAL_MOD_HASH
                       PROPOSAL_TIMER_MOD_HASH
-                      LOCKUP_MOD_HASH
+                      LOCKUP_SELF_HASH
                       DAO_FINISHED_STATE_MOD_HASH
                       CAT_MOD_HASH
                       CAT_TAIL_HASH

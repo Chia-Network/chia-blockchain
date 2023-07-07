@@ -5,7 +5,7 @@
 (mod (
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
-    LOCKUP_MOD_HASH
+    LOCKUP_SELF_HASH
     DAO_FINISHED_STATE_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
@@ -32,7 +32,7 @@
 
   ; PROPOSAL_MOD_HASH
   ; CAT_MOD_HASH
-  ; LOCKUP_MOD_HASH
+  ; LOCKUP_SELF_HASH
   ; CAT_TAIL_HASH
   ; MY_PARENT_SINGLETON_STRUCT
   ; treasury_mod_hash
@@ -44,7 +44,7 @@
   (defun calculate_proposal_puzzlehash (
       PROPOSAL_MOD_HASH
       CAT_MOD_HASH
-      LOCKUP_MOD_HASH
+      LOCKUP_SELF_HASH
       DAO_FINISHED_STATE_HASH
       CAT_TAIL_HASH
       proposal_singleton_struct
@@ -63,7 +63,7 @@
         (sha256 ONE YES_VOTES)
         (sha256 ONE TREASURY_ID)
         (sha256 ONE CAT_TAIL_HASH)
-        (sha256 ONE LOCKUP_MOD_HASH)
+        (sha256 ONE LOCKUP_SELF_HASH)
         (sha256 ONE TREASURY_MOD_HASH)
         (sha256 ONE DAO_FINISHED_STATE_HASH)
         (sha256 ONE CAT_MOD_HASH)
@@ -84,7 +84,7 @@
         (calculate_proposal_puzzlehash
           PROPOSAL_MOD_HASH
           CAT_MOD_HASH
-          LOCKUP_MOD_HASH
+          LOCKUP_SELF_HASH
           DAO_FINISHED_STATE_HASH
           CAT_TAIL_HASH
           MY_PARENT_SINGLETON_STRUCT
@@ -105,7 +105,7 @@
         (calculate_proposal_puzzlehash
           PROPOSAL_MOD_HASH
           CAT_MOD_HASH
-          LOCKUP_MOD_HASH
+          LOCKUP_SELF_HASH
           DAO_FINISHED_STATE_HASH
           CAT_TAIL_HASH
           MY_PARENT_SINGLETON_STRUCT

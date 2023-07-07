@@ -576,6 +576,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         [proposal_amount],
         [None],
     )
+    check_coin = dao_cat_wallet_0.dao_cat_info.locked_coins[0].coin
     proposal_sb = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, uint64(1000))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
@@ -593,6 +594,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     # Check that wallet_1 also finds and saved the proposal
     assert len(dao_wallet_1.dao_info.proposals_list) == 1
     prop = dao_wallet_1.dao_info.proposals_list[0]
+
+    assert dao_cat_wallet_0.dao_cat_info.locked_coins[0].coin != check_coin
 
     # Create votable dao cats and add a new vote
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
@@ -660,6 +663,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     )
     update_inner = await dao_wallet_0.generate_update_proposal_innerpuz(new_dao_rules)
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
+    # await asyncio.sleep(1)
     proposal_sb = await dao_wallet_0.generate_new_proposal(update_inner, dao_cat_0_bal, uint64(1000))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
