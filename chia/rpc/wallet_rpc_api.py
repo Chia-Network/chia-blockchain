@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import zlib
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
@@ -1692,7 +1693,7 @@ class WalletRpcApi:
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
         ###
         ###
@@ -1736,12 +1737,12 @@ class WalletRpcApi:
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
-            raise ValueError("Invalid Offer")
+            raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
         if bytes(OFFER_MOD_OLD) in decompressed_bytes:
             raise ValueError("Old offer format is no longer supported")
@@ -1765,12 +1766,12 @@ class WalletRpcApi:
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
-            raise ValueError("Invalid Offer")
+            raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
         if bytes(OFFER_MOD_OLD) in decompressed_bytes:
             raise ValueError("Old offer format is no longer supported")
