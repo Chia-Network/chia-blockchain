@@ -252,10 +252,12 @@ async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, f
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
     reuse_puzhash = args["reuse_puzhash"]
+    self_destruct = args["self_destruct"]
     res = await wallet_client.dao_close_proposal(
         wallet_id=wallet_id,
         proposal_id=proposal_id,
         fee=final_fee,
+        self_destruct=self_destruct,
         reuse_puzhash=reuse_puzhash,
     )
     # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
@@ -352,7 +354,8 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         vote_amount = None
     wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
     mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-    final_amount: uint64 = uint64(int(Decimal(fee) * mojo_per_unit))
+    final_amount: uint64 = uint64(int(Decimal(amount) * mojo_per_unit))
+    breakpoint()
     res = await wallet_client.dao_create_proposal(
         wallet_id=wallet_id,
         proposal_type="spend",
@@ -360,7 +363,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         amount=final_amount,
         inner_address=address,
         vote_amount=vote_amount,
-        fee=final_fees,
+        fee=final_fee,
         reuse_puzhash=reuse_puzhash,
     )
     if res["success"]:

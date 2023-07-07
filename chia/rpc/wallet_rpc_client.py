@@ -1298,12 +1298,14 @@ class WalletRpcClient(RpcClient):
         self,
         wallet_id: int,
         proposal_id: str,
+        self_destruct: bool,
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "proposal_id": proposal_id,
+            "self_destruct": self_destruct,
             "fee": fee,
             "reuse_puzhash": reuse_puzhash,
         }

@@ -2594,12 +2594,14 @@ class WalletRpcApi:
             genesis_id = bytes32.from_hexstr(request["genesis_id"])
         else:
             genesis_id = None
+        if "self_destruct" in request:
+            self_destruct = request.get("self_destruct")
         tx = await dao_wallet.create_proposal_close_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             genesis_id,
             fee,
-            # genesis_id,
             push=True,
+            self_destruct=self_destruct,
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None

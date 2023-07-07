@@ -466,6 +466,13 @@ def dao_vote_cmd(
     required=True,
 )
 @click.option(
+    "-d",
+    "--self-destruct",
+    help="If a proposal is broken, use self destruct to force it to close",
+    is_flag=True,
+    default=False,
+)
+@click.option(
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH.",
@@ -485,6 +492,7 @@ def dao_close_proposal_cmd(
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
+    self_destruct: bool,
     fee: str,
     reuse: bool,
 ) -> None:
@@ -496,6 +504,7 @@ def dao_close_proposal_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "proposal_id": proposal_id,
+        "self_destruct": self_destruct,
         "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, close_proposal))
