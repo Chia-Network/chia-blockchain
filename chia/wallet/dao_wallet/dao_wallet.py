@@ -1392,7 +1392,6 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1454,7 +1453,7 @@ class DAOWallet(WalletProtocol):
         previous_votes = []
         lockup_inner_puzhashes = []
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(spend.coin.amount)
+            vote_amounts.append(vote_amount)
             vote_coins.append(spend.coin.name())
             previous_votes.append(
                 get_active_votes_from_lockup_puzzle(

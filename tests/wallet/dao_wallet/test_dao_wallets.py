@@ -1017,12 +1017,9 @@ async def test_dao_proposal_partial_vote(
         new_mint_amount,
         recipient_puzzle_hash,
     )
-    # (
-    #     [recipient_puzzle_hash],
-    #     [proposal_amount],
-    #     [None],
-    # )
-    proposal_tx = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
+
+    vote_amount = dao_cat_0_bal - 10
+    proposal_tx = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, vote_amount=vote_amount, fee=uint64(1000))
     proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
@@ -1034,7 +1031,7 @@ async def test_dao_proposal_partial_vote(
 
     # Check the proposal is saved
     assert len(dao_wallet_0.dao_info.proposals_list) == 1
-    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == dao_cat_0_bal
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == vote_amount
     assert dao_wallet_0.dao_info.proposals_list[0].timer_coin is not None
 
     # Check that wallet_1 also finds and saved the proposal
@@ -1062,7 +1059,7 @@ async def test_dao_proposal_partial_vote(
     for i in range(1, dao_rules.proposal_timelock + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    total_votes = dao_cat_0_bal + dao_cat_1_bal // 2
+    total_votes = vote_amount + dao_cat_1_bal // 2
 
     assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == total_votes
     assert dao_wallet_0.dao_info.proposals_list[0].yes_votes == total_votes
