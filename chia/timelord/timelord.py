@@ -136,6 +136,7 @@ class Timelord:
             self.bluebox_mode = self.config.get("sanitizer_mode", False)
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
+        self.max_allowed_inactivity_time = 60
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
 
     async def _start(self) -> None:
@@ -498,7 +499,7 @@ class Timelord:
                             self.iters_to_submit[chain].append(next_sp)
                     self.iteration_to_proof_type[next_sp] = IterationType.SIGNAGE_POINT
                     next_iters_count += 1
-                    if next_iters_count == 3:
+                    if next_iters_count == 10:
                         break
 
                 # Break so we alternate between checking SP and IP
@@ -854,9 +855,10 @@ class Timelord:
         else:
             # If there were no failures recently trigger a reset after 60 seconds of no activity.
             # Signage points should be every 9 seconds
-            active_time_threshold = 60
+            active_time_threshold = self.max_allowed_inactivity_time
         if time.time() - self.last_active_time > active_time_threshold:
             log.error(f"Not active for {active_time_threshold} seconds, restarting all chains")
+            self.max_allowed_inactivity_time = min(self.max_allowed_inactivity_time * 2, 1800)
             await self._reset_chains()
 
     async def _manage_chains(self) -> None:
