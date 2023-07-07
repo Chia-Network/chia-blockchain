@@ -229,11 +229,18 @@ class WalletRpcClient(RpcClient):
             coins_json = [c.to_json_dict() for c in coins]
             response: Dict = await self.fetch(
                 "send_transaction_multi",
-                {"wallet_id": wallet_id, "additions": additions_hex, "coins": coins_json, "fee": fee},
+                {
+                    "wallet_id": wallet_id,
+                    "additions": additions_hex,
+                    "coins": coins_json,
+                    "fee": fee,
+                    **tx_config.to_json_dict(),
+                },
             )
         else:
             response = await self.fetch(
-                "send_transaction_multi", {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee}
+                "send_transaction_multi",
+                {"wallet_id": wallet_id, "additions": additions_hex, "fee": fee, **tx_config.to_json_dict()},
             )
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
