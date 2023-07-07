@@ -626,6 +626,7 @@ class BlockTools:
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
         sub_slots_finished = 0
+        # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
         # Start at the last block in block list
@@ -847,7 +848,7 @@ class BlockTools:
                     sub_slot_iters,
                     True,
                 )
-            # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch
+            # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch or epoch
             # include the hash in the next sub-slot
             sub_epoch_summary: Optional[SubEpochSummary] = None
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
@@ -858,7 +859,7 @@ class BlockTools:
                     block_list[-1],
                     False,
                 )
-            if sub_epoch_summary is not None:
+            if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
                 ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
                 # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
@@ -866,7 +867,7 @@ class BlockTools:
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
                 self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
-            else:
+            else:  # the previous block is not the last block of the sub-epoch or epoch
                 pending_ses = False
                 ses_hash = None
                 new_sub_slot_iters = None
