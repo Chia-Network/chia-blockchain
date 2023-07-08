@@ -7,10 +7,11 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Unio
 
 import click
 
+from chia.cmds.param_types import BYTES32_TYPE, TRANSACTION_FEE
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 
 _T = TypeVar("_T")
-
 
 FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
 
@@ -66,7 +67,7 @@ def create_data_store_id_option() -> Callable[[FC], FC]:
         "-store",
         "--id",
         help="The hexadecimal store id.",
-        type=str,
+        type=BYTES32_TYPE,
         required=True,
     )
 
@@ -98,9 +99,19 @@ def create_fee_option() -> Callable[[FC], FC]:
         "-m",
         "--fee",
         help="Set the fees for the transaction, in XCH",
-        type=str,
+        type=TRANSACTION_FEE,
         default=None,
         show_default=True,
+        required=False,
+    )
+
+
+def create_root_hash_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-r",
+        "--root_hash",
+        help="The hexadecimal root hash",
+        type=BYTES32_TYPE,
         required=False,
     )
 
@@ -110,7 +121,7 @@ def create_fee_option() -> Callable[[FC], FC]:
 @create_fee_option()
 def create_data_store(
     data_rpc_port: int,
-    fee: Optional[str],
+    fee: Optional[uint64],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
@@ -120,12 +131,12 @@ def create_data_store(
 @data_cmd.command("get_value", help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 def get_value(
-    id: str,
+    id: bytes32,
     key_string: str,
-    root_hash: Optional[str],
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
@@ -139,10 +150,10 @@ def get_value(
 @create_rpc_port_option()
 @create_fee_option()
 def update_data_store(
-    id: str,
+    id: bytes32,
     changelist_string: str,
     data_rpc_port: int,
-    fee: str,
+    fee: Optional[uint64],
 ) -> None:
     from chia.cmds.data_funcs import update_data_store_cmd
 
@@ -151,11 +162,11 @@ def update_data_store(
 
 @data_cmd.command("get_keys", help="Get all keys for a given store")
 @create_data_store_id_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 def get_keys(
-    id: str,
-    root_hash: Optional[str],
+    id: bytes32,
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
@@ -165,11 +176,11 @@ def get_keys(
 
 @data_cmd.command("get_keys_values", help="Get all keys and values for a given store")
 @create_data_store_id_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 def get_keys_values(
-    id: str,
-    root_hash: Optional[str],
+    id: bytes32,
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
@@ -181,7 +192,7 @@ def get_keys_values(
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_root(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_root_cmd
@@ -201,7 +212,7 @@ def get_root(
 )
 @create_rpc_port_option()
 def subscribe(
-    id: str,
+    id: bytes32,
     urls: List[str],
     data_rpc_port: int,
 ) -> None:
@@ -215,7 +226,7 @@ def subscribe(
 @click.option("-u", "--url", "urls", help="Server urls to remove", type=str, multiple=True)
 @create_rpc_port_option()
 def remove_subscription(
-    id: str,
+    id: bytes32,
     urls: List[str],
     data_rpc_port: int,
 ) -> None:
@@ -228,7 +239,7 @@ def remove_subscription(
 @create_data_store_id_option()
 @create_rpc_port_option()
 def unsubscribe(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import unsubscribe_cmd
@@ -240,13 +251,13 @@ def unsubscribe(
     "get_kv_diff", help="Get the inserted and deleted keys and values between an initial and a final hash"
 )
 @create_data_store_id_option()
-@click.option("-hash_1", "--hash_1", help="Initial hash", type=str)
-@click.option("-hash_2", "--hash_2", help="Final hash", type=str)
+@click.option("-hash_1", "--hash_1", help="Initial hash", type=BYTES32_TYPE, required=True)
+@click.option("-hash_2", "--hash_2", help="Final hash", type=BYTES32_TYPE, required=True)
 @create_rpc_port_option()
 def get_kv_diff(
-    id: str,
-    hash_1: str,
-    hash_2: str,
+    id: bytes32,
+    hash_1: bytes32,
+    hash_2: bytes32,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_kv_diff_cmd
@@ -258,7 +269,7 @@ def get_kv_diff(
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_root_history(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_root_history_cmd
@@ -297,7 +308,7 @@ def add_missing_files(ids: Optional[str], overwrite: bool, foldername: Optional[
 
 
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
-@click.option("-i", "--id", help="Store id", type=str, required=True)
+@create_data_store_id_option()
 @click.option(
     "-a", "--amount", help="Amount to spend for this mirror, in mojos", type=int, default=0, show_default=True
 )
@@ -311,7 +322,7 @@ def add_missing_files(ids: Optional[str], overwrite: bool, foldername: Optional[
 )
 @create_fee_option()
 @create_rpc_port_option()
-def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
+def add_mirror(id: bytes32, amount: int, urls: List[str], fee: Optional[uint64], data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import add_mirror_cmd
 
     run(
@@ -326,10 +337,10 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
 
 
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
-@click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
+@click.option("-c", "--coin_id", help="Coin id", type=BYTES32_TYPE, required=True)
 @create_fee_option()
 @create_rpc_port_option()
-def delete_mirror(coin_id: str, fee: Optional[str], data_rpc_port: int) -> None:
+def delete_mirror(coin_id: bytes32, fee: Optional[uint64], data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import delete_mirror_cmd
 
     run(
@@ -342,9 +353,9 @@ def delete_mirror(coin_id: str, fee: Optional[str], data_rpc_port: int) -> None:
 
 
 @data_cmd.command("get_mirrors", help="Get a list of all mirrors for a given store")
-@click.option("-i", "--id", help="Store id", type=str, required=True)
+@create_data_store_id_option()
 @create_rpc_port_option()
-def get_mirrors(id: str, data_rpc_port: int) -> None:
+def get_mirrors(id: bytes32, data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import get_mirrors_cmd
 
     run(
@@ -383,7 +394,7 @@ def get_owned_stores(data_rpc_port: int) -> None:
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_sync_status(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_sync_status_cmd
