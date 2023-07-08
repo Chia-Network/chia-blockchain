@@ -8,7 +8,6 @@ import click
 
 from chia.cmds.check_wallet_db import help_text as check_help_text
 from chia.cmds.coins import coins_cmd
-from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -628,7 +627,6 @@ def did_cmd() -> None:
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 def did_create_wallet_cmd(
     wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: str
@@ -864,7 +862,6 @@ def did_message_spend_cmd(
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @click.option(
     "--reuse",
@@ -967,7 +964,6 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @click.option(
     "-rp",
@@ -1058,7 +1054,6 @@ def nft_mint_cmd(
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @click.option(
     "--reuse",
@@ -1113,7 +1108,6 @@ def nft_add_uri_cmd(
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @click.option(
     "--reuse",
@@ -1182,7 +1176,6 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num:
     type=str,
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @click.option(
     "--reuse",

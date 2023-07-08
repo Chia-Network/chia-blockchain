@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import Optional
 
 import click
 
-MAX_CMDLINE_FEE = Decimal(0.5)
-
-
-def validate_fee(ctx: click.Context, param: click.Parameter, value: str) -> str:
-    try:
-        fee = Decimal(value)
-    except ValueError:
-        raise click.BadParameter("Fee must be decimal dotted value in XCH (e.g. 0.00005)")
-    if fee < 0 or fee > MAX_CMDLINE_FEE:
-        raise click.BadParameter(f"Fee must be in the range 0 to {MAX_CMDLINE_FEE}")
-    return value
+from chia.cmds.param_types import ADDRESS_TYPE, TRANSACTION_FEE, CliAddress
+from chia.util.ints import uint64
 
 
 @click.group("plotnft", help="Manage your plot NFTs")
@@ -60,11 +50,10 @@ def get_login_link_cmd(launcher_id: str) -> None:
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH. Fee is used TWICE: once to create the singleton, once for init.",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
-    callback=validate_fee,
 )
 @click.option(
     "-wp",
@@ -78,7 +67,7 @@ def create_cmd(
     fingerprint: int,
     pool_url: str,
     state: str,
-    fee: str,
+    fee: uint64,
     dont_prompt: bool,
 ) -> None:
     import asyncio
@@ -92,7 +81,7 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    asyncio.run(create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), dont_prompt))
+    asyncio.run(create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], fee, dont_prompt))
 
 
 @plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
@@ -104,11 +93,10 @@ def create_cmd(
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH. Fee is used TWICE: once to leave pool, once to join.",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
-    callback=validate_fee,
 )
 @click.option(
     "-wp",
@@ -118,7 +106,7 @@ def create_cmd(
     default=None,
 )
 def join_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, pool_url: str, dont_prompt: bool
+    wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64, pool_url: str, dont_prompt: bool
 ) -> None:
     import asyncio
 
@@ -129,7 +117,7 @@ def join_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             pool_url=pool_url,
-            fee=Decimal(fee),
+            fee=fee,
             wallet_id=id,
             prompt=dont_prompt,
         )
@@ -144,11 +132,10 @@ def join_cmd(
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH. Fee is charged TWICE.",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
-    callback=validate_fee,
 )
 @click.option(
     "-wp",
@@ -157,7 +144,7 @@ def join_cmd(
     type=int,
     default=None,
 )
-def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, dont_prompt: bool) -> None:
+def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64, dont_prompt: bool) -> None:
     import asyncio
 
     from .plotnft_funcs import self_pool
@@ -166,7 +153,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
         self_pool(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
-            fee=Decimal(fee),
+            fee=fee,
             wallet_id=id,
             prompt=dont_prompt,
         )
@@ -198,11 +185,10 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
-    callback=validate_fee,
 )
 @click.option(
     "-wp",
@@ -211,7 +197,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     type=int,
     default=None,
 )
-def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -> None:
+def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64) -> None:
     import asyncio
 
     from .plotnft_funcs import claim_cmd
@@ -220,7 +206,7 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
         claim_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
-            fee=Decimal(fee),
+            fee=fee,
             wallet_id=id,
         )
     )
@@ -231,8 +217,8 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -
     help="Change the payout instructions for a pool. To get the launcher id, use plotnft show.",
 )
 @click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
-@click.option("-a", "--address", help="New address for payout instructions", type=str, required=True)
-def change_payout_instructions_cmd(launcher_id: str, address: str) -> None:
+@click.option("-a", "--address", help="New address for payout instructions", type=ADDRESS_TYPE, required=True)
+def change_payout_instructions_cmd(launcher_id: str, address: CliAddress) -> None:
     import asyncio
 
     from .plotnft_funcs import change_payout_instructions
