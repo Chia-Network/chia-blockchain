@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 from typing import Optional, Sequence
 
 import click
+
+from chia.cmds.param_types import AMOUNT_TYPE, TRANSACTION_FEE, CliAmount
+from chia.util.ints import uint64
 
 
 @click.group("coins", help="Manage your wallets coins")
@@ -27,14 +29,14 @@ def coins_cmd(ctx: click.Context) -> None:
 @click.option(
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
-    default="0",
+    type=AMOUNT_TYPE,
+    default=uint64(0),
 )
 @click.option(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
-    default="0",
+    type=AMOUNT_TYPE,
+    default=uint64(0),
 )
 @click.option(
     "--exclude-coin",
@@ -46,6 +48,7 @@ def coins_cmd(ctx: click.Context) -> None:
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
+    type=AMOUNT_TYPE,
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -60,10 +63,10 @@ def list_cmd(
     fingerprint: int,
     id: int,
     show_unconfirmed: bool,
-    min_amount: str,
-    max_amount: str,
+    min_amount: CliAmount,
+    max_amount: CliAmount,
     coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[int],
+    amounts_to_exclude: Sequence[CliAmount],
     paginate: Optional[bool],
 ) -> None:
     from .coin_funcs import async_list
@@ -73,8 +76,8 @@ def list_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            max_coin_amount=Decimal(max_amount),
-            min_coin_amount=Decimal(min_amount),
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
             excluded_amounts=amounts_to_exclude,
             excluded_coin_ids=coins_to_exclude,
             show_unconfirmed=show_unconfirmed,
@@ -98,19 +101,20 @@ def list_cmd(
     "--target-amount",
     help="Select coins until this amount (in XCH or CAT) is reached. \
     Combine all selected coins into one coin, which will have a value of at least target-amount",
-    type=str,
-    default="0",
+    type=AMOUNT_TYPE,
+    default=uint64(0),
 )
 @click.option(
     "--min-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
-    default="0",
+    type=AMOUNT_TYPE,
+    default=uint64(0),
 )
 @click.option(
     "--exclude-amount",
     "amounts_to_exclude",
     multiple=True,
+    type=AMOUNT_TYPE,
     help="Exclude any coins with this XCH or CAT amount from being included.",
 )
 @click.option(
@@ -124,15 +128,15 @@ def list_cmd(
 @click.option(
     "--max-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
-    default="0",  # 0 means no limit
+    type=AMOUNT_TYPE,
+    default=uint64(0),  # 0 means no limit
 )
 @click.option(
     "-m",
     "--fee",
     help="Set the fees for the transaction, in XCH",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
 )
@@ -152,12 +156,12 @@ def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_amount: str,
-    min_amount: str,
-    amounts_to_exclude: Sequence[str],
+    target_amount: CliAmount,
+    min_amount: CliAmount,
+    amounts_to_exclude: Sequence[CliAmount],
     number_of_coins: int,
-    max_amount: str,
-    fee: str,
+    max_amount: CliAmount,
+    fee: uint64,
     input_coins: Sequence[str],
     largest_first: bool,
 ) -> None:
@@ -168,12 +172,12 @@ def combine_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            fee=Decimal(fee),
-            max_coin_amount=Decimal(max_amount),
-            min_coin_amount=Decimal(min_amount),
+            fee=fee,
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
             excluded_amounts=amounts_to_exclude,
             number_of_coins=number_of_coins,
-            target_coin_amount=Decimal(target_amount),
+            target_coin_amount=target_amount,
             target_coin_ids_str=input_coins,
             largest_first=largest_first,
         )
@@ -201,8 +205,8 @@ def combine_cmd(
     "-m",
     "--fee",
     help="Set the fees for the transaction, in XCH",
-    type=str,
-    default="0",
+    type=TRANSACTION_FEE,
+    default=uint64(0),
     show_default=True,
     required=True,
 )
@@ -210,7 +214,7 @@ def combine_cmd(
     "-a",
     "--amount-per-coin",
     help="The amount of each newly created coin, in XCH",
-    type=str,
+    type=AMOUNT_TYPE,
     required=True,
 )
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
@@ -219,8 +223,8 @@ def split_cmd(
     fingerprint: int,
     id: int,
     number_of_coins: int,
-    fee: str,
-    amount_per_coin: str,
+    fee: uint64,
+    amount_per_coin: CliAmount,
     target_coin_id: str,
 ) -> None:
     from .coin_funcs import async_split
@@ -230,9 +234,9 @@ def split_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            fee=Decimal(fee),
+            fee=fee,
             number_of_coins=number_of_coins,
-            amount_per_coin=Decimal(amount_per_coin),
+            amount_per_coin=amount_per_coin,
             target_coin_id_str=target_coin_id,
         )
     )
