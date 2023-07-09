@@ -177,7 +177,7 @@ class Harvester:
                         "plot_public_key": plot_info.plot_public_key,
                         "file_size": plot_info.file_size,
                         "time_modified": int(plot_info.time_modified),
-                        "compression_level": prover.get_compresion_level(),
+                        "compression_level": prover.get_compression_level(),
                     }
                 )
             self.log.debug(

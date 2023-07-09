@@ -45,7 +45,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(int(plot_info.time_modified)),
-                compression_level=plot_info.prover.get_compresion_level(),
+                compression_level=plot_info.prover.get_compression_level(),
             )
         )
     return converted

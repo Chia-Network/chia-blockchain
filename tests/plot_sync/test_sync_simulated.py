@@ -275,7 +275,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
         def get_size(self) -> int:
             return self.size
 
-        def get_compresion_level(self) -> uint8:
+        def get_compression_level(self) -> uint8:
             return uint8(0)
 
     return [
