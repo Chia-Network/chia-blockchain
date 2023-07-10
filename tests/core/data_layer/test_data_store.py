@@ -536,7 +536,6 @@ async def test_inserting_duplicate_key_fails(
 @pytest.mark.asyncio()
 async def test_inserting_invalid_length_hash_raises_original_exception(
     data_store: DataStore,
-    tree_id: bytes32,
 ) -> None:
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
