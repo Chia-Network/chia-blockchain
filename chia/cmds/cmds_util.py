@@ -4,9 +4,10 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from aiohttp import ClientConnectorError
+from typing_extensions import Literal
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
@@ -41,7 +42,6 @@ node_config_section_names: Dict[Type[RpcClient], str] = {
     DataLayerRpcClient: "data_layer",
     SimulatorFullNodeRpcClient: "full_node",
 }
-
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
 
@@ -207,18 +207,18 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
     return selected_fingerprint
 
 
-async def execute_with_wallet(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    extra_params: Dict[str, Any],
-    function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
-) -> None:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (wallet_client, _):
+@asynccontextmanager
+async def get_wallet_client(
+    wallet_rpc_port: Optional[int] = None,
+    fingerprint: Optional[int] = None,
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> AsyncIterator[Union[Tuple[WalletRpcClient, int, Dict[str, Any]], Tuple[None, Literal[0], Dict[str, Any]]]]:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
         if wallet_client is None:
-            return
-
-        new_fp = await get_wallet(DEFAULT_ROOT_PATH, wallet_client, fingerprint)
-        if new_fp is None:
-            return
-
-        await function(extra_params, wallet_client, new_fp)
+            yield None, 0, config
+        else:
+            new_fp = await get_wallet(root_path, wallet_client, fingerprint)
+            if new_fp is None:
+                yield None, 0, config
+            else:
+                yield wallet_client, new_fp, config

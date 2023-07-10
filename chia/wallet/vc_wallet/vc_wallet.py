@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
+import traceback
 from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
@@ -105,7 +106,13 @@ class VCWallet:
                 f"Cannot get verified credential coin: {coin.name().hex()} puzzle and solution"
             )  # pragma: no cover
             return  # pragma: no cover
-        vc = VerifiedCredential.get_next_from_coin_spend(cs)
+        try:
+            vc = VerifiedCredential.get_next_from_coin_spend(cs)
+        except Exception as e:  # pragma: no cover
+            self.log.debug(
+                f"Syncing VC from coin spend failed (likely means it was revoked): {e}\n{traceback.format_exc()}"
+            )
+            return
         vc_record: VCRecord = VCRecord(vc, height)
         self.wallet_state_manager.state_changed(
             "vc_coin_added", self.id(), dict(launcher_id=vc_record.vc.launcher_id.hex())
