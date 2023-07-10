@@ -239,7 +239,8 @@ class DataStore:
                     values,
                 )
             except aiosqlite.IntegrityError as e:
-                if not e.sqlite_errorname == "SQLITE_CONSTRAINT_PRIMARYKEY":
+                if not e.args[0].startswith("UNIQUE constraint"):
+                    # UNIQUE constraint failed: node.hash
                     raise
 
                 async with writer.execute(
