@@ -177,7 +177,7 @@ async def get_transactions(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
-) -> None:
+) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if wallet_client is None:
             return
