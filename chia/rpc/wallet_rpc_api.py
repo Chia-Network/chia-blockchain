@@ -16,7 +16,7 @@ from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletIn
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import potentially_inside_lock, tx_endpoint
+from chia.rpc.util import tx_endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -1472,9 +1472,8 @@ class WalletRpcApi:
         cats = await self.service.wallet_state_manager.interested_store.get_unacknowledged_tokens()
         return {"stray_cats": cats}
 
-    @potentially_inside_lock
     @tx_endpoint
-    async def cat_spend(self, request, tx_config: TXConfig, hold_lock: bool) -> EndpointResult:
+    async def cat_spend(self, request, tx_config: TXConfig, hold_lock: bool = True) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
@@ -2958,9 +2957,8 @@ class WalletRpcApi:
             "last_height_farmed": last_height_farmed,
         }
 
-    @potentially_inside_lock
     @tx_endpoint
-    async def create_signed_transaction(self, request, tx_config: TXConfig, hold_lock: bool) -> EndpointResult:
+    async def create_signed_transaction(self, request, tx_config: TXConfig, hold_lock: bool = True) -> EndpointResult:
         if "wallet_id" in request:
             wallet_id = uint32(request["wallet_id"])
             wallet = self.service.wallet_state_manager.wallets[wallet_id]
