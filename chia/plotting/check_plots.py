@@ -170,6 +170,7 @@ def check_plots(
 
                             ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                             assert quality_str == ver_quality_str
+                            total_proofs += 1
                         except AssertionError as e:
                             log.error(
                                 f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
