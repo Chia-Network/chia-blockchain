@@ -1,9 +1,5 @@
 # File created by: python manage-mypy.py build-exclusions
-chia.cmds.plots
-chia.cmds.plotters
 chia.cmds.start_funcs
-chia.cmds.wallet
-chia.cmds.wallet_funcs
 chia.daemon.server
 chia.introducer.introducer
 chia.introducer.introducer_api

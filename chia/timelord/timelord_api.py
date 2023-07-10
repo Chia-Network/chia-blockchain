@@ -36,6 +36,7 @@ class TimelordAPI:
         async with self.timelord.lock:
             if self.timelord.bluebox_mode:
                 return None
+            self.timelord.max_allowed_inactivity_time = 60
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
                 log.info(

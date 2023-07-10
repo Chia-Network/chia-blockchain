@@ -11,7 +11,12 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 
-from chia.cmds.cmds_util import get_any_service_client, transaction_status_msg, transaction_submitted_msg
+from chia.cmds.cmds_util import (
+    get_any_service_client,
+    get_wallet_client,
+    transaction_status_msg,
+    transaction_submitted_msg,
+)
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
@@ -54,60 +59,65 @@ async def create_pool_args(pool_url: str) -> Dict[str, Any]:
     return json_dict
 
 
-async def create(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    state = args["state"]
-    prompt = not args.get("yes", False)
-    fee = Decimal(args.get("fee", 0))
-    fee_mojos = uint64(int(fee * units["chia"]))
-    target_puzzle_hash: Optional[bytes32]
-    # Could use initial_pool_state_from_dict to simplify
-    if state == "SELF_POOLING":
-        pool_url: Optional[str] = None
-        relative_lock_height = uint32(0)
-        target_puzzle_hash = None  # wallet will fill this in
-    elif state == "FARMING_TO_POOL":
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        enforce_https = config["full_node"]["selected_network"] == "mainnet"
-        pool_url = str(args["pool_url"])
-        if enforce_https and not pool_url.startswith("https://"):
-            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+async def create(
+    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: Decimal, prompt: bool
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
+        if wallet_client is None:
+            return None
+        fee_mojos = uint64(int(fee * units["chia"]))
+        target_puzzle_hash: Optional[bytes32]
+        # Could use initial_pool_state_from_dict to simplify
+        if state == "SELF_POOLING":
+            pool_url = None
+            relative_lock_height = uint32(0)
+            target_puzzle_hash = None  # wallet will fill this in
+        elif state == "FARMING_TO_POOL":
+            config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+            enforce_https = config["full_node"]["selected_network"] == "mainnet"
+            assert pool_url is not None
+            if enforce_https and not pool_url.startswith("https://"):
+                print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+                return
+            assert pool_url is not None
+            json_dict = await create_pool_args(pool_url)
+            relative_lock_height = json_dict["relative_lock_height"]
+            target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
+        else:
+            raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
+
+        pool_msg = f" and join pool: {pool_url}" if pool_url else ""
+        print(f"Will create a plot NFT{pool_msg}.")
+        if prompt:
+            user_input: str = input("Confirm [n]/y: ")
+        else:
+            user_input = "yes"
+
+        if user_input.lower() == "y" or user_input.lower() == "yes":
+            try:
+                tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
+                    target_puzzle_hash,
+                    pool_url,
+                    relative_lock_height,
+                    "localhost:5000",
+                    "new",
+                    state,
+                    fee_mojos,
+                )
+                start = time.time()
+                while time.time() - start < 10:
+                    await asyncio.sleep(0.1)
+                    tx = await wallet_client.get_transaction(1, tx_record.name)
+                    if len(tx.sent_to) > 0:
+                        print(transaction_submitted_msg(tx))
+                        print(transaction_status_msg(fingerprint, tx_record.name))
+                        return None
+            except Exception as e:
+                print(
+                    f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer"
+                )
             return
-        json_dict = await create_pool_args(pool_url)
-        relative_lock_height = json_dict["relative_lock_height"]
-        target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
-    else:
-        raise ValueError("Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state.")
-
-    pool_msg = f" and join pool: {pool_url}" if pool_url else ""
-    print(f"Will create a plot NFT{pool_msg}.")
-    if prompt:
-        user_input: str = input("Confirm [n]/y: ")
-    else:
-        user_input = "yes"
-
-    if user_input.lower() == "y" or user_input.lower() == "yes":
-        try:
-            tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
-                target_puzzle_hash,
-                pool_url,
-                relative_lock_height,
-                "localhost:5000",
-                "new",
-                state,
-                fee_mojos,
-            )
-            start = time.time()
-            while time.time() - start < 10:
-                await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(1, tx_record.name)
-                if len(tx.sent_to) > 0:
-                    print(transaction_submitted_msg(tx))
-                    print(transaction_status_msg(fingerprint, tx_record.name))
-                    return None
-        except Exception as e:
-            print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
-        return
-    print("Aborting.")
+        print("Aborting.")
 
 
 async def pprint_pool_wallet_state(
@@ -172,51 +182,53 @@ async def pprint_pool_wallet_state(
             print(f"Expected to leave after block height: {expected_leave_height}")
 
 
-async def show(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_passed_in: Optional[int]) -> None:
     async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
-        if farmer_client is not None:
-            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-            summaries_response = await wallet_client.get_wallets()
-            wallet_id_passed_in = args.get("id", None)
-            pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-            pool_state_dict: Dict[bytes32, Dict[str, Any]] = {
-                bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
-                for pool_state_item in pool_state_list
-            }
-            if wallet_id_passed_in is not None:
-                for summary in summaries_response:
-                    typ = WalletType(int(summary["type"]))
-                    if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
-                        print(
-                            f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
-                            " Please provide a different id."
-                        )
-                        return
-                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
-                await pprint_pool_wallet_state(
-                    wallet_client,
-                    wallet_id_passed_in,
-                    pool_wallet_info,
-                    address_prefix,
-                    pool_state_dict.get(pool_wallet_info.launcher_id),
-                )
-            else:
-                print(f"Wallet height: {await wallet_client.get_height_info()}")
-                print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-                for summary in summaries_response:
-                    wallet_id = summary["id"]
-                    typ = WalletType(int(summary["type"]))
-                    if typ == WalletType.POOLING_WALLET:
-                        print(f"Wallet id {wallet_id}: ")
-                        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
-                        await pprint_pool_wallet_state(
-                            wallet_client,
-                            wallet_id,
-                            pool_wallet_info,
-                            address_prefix,
-                            pool_state_dict.get(pool_wallet_info.launcher_id),
-                        )
-                        print("")
+        async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
+            if wallet_client is None:
+                return
+            if farmer_client is not None:
+                address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+                summaries_response = await wallet_client.get_wallets()
+                pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
+                pool_state_dict: Dict[bytes32, Dict[str, Any]] = {
+                    bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+                    for pool_state_item in pool_state_list
+                }
+                if wallet_id_passed_in is not None:
+                    for summary in summaries_response:
+                        typ = WalletType(int(summary["type"]))
+                        if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
+                            print(
+                                f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
+                                " Please provide a different id."
+                            )
+                            return
+                    pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
+                    await pprint_pool_wallet_state(
+                        wallet_client,
+                        wallet_id_passed_in,
+                        pool_wallet_info,
+                        address_prefix,
+                        pool_state_dict.get(pool_wallet_info.launcher_id),
+                    )
+                else:
+                    print(f"Wallet height: {await wallet_client.get_height_info()}")
+                    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+                    for summary in summaries_response:
+                        wallet_id = summary["id"]
+                        typ = WalletType(int(summary["type"]))
+                        if typ == WalletType.POOLING_WALLET:
+                            print(f"Wallet id {wallet_id}: ")
+                            pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+                            await pprint_pool_wallet_state(
+                                wallet_client,
+                                wallet_id,
+                                pool_wallet_info,
+                                address_prefix,
+                                pool_state_dict.get(pool_wallet_info.launcher_id),
+                            )
+                            print("")
 
 
 async def get_login_link(launcher_id_str: str) -> None:
@@ -262,86 +274,98 @@ async def submit_tx_with_confirmation(
     print("Aborting.")
 
 
-async def join_pool(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    enforce_https = config["full_node"]["selected_network"] == "mainnet"
-    pool_url: str = args["pool_url"]
-    fee = Decimal(args.get("fee", 0))
-    fee_mojos = uint64(int(fee * units["chia"]))
+async def join_pool(
+    *,
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    pool_url: str,
+    fee: Decimal,
+    wallet_id: int,
+    prompt: bool,
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+        if wallet_client is None:
+            return None
+        enforce_https = config["full_node"]["selected_network"] == "mainnet"
+        fee_mojos = uint64(int(fee * units["chia"]))
 
-    if enforce_https and not pool_url.startswith("https://"):
-        print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
-        return
-    wallet_id = args.get("id", None)
-    prompt = not args.get("yes", False)
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
-                if response.ok:
-                    json_dict = json.loads(await response.text())
-                else:
-                    print(f"Response not OK: {response.status}")
-                    return
-    except Exception as e:
-        print(f"Error connecting to pool {pool_url}: {e}")
-        return
+        if enforce_https and not pool_url.startswith("https://"):
+            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+            return
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())
+                ) as response:
+                    if response.ok:
+                        json_dict = json.loads(await response.text())
+                    else:
+                        print(f"Response not OK: {response.status}")
+                        return
+        except Exception as e:
+            print(f"Error connecting to pool {pool_url}: {e}")
+            return
 
-    if json_dict["relative_lock_height"] > 1000:
-        print("Relative lock height too high for this pool, cannot join")
-        return
-    if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-        print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
-        return
+        if json_dict["relative_lock_height"] > 1000:
+            print("Relative lock height too high for this pool, cannot join")
+            return
+        if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
+            print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
+            return
 
-    pprint(json_dict)
-    msg = f"\nWill join pool: {pool_url} with Plot NFT {fingerprint}."
-    func = functools.partial(
-        wallet_client.pw_join_pool,
-        wallet_id,
-        hexstr_to_bytes(json_dict["target_puzzle_hash"]),
-        pool_url,
-        json_dict["relative_lock_height"],
-        fee_mojos,
-    )
+        pprint(json_dict)
+        msg = f"\nWill join pool: {pool_url} with Plot NFT {fingerprint}."
+        func = functools.partial(
+            wallet_client.pw_join_pool,
+            wallet_id,
+            hexstr_to_bytes(json_dict["target_puzzle_hash"]),
+            pool_url,
+            json_dict["relative_lock_height"],
+            fee_mojos,
+        )
 
-    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
-
-
-async def self_pool(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args.get("id", None)
-    prompt = not args.get("yes", False)
-    fee = Decimal(args.get("fee", 0))
-    fee_mojos = uint64(int(fee * units["chia"]))
-
-    msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
-    func = functools.partial(wallet_client.pw_self_pool, wallet_id, fee_mojos)
-    await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
+        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
-async def inspect_cmd(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args.get("id", None)
-    pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
-    print(
-        {
-            "pool_wallet_info": pool_wallet_info,
-            "unconfirmed_transactions": [
-                {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
-            ],
-        }
-    )
+async def self_pool(
+    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int, prompt: bool
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
+        if wallet_client is None:
+            return None
+        fee_mojos = uint64(int(fee * units["chia"]))
+        msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
+        func = functools.partial(wallet_client.pw_self_pool, wallet_id, fee_mojos)
+        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
-async def claim_cmd(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    wallet_id = args.get("id", None)
-    fee = Decimal(args.get("fee", 0))
-    fee_mojos = uint64(int(fee * units["chia"]))
-    msg = f"\nWill claim rewards for wallet ID: {wallet_id}."
-    func = functools.partial(
-        wallet_client.pw_absorb_rewards,
-        wallet_id,
-        fee_mojos,
-    )
-    await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
+async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_id: int) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
+        if wallet_client is None:
+            return None
+        pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
+        print(
+            {
+                "pool_wallet_info": pool_wallet_info,
+                "unconfirmed_transactions": [
+                    {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
+                ],
+            }
+        )
+
+
+async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
+        if wallet_client is None:
+            return None
+        fee_mojos = uint64(int(fee * units["chia"]))
+        msg = f"\nWill claim rewards for wallet ID: {wallet_id}."
+        func = functools.partial(
+            wallet_client.pw_absorb_rewards,
+            wallet_id,
+            fee_mojos,
+        )
+        await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
 
 
 async def change_payout_instructions(launcher_id: str, address: str) -> None:
