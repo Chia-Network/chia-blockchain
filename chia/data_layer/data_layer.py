@@ -135,7 +135,7 @@ class DataLayer:
     async def _start(self) -> None:
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
-            sql_log_path = path_from_root(self.root_path, "log/sql.log")
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
         self.data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)

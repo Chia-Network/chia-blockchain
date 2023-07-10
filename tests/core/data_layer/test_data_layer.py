@@ -26,7 +26,7 @@ class SufficientWalletRpcClient:
 async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Path) -> None:
     config["data_layer"]["log_sqlite_cmds"] = enable
 
-    log_path = tmp_chia_root.joinpath("log", "sql.log")
+    log_path = tmp_chia_root.joinpath("log", "data_sql.log")
 
     data_layer = DataLayer(
         config=config["data_layer"],
