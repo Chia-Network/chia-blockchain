@@ -10,6 +10,7 @@ from pathlib import Path
 from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
 
+import aiosqlite
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -462,7 +463,8 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: byt
     hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
     hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
     await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    with pytest.raises(Exception):
+    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
+    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
         await data_store._insert_ancestor_table(hash_1, hash_1, tree_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
 
@@ -529,6 +531,21 @@ async def test_inserting_duplicate_key_fails(
             reference_node_hash=first_hash,
             side=Side.RIGHT,
             hint_keys_values=hint_keys_values,
+        )
+
+
+@pytest.mark.asyncio()
+async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
+    data_store: DataStore,
+    tree_id: bytes32,
+) -> None:
+    with pytest.raises(aiosqlite.IntegrityError):
+        # casting since we are testing an invalid case
+        await data_store._insert_ancestor_table(
+            left_hash=bytes32(b"\x01" * 32),
+            right_hash=bytes32(b"\x02" * 32),
+            tree_id=tree_id,
+            generation=0,
         )
 
 

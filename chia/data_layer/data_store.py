@@ -230,10 +230,7 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
-            result = await cursor.fetchone()
-
-            if result is None:
+            try:
                 await writer.execute(
                     """
                     INSERT INTO node(hash, node_type, left, right, key, value)
@@ -241,7 +238,20 @@ class DataStore:
                     """,
                     values,
                 )
-            else:
+            except aiosqlite.IntegrityError as e:
+                if not e.args[0].startswith("UNIQUE constraint"):
+                    # UNIQUE constraint failed: node.hash
+                    raise
+
+                async with writer.execute(
+                    "SELECT * FROM node WHERE hash == :hash LIMIT 1",
+                    {"hash": node_hash},
+                ) as cursor:
+                    result = await cursor.fetchone()
+
+                if result is None:
+                    raise
+
                 result_dict = dict(result)
                 if result_dict != values:
                     raise Exception(
@@ -289,12 +299,7 @@ class DataStore:
                     "tree_id": tree_id,
                     "generation": generation,
                 }
-                cursor = await writer.execute(
-                    "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
-                    {"hash": hash, "generation": generation, "tree_id": tree_id},
-                )
-                result = await cursor.fetchone()
-                if result is None:
+                try:
                     await writer.execute(
                         """
                         INSERT INTO ancestors(hash, ancestor, tree_id, generation)
@@ -302,7 +307,24 @@ class DataStore:
                         """,
                         values,
                     )
-                else:
+                except aiosqlite.IntegrityError as e:
+                    if not e.args[0].startswith("UNIQUE constraint"):
+                        # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
+                        raise
+
+                    async with writer.execute(
+                        """
+                        SELECT *
+                        FROM ancestors
+                        WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                        """,
+                        {"hash": hash, "generation": generation, "tree_id": tree_id},
+                    ) as cursor:
+                        result = await cursor.fetchone()
+
+                    if result is None:
+                        raise
+
                     result_dict = dict(result)
                     if result_dict != values:
                         raise Exception(
