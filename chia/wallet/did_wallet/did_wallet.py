@@ -1426,9 +1426,9 @@ class DIDWallet:
         return True
 
     async def get_coin(self) -> Coin:
-        spendable_coins: List[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+        spendable_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.wallet_info.id
         )
         if len(spendable_coins) == 0:
             raise RuntimeError("DID is not currently spendable")
-        return spendable_coins[0].coin
+        return list(spendable_coins)[0].coin
