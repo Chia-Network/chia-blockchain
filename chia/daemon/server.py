@@ -821,12 +821,20 @@ class WebSocketServer:
         if plot_type == "cudaplot":
             device_index = request.get("device", None)
             no_direct_downloads = request.get("no_direct_downloads", False)
+            t1 = request.get("t", None)  # Temp directory
+            t2 = request.get("t2", None)  # Temp2 directory
 
             if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
                 command_args.append(str(device_index))
             if no_direct_downloads:
                 command_args.append("--no-direct-downloads")
+            if t1 is not None:
+                command_args.append("-t")
+                command_args.append(t1)
+            if t2 is not None:
+                command_args.append("-2")
+                command_args.append(t2)
 
             return command_args
 
