@@ -100,10 +100,9 @@ async def get_any_service_client(
     try:
         # check if we can connect to node
         connected = await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
-        if connected:
-            yield node_client, config
-        else:
+        if not connected:
             raise CliRpcConnectionError
+        yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError):
             raise
@@ -215,7 +214,6 @@ async def get_wallet_client(
 ) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
         new_fp = await get_wallet(root_path, wallet_client, fingerprint)
-        if new_fp is not None:
-            yield wallet_client, new_fp, config
-        else:
+        if new_fp is None:
             raise CliRpcConnectionError  # this is caught by the main cli function
+        yield wallet_client, new_fp, config
