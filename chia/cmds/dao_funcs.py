@@ -147,7 +147,7 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
     res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
     proposals = res["proposals"]
-    lockup_time = res["lockup_time"]
+    lockup_time = res["proposal_timelock"]
     soft_close_length = res["soft_close_length"]
     print("############################")
     for prop in proposals:
@@ -157,8 +157,6 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
         print("Votes for: {yes_votes}".format(**prop))
         votes_against = prop["amount_voted"] - prop["yes_votes"]
         print(f"Votes against: {votes_against}")
-        close_height = prop["singleton_block_height"] - lockup_time
-        print(f"Closable at block height: {close_height}")
         print("------------------------")
     print(f"Proposals have {soft_close_length} blocks of soft close time.")
     print("############################")

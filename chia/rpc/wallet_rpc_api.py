@@ -2455,7 +2455,7 @@ class WalletRpcApi:
         return {
             "success": True,
             "proposals": proposal_list,
-            "lockup_time": dao_rules.proposal_timelock,
+            "proposal_timelock": dao_rules.proposal_timelock,
             "soft_close_length": dao_rules.soft_close_length,
         }
 
