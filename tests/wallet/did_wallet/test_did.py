@@ -195,8 +195,7 @@ class TestDIDWallet:
             did_wallet_2 = await DIDWallet.create_new_did_wallet_from_recovery(
                 wallet_node_2.wallet_state_manager, wallet_2, backup_data
             )
-        coins = await did_wallet_1.select_coins(1)
-        coin = coins.copy().pop()
+        coin = await did_wallet_1.get_coin()
         assert did_wallet_2.did_info.temp_coin == coin
         newpuzhash = await did_wallet_2.get_new_did_inner_hash()
         pubkey = bytes(
@@ -347,8 +346,7 @@ class TestDIDWallet:
         assert did_wallet_3.did_info.backup_ids == recovery_list
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 201)
-        coins = await did_wallet_3.select_coins(1)
-        coin = coins.pop()
+        coin = await did_wallet_3.get_coin()
 
         backup_data = did_wallet_3.create_backup()
 
@@ -448,8 +446,7 @@ class TestDIDWallet:
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
-        coins = await did_wallet.select_coins(1)
-        coin = coins.pop()
+        coin = await did_wallet.get_coin()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         try:
@@ -503,8 +500,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         # Delete the coin and wallet
-        coins = await did_wallet.select_coins(uint64(1))
-        coin = coins.pop()
+        coin = await did_wallet.get_coin()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await wallet_node.wallet_state_manager.user_store.delete_wallet(did_wallet.wallet_info.id)
@@ -535,8 +531,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         # Delete the coin and change inner puzzle
-        coins = await did_wallet.select_coins(uint64(1))
-        coin = coins.pop()
+        coin = await did_wallet.get_coin()
         await wallet_node.wallet_state_manager.coin_store.delete_coin_record(coin.name())
         await time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         new_inner_puzzle = await did_wallet.get_new_did_innerpuz()
@@ -629,8 +624,7 @@ class TestDIDWallet:
                 backup_data,
             )
         new_ph = await did_wallet_3.get_new_did_inner_hash()
-        coins = await did_wallet_2.select_coins(1)
-        coin = coins.pop()
+        coin = await did_wallet_2.get_coin()
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
@@ -668,8 +662,7 @@ class TestDIDWallet:
                 wallet2,
                 backup_data,
             )
-        coins = await did_wallet.select_coins(1)
-        coin = coins.pop()
+        coin = await did_wallet.get_coin()
         new_ph = await did_wallet_4.get_new_did_inner_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
@@ -890,7 +883,7 @@ class TestDIDWallet:
             did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
         )
         assert response["metadata"]["twitter"] == "twitter"
-        assert response["latest_coin"] == (await did_wallet_1.select_coins(uint64(1))).pop().name().hex()
+        assert response["latest_coin"] == (await did_wallet_1.get_coin()).name().hex()
         assert response["num_verification"] == 0
         assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
         assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
