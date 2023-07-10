@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Callable
+from typing import Any, Callable, Coroutine, Dict
 
 import aiohttp
 
@@ -31,3 +31,12 @@ def wrap_http_handler(f) -> Callable:
         return obj_to_response(res_object)
 
     return inner
+
+
+def potentially_inside_lock(
+    func: Callable[..., Coroutine[Any, Any, Dict[str, Any]]]
+) -> Callable[..., Coroutine[Any, Any, Dict[str, Any]]]:
+    async def rpc_endpoint(self, *args, hold_lock=True, **kwargs) -> Dict[str, Any]:
+        return await func(self, *args, hold_lock, **kwargs)
+
+    return rpc_endpoint
