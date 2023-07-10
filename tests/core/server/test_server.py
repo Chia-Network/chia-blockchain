@@ -64,6 +64,61 @@ async def test_connection_versions(
         assert connection.get_version() == chia_full_version_str()
 
 
+@pytest.mark.parametrize(
+    argnames="other_version",
+    argvalues=[
+        "1.2.3-poof",
+        "abc",
+        "1.2a.3",
+        "1.2rc3",
+        "1.2.3rc4",
+        "1.2.3-rc4",
+        "2.0.0b5.dev6",
+        "2001i^2",
+    ],
+    ids=repr,
+)
+@pytest.mark.asyncio
+async def test_connection_differently_formed_version(
+    self_hostname: str,
+    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    monkeypatch: pytest.MonkeyPatch,
+    other_version: str,
+) -> None:
+    [api_1, api_2, server_1, server_2, blocktools] = two_nodes
+
+    versions = [chia_full_version_str(), other_version]
+
+    def get_version() -> str:
+        return versions.pop()
+
+    with monkeypatch.context() as m:
+        m.setattr("chia.server.ws_connection.chia_full_version_str", get_version)
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        connections = [
+            server_2.all_connections[server_1.node_id],
+            server_1.all_connections[server_2.node_id],
+        ]
+
+        try:
+            for connection in connections:
+                # started
+                assert connection.incoming_message_task is not None
+                # not closed
+                assert not connection.closed
+        finally:
+            pass
+            # for connection in connections:
+            #     await connection.close()
+            # for connection in connections:
+            #     await connection.wait_until_closed()
+
+    # confirm that the versions were used
+    assert versions == []
+
+
 @pytest.mark.asyncio
 async def test_api_not_ready(
     self_hostname: str,
