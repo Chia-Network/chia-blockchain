@@ -42,13 +42,9 @@ def verify_and_get_quality_string(
     original_challenge_hash: bytes32,
     signage_point: bytes32,
     *,
-    height: Optional[uint32],
-    filter_prefix_bits: Optional[uint8] = None,
+    height: uint32,
 ) -> Optional[bytes32]:
-    """
-    Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
-    If height is passed as None, plot filter validation will not be performed
-    """
+    # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
         log.error("Expected pool public key or pool contract puzzle hash but got neither")
         return None
@@ -67,14 +63,7 @@ def verify_and_get_quality_string(
     if new_challenge != pos.challenge:
         log.error("Calculated pos challenge doesn't match the provided one")
         return None
-
-    # Ensure we always pass in either height or filter_prefix_bits
-    assert (filter_prefix_bits is None) != (height is None), "Expected either height or filter_prefix_bits"
-
-    if filter_prefix_bits is not None:
-        prefix_bits = cast(int, filter_prefix_bits)
-    elif height is not None:
-        prefix_bits = calculate_prefix_bits(constants, height)
+    prefix_bits = calculate_prefix_bits(constants, height)
     if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
         log.error("Did not pass the plot filter")
         return None
