@@ -297,18 +297,15 @@ class DataStore:
                     "tree_id": tree_id,
                     "generation": generation,
                 }
-                # cursor = await writer.execute(
-                #     "SELECT hash,ancestor,tree_id,generation FROM ancestors "
-                #     "WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id LIMIT 1",
-                #     {"hash": hash, "generation": generation, "tree_id": tree_id},
-                # )
-                # result = await cursor.fetchone()
-                result = None
-
+                cursor = await writer.execute(
+                    "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
+                    {"hash": hash, "generation": generation, "tree_id": tree_id},
+                )
+                result = await cursor.fetchone()
                 if result is None:
                     await writer.execute(
                         """
-                        INSERT OR REPLACE INTO ancestors(hash, ancestor, tree_id, generation)
+                        INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                         VALUES (:hash, :ancestor, :tree_id, :generation)
                         """,
                         values,
