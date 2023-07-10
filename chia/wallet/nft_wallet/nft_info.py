@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import List, Optional
 
 from chia.types.blockchain_format.coin import Coin
@@ -118,3 +119,7 @@ class NFTCoinInfo(Streamable):
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
     did_id: Optional[bytes32] = None
+
+
+class NFTVersion(IntEnum):
+    V1 = uint16(1)

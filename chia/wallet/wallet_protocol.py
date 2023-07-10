@@ -11,6 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import VersionedBlob
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -28,7 +29,9 @@ class WalletProtocol(Protocol):
     def id(self) -> uint32:
         ...
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[VersionedBlob]
+    ) -> None:
         ...
 
     async def select_coins(

@@ -24,6 +24,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.misc import VersionedBlob
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
@@ -814,7 +815,9 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[VersionedBlob]
+    ) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)

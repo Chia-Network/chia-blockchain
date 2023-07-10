@@ -20,6 +20,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import VersionedBlob
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
@@ -377,7 +378,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, coin_data: Optional[VersionedBlob]):
         """Notification from wallet state manager that wallet has been received."""
 
         parent = self.get_parent_for_coin(coin)

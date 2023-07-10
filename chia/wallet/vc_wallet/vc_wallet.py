@@ -18,6 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.misc import VersionedBlob
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
@@ -87,7 +88,9 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[VersionedBlob]
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
