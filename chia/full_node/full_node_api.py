@@ -1302,7 +1302,7 @@ class FullNodeAPI:
         assert block_generator is not None
         try:
             spend_info = await asyncio.get_running_loop().run_in_executor(
-                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin
+                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin, 0
             )
         except ValueError:
             return reject_msg
