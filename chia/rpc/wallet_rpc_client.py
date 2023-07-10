@@ -1228,6 +1228,14 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("create_new_wallet", request)
         return response
 
+    async def dao_get_treasury_id(
+        self,
+        wallet_id: int,
+    ) -> Dict:
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("dao_get_treasury_id", request)
+        return response
+
     async def dao_create_proposal(
         self,
         wallet_id: int,

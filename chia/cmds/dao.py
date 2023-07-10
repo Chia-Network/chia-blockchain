@@ -204,7 +204,32 @@ def dao_create_cmd(
 
 
 # ----------------------------------------------------------------------------------------
-# TREASURY FUNDS
+# TREASURY INFO
+
+@dao_cmd.command("get-id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="ID of the DAO wallet which will receive the funds", type=int, required=True)
+def dao_get_id_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
+    import asyncio
+
+    from .dao_funcs import get_treasury_id
+
+    extra_params = {
+        "wallet_id": wallet_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_id))
+
 
 
 @dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)

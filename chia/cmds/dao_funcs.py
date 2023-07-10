@@ -78,6 +78,12 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
     print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
 
 
+async def get_treasury_id(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    res = await wallet_client.dao_get_treasury_id(wallet_id=wallet_id)
+    treasury_id = res["treasury_id"]
+    print(f"Treasury ID: {treasury_id}")
+
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]

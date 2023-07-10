@@ -205,6 +205,7 @@ class WalletRpcApi:
             "/dao_parse_proposal": self.dao_parse_proposal,
             "/dao_vote_on_proposal": self.dao_vote_on_proposal,
             "/dao_get_treasury_balance": self.dao_get_treasury_balance,
+            "/dao_get_treasury_id": self.dao_get_treasury_id,
             "/dao_close_proposal": self.dao_close_proposal,
             "/dao_exit_lockup": self.dao_exit_lockup,
             "/dao_adjust_filter_level": self.dao_adjust_filter_level,
@@ -2418,6 +2419,13 @@ class WalletRpcApi:
             balance = await dao_wallet.get_balance_by_asset_type(asset_id=asset_id)
             balances[asset_id] = balance
         return {"success": True, "balances": balances}
+
+    async def dao_get_treasury_id(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        treasury_id = dao_wallet.dao_info.treasury_id
+        return {"treasury_id": treasury_id}
 
     async def dao_send_to_lockup(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
