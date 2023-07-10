@@ -30,8 +30,6 @@ async def async_list(
     paginate: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
-        if wallet_client is None:
-            return
         addr_prefix = selected_network_address_prefix(config)
         if paginate is None:
             paginate = sys.stdout.isatty()
@@ -130,8 +128,6 @@ async def async_combine(
     largest_first: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in target_coin_ids_str]
         final_fee = uint64(int(fee * units["chia"]))
         if number_of_coins > 500:
@@ -211,8 +207,6 @@ async def async_split(
     target_coin_id_str: str,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         final_fee = uint64(int(fee * units["chia"]))
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
         if number_of_coins > 500:
