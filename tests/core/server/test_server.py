@@ -61,7 +61,7 @@ async def test_connection_versions(
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version)
         assert connection.version == chia_full_version_str()
-        assert connection.get_version() == chia_full_version_str()
+        assert connection.get_version_str() == chia_full_version_str()
 
 
 @pytest.mark.asyncio

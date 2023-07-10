@@ -111,7 +111,7 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: str = field(default_factory=str)
+    version: Optional[str] = None
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
@@ -674,8 +674,8 @@ class WSChiaConnection:
         return None
 
     # Used by the Chia Seeder.
-    def get_version(self) -> str:
-        return self.version
+    def get_version_str(self) -> str:
+        return "no version set" if self.version is None else self.version
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")
