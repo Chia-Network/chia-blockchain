@@ -258,8 +258,7 @@ class TradeManager:
                 tx = await wallet.generate_signed_transaction(
                     uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                     new_ph,
-                    dataclasses.replace(
-                        tx_config,
+                    tx_config.override(
                         excluded_coin_ids=[],
                     ),
                     fee=fee_to_pay,
@@ -272,8 +271,7 @@ class TradeManager:
                 txs = await wallet.generate_signed_transaction(
                     [coin.amount],
                     [new_ph],
-                    dataclasses.replace(
-                        tx_config,
+                    tx_config.override(
                         excluded_coin_ids=[],
                     ),
                     fee=fee_to_pay,
@@ -352,8 +350,7 @@ class TradeManager:
                     tx: TransactionRecord = await wallet.generate_signed_transaction(
                         uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                         new_ph,
-                        dataclasses.replace(
-                            tx_config,
+                        tx_config.override(
                             excluded_coin_ids=[],
                         ),
                         fee=fee_to_pay,
@@ -368,8 +365,7 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         [coin.amount],
                         [new_ph],
-                        dataclasses.replace(
-                            tx_config,
+                        tx_config.override(
                             excluded_coin_ids=[],
                         ),
                         fee=fee_to_pay,

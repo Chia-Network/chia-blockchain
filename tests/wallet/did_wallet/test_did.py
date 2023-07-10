@@ -913,15 +913,14 @@ class TestDIDWallet:
         odd_amount = uint64(1)
         coin_1 = (
             await wallet.select_coins(
-                odd_amount, dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[coin.name()])
+                odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin.name()])
             )
         ).pop()
         assert coin_1.amount % 2 == 0
         tx = await wallet.generate_signed_transaction(
             odd_amount,
             ph1,
-            dataclasses.replace(
-                DEFAULT_TX_CONFIG,
+            DEFAULT_TX_CONFIG.override(
                 excluded_coin_ids=[coin.name()],
             ),
             fee,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
 from random import randrange
@@ -452,7 +451,7 @@ class TestCoinSelection:
             for min_coin_amount in [10, 100, 200, 300, 1000]:
                 result: Set[Coin] = await select_coins(
                     spendable_amount,
-                    dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, min_coin_amount=uint64(min_coin_amount)),
+                    DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(min_coin_amount)),
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -484,7 +483,7 @@ class TestCoinSelection:
         # test that excluded coins are not included in the result
         selected_coins: Set[Coin] = await select_coins(
             spendable_amount,
-            dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_coins]),
+            DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in excluded_coins]),
             spendable_wallet_coin_records,
             {},
             logging.getLogger("test"),
@@ -501,9 +500,7 @@ class TestCoinSelection:
         with pytest.raises(ValueError):
             await select_coins(
                 spendable_amount,
-                dataclasses.replace(
-                    DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_all_coins]
-                ),
+                DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in excluded_all_coins]),
                 spendable_wallet_coin_records,
                 {},
                 logging.getLogger("test"),

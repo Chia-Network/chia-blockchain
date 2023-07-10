@@ -164,7 +164,7 @@ class TestWalletSimulator:
         tx = await wallet.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=True),
+            DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
             uint64(0),
         )
         assert tx.spend_bundle is not None

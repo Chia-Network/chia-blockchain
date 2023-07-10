@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import tempfile
 from pathlib import Path
 from typing import List
@@ -340,7 +339,7 @@ class TestCATWallet:
 
         cat_2_hash = await cat_wallet_2.get_new_inner_hash()
         tx_records = await cat_wallet.generate_signed_transaction(
-            [uint64(60)], [cat_2_hash], dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=True), fee=uint64(1)
+            [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), fee=uint64(1)
         )
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)

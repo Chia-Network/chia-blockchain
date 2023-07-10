@@ -77,7 +77,7 @@ class TestCATTrades:
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
-        tx_config: TXConfig = dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=reuse_puzhash)
+        tx_config: TXConfig = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
         # Create two new CATs, one in each wallet
         async with wallet_node_maker.wallet_state_manager.lock:

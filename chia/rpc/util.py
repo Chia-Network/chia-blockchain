@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import traceback
 from typing import Any, Callable, Coroutine, Dict, List, Optional
@@ -45,21 +44,18 @@ def tx_endpoint(
 
         # Some backwards compat fill-ins
         if tx_config_loader.excluded_coin_ids is None:
-            tx_config_loader = dataclasses.replace(
-                tx_config_loader,
+            tx_config_loader = tx_config_loader.override(
                 excluded_coin_ids=request.get("exclude_coin_ids"),
             )
         if tx_config_loader.excluded_coin_amounts is None:
-            tx_config_loader = dataclasses.replace(
-                tx_config_loader,
+            tx_config_loader = tx_config_loader.override(
                 excluded_coin_amounts=request.get("exclude_coin_amounts"),
             )
         if tx_config_loader.excluded_coin_ids is None:
             excluded_coins: Optional[List[Coin]] = request.get("exclude_coins", request.get("excluded_coins"))
             if excluded_coins is not None:
-                tx_config_loader = dataclasses.replace(
-                    tx_config_loader,
-                    excluded_coin_amounts=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                tx_config_loader = tx_config_loader.override(
+                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
                 )
 
         tx_config: TXConfig = tx_config_loader.autofill(

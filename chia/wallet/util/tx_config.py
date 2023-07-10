@@ -28,6 +28,10 @@ class CoinSelectionConfig:
             self.excluded_coin_ids,
         ).to_json_dict()
 
+    # This function is purely for ergonomics
+    def override(self, **kwargs: Any) -> CoinSelectionConfig:
+        return dataclasses.replace(self, **kwargs)
+
 
 @dataclasses.dataclass(frozen=True)
 class TXConfig(CoinSelectionConfig):
@@ -50,6 +54,10 @@ class TXConfig(CoinSelectionConfig):
             self.excluded_coin_ids,
             self.reuse_puzhash,
         ).to_json_dict()
+
+    # This function is purely for ergonomics
+    def override(self, **kwargs: Any) -> TXConfig:
+        return dataclasses.replace(self, **kwargs)
 
 
 class AutofillArgs(TypedDict):
@@ -93,6 +101,10 @@ class CoinSelectionConfigLoader(Streamable):
             json_dict["excluded_coin_ids"] = excluded_coin_ids
         return super().from_json_dict(json_dict)
 
+    # This function is purely for ergonomics
+    def override(self, **kwargs: Any) -> CoinSelectionConfigLoader:
+        return dataclasses.replace(self, **kwargs)
+
 
 @streamable
 @dataclasses.dataclass(frozen=True)
@@ -129,6 +141,10 @@ class TXConfigLoader(CoinSelectionConfigLoader):
             autofilled_cs_config.excluded_coin_ids,
             reuse_puzhash,
         )
+
+    # This function is purely for ergonomics
+    def override(self, **kwargs: Any) -> TXConfigLoader:
+        return dataclasses.replace(self, **kwargs)
 
 
 DEFAULT_COIN_SELECTION_CONFIG = CoinSelectionConfig(uint64(0), uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT), [], [])

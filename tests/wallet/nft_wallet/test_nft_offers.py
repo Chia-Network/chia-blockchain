@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import sys
 from secrets import token_bytes
 from typing import Any, Dict, Optional
@@ -54,7 +53,7 @@ async def test_nft_offer_with_fee(
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
 
-    tx_config = dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=reuse_puzhash)
+    tx_config = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
@@ -572,7 +571,7 @@ async def test_nft_offer_nft_for_cat(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
-    tx_config = dataclasses.replace(DEFAULT_TX_CONFIG, reuse_puzhash=reuse_puzhash)
+    tx_config = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
     # Create NFT wallets and nfts for maker and taker
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(

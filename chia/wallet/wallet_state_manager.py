@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import multiprocessing.context
 import time
@@ -719,8 +718,7 @@ class WalletStateManager:
             logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
         )
         if tx_config_loader.min_coin_amount is None:
-            tx_config_loader = dataclasses.replace(
-                tx_config_loader,
+            tx_config_loader = tx_config_loader.override(
                 min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
             )
         unspent_coins = await self.coin_store.get_coin_records(

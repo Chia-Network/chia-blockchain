@@ -311,8 +311,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         tx_amount,
         addr,
         memos=["this is a basic tx"],
-        tx_config=dataclasses.replace(
-            DEFAULT_TX_CONFIG,
+        tx_config=DEFAULT_TX_CONFIG.override(
             excluded_coin_amounts=[uint64(250000000000)],
             excluded_coin_ids=[bytes32([0] * 32)],
         ),
@@ -515,8 +514,7 @@ async def test_create_signed_transaction(
         fee=amount_fee,
         wallet_id=wallet_id,
         # shouldn't actually block it
-        tx_config=dataclasses.replace(
-            DEFAULT_TX_CONFIG,
+        tx_config=DEFAULT_TX_CONFIG.override(
             excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
         ),
     )
@@ -629,8 +627,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
 
         tx = await wallet_1_rpc.create_signed_transaction(
             outputs,
-            dataclasses.replace(
-                DEFAULT_TX_CONFIG,
+            DEFAULT_TX_CONFIG.override(
                 excluded_coin_ids=[c.name() for c in selected_coins],
             ),
         )
@@ -650,8 +647,7 @@ async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environm
         with pytest.raises(ValueError):
             await wallet_1_rpc.create_signed_transaction(
                 outputs,
-                dataclasses.replace(
-                    DEFAULT_TX_CONFIG,
+                DEFAULT_TX_CONFIG.override(
                     excluded_coin_ids=[c.name() for c in selected_coins],
                 ),
             )
@@ -999,8 +995,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     with pytest.raises(ValueError):
         await client.cat_spend(
             cat_0_id,
-            dataclasses.replace(
-                DEFAULT_TX_CONFIG,
+            DEFAULT_TX_CONFIG.override(
                 excluded_coin_amounts=[uint64(20)],
                 excluded_coin_ids=[bytes32([0] * 32)],
             ),
@@ -1609,7 +1604,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     min_coins: List[Coin] = await client_2.select_coins(
         amount=1000,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, min_coin_amount=uint64(1001)),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
     )
     assert min_coins is not None
     assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
@@ -1618,8 +1613,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     max_coins: List[Coin] = await client_2.select_coins(
         amount=2000,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
         ),
     )
     assert max_coins is not None
@@ -1630,7 +1625,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     excluded_amt_coins: List[Coin] = await client_2.select_coins(
         amount=non_1000_amt,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_amounts=[uint64(1000)]),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
     assert excluded_amt_coins is not None
     assert (
@@ -1643,16 +1638,14 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         await client_2.select_coins(
             amount=5000,
             wallet_id=1,
-            coin_selection_config=dataclasses.replace(
-                DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in min_coins]
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+                excluded_coin_ids=[c.name() for c in min_coins]
             ),
         )
     excluded_test = await client_2.select_coins(
         amount=1300,
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in coin_300]
-        ),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in coin_300]),
     )
     assert len(excluded_test) == 2
     for coin in excluded_test:
@@ -1661,25 +1654,25 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     # test get coins
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in excluded_amt_coins]
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            excluded_coin_ids=[c.name() for c in excluded_amt_coins]
         ),
     )
     assert excluded_amt_coins not in all_coins
     all_coins, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_amounts=[uint64(1000)]),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
     assert excluded_amt_coins not in all_coins
     all_coins_2, _, _ = await client_2.get_spendable_coins(
         wallet_id=1,
-        coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, max_coin_amount=uint64(999)),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
     )
     assert all_coins_2[0].coin == coin_300[0]
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(
             wallet_id=1,
-            coin_selection_config=dataclasses.replace(DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[b"a"]),
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[b"a"]),
         )
 
 

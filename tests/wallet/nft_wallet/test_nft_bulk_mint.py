@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from secrets import token_bytes
 from typing import Any, Dict
 
@@ -588,9 +587,7 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
     xch_coins_2 = await wallet_maker.select_coins(
         amount=10000,
-        coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in xch_coins_1]
-        ),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
     )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
@@ -995,9 +992,7 @@ async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nod
     xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
     xch_coins_2 = await wallet_maker.select_coins(
         amount=10000,
-        coin_selection_config=dataclasses.replace(
-            DEFAULT_COIN_SELECTION_CONFIG, excluded_coin_ids=[c.name() for c in xch_coins_1]
-        ),
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
     )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
