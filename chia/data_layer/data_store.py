@@ -313,14 +313,18 @@ class DataStore:
                         result = await cursor.fetchone()
 
                     if result is None:
-                        raise Exception("Unable to find conflicting row") from e
+                        # some ideas for causes:
+                        #   an sqlite bug
+                        #   bad queries in this function
+                        #   unexpected db constraints
+                        raise Exception("Unable to find conflicting row") from e  # pragma: no cover
 
                     result_dict = dict(result)
                     if result_dict != values:
                         raise Exception(
                             "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
                             f"{hash} {generation} {tree_id}"
-                        )
+                        ) from None
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
