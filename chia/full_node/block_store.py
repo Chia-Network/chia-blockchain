@@ -522,8 +522,7 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
-        all_blocks: Dict[bytes32, BlockRecordDB] = {}
-        all_blocks_plot_filters: Dict[bytes32, PlotFilterInfo] = {}
+        all_blocks: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
@@ -533,16 +532,14 @@ class BlockStore:
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        all_blocks[header_hash] = BlockRecordDB.from_bytes(row[1])
-                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
         else:
-            formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
-                    for row in await cursor.fetchall():
-                        block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[0])
-                        all_blocks[block_rec_db.header_hash] = block_rec_db
-
+            all_blocks_plot_filters: Dict[bytes32, PlotFilterInfo] = {}
             formatted_str = (
                 f'SELECT header_hash,block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
             )
@@ -552,17 +549,23 @@ class BlockStore:
                         header_hash = bytes32.fromhex(row[0])
                         all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(row[1])
 
+            formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
+                    for row in await cursor.fetchall():
+                        block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[0])
+                        assert block_rec_db.header_hash in all_blocks_plot_filters
+                        plot_filter_info = all_blocks_plot_filters[block_rec_db.header_hash]
+                        all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+
         ret: List[BlockRecord] = []
         for hh in header_hashes:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
-            assert hh in all_blocks_plot_filters
-            plot_filter_info = all_blocks_plot_filters[hh]
-            block_record = all_blocks[hh].to_block_record(
-                plot_filter_info.pos_ss_cc_challenge_hash,
-                plot_filter_info.cc_sp_hash,
-            )
-            ret.append(block_record)
+            ret.append(all_blocks[hh])
         return ret
 
     async def get_block_bytes_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
