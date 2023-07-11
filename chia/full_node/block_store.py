@@ -652,7 +652,7 @@ class BlockStore:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     """
-                    SELECT block_records.block,full_blocks.block 
+                    SELECT block_records.block,full_blocks.block
                     FROM block_records JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
                     WHERE block_records.header_hash = ?
                     """,
