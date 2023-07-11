@@ -173,8 +173,8 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     key = b"\x01\x02"
     value = b"abc"
 
-    node_hash, _ = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == leaf_hash(key=key, value=value)
+    insert_result = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    assert insert_result.node_hash == leaf_hash(key=key, value=value)
 
 
 @pytest.mark.asyncio
@@ -187,7 +187,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
     node_hash = None
     for key, expected_generation in zip(keys, itertools.count(start=1)):
-        node_hash, _ = await data_store.insert(
+        insert_result = await data_store.insert(
             key=key,
             value=value,
             tree_id=tree_id,
@@ -195,6 +195,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
             side=None if node_hash is None else Side.LEFT,
             status=Status.COMMITTED,
         )
+        node_hash = insert_result.node_hash
         generation = await data_store.get_tree_generation(tree_id=tree_id)
         generations.append(generation)
         expected.append(expected_generation)
@@ -343,7 +344,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             node_count += 1
             side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
-            node_hash, _ = await data_store.insert(
+            insert_result = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
@@ -352,6 +353,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 use_optimized=False,
                 status=Status.COMMITTED,
             )
+            node_hash = insert_result.node_hash
             if node_hash is not None:
                 generation = await data_store.get_tree_generation(tree_id=tree_id)
                 current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id)
@@ -501,7 +503,7 @@ async def test_inserting_duplicate_key_fails(
 ) -> None:
     key = b"\x05"
 
-    first_hash, _ = await data_store.insert(
+    insert_result = await data_store.insert(
         key=key,
         value=first_value,
         tree_id=tree_id,
@@ -515,7 +517,7 @@ async def test_inserting_duplicate_key_fails(
             key=key,
             value=second_value,
             tree_id=tree_id,
-            reference_node_hash=first_hash,
+            reference_node_hash=insert_result.node_hash,
             side=Side.RIGHT,
         )
 
@@ -526,7 +528,7 @@ async def test_inserting_duplicate_key_fails(
             key=key,
             value=second_value,
             tree_id=tree_id,
-            reference_node_hash=first_hash,
+            reference_node_hash=insert_result.node_hash,
             side=Side.RIGHT,
             hint_keys_values=hint_keys_values,
         )
@@ -542,8 +544,8 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        node_hash, _ = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
-        hashes.append(node_hash)
+        insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+        hashes.append(insert_result.node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
@@ -562,10 +564,10 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         if i == 0 or i > 10:
-            node_hash, _ = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+            insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         else:
             reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
-            node_hash, _ = await data_store.insert(
+            insert_result = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
@@ -574,9 +576,9 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 hint_keys_values=hint_keys_values,
                 status=Status.COMMITTED,
             )
-            ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
+            ancestors = await data_store.get_ancestors_optimized(insert_result.node_hash, tree_id)
             assert len(ancestors) == i
-        hashes.append(node_hash)
+        hashes.append(insert_result.node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
@@ -1048,7 +1050,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
 
 @pytest.mark.asyncio
 async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
-    node_hash, _ = await data_store.insert(
+    insert_result = await data_store.insert(
         key=b"000",
         value=b"000",
         tree_id=tree_id,
@@ -1057,11 +1059,11 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     )
     empty_hash = bytes32([0] * 32)
     invalid_hash = bytes32([0] * 31 + [1])
-    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, node_hash)
+    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, insert_result.node_hash)
     assert diff_1 == set([DiffData(OperationType.INSERT, b"000", b"000")])
-    diff_2 = await data_store.get_kv_diff(tree_id, node_hash, empty_hash)
+    diff_2 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, empty_hash)
     assert diff_2 == set([DiffData(OperationType.DELETE, b"000", b"000")])
-    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, node_hash)
+    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, insert_result.node_hash)
     assert diff_3 == set()
 
 

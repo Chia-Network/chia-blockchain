@@ -12,6 +12,7 @@ import aiosqlite
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
+    InsertResult,
     InternalNode,
     Node,
     NodeType,
@@ -734,7 +735,7 @@ class DataStore:
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
-    ) -> Tuple[bytes32, Root]:
+    ) -> InsertResult:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(tree_id=tree_id)
@@ -804,7 +805,7 @@ class DataStore:
         use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
-    ) -> Tuple[bytes32, Root]:
+    ) -> InsertResult:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(tree_id=tree_id)
@@ -917,7 +918,7 @@ class DataStore:
 
         if hint_keys_values is not None:
             hint_keys_values[bytes(key)] = value
-        return new_terminal_node_hash, new_root
+        return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
 
     async def delete(
         self,
@@ -1028,13 +1029,14 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
-                        inserted_node_hash, intermediate_root = await self.autoinsert(
+                        insert_result = await self.autoinsert(
                             key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
                         )
+                        intermediate_root = insert_result.root
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
-                        inserted_node_hash, intermediate_root = await self.insert(
+                        insert_result = await self.insert(
                             key,
                             value,
                             tree_id,
@@ -1045,6 +1047,7 @@ class DataStore:
                             Status.COMMITTED,
                             root=intermediate_root,
                         )
+                        intermediate_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
                     intermediate_root = await self.delete(

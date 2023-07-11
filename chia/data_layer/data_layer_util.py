@@ -704,3 +704,9 @@ class PluginStatus:
                 "downloaders": self.downloaders,
             }
         }
+
+
+@dataclasses.dataclass(frozen=True)
+class InsertResult:
+    node_hash: bytes32
+    root: Root
