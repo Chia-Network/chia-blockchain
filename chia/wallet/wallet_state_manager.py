@@ -654,15 +654,12 @@ class WalletStateManager:
         response: List[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
-        if len(response) == 0:
-            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
-            return None, None
+        assert len(response) != 0, f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info.hex()}"
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
-        if coin_spend is None:
-            return None, None
+        assert coin_spend is None, f"Could not find the coin spent  with ID: {coin_state.coin.parent_coin_info.hex()}"
 
         puzzle = coin_spend.puzzle_reveal.to_program()
         uncurried = uncurry_puzzle(puzzle)
@@ -671,9 +668,7 @@ class WalletStateManager:
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
-            cat_data: CATCoinData = CATCoinData(
-                bytes32(bytes(cat_mod_hash)[1:]), bytes32(bytes(tail_program_hash)[1:]), cat_inner_puzzle
-            )
+            cat_data: CATCoinData = CATCoinData(cat_mod_hash.atom, tail_program_hash.atom, cat_inner_puzzle)
             return await self.handle_cat(
                 cat_data,
                 parent_coin_state,
@@ -697,7 +692,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32.from_bytes(bytes(recovery_list_hash)[1:]),
+                recovery_list_hash.atom,
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
