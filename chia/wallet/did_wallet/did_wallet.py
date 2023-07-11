@@ -762,12 +762,27 @@ class DIDWallet:
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
         if new_innerpuzzle is None:
-            new_innerpuzzle = innerpuz
-        uncurried = did_wallet_puzzles.uncurry_innerpuz(new_innerpuzzle)
-        assert uncurried is not None
-        p2_puzzle = uncurried[0]
+            if tx_config.reuse_puzhash:
+                new_innerpuzzle_hash = innerpuz.get_tree_hash()
+                uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+                assert uncurried is not None
+                p2_ph = uncurried[0].get_tree_hash()
+            else:
+                p2_ph = await self.standard_wallet.get_puzzle_hash(new=False)
+                new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+                    p2_ph,
+                    self.did_info.backup_ids,
+                    self.did_info.num_of_backup_ids_needed,
+                    self.did_info.origin_coin.name(),
+                    did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                )
+        else:
+            new_innerpuzzle_hash = new_innerpuzzle.get_tree_hash()
+            uncurried = did_wallet_puzzles.uncurry_innerpuz(new_innerpuzzle)
+            assert uncurried is not None
+            p2_ph = uncurried[0].get_tree_hash()
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[Payment(new_innerpuzzle.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            primaries=[Payment(new_innerpuzzle_hash, uint64(coin.amount), [p2_ph])],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
             coin_announcements_to_assert={a.name() for a in coin_announcements_to_assert}
