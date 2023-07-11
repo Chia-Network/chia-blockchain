@@ -456,6 +456,7 @@ class TestWalletSimulator:
         tx = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
+            DEFAULT_TX_CONFIG,
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
             memos=[b"Test"],
@@ -791,6 +792,7 @@ class TestWalletSimulator:
         tx = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
+            DEFAULT_TX_CONFIG,
             uint64(0),
             puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
         )

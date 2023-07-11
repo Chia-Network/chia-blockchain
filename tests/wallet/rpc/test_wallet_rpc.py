@@ -2097,6 +2097,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
         wallet_id=1,
         amount=uint64(500),
         address=address,
+        tx_config=DEFAULT_TX_CONFIG,
         fee=uint64(0),
         puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
     )

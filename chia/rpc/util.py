@@ -63,6 +63,6 @@ def tx_endpoint(
             config=self.service.wallet_state_manager.config,
             logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
-        return await func(self, request, tx_config, *args, **kwargs)
+        return await func(self, request, *args, tx_config=tx_config, **kwargs)
 
     return rpc_endpoint
