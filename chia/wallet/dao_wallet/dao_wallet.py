@@ -1392,7 +1392,7 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-
+        breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1734,17 +1734,9 @@ class DAOWallet(WalletProtocol):
                 proposal_info.proposal_id,
                 self.dao_info.treasury_id,
             )
-            curried_args = uncurry_proposal(proposal_info.current_innerpuz)
+            c_a, curried_args = uncurry_proposal(proposal_info.current_innerpuz)
             (
-                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
-                PROPOSAL_MOD_HASH,
-                PROPOSAL_TIMER_MOD_HASH,  # proposal timer needs to know which proposal created it, AND
-                CAT_MOD_HASH,
-                DAO_FINISHED_STATE_HASH,
-                TREASURY_MOD_HASH,
-                LOCKUP_MOD_HASH,
-                CAT_TAIL_HASH,
-                TREASURY_ID,
+                SELF_HASH,
                 PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
                 YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
                 TOTAL_VOTES,  # how many people responded
@@ -1764,7 +1756,6 @@ class DAOWallet(WalletProtocol):
             # parent_parent
             timer_solution = Program.to(
                 [
-                    DAO_TREASURY_MOD_HASH,
                     YES_VOTES,
                     TOTAL_VOTES,
                     PROPOSED_PUZ_HASH,

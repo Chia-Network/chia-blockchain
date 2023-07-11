@@ -6,10 +6,8 @@
 
 (mod (
     ; this is the first curry
-    PROPOSAL_MOD_HASH
     SINGLETON_MOD_HASH
     SINGLETON_LAUNCHER_PUZHASH
-    LOCKUP_MOD_HASH
     DAO_FINISHED_STATE_MOD_HASH
     CAT_MOD_HASH
     CAT_TAIL_HASH
@@ -22,7 +20,7 @@
     inner_solution
     my_amount
     new_proposal_vote_id_or_removal_id  ; removal_id is a list of removal_ids
-    proposal_curry_vals  ; list of curry_vals which should match the order of removal_id_list
+    proposal_innerpuzhash  ; list of singleton innerpuzhashes which should match the order of the new_proposal_vote_id list
     vote_info
     vote_amount
     my_inner_puzhash
@@ -101,16 +99,11 @@
   (defun check_not_previously_voted (
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
-      SELF_HASH
-      DAO_FINISHED_STATE_MOD_HASH
-      CAT_MOD_HASH
-      CAT_TAIL_HASH
-      PROPOSAL_MOD_HASH
       INNERPUZ
       my_id
       new_vote_id
       active_votes
-      proposal_curry_vals
+      proposal_innerpuzhash
     )
     (if active_votes
         (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
@@ -118,27 +111,18 @@
             (check_not_previously_voted
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
-              SELF_HASH
-              DAO_FINISHED_STATE_MOD_HASH
-              CAT_MOD_HASH
-              CAT_TAIL_HASH
-              PROPOSAL_MOD_HASH
               INNERPUZ
               my_id
               new_vote_id
               (r active_votes)
-              proposal_curry_vals
+              proposal_innerpuzhash
             )
         )
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; the problem might be here
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
             (calculate_proposal_puzzlehash
-              PROPOSAL_MOD_HASH
-              CAT_MOD_HASH
-              DAO_FINISHED_STATE_MOD_HASH
-              SELF_HASH
-              CAT_TAIL_HASH
+              proposal_innerpuzhash
               (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
-              proposal_curry_vals
             )
             my_id
           )
@@ -155,37 +139,13 @@
   )
 
   (defun calculate_proposal_puzzlehash (
-      PROPOSAL_MOD_HASH
-      CAT_MOD_HASH
-      DAO_FINISHED_STATE_MOD_HASH
-      SELF_HASH
-      CAT_TAIL_HASH
+      proposal_innerpuzhash
       proposal_singleton_struct
-      (
-        TREASURY_MOD_HASH
-        PROPOSAL_TIMER_MOD_HASH
-        TREASURY_ID
-        YES_VOTES
-        TOTAL_VOTES
-        INNERPUZHASH
-      )
+
     )
     (calculate_singleton_puzzle_hash
       proposal_singleton_struct
-      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-        (sha256 ONE TOTAL_VOTES)
-        (sha256 ONE YES_VOTES)
-        (sha256 ONE INNERPUZHASH)
-        (sha256 ONE TREASURY_ID)
-        (sha256 ONE CAT_TAIL_HASH)
-        (sha256 ONE SELF_HASH)
-        (sha256 ONE TREASURY_MOD_HASH)
-        (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-        (sha256 ONE PROPOSAL_MOD_HASH)
-        (sha256tree proposal_singleton_struct)
-      )
+      proposal_innerpuzhash
     )
   )
 
@@ -202,7 +162,6 @@
   )
 
   (defun for_every_removal_id (
-      PROPOSAL_MOD_HASH
       SINGLETON_MOD_HASH
       SINGLETON_LAUNCHER_PUZHASH
       SELF_HASH
@@ -213,7 +172,6 @@
       INNERPUZ
       removal_ids
       my_amount
-      proposal_curry_vals
       unused_votes
     )
     (if removal_ids
@@ -232,7 +190,6 @@
           )
         )
         (for_every_removal_id
-          PROPOSAL_MOD_HASH
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
           SELF_HASH
@@ -243,7 +200,6 @@
           INNERPUZ
           (r removal_ids)
           my_amount
-          (r proposal_curry_vals)
           (c (f removal_ids) unused_votes)
         )
       )
@@ -292,16 +248,11 @@
                   (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
                     SINGLETON_MOD_HASH
                     SINGLETON_LAUNCHER_PUZHASH
-                    SELF_HASH
-                    DAO_FINISHED_STATE_MOD_HASH
-                    CAT_MOD_HASH
-                    CAT_TAIL_HASH
-                    PROPOSAL_MOD_HASH
                     INNERPUZ
                     my_id
                     new_proposal_vote_id_or_removal_id
                     ACTIVE_VOTES
-                    proposal_curry_vals
+                    proposal_innerpuzhash
                   )
                   (list REMARK)
               )
@@ -316,7 +267,7 @@
                 )
                 my_amount
                 ; TODO: add namespace to this announcement to allow announcements from the innerpuz
-                (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))  ; (sha256tree (list (f (r SINGLETON_STRUCT)) (f vote_amount_list) vote_info (f coin_id_list)))
+                (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
                 vote_amount
                 my_inner_puzhash
                 0
@@ -330,7 +281,6 @@
       ; return to return_address or remove something from active list - check if our locked list is empty
       (if ACTIVE_VOTES
           (for_every_removal_id  ; locked list is not empty, so we must be trying to remove something from it
-            PROPOSAL_MOD_HASH
             SINGLETON_MOD_HASH
             SINGLETON_LAUNCHER_PUZHASH
             SELF_HASH
@@ -341,7 +291,6 @@
             INNERPUZ
             new_proposal_vote_id_or_removal_id
             my_amount
-            proposal_curry_vals
             ()
           )
           (a INNERPUZ inner_solution)

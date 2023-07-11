@@ -41,6 +41,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
+from chia.wallet.singleton import create_singleton_puzzle_hash
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
@@ -293,18 +294,18 @@ class DAOCATWallet:
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-        treasury_id = dao_wallet.dao_info.treasury_id
+        # treasury_id = dao_wallet.dao_info.treasury_id
         if curry_vals is None:
             YES_VOTES, TOTAL_VOTES, INNERPUZHASH = dao_wallet.get_proposal_curry_values(proposal_id)
         else:
             YES_VOTES, TOTAL_VOTES, INNERPUZHASH = curry_vals
-        # proposal_curry_vals = [YES_VOTES, TOTAL_VOTES, INNERPUZ]
+
         for lci in coins:
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
             # my_amount
             # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-            # proposal_curry_vals
+            # proposal_innerpuz_hash
             # vote_info
             # vote_amount
             # my_puzhash
@@ -387,35 +388,19 @@ class DAOCATWallet:
             # inner_solution
             # my_amount
             # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-            # proposal_curry_vals
+            # proposal_innerpuzhashes_
             # vote_info
             # vote_amount
             # my_inner_puzhash
             # new_innerpuzhash  ; only include this if we're changing owners
-
-            # proposal_curry_vals is:
-            # (
-            #   TREASURY_MOD_HASH
-            #   PROPOSAL_TIMER_MOD_HASH
-            #   TREASURY_ID
-            #   YES_VOTES
-            #   TOTAL_VOTES
-            #   INNERPUZHASH
-            # )
+            proposal_puzzle_hash = create_singleton_puzzle_hash(INNERPUZHASH.as_atom(), proposal_id)
             solution = Program.to(
                 [
                     coin.name(),
                     inner_solution,
                     coin.amount,
                     proposal_id,
-                    [
-                        DAO_TREASURY_MOD_HASH,
-                        DAO_PROPOSAL_TIMER_MOD_HASH,
-                        treasury_id,
-                        YES_VOTES,
-                        TOTAL_VOTES,
-                        INNERPUZHASH,
-                    ],
+                    proposal_puzzle_hash,
                     vote_info,
                     vote_amount,
                     lci.inner_puzzle.get_tree_hash(),

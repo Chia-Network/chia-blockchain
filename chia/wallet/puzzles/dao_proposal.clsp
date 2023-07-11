@@ -1,7 +1,6 @@
 (mod (
     ; first hash
     SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
-    PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH  ; proposal timer needs to know which proposal created it, AND
     CAT_MOD_HASH
     DAO_FINISHED_STATE_MOD_HASH
@@ -9,8 +8,9 @@
     LOCKUP_SELF_HASH
     CAT_TAIL_HASH
     TREASURY_ID
-    PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
     ; second hash
+    SELF_HASH
+    PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
     YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     TOTAL_VOTES  ; how many people responded
     ; solution
@@ -47,24 +47,13 @@
   )
 
   (defun calculate_timer_puzhash (
-      PROPOSAL_MOD_HASH
       PROPOSAL_TIMER_MOD_HASH
-      LOCKUP_SELF_HASH
-      DAO_FINISHED_STATE_MOD_HASH
-      CAT_MOD_HASH
-      CAT_TAIL_HASH
-      MY_SINGLETON_STRUCT
-      TREASURY_ID
+      SELF_HASH
+      MY_SINGLETON_ID
     )
     (puzzle-hash-of-curried-function PROPOSAL_TIMER_MOD_HASH
-      (sha256 ONE TREASURY_ID)
-      (sha256tree MY_SINGLETON_STRUCT)
-      (sha256 ONE CAT_TAIL_HASH)
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
-      (sha256 ONE LOCKUP_SELF_HASH)
-      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-      (sha256 ONE PROPOSAL_MOD_HASH)
+      (sha256tree MY_SINGLETON_ID)
+      (sha256 ONE SELF_HASH)
     )
   )
 
@@ -81,33 +70,16 @@
   )
 
   (defun recreate_self (
-      SINGLETON_STRUCT
-      PROPOSAL_MOD_HASH
-      PROPOSAL_TIMER_MOD_HASH
-      CAT_MOD_HASH
-      DAO_FINISHED_STATE_MOD_HASH
-      TREASURY_MOD_HASH
-      LOCKUP_SELF_HASH
-      CAT_TAIL_HASH
-      TREASURY_ID
+      SELF_HASH
+      PROPOSED_PUZ_HASH
       YES_VOTES
       TOTAL_VOTES
-      PROPOSED_PUZ_HASH
     )
-    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-
+    (puzzle-hash-of-curried-function SELF_HASH
       (sha256 ONE TOTAL_VOTES)
       (sha256 ONE YES_VOTES)
       (sha256 ONE PROPOSED_PUZ_HASH)
-      (sha256 ONE TREASURY_ID)
-      (sha256 ONE CAT_TAIL_HASH)
-      (sha256 ONE LOCKUP_SELF_HASH)
-      (sha256 ONE TREASURY_MOD_HASH)
-      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-      (sha256 ONE PROPOSAL_MOD_HASH)
-      (sha256tree SINGLETON_STRUCT)
+      (sha256 ONE SELF_HASH)
     )
   )
 
@@ -154,14 +126,11 @@
 
   (defun loop_over_vote_coins (
       SINGLETON_STRUCT
+      LOCKUP_SELF_HASH
       CAT_MOD_HASH
       CAT_TAIL_HASH
-      PROPOSAL_MOD_HASH
-      PROPOSAL_TIMER_MOD_HASH
-      TREASURY_MOD_HASH
-      LOCKUP_SELF_HASH
-      DAO_FINISHED_STATE_MOD_HASH
       TREASURY_ID
+      SELF_HASH
       YES_VOTES
       TOTAL_VOTES
       PROPOSED_PUZ_HASH
@@ -196,14 +165,11 @@
               )
               (loop_over_vote_coins
                 SINGLETON_STRUCT
+                LOCKUP_SELF_HASH
                 CAT_MOD_HASH
                 CAT_TAIL_HASH
-                PROPOSAL_MOD_HASH
-                PROPOSAL_TIMER_MOD_HASH
-                TREASURY_MOD_HASH
-                LOCKUP_SELF_HASH
-                DAO_FINISHED_STATE_MOD_HASH
                 TREASURY_ID
+                SELF_HASH
                 YES_VOTES
                 TOTAL_VOTES
                 PROPOSED_PUZ_HASH
@@ -218,24 +184,16 @@
               )
             )
           )
-          (x "test 2")
+          (x)
         )
         (c
           (list
             CREATE_COIN  ; recreate self with vote information added
             (recreate_self
-              SINGLETON_STRUCT
-              PROPOSAL_MOD_HASH
-              PROPOSAL_TIMER_MOD_HASH
-              CAT_MOD_HASH
-              DAO_FINISHED_STATE_MOD_HASH
-              TREASURY_MOD_HASH
-              LOCKUP_SELF_HASH
-              CAT_TAIL_HASH
-              TREASURY_ID
+              SELF_HASH
+              PROPOSED_PUZ_HASH
               (if vote_info (+ YES_VOTES sum) YES_VOTES)
               (+ TOTAL_VOTES sum)
-              PROPOSED_PUZ_HASH
             )
             my_amount
             (list TREASURY_ID)  ; hint to Treasury ID so people can find it
@@ -274,7 +232,7 @@
             )
           )
         )
-        (x "test 3")
+        (x)
       )
       ; We're not trying to self destruct
       ; Check whether we have a soft close to either try closing the proposal or adding votes
@@ -293,14 +251,10 @@
                   ASSERT_PUZZLE_ANNOUNCEMENT
                   (sha256  ; external timer
                     (calculate_timer_puzhash
-                      PROPOSAL_MOD_HASH
                       PROPOSAL_TIMER_MOD_HASH
-                      LOCKUP_SELF_HASH
-                      DAO_FINISHED_STATE_MOD_HASH
-                      CAT_MOD_HASH
-                      CAT_TAIL_HASH
-                      SINGLETON_STRUCT
-                      TREASURY_ID
+                      SELF_HASH
+                      (f (r SINGLETON_STRUCT))
+
                     )
                     (f (r SINGLETON_STRUCT))
                   )
@@ -363,14 +317,11 @@
           ; no soft_close_length so run the add votes path
           (loop_over_vote_coins
             SINGLETON_STRUCT
+            LOCKUP_SELF_HASH
             CAT_MOD_HASH
             CAT_TAIL_HASH
-            PROPOSAL_MOD_HASH
-            PROPOSAL_TIMER_MOD_HASH
-            TREASURY_MOD_HASH
-            LOCKUP_SELF_HASH
-            DAO_FINISHED_STATE_MOD_HASH
             TREASURY_ID
+            SELF_HASH
             YES_VOTES
             TOTAL_VOTES
             PROPOSED_PUZ_HASH
@@ -386,20 +337,15 @@
                   (list
                     CREATE_COIN
                     (calculate_timer_puzhash
-                      PROPOSAL_MOD_HASH
                       PROPOSAL_TIMER_MOD_HASH
-                      LOCKUP_SELF_HASH
-                      DAO_FINISHED_STATE_MOD_HASH
-                      CAT_MOD_HASH
-                      CAT_TAIL_HASH
-                      SINGLETON_STRUCT
-                      TREASURY_ID
+                      SELF_HASH
+                      (f (r SINGLETON_STRUCT))
                     )
                     0
                   )
                   (if (= (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH)  ; reveal the proposed code on chain with the first vote
                       ()
-                      (x (sha256tree innerpuz_reveal) PROPOSED_PUZ_HASH innerpuz_reveal)
+                      (x)
                   )
                 )
             )
