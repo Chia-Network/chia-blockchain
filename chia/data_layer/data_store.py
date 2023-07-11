@@ -313,7 +313,7 @@ class DataStore:
                         result = await cursor.fetchone()
 
                     if result is None:
-                        raise
+                        raise Exception("Unable to find conflicting row") from e
 
                     result_dict = dict(result)
                     if result_dict != values:
