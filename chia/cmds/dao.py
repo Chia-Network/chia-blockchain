@@ -183,8 +183,8 @@ def dao_create_cmd(
 
     if proposal_minimum % 2 == 0:
         raise ValueError("Please use an odd mojo amount for proposal minimum amount")
-    else:
-        print("Creating new DAO")
+
+    print("Creating new DAO")
 
     extra_params = {
         "fee": fee,
