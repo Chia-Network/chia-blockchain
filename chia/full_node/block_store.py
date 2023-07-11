@@ -553,7 +553,7 @@ class BlockStore:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
                     for row in await cursor.fetchall():
-                        block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[0])
+                        block_rec_db = BlockRecordDB.from_bytes(row[0])
                         assert block_rec_db.header_hash in all_blocks_plot_filters
                         plot_filter_info = all_blocks_plot_filters[block_rec_db.header_hash]
                         all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
