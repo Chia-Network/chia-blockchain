@@ -1020,7 +1020,7 @@ class DataStore:
             old_root = await self.get_tree_root(tree_id)
             hint_keys_values = await self.get_keys_values_dict(tree_id, root_hash=old_root.node_hash)
 
-            iter_root: Optional[Root] = old_root
+            intermediate_root: Optional[Root] = old_root
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1028,13 +1028,13 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
-                        inserted_node_hash, iter_root = await self.autoinsert(
-                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=iter_root
+                        inserted_node_hash, intermediate_root = await self.autoinsert(
+                            key, value, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
                         )
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
-                        inserted_node_hash, iter_root = await self.insert(
+                        inserted_node_hash, intermediate_root = await self.insert(
                             key,
                             value,
                             tree_id,
@@ -1043,12 +1043,12 @@ class DataStore:
                             hint_keys_values,
                             True,
                             Status.COMMITTED,
-                            root=iter_root,
+                            root=intermediate_root,
                         )
                 elif change["action"] == "delete":
                     key = change["key"]
-                    iter_root = await self.delete(
-                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=iter_root
+                    intermediate_root = await self.delete(
+                        key, tree_id, hint_keys_values, True, Status.COMMITTED, root=intermediate_root
                     )
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
