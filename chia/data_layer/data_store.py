@@ -763,9 +763,6 @@ class DataStore:
             )
 
     async def get_keys_values_dict(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> Dict[bytes, bytes]:
-        if root_hash is None:
-            return {}
-
         pairs = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
         return {node.key: node.value for node in pairs}
 
@@ -1019,7 +1016,11 @@ class DataStore:
     ) -> Optional[bytes32]:
         async with self.db_wrapper.writer():
             old_root = await self.get_tree_root(tree_id)
-            hint_keys_values = await self.get_keys_values_dict(tree_id, root_hash=old_root.node_hash)
+            root_hash = old_root.node_hash
+            if old_root.node_hash is None:
+                hint_keys_values = {}
+            else:
+                hint_keys_values = await self.get_keys_values_dict(tree_id, root_hash=root_hash)
 
             intermediate_root: Optional[Root] = old_root
             for change in changelist:
