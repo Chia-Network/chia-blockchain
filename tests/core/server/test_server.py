@@ -102,18 +102,11 @@ async def test_connection_differently_formed_version(
             server_1.all_connections[server_2.node_id],
         ]
 
-        try:
-            for connection in connections:
-                # started
-                assert connection.incoming_message_task is not None
-                # not closed
-                assert not connection.closed
-        finally:
-            pass
-            # for connection in connections:
-            #     await connection.close()
-            # for connection in connections:
-            #     await connection.wait_until_closed()
+        for connection in connections:
+            # started
+            assert connection.incoming_message_task is not None
+            # not closed
+            assert not connection.closed
 
     # confirm that the versions were used
     assert versions == []
