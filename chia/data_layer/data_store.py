@@ -181,23 +181,19 @@ class DataStore:
                 else:
                     generation = existing_generation + 1
 
-            await writer.execute(
-                """
-                INSERT INTO root(tree_id, generation, node_hash, status)
-                VALUES(:tree_id, :generation, :node_hash, :status)
-                """,
-                {
-                    "tree_id": tree_id,
-                    "generation": generation,
-                    "node_hash": None if node_hash is None else node_hash,
-                    "status": status.value,
-                },
-            )
             new_root = Root(
                 tree_id=tree_id,
                 node_hash=None if node_hash is None else node_hash,
                 generation=generation,
                 status=status,
+            )
+
+            await writer.execute(
+                """
+                INSERT INTO root(tree_id, generation, node_hash, status)
+                VALUES(:tree_id, :generation, :node_hash, :status)
+                """,
+                new_root.to_row(),
             )
 
             # `node_hash` is now a root, so it has no ancestor.

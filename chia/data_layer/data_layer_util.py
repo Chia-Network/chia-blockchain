@@ -299,6 +299,14 @@ class Root:
             status=Status(row["status"]),
         )
 
+    def to_row(self) -> Dict[str, Any]:
+        return {
+            "tree_id": self.tree_id,
+            "node_hash": self.node_hash,
+            "generation": self.generation,
+            "status": self.status.value,
+        }
+
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> "Root":
         return cls(
