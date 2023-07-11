@@ -77,7 +77,11 @@ class TestCostCalculation:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            program,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
 
         assert npc_result.error is None
@@ -142,11 +146,19 @@ class TestCostCalculation:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
+            generator,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=True,
+            height=softfork_height,
+            constants=bt.constants,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            generator,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
         assert npc_result.error is None
 
@@ -169,11 +181,19 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=True,
+            height=softfork_height,
+            constants=test_constants,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=test_constants,
         )
         assert npc_result.error is None
 
@@ -187,7 +207,11 @@ class TestCostCalculation:
         with assert_runtime(seconds=0.5, label=request.node.name):
             generator = BlockGenerator(program, [], [])
             npc_result = get_name_puzzle_conditions(
-                generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+                generator,
+                test_constants.MAX_BLOCK_COST_CLVM,
+                mempool_mode=False,
+                height=softfork_height,
+                constants=test_constants,
             )
 
         assert npc_result.error is None
@@ -208,14 +232,18 @@ class TestCostCalculation:
 
         # ensure we fail if the program exceeds the cost
         generator = BlockGenerator(program, [], [])
-        npc_result = get_name_puzzle_conditions(generator, 10000000, mempool_mode=False, height=softfork_height)
+        npc_result = get_name_puzzle_conditions(
+            generator, 10000000, mempool_mode=False, height=softfork_height, constants=test_constants
+        )
 
         assert npc_result.error is not None
         assert npc_result.cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result = get_name_puzzle_conditions(generator, 23000000, mempool_mode=False, height=softfork_height)
+        npc_result = get_name_puzzle_conditions(
+            generator, 23000000, mempool_mode=False, height=softfork_height, constants=test_constants
+        )
 
         assert npc_result.error is None
         assert npc_result.cost > 10000000

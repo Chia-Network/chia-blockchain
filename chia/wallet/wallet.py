@@ -101,7 +101,11 @@ class Wallet:
             # will only matter once the wallet generates transactions relying on
             # new conditions, and we can change this by then
             result: NPCResult = get_name_puzzle_conditions(
-                program, self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=uint32(0)
+                program,
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                mempool_mode=True,
+                height=uint32(0),
+                constants=self.wallet_state_manager.constants,
             )
             self.cost_of_single_tx = result.cost
             self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")

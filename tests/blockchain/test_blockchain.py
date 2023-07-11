@@ -2577,7 +2577,11 @@ class TestBodyValidation:
 
         block_generator: BlockGenerator = BlockGenerator(blocks[-1].transactions_generator, [], [])
         npc_result = get_name_puzzle_conditions(
-            block_generator, b.constants.MAX_BLOCK_COST_CLVM * 1000, mempool_mode=False, height=softfork_height
+            block_generator,
+            b.constants.MAX_BLOCK_COST_CLVM * 1000,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
         err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True)))[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
@@ -2638,6 +2642,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             mempool_mode=False,
             height=softfork_height,
+            constants=bt.constants,
         )
         result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
@@ -2662,6 +2667,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             mempool_mode=False,
             height=softfork_height,
+            constants=bt.constants,
         )
         result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
         assert err == Err.INVALID_BLOCK_COST
@@ -2686,6 +2692,7 @@ class TestBodyValidation:
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost),
             mempool_mode=False,
             height=softfork_height,
+            constants=bt.constants,
         )
 
         result, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False))
@@ -3504,7 +3511,7 @@ async def test_chain_failed_rollback(empty_blockchain, bt):
     await b.coin_store.rollback_to_block(2)
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid operation to set spent"):
         await _validate_and_add_block(b, blocks_reorg_chain[-1])
 
     assert b.get_peak().height == 19

@@ -49,7 +49,7 @@ def get_name_puzzle_conditions(
     *,
     mempool_mode: bool,
     height: uint32,
-    constants: ConsensusConstants = DEFAULT_CONSTANTS,
+    constants: ConsensusConstants,
 ) -> NPCResult:
     flags = 0
     if mempool_mode:
