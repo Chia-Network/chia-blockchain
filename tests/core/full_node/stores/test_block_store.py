@@ -410,6 +410,9 @@ async def test_get_plot_filer_info(
             assert opt_block_record.pos_ss_cc_challenge_hash == block.reward_chain_block.pos_ss_cc_challenge_hash
             assert opt_block_record.cc_sp_hash == expected_cc_sp_hashes[-1]
 
+            opt_block_record = await store.get_block_record(bytes32([0] * 32))
+            assert opt_block_record is None
+
             block_records_dict = await store.get_block_records_in_range(max(0, block.height - 4), block.height)
             for full_b, expected_cc_sp in zip(blocks, expected_cc_sp_hashes):
                 block_record = block_records_dict[full_b.header_hash]
