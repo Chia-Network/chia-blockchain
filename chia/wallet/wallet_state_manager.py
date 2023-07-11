@@ -712,15 +712,15 @@ class WalletStateManager:
         tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
         assert self.wallet_node.logged_in_fingerprint is not None
         tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(self.config.get("auto_claim", {}))
+        if tx_config_loader.min_coin_amount is None:
+            tx_config_loader = tx_config_loader.override(
+                min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
+            )
         tx_config: TXConfig = tx_config_loader.autofill(
             constants=self.constants,
             config=self.config,
             logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
         )
-        if tx_config_loader.min_coin_amount is None:
-            tx_config_loader = tx_config_loader.override(
-                min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
-            )
         unspent_coins = await self.coin_store.get_coin_records(
             coin_type=CoinType.CLAWBACK,
             wallet_type=WalletType.STANDARD_WALLET,

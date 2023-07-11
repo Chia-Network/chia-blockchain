@@ -247,9 +247,8 @@ class TradeManager:
                 if fee_to_pay > coin.amount:
                     selected_coins: Set[Coin] = await wallet.select_coins(
                         uint64(fee_to_pay - coin.amount),
-                        dataclasses.replace(
-                            tx_config.coin_selection_config,
-                            exculded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
+                        tx_config.coin_selection_config.override(
+                            excluded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
                         ),
                     )
                     selected_coins.add(coin)
@@ -339,9 +338,8 @@ class TradeManager:
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
-                            dataclasses.replace(
-                                tx_config.coin_selection_config,
-                                exculded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
+                            tx_config.coin_selection_config.override(
+                                excluded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, coin.name()],
                             ),
                         )
                         selected_coins.add(coin)
