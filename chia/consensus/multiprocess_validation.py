@@ -373,6 +373,7 @@ def _run_generator(
             min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
             mempool_mode=False,
             height=height,
+            constants=constants,
         )
         return bytes(npc_result)
     except ValidationError as e:
