@@ -651,23 +651,20 @@ class BlockStore:
         else:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT block from block_records WHERE header_hash=?",
+                    """
+                    SELECT block_records.block,full_blocks.block 
+                    FROM block_records JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                    WHERE block_records.header_hash = ?
+                    """,
                     (header_hash.hex(),),
                 ) as cursor:
                     row = await cursor.fetchone()
+
             if row is None:
                 return None
 
             block_record_db = BlockRecordDB.from_bytes(row[0])
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(
-                    "SELECT block from full_blocks WHERE header_hash=?",
-                    (header_hash.hex(),),
-                ) as cursor:
-                    row = await cursor.fetchone()
-
-            assert row is not None
-            block_bytes = row[0]
+            block_bytes = row[1]
 
         plot_filter_info = plot_filter_info_from_block(block_bytes)
         block_record = block_record_db.to_block_record(
