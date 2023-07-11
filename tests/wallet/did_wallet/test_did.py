@@ -85,6 +85,9 @@ class TestDIDWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
             )
 
+        assert await did_wallet_0.select_coins(uint64(1)) == set()
+        assert await did_wallet_0.get_info_for_recovery() is None
+
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_0.id()
         )
