@@ -82,9 +82,9 @@ class Harvester:
         self.parallel_read: bool = config.get("parallel_read", True)
 
         context_count = config.get("parallel_decompressers_count", 1)
-        thread_count = config.get("decompresser_thread_count", 0)
+        thread_count = config.get("decompresser_thread_count", 1)
         if thread_count == 0:
-            thread_count = multiprocessing.cpu_count() // 2
+            thread_count = multiprocessing.cpu_count() // 1
         disable_cpu_affinity = config.get("disable_cpu_affinity", False)
         max_compression_level_allowed = config.get("max_compression_level_allowed", 7)
         use_gpu_harvesting = config.get("use_gpu_harvesting", False)

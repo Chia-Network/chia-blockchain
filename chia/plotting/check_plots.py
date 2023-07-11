@@ -55,9 +55,9 @@ def check_plots(
     )
 
     context_count = config["harvester"].get("parallel_decompressers_count", 1)
-    thread_count = config["harvester"].get("decompresser_thread_count", 0)
+    thread_count = config["harvester"].get("decompresser_thread_count", 1)
     if thread_count == 0:
-        thread_count = multiprocessing.cpu_count() // 2
+        thread_count = multiprocessing.cpu_count() // 1
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
     max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
