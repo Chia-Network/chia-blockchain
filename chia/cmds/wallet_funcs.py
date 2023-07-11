@@ -135,8 +135,6 @@ async def get_transaction(
     *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], tx_id: str, verbose: int
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
         # The wallet id parameter is required by the client but unused by the RPC.
@@ -179,8 +177,6 @@ async def get_transactions(
     clawback: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         if paginate is None:
             paginate = sys.stdout.isatty()
         type_filter = (
@@ -268,8 +264,6 @@ async def send(
     clawback_time_lock: int,
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        if wallet_client is None:
-            return
         if memo is None:
             memos = None
         else:
@@ -349,32 +343,24 @@ async def send(
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         res = await wallet_client.get_next_address(wallet_id, new_address)
         print(res)
 
 
 async def delete_unconfirmed_transactions(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        if wallet_client is None:
-            return
         await wallet_client.delete_unconfirmed_transactions(wallet_id)
         print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 
 async def get_derivation_index(wallet_rpc_port: Optional[int], fp: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        if wallet_client is None:
-            return
         res = await wallet_client.get_current_derivation_index()
         print(f"Last derivation index: {res}")
 
 
 async def update_derivation_index(wallet_rpc_port: Optional[int], fp: Optional[int], index: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        if wallet_client is None:
-            return
         print("Updating derivation index... This may take a while.")
         res = await wallet_client.extend_derivation_index(index)
         print(f"Updated derivation index: {res}")
@@ -383,8 +369,6 @@ async def update_derivation_index(wallet_rpc_port: Optional[int], fp: Optional[i
 
 async def add_token(wallet_rpc_port: Optional[int], fp: Optional[int], asset_id: str, token_name: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
-        if wallet_client is None:
-            return
         try:
             asset_id_bytes: bytes32 = bytes32.from_hexstr(asset_id)
             existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(
@@ -419,8 +403,6 @@ async def make_offer(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         fee: int = int(d_fee * units["chia"])
 
         if offers == [] or requests == []:
@@ -651,8 +633,6 @@ async def get_offers(
     reverse: bool = False,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         file_contents: bool = (filepath is not None) or summaries
         records: List[TradeRecord] = []
         if offer_id is None:
@@ -698,8 +678,6 @@ async def take_offer(
     examine_only: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         if os.path.exists(file):
             filepath = pathlib.Path(file)
             with open(filepath, "r") as ffile:
@@ -814,8 +792,6 @@ async def cancel_offer(
     wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         offer_id = bytes32.from_hexstr(offer_id_hex)
         fee: int = int(d_fee * units["chia"])
 
@@ -853,8 +829,6 @@ async def print_balances(
     wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         summaries_response = await wallet_client.get_wallets(wallet_type)
         address_prefix = selected_network_address_prefix(config)
 
@@ -918,8 +892,6 @@ async def create_did_wallet(
     wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, name: Optional[str], amount: int
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         fee: int = int(d_fee * units["chia"])
         try:
             response = await wallet_client.create_new_did_wallet(amount, fee, name)
@@ -933,8 +905,6 @@ async def create_did_wallet(
 
 async def did_set_wallet_name(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, name: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             await wallet_client.did_set_wallet_name(wallet_id, name)
             print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
@@ -944,8 +914,6 @@ async def did_set_wallet_name(wallet_rpc_port: Optional[int], fp: Optional[int],
 
 async def get_did(wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_id: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.get_did_id(did_wallet_id)
             my_did = response["my_did"]
@@ -958,8 +926,6 @@ async def get_did(wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_
 
 async def get_did_info(wallet_rpc_port: Optional[int], fp: Optional[int], coin_id: str, latest: bool) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         did_padding_length = 23
         try:
             response = await wallet_client.get_did_info(coin_id, latest)
@@ -983,8 +949,6 @@ async def update_did_metadata(
     wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_id: int, metadata: str, reuse_puzhash: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.update_did_metadata(did_wallet_id, json.loads(metadata), reuse_puzhash)
             print(
@@ -1002,8 +966,6 @@ async def did_message_spend(
     coin_announcements: List[str],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.did_message_spend(did_wallet_id, puzzle_announcements, coin_announcements)
             print(f"Message Spend Bundle: {response['spend_bundle']}")
@@ -1021,8 +983,6 @@ async def transfer_did(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.did_transfer_did(
                 did_wallet_id,
@@ -1048,8 +1008,6 @@ async def find_lost_did(
     num_verification: Optional[int],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.find_lost_did(
                 coin_id,
@@ -1069,8 +1027,6 @@ async def create_nft_wallet(
     wallet_rpc_port: Optional[int], fp: Optional[int], did_id: Optional[str] = None, name: Optional[str] = None
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.create_new_nft_wallet(did_id, name)
             wallet_id = response["wallet_id"]
@@ -1100,8 +1056,6 @@ async def mint_nft(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         royalty_address = (
             None
             if not royalty_address
@@ -1164,8 +1118,6 @@ async def add_uri_to_nft(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
                 raise ValueError("You must provide only one of the URI flags")
@@ -1199,8 +1151,6 @@ async def transfer_nft(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             target_address = ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
             fee: int = int(d_fee * units["chia"])
@@ -1252,8 +1202,6 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
 
 async def list_nfts(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.list_nfts(wallet_id)
             nft_list = response["nft_list"]
@@ -1278,8 +1226,6 @@ async def set_nft_did(
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         fee: int = int(d_fee * units["chia"])
         try:
             response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee, reuse_puzhash=reuse_puzhash)
@@ -1291,8 +1237,6 @@ async def set_nft_did(
 
 async def get_nft_info(wallet_rpc_port: Optional[int], fp: Optional[int], nft_coin_id: str) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         try:
             response = await wallet_client.get_nft_info(nft_coin_id)
             nft_info = NFTInfo.from_json_dict(response["nft_info"])
@@ -1367,8 +1311,6 @@ async def send_notification(
     d_amount: Decimal,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         address: bytes32 = decode_puzzle_hash(address_str)
         amount: uint64 = uint64(d_amount * units["chia"])
         message: bytes = bytes(message_hex, "utf8")
@@ -1384,8 +1326,6 @@ async def get_notifications(
     wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: Sequence[str], start: Optional[int], end: Optional[int]
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         ids: Optional[List[bytes32]] = [bytes32.from_hexstr(sid) for sid in str_ids]
         if ids is not None and len(ids) == 0:
             ids = None
@@ -1402,8 +1342,6 @@ async def delete_notifications(
     wallet_rpc_port: Optional[int], fp: Optional[int], str_ids: Sequence[str], delete_all: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         ids: Optional[List[bytes32]] = [bytes32.from_hexstr(sid) for sid in str_ids]
 
         if delete_all:
@@ -1423,8 +1361,6 @@ async def sign_message(
     nft_id: Optional[str] = None,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         if addr_type == AddressType.XCH:
             if address is None:
                 print("Address is required for XCH address type.")
@@ -1454,8 +1390,6 @@ async def spend_clawback(
     *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        if wallet_client is None:
-            return
         tx_ids = []
         for tid in tx_ids_str.split(","):
             tx_ids.append(bytes32.from_hexstr(tid))
@@ -1473,8 +1407,6 @@ async def mint_vc(
     wallet_rpc_port: Optional[int], fp: Optional[int], did: str, d_fee: Decimal, target_address: Optional[str]
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         vc_record, txs = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
             None
@@ -1502,8 +1434,6 @@ async def get_vcs(
     wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         vc_records, proofs = await wallet_client.vc_get_list(start, count)
         print("Proofs:")
         for hash, proof_dict in proofs.items():
@@ -1536,8 +1466,6 @@ async def spend_vc(
     reuse_puzhash: bool,
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         txs = await wallet_client.vc_spend(
             bytes32.from_hexstr(vc_id),
             new_puzhash=None if new_puzhash is None else bytes32.from_hexstr(new_puzhash),
@@ -1563,8 +1491,6 @@ async def add_proof_reveal(
     wallet_rpc_port: Optional[int], fp: Optional[int], proofs: Sequence[str], root_only: bool
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         if len(proofs) == 0:
             print("Must specify at least one proof")
             return
@@ -1583,8 +1509,6 @@ async def get_proofs_for_root(
     wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         proof_dict: Dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(proof_hash))
         print("Proofs:")
         for proof in proof_dict:
@@ -1600,8 +1524,6 @@ async def revoke_vc(
     reuse_puzhash: bool,
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if wallet_client is None:
-            return
         if parent_coin_id is None:
             if vc_id is None:
                 print("Must specify either --parent-coin-id or --vc-id")

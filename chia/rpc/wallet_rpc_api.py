@@ -2500,7 +2500,6 @@ class WalletRpcApi:
                 nft_dict[wallet_id] = [nft_coin_info]
             nft_ids.append(nft_coin_info.nft_id)
         first = True
-        nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
@@ -2528,8 +2527,8 @@ class WalletRpcApi:
 
             for tx in refined_tx_list:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await nft_wallet.update_coin_status(coin, True)
+            for id in coin_ids:
+                await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
             return {
@@ -2582,7 +2581,6 @@ class WalletRpcApi:
             else:
                 nft_dict[wallet_id] = [nft_coin_info]
         first = True
-        nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
@@ -2609,8 +2607,8 @@ class WalletRpcApi:
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
             for tx in refined_tx_list:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await nft_wallet.update_coin_status(coin, True)
+            for id in coin_ids:
+                await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
             return {

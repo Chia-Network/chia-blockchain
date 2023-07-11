@@ -111,7 +111,7 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: Version = field(default_factory=lambda: Version("0"))
+    version: str = field(default_factory=str)
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
@@ -219,7 +219,7 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = Version(inbound_handshake.software_version)
+            self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
@@ -247,7 +247,7 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             await self._send_message(outbound_handshake)
-            self.version = Version(inbound_handshake.software_version)
+            self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
@@ -675,7 +675,7 @@ class WSChiaConnection:
 
     # Used by the Chia Seeder.
     def get_version(self) -> str:
-        return str(self.version)
+        return self.version
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

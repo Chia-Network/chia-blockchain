@@ -17,9 +17,8 @@ from chia.util.ints import uint64
 async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.create_data_store(fee=final_fee)
-            print(res)
+        res = await client.create_data_store(fee=final_fee)
+        print(res)
 
 
 async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_hash: Optional[str]) -> None:
@@ -27,9 +26,8 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_h
     key_bytes = hexstr_to_bytes(key)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
-            print(res)
+        res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
+        print(res)
 
 
 async def update_data_store_cmd(
@@ -41,9 +39,8 @@ async def update_data_store_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
-            print(res)
+        res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
+        print(res)
 
 
 async def get_keys_cmd(
@@ -54,9 +51,8 @@ async def get_keys_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
-            print(res)
+        res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
+        print(res)
 
 
 async def get_keys_values_cmd(
@@ -67,9 +63,8 @@ async def get_keys_values_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
-            print(res)
+        res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
+        print(res)
 
 
 async def get_root_cmd(
@@ -78,9 +73,8 @@ async def get_root_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_root(store_id=store_id_bytes)
-            print(res)
+        res = await client.get_root(store_id=store_id_bytes)
+        print(res)
 
 
 async def subscribe_cmd(
@@ -90,9 +84,8 @@ async def subscribe_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.subscribe(store_id=store_id_bytes, urls=urls)
-            print(res)
+        res = await client.subscribe(store_id=store_id_bytes, urls=urls)
+        print(res)
 
 
 async def unsubscribe_cmd(
@@ -101,9 +94,8 @@ async def unsubscribe_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.unsubscribe(store_id=store_id_bytes)
-            print(res)
+        res = await client.unsubscribe(store_id=store_id_bytes)
+        print(res)
 
 
 async def remove_subscriptions_cmd(
@@ -113,9 +105,8 @@ async def remove_subscriptions_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
-            print(res)
+        res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+        print(res)
 
 
 async def get_kv_diff_cmd(
@@ -128,9 +119,8 @@ async def get_kv_diff_cmd(
     hash_1_bytes = bytes32.from_hexstr(hash_1)
     hash_2_bytes = bytes32.from_hexstr(hash_2)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
-            print(res)
+        res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
+        print(res)
 
 
 async def get_root_history_cmd(
@@ -139,22 +129,20 @@ async def get_root_history_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_root_history(store_id=store_id_bytes)
-            print(res)
+        res = await client.get_root_history(store_id=store_id_bytes)
+        print(res)
 
 
 async def add_missing_files_cmd(
     rpc_port: Optional[int], ids: Optional[List[str]], overwrite: bool, foldername: Optional[Path]
 ) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.add_missing_files(
-                store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
-                overwrite=overwrite,
-                foldername=foldername,
-            )
-            print(res)
+        res = await client.add_missing_files(
+            store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
+            overwrite=overwrite,
+            foldername=foldername,
+        )
+        print(res)
 
 
 async def add_mirror_cmd(
@@ -163,48 +151,43 @@ async def add_mirror_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.add_mirror(
-                store_id=store_id_bytes,
-                urls=urls,
-                amount=amount,
-                fee=final_fee,
-            )
-            print(res)
+        res = await client.add_mirror(
+            store_id=store_id_bytes,
+            urls=urls,
+            amount=amount,
+            fee=final_fee,
+        )
+        print(res)
 
 
 async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
     coin_id_bytes = bytes32.from_hexstr(coin_id)
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.delete_mirror(
-                coin_id=coin_id_bytes,
-                fee=final_fee,
-            )
-            print(res)
+        res = await client.delete_mirror(
+            coin_id=coin_id_bytes,
+            fee=final_fee,
+        )
+        print(res)
 
 
 async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_mirrors(store_id=store_id_bytes)
-            print(res)
+        res = await client.get_mirrors(store_id=store_id_bytes)
+        print(res)
 
 
 async def get_subscriptions_cmd(rpc_port: Optional[int]) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_subscriptions()
-            print(res)
+        res = await client.get_subscriptions()
+        print(res)
 
 
 async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_owned_stores()
-            print(res)
+        res = await client.get_owned_stores()
+        print(res)
 
 
 async def get_sync_status_cmd(
@@ -213,16 +196,14 @@ async def get_sync_status_cmd(
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.get_sync_status(store_id=store_id_bytes)
-            print(res)
+        res = await client.get_sync_status(store_id=store_id_bytes)
+        print(res)
 
 
 async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        if client is not None:
-            res = await client.check_plugins()
-            print(json.dumps(res, indent=4, sort_keys=True))
+        res = await client.check_plugins()
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def clear_pending_roots(
@@ -231,8 +212,7 @@ async def clear_pending_roots(
     root_path: Path = DEFAULT_ROOT_PATH,
 ) -> Dict[str, Any]:
     async with get_any_service_client(DataLayerRpcClient, rpc_port, root_path=root_path) as (client, _):
-        if client is not None:
-            result = await client.clear_pending_roots(store_id=store_id)
-            print(json.dumps(result, indent=4, sort_keys=True))
+        result = await client.clear_pending_roots(store_id=store_id)
+        print(json.dumps(result, indent=4, sort_keys=True))
 
     return result
