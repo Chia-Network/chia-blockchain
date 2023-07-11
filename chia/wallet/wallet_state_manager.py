@@ -659,7 +659,9 @@ class WalletStateManager:
         assert parent_coin_state.spent_height == coin_state.created_height
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
-        assert coin_spend is not None, f"Could not find the coin spent  with ID: {coin_state.coin.parent_coin_info.hex()}"
+        assert (
+            coin_spend is not None
+        ), f"Could not find the coin spent  with ID: {coin_state.coin.parent_coin_info.hex()}"
 
         puzzle = coin_spend.puzzle_reveal.to_program()
         uncurried = uncurry_puzzle(puzzle)
