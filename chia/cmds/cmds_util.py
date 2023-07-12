@@ -267,7 +267,7 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
         "--reuse-puzhash/--generate-new-puzhash",
         help="Reuse existing address for the change.",
         is_flag=True,
-        default=False,
+        default=None,
     )(coin_selection_args(func))
 
 
