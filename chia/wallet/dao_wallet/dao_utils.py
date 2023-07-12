@@ -431,6 +431,7 @@ def get_proposal_timer_puzzle(
         cat_tail_hash,
         treasury_id,
     ).get_tree_hash()
+
     puzzle: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         PROPOSAL_SELF_HASH,
         parent_singleton_struct,

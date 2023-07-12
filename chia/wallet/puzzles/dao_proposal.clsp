@@ -49,10 +49,10 @@
   (defun calculate_timer_puzhash (
       PROPOSAL_TIMER_MOD_HASH
       SELF_HASH
-      MY_SINGLETON_ID
+      MY_SINGLETON_STRUCT
     )
     (puzzle-hash-of-curried-function PROPOSAL_TIMER_MOD_HASH
-      (sha256tree MY_SINGLETON_ID)
+      (sha256tree MY_SINGLETON_STRUCT)
       (sha256 ONE SELF_HASH)
     )
   )
@@ -253,7 +253,7 @@
                     (calculate_timer_puzhash
                       PROPOSAL_TIMER_MOD_HASH
                       SELF_HASH
-                      (f (r SINGLETON_STRUCT))
+                      SINGLETON_STRUCT
 
                     )
                     (f (r SINGLETON_STRUCT))
@@ -339,7 +339,7 @@
                     (calculate_timer_puzhash
                       PROPOSAL_TIMER_MOD_HASH
                       SELF_HASH
-                      (f (r SINGLETON_STRUCT))
+                      SINGLETON_STRUCT
                     )
                     0
                   )
