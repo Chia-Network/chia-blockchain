@@ -15,7 +15,6 @@ from clvm.casts import int_from_bytes
 import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
 
-# from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -32,7 +31,6 @@ from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
-# from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
@@ -70,7 +68,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     uncurry_treasury,
 )
 
-# from chia.wallet.dao_wallet.dao_wallet_puzzles import get_dao_inner_puzhash_by_p2
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
     get_inner_puzzle_from_singleton,
@@ -88,24 +85,21 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 
-# from chia.wallet.wallet_state_manager import WalletStateManager
-
-# from chia.wallet.wallet_singleton_store import WalletSingletonStore
-
 
 class DAOWallet(WalletProtocol):
     """
     This is a wallet in the sense that it conforms to the interface needed by WalletStateManager.
     It is not a user-facing wallet. A user cannot spend or receive XCH though a wallet of this type.
 
-    It is expected that a wallet of type DAOCATWallet will be the user-facing wallet, and use a
-    DAOWallet for state-tracking of the Treasury Singleton and its associated Proposals.
+    Wallets of type CAT and DAO_CAT are be the user-facing wallets which hold the voting tokens a user
+    owns. The DAO Wallet is used for state-tracking of the Treasury Singleton and its associated
+    Proposals.
 
     State change Spends (spends this user creates, either from DAOWallet or DAOCATWallet:
       * Create a proposal
-      * Initial Vote on proposal
       * Add more votes to a proposal
-      * Collect finished state of a Proposal - spend to read the oracle result and Get our (CAT) coins back
+      * Lock / Unlock voting tokens
+      * Collect finished state of a Proposal - spend to read the oracle result and Get our CAT coins back
       * Anyone can send money to the Treasury, whether in possession of a voting CAT or not
 
     Incoming spends we listen for:
@@ -144,6 +138,8 @@ class DAOWallet(WalletProtocol):
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
         :param amount_of_cats: Initial amount of voting CATs
+        :param dao_rules: The rules which govern the DAO
+        :param filter_amount: Min votes to see proposal (user defined)
         :param name: Wallet name
         :param fee: transaction fee
         :return: DAO wallet
@@ -202,19 +198,7 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            self.dao_info.current_treasury_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
+        dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
         await self.save_info(dao_info)
 
         return self
@@ -231,6 +215,8 @@ class DAOWallet(WalletProtocol):
         Create a DAO wallet for existing DAO
         :param wallet_state_manager: Wallet state manager
         :param main_wallet: Standard wallet
+        :param treasury_id: The singleton ID of the DAO treasury coin
+        :param filter_amount: Min votes to see proposal (user defined)
         :param name: Wallet name
         :return: DAO wallet
         """
@@ -243,17 +229,17 @@ class DAOWallet(WalletProtocol):
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Creating DAO wallet for existent DAO ...")
         self.dao_info = DAOInfo(
-            treasury_id,  # treasury_id: bytes32
-            uint32(0),  # cat_wallet_id: uint64
-            uint32(0),  # dao_cat_wallet_id: uint64
-            [],  # proposals_list: List[ProposalInfo]
-            [],  # treasury_id: bytes32
-            None,  # current_coin
-            None,  # current innerpuz
-            uint32(0),
-            filter_amount,
-            [],
-            uint64(0),
+            treasury_id=treasury_id,
+            cat_wallet_id=uint32(0),
+            dao_cat_wallet_id=uint32(0),
+            proposals_list=[],
+            parent_info=[],
+            current_treasury_coin=None,
+            current_treasury_innerpuz=None,
+            singleton_block_height=uint32(0),
+            filter_below_vote_amount=filter_amount,
+            assets=[],
+            current_height=uint64(0),
         )
         info_as_string = json.dumps(self.dao_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
@@ -273,22 +259,10 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            self.dao_info.current_treasury_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
+        dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
         await self.save_info(dao_info)
 
-        # add interested puzzle hash so we can folllow treasury funds
+        # add treasury id to interested puzzle hashes so we can folllow treasury funds
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return self
 
@@ -299,7 +273,7 @@ class DAOWallet(WalletProtocol):
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
-        block_height: Optional[int],  # this is included in CoinState, pass it in from WSM
+        block_height: Optional[int],
         name: Optional[str] = None,
     ) -> DAOWallet:
         """
@@ -309,6 +283,7 @@ class DAOWallet(WalletProtocol):
         :param launch_coin: The launch coin of the DID
         :param inner_puzzle: DID inner puzzle
         :param coin_spend: DID transfer spend
+        :param block_height: Included in CoinState, pass it in from WSM
         :param name: Wallet name
         :return: DID wallet
         """
@@ -321,12 +296,12 @@ class DAOWallet(WalletProtocol):
         self.log = logging.getLogger(name if name else __name__)
 
         self.log.info(f"Creating DAO wallet from a coin spend {launch_coin.name()}  ...")
-        # Create did info from the coin spend
+        # Create dao info from the coin spend
         curried_args = uncurry_treasury(inner_puzzle)
         if curried_args is None:
             raise ValueError("Cannot uncurry the DAO puzzle.")
         (
-            _DAO_TREASURY_MOD_HASH,
+            DAO_TREASURY_MOD_HASH,
             proposal_validator,
             proposal_timelock,
             soft_close_length,
@@ -335,9 +310,6 @@ class DAOWallet(WalletProtocol):
             self_destruct_length,
             oracle_spend_delay,
         ) = curried_args
-        # full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
-        # inner_solution: Program = full_solution.rest().rest().first()
-        # recovery_list: List[bytes32] = []
         curried_args = uncurry_proposal_validator(proposal_validator)
         (
             SINGLETON_STRUCT,
@@ -352,7 +324,8 @@ class DAOWallet(WalletProtocol):
             PAYOUT_PUZHASH,
         ) = curried_args.as_iter()
 
-        # TODO: how is this working with our system about receiving CATs you haven't subscribed to?
+        # If you received CATs for a DAO you haven't subscribed to they will be recognised in the
+        # CAT wallet being created here
         cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
@@ -369,17 +342,17 @@ class DAOWallet(WalletProtocol):
         self.dao_rules = get_treasury_rules_from_puzzle(inner_puzzle)
         assert isinstance(block_height, int)
         dao_info = DAOInfo(
-            launch_coin.name(),
-            cat_wallet.id(),
-            dao_cat_wallet.id(),
-            [],
-            [],
-            current_coin,
-            inner_puzzle,
-            uint32(block_height),
-            uint64(1),  # TODO: how should we deal with filter integer? Just update it later?
-            [],
-            uint64(0),
+            treasury_id=launch_coin.name(),
+            cat_wallet_id=cat_wallet.id(),
+            dao_cat_wallet_id=dao_cat_wallet.id(),
+            proposals_list=[],
+            parent_info=[],
+            current_treasury_coin=current_coin,
+            current_treasury_innerpuz=inner_puzzle,
+            singleton_block_height=uint32(block_height),
+            filter_below_vote_amount=uint64(1),  # Use default of 1, users can manually change this later
+            assets=[],
+            current_height=uint64(0),
         )
 
         info_as_string = json.dumps(dao_info.to_json_dict())
@@ -393,6 +366,8 @@ class DAOWallet(WalletProtocol):
 
         self.log.info(f"New DAO wallet created {info_as_string}.")
         if self.wallet_info is None:
+            # TODO: When we add support for this method, We will need to delete the CAT and DAO_CAT
+            # wallets here
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
         return self
@@ -412,6 +387,9 @@ class DAOWallet(WalletProtocol):
         This must be called under the wallet state manager lock
         :param wallet_state_manager: Wallet state manager
         :param wallet: Standard wallet
+        :param tail_hash: The asset id of the cat to be used as a voting token
+        :param dao_rules: The rules which govern the DAO
+        :param filter_amount: Min votes to see proposal (user defined)
         :param name: Wallet name
         :param fee: transaction fee
         :return: DAO wallet
@@ -426,17 +404,17 @@ class DAOWallet(WalletProtocol):
         self.log = logging.getLogger(name if name else __name__)
 
         self.dao_info = DAOInfo(
-            bytes32([0] * 32),
-            uint32(0),
-            uint32(0),
-            [],
-            [],
-            None,
-            None,
-            uint32(0),
-            filter_amount,
-            [],
-            uint64(0),
+            treasury_id=bytes32([0] * 32),
+            cat_wallet_id=uint32(0),
+            dao_cat_wallet_id=uint32(0),
+            proposals_list=[],
+            parent_info=[],
+            current_treasury_coin=None,
+            current_treasury_innerpuz=None,
+            singleton_block_height=uint32(0),
+            filter_below_vote_amount=filter_amount,
+            assets=[],
+            current_height=uint64(0),
         )
         self.dao_rules = dao_rules
         info_as_string = json.dumps(self.dao_info.to_json_dict())
@@ -467,22 +445,11 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            self.dao_info.current_treasury_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
+
+        dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
         await self.save_info(dao_info)
-        # breakpoint()
-        # add interested puzzle hash so we can folllow treasury funds and proposals
+
+        # add treasury id to interested puzzle hashes so we can folllow treasury funds
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
 
         return self
