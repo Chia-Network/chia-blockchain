@@ -227,6 +227,12 @@ class Timelord:
         except Exception as e:
             log.error(f"Exception in stop chain: {type(e)} {e}")
 
+    def get_height(self) -> uint32:
+        if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
+            return uint32(0)
+        else:
+            return uint32(self.last_state.get_height() + 1)
+
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[uint64]:
         assert self.last_state is not None
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -239,6 +245,7 @@ class Timelord:
                 rc_block,
                 sub_slot_iters,
                 difficulty,
+                self.get_height(),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -535,6 +542,7 @@ class Timelord:
                             unfinished_block.reward_chain_block,
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
+                            self.get_height(),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")

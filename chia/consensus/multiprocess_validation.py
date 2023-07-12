@@ -236,7 +236,7 @@ async def pre_validate_blocks_multiprocessing(
         else:
             cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
         q_str: Optional[bytes32] = verify_and_get_quality_string(
-            block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
+            block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):

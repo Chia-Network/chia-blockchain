@@ -3,23 +3,130 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
+from chia.types.blockchain_format.classgroup import ClassgroupElement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
-from chia.util.ints import uint32
+from chia.util.full_block_utils import (
+    GeneratorBlockInfo,
+    PlotFilterInfo,
+    block_info_from_block,
+    generator_from_block,
+    plot_filter_info_from_block,
+)
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+
+@streamable
+@dataclass(frozen=True)
+class BlockRecordDB(Streamable):
+    """
+    This class contains the fields from `BlockRecord` that get stored in the DB.
+    Unlike `BlockRecord`, this should never extend with more fields, in order to avoid DB corruption.
+    """
+
+    header_hash: bytes32
+    prev_hash: bytes32
+    height: uint32
+    weight: uint128
+    total_iters: uint128
+    signage_point_index: uint8
+    challenge_vdf_output: ClassgroupElement
+    infused_challenge_vdf_output: Optional[ClassgroupElement]
+    reward_infusion_new_challenge: bytes32
+    challenge_block_info_hash: bytes32
+    sub_slot_iters: uint64
+    pool_puzzle_hash: bytes32
+    farmer_puzzle_hash: bytes32
+    required_iters: uint64
+    deficit: uint8
+    overflow: bool
+    prev_transaction_block_height: uint32
+    timestamp: Optional[uint64]
+    prev_transaction_block_hash: Optional[bytes32]
+    fees: Optional[uint64]
+    reward_claims_incorporated: Optional[List[Coin]]
+    finished_challenge_slot_hashes: Optional[List[bytes32]]
+    finished_infused_challenge_slot_hashes: Optional[List[bytes32]]
+    finished_reward_slot_hashes: Optional[List[bytes32]]
+    sub_epoch_summary_included: Optional[SubEpochSummary]
+
+    def to_block_record(self, pos_ss_cc_challenge_hash: bytes32, cc_sp_hash: bytes32) -> BlockRecord:
+        return BlockRecord(
+            header_hash=self.header_hash,
+            prev_hash=self.prev_hash,
+            height=self.height,
+            weight=self.weight,
+            total_iters=self.total_iters,
+            signage_point_index=self.signage_point_index,
+            challenge_vdf_output=self.challenge_vdf_output,
+            infused_challenge_vdf_output=self.infused_challenge_vdf_output,
+            reward_infusion_new_challenge=self.reward_infusion_new_challenge,
+            challenge_block_info_hash=self.challenge_block_info_hash,
+            sub_slot_iters=self.sub_slot_iters,
+            pool_puzzle_hash=self.pool_puzzle_hash,
+            farmer_puzzle_hash=self.farmer_puzzle_hash,
+            required_iters=self.required_iters,
+            deficit=self.deficit,
+            overflow=self.overflow,
+            prev_transaction_block_height=self.prev_transaction_block_height,
+            pos_ss_cc_challenge_hash=pos_ss_cc_challenge_hash,
+            cc_sp_hash=cc_sp_hash,
+            timestamp=self.timestamp,
+            prev_transaction_block_hash=self.prev_transaction_block_hash,
+            fees=self.fees,
+            reward_claims_incorporated=self.reward_claims_incorporated,
+            finished_challenge_slot_hashes=self.finished_challenge_slot_hashes,
+            finished_infused_challenge_slot_hashes=self.finished_infused_challenge_slot_hashes,
+            finished_reward_slot_hashes=self.finished_reward_slot_hashes,
+            sub_epoch_summary_included=self.sub_epoch_summary_included,
+        )
+
+    @classmethod
+    def from_block_record(cls, block_record: BlockRecord) -> BlockRecordDB:
+        return cls(
+            header_hash=block_record.header_hash,
+            prev_hash=block_record.prev_hash,
+            height=block_record.height,
+            weight=block_record.weight,
+            total_iters=block_record.total_iters,
+            signage_point_index=block_record.signage_point_index,
+            challenge_vdf_output=block_record.challenge_vdf_output,
+            infused_challenge_vdf_output=block_record.infused_challenge_vdf_output,
+            reward_infusion_new_challenge=block_record.reward_infusion_new_challenge,
+            challenge_block_info_hash=block_record.challenge_block_info_hash,
+            sub_slot_iters=block_record.sub_slot_iters,
+            pool_puzzle_hash=block_record.pool_puzzle_hash,
+            farmer_puzzle_hash=block_record.farmer_puzzle_hash,
+            required_iters=block_record.required_iters,
+            deficit=block_record.deficit,
+            overflow=block_record.overflow,
+            prev_transaction_block_height=block_record.prev_transaction_block_height,
+            timestamp=block_record.timestamp,
+            prev_transaction_block_hash=block_record.prev_transaction_block_hash,
+            fees=block_record.fees,
+            reward_claims_incorporated=block_record.reward_claims_incorporated,
+            finished_challenge_slot_hashes=block_record.finished_challenge_slot_hashes,
+            finished_infused_challenge_slot_hashes=block_record.finished_infused_challenge_slot_hashes,
+            finished_reward_slot_hashes=block_record.finished_reward_slot_hashes,
+            sub_epoch_summary_included=block_record.sub_epoch_summary_included,
+        )
 
 
 @typing_extensions.final
@@ -187,6 +294,7 @@ class BlockStore:
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
+        block_record_db: BlockRecordDB = BlockRecordDB.from_block_record(block_record)
 
         if self.db_wrapper.db_version == 2:
             ses: Optional[bytes] = (
@@ -206,7 +314,7 @@ class BlockStore:
                         int(block.is_fully_compactified()),
                         False,  # in_main_chain
                         self.compress(block),
-                        bytes(block_record),
+                        bytes(block_record_db),
                     ),
                 )
 
@@ -229,7 +337,7 @@ class BlockStore:
                         header_hash.hex(),
                         block.prev_header_hash.hex(),
                         block.height,
-                        bytes(block_record),
+                        bytes(block_record_db),
                         None
                         if block_record.sub_epoch_summary_included is None
                         else bytes(block_record.sub_epoch_summary_included),
@@ -418,20 +526,40 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash,block_record FROM full_blocks "
+                    "SELECT header_hash,block_record,block FROM full_blocks "
                     f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                     header_hashes,
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        all_blocks[header_hash] = BlockRecord.from_bytes(row[1])
+                        block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
         else:
+            all_blocks_plot_filters: Dict[bytes32, PlotFilterInfo] = {}
+            formatted_str = (
+                f'SELECT header_hash,block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
+            )
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
+                    for row in await cursor.fetchall():
+                        header_hash = bytes32.fromhex(row[0])
+                        all_blocks_plot_filters[header_hash] = plot_filter_info_from_block(row[1])
+
             formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
                     for row in await cursor.fetchall():
-                        block_rec: BlockRecord = BlockRecord.from_bytes(row[0])
-                        all_blocks[block_rec.header_hash] = block_rec
+                        block_rec_db = BlockRecordDB.from_bytes(row[0])
+                        assert block_rec_db.header_hash in all_blocks_plot_filters
+                        plot_filter_info = all_blocks_plot_filters[block_rec_db.header_hash]
+                        all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
 
         ret: List[BlockRecord] = []
         for hh in header_hashes:
@@ -511,23 +639,39 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT block_record FROM full_blocks WHERE header_hash=?",
+                    "SELECT block_record,block FROM full_blocks WHERE header_hash=?",
                     (header_hash,),
                 ) as cursor:
                     row = await cursor.fetchone()
-            if row is not None:
-                return BlockRecord.from_bytes(row[0])
+            if row is None:
+                return None
+            block_record_db = BlockRecordDB.from_bytes(row[0])
+            block_bytes = zstd.decompress(row[1])
 
         else:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT block from block_records WHERE header_hash=?",
+                    """
+                    SELECT block_records.block,full_blocks.block
+                    FROM block_records JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                    WHERE block_records.header_hash = ?
+                    """,
                     (header_hash.hex(),),
                 ) as cursor:
                     row = await cursor.fetchone()
-            if row is not None:
-                return BlockRecord.from_bytes(row[0])
-        return None
+
+            if row is None:
+                return None
+
+            block_record_db = BlockRecordDB.from_bytes(row[0])
+            block_bytes = row[1]
+
+        plot_filter_info = plot_filter_info_from_block(block_bytes)
+        block_record = block_record_db.to_block_record(
+            plot_filter_info.pos_ss_cc_challenge_hash,
+            plot_filter_info.cc_sp_hash,
+        )
+        return block_record
 
     async def get_block_records_in_range(
         self,
@@ -543,21 +687,42 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND height <= ?",
+                    "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ? AND height <= ?",
                     (start, stop),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        ret[header_hash] = BlockRecord.from_bytes(row[1])
-
+                        block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
         else:
-            formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
+            formatted_str = f"""
+                SELECT
+                    block_records.header_hash AS header_hash_br,
+                    full_blocks.header_hash AS header_hash_fb,
+                    block_records.block AS block_br,
+                    full_blocks.block AS block_fb
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                WHERE
+                    block_records.height >= {start} and block_records.height <= {stop}
+                    and full_blocks.height >= {start} and full_blocks.height <= {stop}
+            """
 
             async with self.db_wrapper.reader_no_transaction() as conn:
-                async with await conn.execute(formatted_str) as cursor:
+                async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
-                        ret[header_hash] = BlockRecord.from_bytes(row[1])
+                        block_record_db = BlockRecordDB.from_bytes(row[2])
+                        plot_filter_info = plot_filter_info_from_block(row[3])
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
 
         return ret
 
@@ -620,20 +785,45 @@ class BlockStore:
         if self.db_wrapper.db_version == 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
-                    "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
+                    "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ?",
                     (peak[1] - blocks_n,),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
-                        ret[header_hash] = BlockRecord.from_bytes(row[1])
+                        block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                        plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
 
         else:
-            formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak[1] - blocks_n}"
+            height = peak[1] - blocks_n
+
+            formatted_str = f"""
+                SELECT
+                    block_records.header_hash,
+                    full_blocks.header_hash,
+                    block_records.block,
+                    full_blocks.block
+                FROM block_records INNER JOIN full_blocks ON block_records.header_hash = full_blocks.header_hash
+                WHERE
+                    block_records.height >= {height}
+                    AND full_blocks.height >= {height}
+            """
+
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
-                        ret[header_hash] = BlockRecord.from_bytes(row[1])
+                        block_record_db = BlockRecordDB.from_bytes(row[2])
+                        plot_filter_info = plot_filter_info_from_block(row[3])
+                        block_record = block_record_db.to_block_record(
+                            plot_filter_info.pos_ss_cc_challenge_hash,
+                            plot_filter_info.cc_sp_hash,
+                        )
+                        ret[header_hash] = block_record
 
         return ret, peak[0]
 

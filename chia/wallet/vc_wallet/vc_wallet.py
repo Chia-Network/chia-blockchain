@@ -380,16 +380,13 @@ class VCWallet:
         else:
             raise ValueError(f"You don't own the DID {vc.proof_provider.hex()}")  # pragma: no cover
 
-        recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery(
-            tx_config.coin_selection_config
-        )
+        recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
         if recovery_info is None:
             raise RuntimeError("DID could not currently be accessed while trying to revoke VC")  # pragma: no cover
         _, provider_inner_puzhash, _ = recovery_info
 
         # Generate spend specific nonce
-        coins = await did_wallet.select_coins(uint64(1), tx_config.coin_selection_config)
-        assert coins is not None
+        coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
             coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))

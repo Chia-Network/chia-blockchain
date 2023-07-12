@@ -1411,11 +1411,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"], is_hex)
-
-            latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1), tx_config.coin_selection_config)
-            latest_coin_id = None
-            if len(latest_coin) > 0:
-                latest_coin_id = latest_coin.pop().name()
+            latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1435,7 +1431,6 @@ class WalletRpcApi:
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
 
-        assert latest_coin_id is not None
         return {
             "success": True,
             "pubkey": str(pubkey),
@@ -2075,11 +2070,10 @@ class WalletRpcApi:
                     await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
 
             try:
-                coins = await did_wallet.select_coins(uint64(1), tx_config.coin_selection_config)
-                coin = coins.pop()
+                coin = await did_wallet.get_coin()
                 if coin.name() == coin_state.coin.name():
                     return {"success": True, "latest_coin_id": coin.name().hex()}
-            except ValueError:
+            except RuntimeError:
                 # We don't have any coin for this wallet, add the coin
                 pass
 
@@ -2119,10 +2113,9 @@ class WalletRpcApi:
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             try:
-                coins = await wallet.select_coins(uint64(1), tx_config.coin_selection_config)
-                coin = coins.pop()
+                coin = await wallet.get_coin()
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
-            except ValueError:
+            except RuntimeError:
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
 
     async def did_get_recovery_list(self, request) -> EndpointResult:
@@ -2197,7 +2190,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
-            info = await wallet.get_info_for_recovery(tx_config.coin_selection_config)
+            info = await wallet.get_info_for_recovery()
             coin = bytes32.from_hexstr(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             spend_bundle, attest_data = await wallet.create_attestment(
@@ -2234,15 +2227,14 @@ class WalletRpcApi:
             "backup_dids": did_wallet.did_info.backup_ids,
         }
 
-    @tx_endpoint
-    async def did_get_current_coin_info(self, request, tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
+    async def did_get_current_coin_info(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         my_did = encode_puzzle_hash(
             bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
         )
 
-        did_coin_threeple = await did_wallet.get_info_for_recovery(tx_config.coin_selection_config)
+        did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
         return {
