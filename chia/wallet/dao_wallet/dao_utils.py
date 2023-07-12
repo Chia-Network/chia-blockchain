@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import Iterator, List, Optional, Tuple
-
+from itertools import chain
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
@@ -528,65 +528,62 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
         return puzzle_reveal  # we're finished, shortcut this function
 
     if solution.at("rrrrrrf") == Program.to(0):
-        curried_args = uncurry_proposal(puzzle_reveal)
+        c_a, curried_args = uncurry_proposal(puzzle_reveal)
         (
-            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-            PROPOSAL_MOD_HASH,
-            PROPOSAL_TIMER_MOD_HASH,
-            CAT_MOD_HASH,
-            DAO_FINISHED_STATE_HASH,
-            TREASURY_MOD_HASH,
-            LOCKUP_SELF_HASH,
-            CAT_TAIL_HASH,
-            TREASURY_ID,
-            INNERPUZ_HASH,
-            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-            TOTAL_VOTES,  # how many people responded
-
-        ) = curried_args.as_iter()
-
-        added_votes = solution.at("ff").as_int()
-        new_total_votes = TOTAL_VOTES.as_int() + added_votes
-
-        if solution.at("rf") == Program.to(0):
-            # Vote Type: NO
-            new_yes_votes = YES_VOTES
-        else:
-            # Vote Type: YES
-            new_yes_votes = YES_VOTES.as_int() + added_votes
-        return DAO_PROPOSAL_MOD.curry(
-            SINGLETON_STRUCT,
-            DAO_PROPOSAL_MOD_HASH,
+            singleton_struct,
             DAO_PROPOSAL_TIMER_MOD_HASH,
             CAT_MOD_HASH,
             DAO_FINISHED_STATE_HASH,
             DAO_TREASURY_MOD_HASH,
-            LOCKUP_SELF_HASH,
-            CAT_TAIL_HASH,
-            TREASURY_ID,
-            INNERPUZ_HASH,
-            new_yes_votes,
-            new_total_votes,
+            lockup_self_hash,
+            cat_tail_hash,
+            treasury_id,
+        ) = curried_args.as_iter()
+        (
+            curry_one,
+            proposed_puzzle_hash,
+            yes_votes,
+            total_votes,
+        ) = c_a.as_iter()
+
+        added_votes = solution.at("ff").as_int()
+        new_total_votes = total_votes.as_int() + added_votes
+
+        if solution.at("rf") == Program.to(0):
+            # Vote Type: NO
+            new_yes_votes = yes_votes.as_int()
+        else:
+            # Vote Type: YES
+            new_yes_votes = yes_votes.as_int() + added_votes
+        return get_proposal_puzzle(
+            proposal_id=singleton_struct.rest().first().as_atom(),
+            cat_tail_hash=cat_tail_hash.as_atom(),
+            treasury_id=treasury_id.as_atom(),
+            votes_sum=new_yes_votes,
+            total_votes=new_total_votes,
+            proposed_puzzle_hash=proposed_puzzle_hash.as_atom(),
         )
     else:
         # we are in the finished state, puzzle is the same as ever
         mod, currieds = puzzle_reveal.uncurry()  # singleton
         if mod == DAO_PROPOSAL_MOD:
+            c_a, curried_args = uncurry_proposal(puzzle_reveal)
             (
-                SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-                PROPOSAL_MOD_HASH,
-                PROPOSAL_TIMER_MOD_HASH,
+                SINGLETON_STRUCT,
+                DAO_PROPOSAL_TIMER_MOD_HASH,
                 CAT_MOD_HASH,
                 DAO_FINISHED_STATE_HASH,
-                TREASURY_MOD_HASH,
-                LOCKUP_SELF_HASH,
-                CAT_TAIL_HASH,
-                TREASURY_ID,
-                INNERPUZ_HASH,
-                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-                TOTAL_VOTES,  # how many people responded
-
-            ) = currieds.as_iter()
+                DAO_TREASURY_MOD_HASH,
+                lockup_self_hash,
+                cat_tail_hash,
+                treasury_id,
+            ) = curried_args.as_iter()
+            (
+                curry_one,
+                proposed_puzzle_hash,
+                yes_votes,
+                total_votes,
+            ) = c_a.as_iter()
         else:
             SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
 
@@ -794,8 +791,9 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
     try:
         if mod == SINGLETON_MOD:
             c_a, curried_args = uncurry_proposal(curried_args.rest().first())
-
-            return zip(c_a.as_iter(), curried_args.as_iter())
+            assert c_a is not None and curried_args is not None
+            ret = chain(c_a.as_iter(), curried_args.as_iter())
+            return ret
     except ValueError:
         import traceback
 
