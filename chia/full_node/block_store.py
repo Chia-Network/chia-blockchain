@@ -713,7 +713,7 @@ class BlockStore:
             """
 
             async with self.db_wrapper.reader_no_transaction() as conn:
-                async with await conn.execute(formatted_str) as cursor:
+                async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
                         block_record_db = BlockRecordDB.from_bytes(row[2])
@@ -814,7 +814,7 @@ class BlockStore:
             """
 
             async with self.db_wrapper.reader_no_transaction() as conn:
-                async with await conn.execute(formatted_str) as cursor:
+                async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = self.maybe_from_hex(row[0])
                         block_record_db = BlockRecordDB.from_bytes(row[2])
