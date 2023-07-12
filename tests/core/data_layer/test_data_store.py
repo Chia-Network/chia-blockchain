@@ -458,6 +458,46 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 ancestors[node.right_hash] = node_hash
 
 
+@pytest.mark.parametrize(argnames="side", argvalues=list(Side))
+@pytest.mark.asyncio
+async def test_insert_batch_reference_and_side(
+    data_store: DataStore,
+    tree_id: bytes32,
+    side: Side,
+) -> None:
+    insert_result = await data_store.autoinsert(
+        key=b"key1",
+        value=b"value1",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+
+    new_root_hash = await data_store.insert_batch(
+        tree_id=tree_id,
+        changelist=[
+            {
+                "action": "insert",
+                "key": b"key2",
+                "value": b"value2",
+                "reference_node_hash": insert_result.node_hash,
+                "side": side,
+            },
+        ],
+    )
+    assert new_root_hash is not None, "batch insert failed or failed to update root"
+
+    parent = await data_store.get_node(new_root_hash)
+    assert isinstance(parent, InternalNode)
+    if side == Side.LEFT:
+        child = await data_store.get_node(parent.left_hash)
+        assert parent.left_hash == child.hash
+    elif side == Side.RIGHT:
+        child = await data_store.get_node(parent.right_hash)
+        assert parent.right_hash == child.hash
+    else:  # pragma: no cover
+        raise Exception("invalid side for test")
+
+
 @pytest.mark.asyncio
 async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store=data_store, tree_id=tree_id)
