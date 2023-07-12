@@ -290,6 +290,8 @@ async def setup_harvester(
         config["harvester"]["port"] = 0
         config["harvester"]["rpc_port"] = 0
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
+        # CI doesn't like GPU compressed farming
+        config["harvester"]["parallel_decompressers_count"] = 0
         save_config(root_path, "config.yaml", config)
     service = create_harvester_service(
         root_path,
