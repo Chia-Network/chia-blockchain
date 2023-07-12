@@ -7,7 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.byte_types import hexstr_to_bytes
 from tests.cmds.cmd_test_utils import GlobalTestRpcClients, TestFullNodeRpcClient, cli_assert_shortcut, run_cli_command
-from tests.cmds.test_classes import height_hash
+from tests.cmds.testing_classes import height_hash
 
 BASE_LIST = ["show"]
 

@@ -21,7 +21,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32
-from tests.cmds.test_classes import create_test_block_record
+from tests.cmds.testing_classes import create_test_block_record
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
