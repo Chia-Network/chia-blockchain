@@ -373,8 +373,6 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 async def test_get_plot_filer_info(
     default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools
 ) -> None:
-    assert sqlite3.threadsafety >= 1
-
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
@@ -382,7 +380,6 @@ async def test_get_plot_filer_info(
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
         store = await BlockStore.create(db_wrapper)
-        await BlockStore.create(db_wrapper_2)
         blocks: List[FullBlock] = []
         expected_cc_sp_hashes: List[bytes32] = []
         for block in default_400_blocks:
