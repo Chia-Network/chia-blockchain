@@ -81,7 +81,7 @@ class Harvester:
         self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
-        context_count = config.get("parallel_decompressors_count", 5)
+        context_count = config.get("parallel_decompressor_count", 5)
         thread_count = config.get("decompressor_thread_count", 0)
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2

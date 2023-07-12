@@ -212,7 +212,7 @@ harvester:
     key: "config/ssl/ca/chia_ca.key"
 
   # Compressed harvesting.
-  parallel_decompressors_count: 0
+  parallel_decompressor_count: 0
   # If set to 0, `decompressor_thread_count` will default to half of nproc available on the machine.
   # A non-zero number overrides this default.
   decompressor_thread_count: 0

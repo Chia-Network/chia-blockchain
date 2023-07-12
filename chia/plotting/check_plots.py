@@ -54,7 +54,7 @@ def check_plots(
         refresh_callback=plot_refresh_callback,
     )
 
-    context_count = config["harvester"].get("parallel_decompressors_count", 5)
+    context_count = config["harvester"].get("parallel_decompressor_count", 5)
     thread_count = config["harvester"].get("decompressor_thread_count", 0)
     if thread_count == 0:
         thread_count = multiprocessing.cpu_count() // 2
