@@ -120,9 +120,9 @@
         )
         (list ASSERT_PUZZLE_ANNOUNCEMENT
           (sha256
-            (calculate_proposal_puzzlehash
-              proposal_innerpuzhash
+            (calculate_singleton_puzzle_hash
               (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
+              proposal_innerpuzhash
             )
             my_id
           )
@@ -135,17 +135,6 @@
     (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
       inner_puzzle_hash
       (sha256tree PROPOSAL_SINGLETON_STRUCT)
-    )
-  )
-
-  (defun calculate_proposal_puzzlehash (
-      proposal_innerpuzhash
-      proposal_singleton_struct
-
-    )
-    (calculate_singleton_puzzle_hash
-      proposal_singleton_struct
-      proposal_innerpuzhash
     )
   )
 

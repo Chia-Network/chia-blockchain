@@ -1246,6 +1246,13 @@ class DAOWallet(WalletProtocol):
                 return get_curry_vals_from_proposal_puzzle(prop.inner_puzzle)
         raise ValueError("proposal not found")
 
+    # This has to be in the wallet because we are taking an ID and then searching our stored proposals for that ID
+    def get_proposal_puzzle(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
+        for prop in self.dao_info.proposals_list:
+            if prop.proposal_id == proposal_id:
+                return prop.inner_puzzle
+        raise ValueError("proposal not found")
+
     def generate_simple_proposal_innerpuz(
         self,
         recipient_puzhashes: List[bytes32],
@@ -1432,9 +1439,8 @@ class DAOWallet(WalletProtocol):
         )
         assert dao_cat_wallet is not None
 
-        curry_vals = get_curry_vals_from_proposal_puzzle(dao_proposal_puzzle)
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-            vote_amount, launcher_coin.name(), True, curry_vals=curry_vals
+            vote_amount, launcher_coin.name(), True, proposal_puzzle=dao_proposal_puzzle
         )
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
@@ -1521,12 +1527,12 @@ class DAOWallet(WalletProtocol):
         )
         assert dao_cat_wallet is not None
         assert proposal_info.current_innerpuz is not None
-        curry_vals = get_curry_vals_from_proposal_puzzle(proposal_info.current_innerpuz)
+
         if vote_amount is None:
             vote_amount = await dao_cat_wallet.get_votable_balance(proposal_id)
         assert vote_amount is not None
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-            vote_amount, proposal_id, is_yes_vote, curry_vals=curry_vals
+            vote_amount, proposal_id, is_yes_vote, proposal_puzzle=proposal_info.current_innerpuz
         )
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
