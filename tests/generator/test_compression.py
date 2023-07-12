@@ -158,12 +158,12 @@ class TestCompression:
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         removal = sb.coin_spends[0].coin
-        spend_info = get_puzzle_and_solution_for_coin(c, removal)
+        spend_info = get_puzzle_and_solution_for_coin(c, removal, 0)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
         # Test non compressed generator as well
         s = simple_solution_generator(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, 0)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
 

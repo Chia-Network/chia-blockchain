@@ -60,7 +60,7 @@ async def test_connection_versions(
     incoming_connection = full_node.server.all_connections[wallet_node.server.node_id]
     for connection in [outgoing_connection, incoming_connection]:
         assert connection.protocol_version == Version(protocol_version)
-        assert connection.version == Version(chia_full_version_str())
+        assert connection.version == chia_full_version_str()
         assert connection.get_version() == chia_full_version_str()
 
 

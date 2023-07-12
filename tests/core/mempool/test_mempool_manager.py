@@ -366,7 +366,7 @@ def make_bundle_spends_map_and_fee(
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
-        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
     )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
     return MempoolItem(

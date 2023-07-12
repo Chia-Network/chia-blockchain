@@ -11,6 +11,7 @@ import pytest
 from blspy import G2Element
 
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -606,7 +607,7 @@ class TestCATTrades:
         bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
         program = simple_solution_generator(bundle)
         result: NPCResult = get_name_puzzle_conditions(
-            program, INFINITE_COST, mempool_mode=True, height=softfork_height
+            program, INFINITE_COST, mempool_mode=True, height=softfork_height, constants=DEFAULT_CONSTANTS
         )
         assert result.error is None
 
@@ -870,7 +871,7 @@ class TestCATTrades:
             raise ValueError("Couldn't find the trade record")
 
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
-        await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
+        await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -880,15 +881,11 @@ class TestCATTrades:
         offer = dataclasses.replace(offer, _bundle=bundle)
         tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, fee=uint64(10))
         wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
-        await wallet_node_taker._resend_queue()
+        for _ in range(10):
+            print(await wallet_node_taker._resend_queue())
         offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
         await full_node.process_transaction_records(records=offer_tx_records)
-        await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
+        await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
     @pytest.mark.asyncio
     async def test_trade_high_fee(self, wallets_prefarm):

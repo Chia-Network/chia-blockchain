@@ -1496,7 +1496,15 @@ class TestFullNodeProtocol:
         # Submit the sub slot, but not the last block
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
         for ss in blocks[-1].finished_sub_slots:
-            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(ss), peer)
+            challenge_chain = dataclasses.replace(
+                ss.challenge_chain,
+                new_difficulty=20,
+            )
+            slot2 = dataclasses.replace(
+                ss,
+                challenge_chain=challenge_chain,
+            )
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)
 
         second_blockchain = empty_blockchain
         for block in blocks:
@@ -1513,7 +1521,6 @@ class TestFullNodeProtocol:
             [],
             peak_2.sub_slot_iters,
         )
-
         # Submits the signage point, cannot add because don't have block
         await full_node_1.respond_signage_point(
             fnp.RespondSignagePoint(4, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
@@ -1529,7 +1536,8 @@ class TestFullNodeProtocol:
         await full_node_1.full_node.add_block(blocks[-1], peer)
 
         # Now signage point should be added
-        assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
+        sp = full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash())
+        assert sp is not None
 
     @pytest.mark.asyncio
     async def test_slot_catch_up_genesis(self, setup_two_nodes_fixture, self_hostname):
