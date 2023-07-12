@@ -19,7 +19,6 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32
 from tests.cmds.testing_classes import create_test_block_record
 
@@ -113,7 +112,7 @@ class TestSimulatorFullNodeRpcClient(TestRpcClient):
 
 
 @dataclass
-class GlobalTestRpcClients:
+class TestRpcClients:
     """
     Because this data is in a class, it can be modified by the tests even after the generator is created and imported.
     """
@@ -139,14 +138,14 @@ class GlobalTestRpcClients:
             raise ValueError(f"Invalid client type requested: {client_type.__name__}")
 
 
-def create_service_and_wallet_client_generators(test_rpc_clients: GlobalTestRpcClients) -> None:
+def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients, default_root: Path) -> None:
     # custom generators designed for testing
 
     @asynccontextmanager
     async def test_get_any_service_client(
         client_type: Type[_T_RpcClient],
         rpc_port: Optional[int] = None,
-        root_path: Path = DEFAULT_ROOT_PATH,
+        root_path: Path = default_root,
         consume_errors: bool = True,
     ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
         node_type = node_config_section_names.get(client_type)
@@ -171,7 +170,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: GlobalTestRpcC
     async def test_get_wallet_client(
         wallet_rpc_port: Optional[int] = None,
         fingerprint: Optional[int] = None,
-        root_path: Path = DEFAULT_ROOT_PATH,
+        root_path: Path = default_root,
     ) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
         async with test_get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore
@@ -183,22 +182,22 @@ def create_service_and_wallet_client_generators(test_rpc_clients: GlobalTestRpcC
     chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
 
 
-def run_cli_command(capsys: Any, command_list: List[str]) -> Tuple[bool, str]:
+def run_cli_command(capsys: Any, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:
     argv_temp = sys.argv
     try:
-        sys.argv = [sys.argv[0]] + command_list
+        sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
         exited_cleanly = True
         try:
             chia_cli()  # pylint: disable=no-value-for-parameter
         except SystemExit as e:
             if e.code != 0:
                 exited_cleanly = False
-        str_output = capsys.readouterr().out
+        output = capsys.readouterr()
     finally:  # always reset sys.argv
         sys.argv = argv_temp
     if not exited_cleanly:  # so we can look at what went wrong
-        print(str_output)
-    return exited_cleanly, str_output
+        print(f"\n{output.out}\n{output.err}")
+    return exited_cleanly, output.out
 
 
 def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:

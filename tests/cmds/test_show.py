@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.byte_types import hexstr_to_bytes
-from tests.cmds.cmd_test_utils import GlobalTestRpcClients, TestFullNodeRpcClient, cli_assert_shortcut, run_cli_command
+from tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, cli_assert_shortcut, run_cli_command
 from tests.cmds.testing_classes import height_hash
 
 BASE_LIST = ["show"]
@@ -49,12 +50,13 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
 RPC_CLIENT_TO_USE = ShowFullNodeRpcClient()  # pylint: disable=no-value-for-parameter
 
 
-def test_chia_show(capsys: Any, get_global_cli_clients: GlobalTestRpcClients) -> None:
+def test_chia_show(capsys: Any, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
     # set RPC Client
-    get_global_cli_clients.full_node_rpc_client = RPC_CLIENT_TO_USE
+    test_rpc_clients.full_node_rpc_client = RPC_CLIENT_TO_USE
     # get output with all options
     command_args = ["-s", "-f", "-bh 1", "-b 0000000000000000000000000000000000000000000000000000000000000002"]
-    success, output = run_cli_command(capsys, BASE_LIST + command_args)
+    success, output = run_cli_command(capsys, root_dir, BASE_LIST + command_args)
     assert success
     # these are various things that should be in the output
     assert_list = [
@@ -71,4 +73,4 @@ def test_chia_show(capsys: Any, get_global_cli_clients: GlobalTestRpcClients) ->
         "get_fee_estimate": ([60, 120, 300], 1),
         "get_block": (height_hash(2),),
     }  # these RPC's should be called with these variables.
-    get_global_cli_clients.full_node_rpc_client.check_log(expected_calls)
+    test_rpc_clients.full_node_rpc_client.check_log(expected_calls)
