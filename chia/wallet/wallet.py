@@ -20,7 +20,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
@@ -619,7 +619,7 @@ class Wallet:
 
     # WSChiaConnection is only imported for type checking
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[VersionedBlob]
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 

@@ -46,7 +46,8 @@ from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
-from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS, CATVersion
+from chia.util.streamable import Streamable
+from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -60,11 +61,10 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened,
     master_sk_to_wallet_sk_unhardened_intermediate,
 )
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDVersion
+from chia.wallet.did_wallet.did_info import DIDCoinData
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
-from chia.wallet.nft_wallet.nft_info import NFTVersion
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -91,7 +91,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vc_wallet.vc_drivers import VCVersion, VerifiedCredential
+from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
@@ -644,7 +644,7 @@ class WalletStateManager:
 
     async def determine_coin_type(
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
-    ) -> Tuple[Optional[WalletIdentifier], Optional[VersionedBlob]]:
+    ) -> Tuple[Optional[WalletIdentifier], Optional[Streamable]]:
         if coin_state.created_height is not None and (
             self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin)
             or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
@@ -671,22 +671,23 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(cat_mod_hash.atom, tail_program_hash.atom, cat_inner_puzzle)
-            return await self.handle_cat(
+            return (
+                await self.handle_cat(
+                    cat_data,
+                    parent_coin_state,
+                    coin_state,
+                    coin_spend,
+                    fork_height,
+                ),
                 cat_data,
-                parent_coin_state,
-                coin_state,
-                coin_spend,
-                fork_height,
-            ), VersionedBlob(CATVersion.V2.value, bytes(cat_data))
+            )
 
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
-            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state), VersionedBlob(
-                NFTVersion.V1.value, bytes(uncurried_nft)
-            )
+            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state), uncurried_nft
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -699,23 +700,19 @@ class WalletStateManager:
                 singleton_struct,
                 metadata,
             )
-            return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), VersionedBlob(
-                DIDVersion.V1.value, bytes(did_data)
-            )
+            return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
         # Check if the coin is clawback
         solution = coin_spend.solution.to_program()
-        clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
-        if clawback_metadata is not None:
-            return await self.handle_clawback(clawback_metadata, coin_state, coin_spend, peer), VersionedBlob(
-                ClawbackVersion.V1.value, bytes(clawback_metadata)
-            )
+        clawback_coin_data = match_clawback_puzzle(uncurried, puzzle, solution)
+        if clawback_coin_data is not None:
+            return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
         # Check if the coin is a VC
         is_vc, err_msg = VerifiedCredential.is_vc(uncurried)
         if is_vc:
             vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
-            return await self.handle_vc(vc), VersionedBlob(VCVersion.V1.value, bytes(vc))
+            return await self.handle_vc(vc), vc
 
         await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
@@ -865,7 +862,7 @@ class WalletStateManager:
 
     async def handle_cat(
         self,
-        cat_data: CATCoinData,
+        parent_data: CATCoinData,
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
@@ -873,7 +870,7 @@ class WalletStateManager:
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a CAT
-        :param cat_data: CAT coin uncurried metadata
+        :param parent_data: Parent CAT coin uncurried metadata
         :param parent_coin_state: Parent coin state
         :param coin_state: Current coin state
         :param coin_spend: New coin spend
@@ -889,7 +886,7 @@ class WalletStateManager:
             return None
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-            asset_id: bytes32 = cat_data.tail_program_hash
+            asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 return None
@@ -914,7 +911,7 @@ class WalletStateManager:
 
     async def handle_did(
         self,
-        did_data: DIDCoinData,
+        parent_data: DIDCoinData,
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
@@ -922,21 +919,21 @@ class WalletStateManager:
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a DID
-        :param did_data: Curried data of the DID coin
+        :param parent_data: Curried data of the DID coin
         :param parent_coin_state: Parent coin state
         :param coin_state: Current coin state
         :param coin_spend: New coin spend
         :return: Wallet ID & Wallet Type
         """
 
-        inner_puzzle_hash = did_data.p2_puzzle.get_tree_hash()
+        inner_puzzle_hash = parent_data.p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = bytes32(bytes(did_data.singleton_struct.rest().first())[1:])
+        launch_id: bytes32 = bytes32(bytes(parent_data.singleton_struct.rest().first())[1:])
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
@@ -962,18 +959,18 @@ class WalletStateManager:
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle,
-                did_data.recovery_list_hash,
-                did_data.num_verification,
-                did_data.singleton_struct,
-                did_data.metadata,
+                parent_data.recovery_list_hash,
+                parent_data.num_verification,
+                parent_data.singleton_struct,
+                parent_data.metadata,
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launch_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle,
                 Program.to([]).get_tree_hash(),
                 uint64(0),
-                did_data.singleton_struct,
-                did_data.metadata,
+                parent_data.singleton_struct,
+                parent_data.metadata,
             )
             full_puzzle_empty_recovery = create_singleton_puzzle(did_puzzle_empty_recovery, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
@@ -1271,7 +1268,7 @@ class WalletStateManager:
                     await self.retry_store.remove_state(coin_state)
 
                     wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
-                    coin_data: Optional[VersionedBlob] = None
+                    coin_data: Optional[Streamable] = None
                     # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
                     if local_record is not None:
                         local_spent = None
@@ -1700,7 +1697,7 @@ class WalletStateManager:
         wallet_type: WalletType,
         peer: WSChiaConnection,
         coin_name: bytes32,
-        coin_data: Optional[VersionedBlob],
+        coin_data: Optional[Streamable],
     ) -> None:
         """
         Adding coin to DB
