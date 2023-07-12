@@ -1,23 +1,30 @@
 from __future__ import annotations
 
-import io
 import sys
-from contextlib import asynccontextmanager, redirect_stdout
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Dict, Optional, Tuple, Type, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, cast
 
 import chia.cmds.wallet_funcs
+from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32
+from tests.cmds.test_classes import create_test_block_record
+
+# Any functions that are the same for every command being tested should be below.
+# Functions that are specific to a command should be in the test file for that command.
 
 
 @dataclass
@@ -27,12 +34,20 @@ class TestRpcClient:
     root_path: Optional[Path] = None
     config: Optional[Dict[str, Any]] = None
     create_called: bool = field(init=False, default=False)
+    rpc_log: Dict[str, Tuple[Any, ...]] = field(init=False, default_factory=dict)
 
     async def create(self, _: str, rpc_port: uint16, root_path: Path, config: Dict[str, Any]) -> None:
         self.rpc_port = rpc_port
         self.root_path = root_path
         self.config = config
         self.create_called = True
+
+    def check_log(self, expected_calls: Dict[str, Optional[Tuple[Any, ...]]]) -> None:
+        for k, v in expected_calls.items():
+            assert k in self.rpc_log
+            if v is not None:  # None means we don't care about the value used when calling the rpc.
+                assert self.rpc_log[k] == v
+        self.rpc_log = {}
 
 
 @dataclass
@@ -49,6 +64,42 @@ class TestWalletRpcClient(TestRpcClient):
 @dataclass
 class TestFullNodeRpcClient(TestRpcClient):
     client_type: Type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
+
+    async def get_blockchain_state(self) -> Dict[str, Any]:
+        response: Dict[str, Any] = {
+            "peak": cast(BlockRecord, create_test_block_record()),
+            "genesis_challenge_initialized": True,
+            "sync": {
+                "sync_mode": False,
+                "synced": True,
+                "sync_tip_height": 0,
+                "sync_progress_height": 0,
+            },
+            "difficulty": 1024,
+            "sub_slot_iters": 147849216,
+            "space": 29569289860555554816,
+            "mempool_size": 3,
+            "mempool_cost": 88304083,
+            "mempool_fees": 50,
+            "mempool_min_fees": {
+                # We may give estimates for varying costs in the future
+                # This Dict sets us up for that in the future
+                "cost_5000000": 0,
+            },
+            "mempool_max_total_cost": 550000000000,
+            "block_max_cost": DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            "node_id": "7991a584ae4784ab7525bda352ea9b155ce2ac108d361afc13d5964a0f33fa6d",
+        }
+        self.rpc_log["get_blockchain_state"] = ()
+        return response
+
+    async def get_block_record_by_height(self, height: int) -> Optional[BlockRecord]:
+        self.rpc_log["get_block_record_by_height"] = (height,)
+        return cast(BlockRecord, create_test_block_record(height=uint32(height)))
+
+    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        self.rpc_log["get_block_record"] = (header_hash,)
+        return cast(BlockRecord, create_test_block_record(header_hash=header_hash))
 
 
 @dataclass
@@ -132,24 +183,27 @@ def create_service_and_wallet_client_generators(test_rpc_clients: GlobalTestRpcC
     chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
 
 
-def run_cli_command(func: Callable[[], None], command_list: list[str]) -> tuple[str, bool]:
+def run_cli_command(capsys: Any, command_list: List[str]) -> Tuple[bool, str]:
     argv_temp = sys.argv
     try:
-        sys.argv = sys.argv + command_list
+        sys.argv = [sys.argv[0]] + command_list
         exited_cleanly = True
-        with redirect_stdout(io.StringIO()) as cmd_output:
-            try:
-                func()
-            except SystemExit as e:
-                if e.code != 0:
-                    exited_cleanly = False
-        str_output = cmd_output.getvalue()
+        try:
+            chia_cli()  # pylint: disable=no-value-for-parameter
+        except SystemExit as e:
+            if e.code != 0:
+                exited_cleanly = False
+        str_output = capsys.readouterr().out
     finally:  # always reset sys.argv
         sys.argv = argv_temp
-    return str_output, exited_cleanly
+    if not exited_cleanly:  # so we can look at what went wrong
+        print(str_output)
+    return exited_cleanly, str_output
 
 
-# these are used by other tests to set the test rpc clients used by the cli commands
-GLOBAL_TEST_RPC_CLIENTS = GlobalTestRpcClients()
-# this must be called before running wallet_cmd for the first time
-create_service_and_wallet_client_generators(GLOBAL_TEST_RPC_CLIENTS)
+def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
+    """
+    Asserts that all the strings in strings_to_assert are in the output
+    """
+    for string_to_assert in strings_to_assert:
+        assert string_to_assert in output
