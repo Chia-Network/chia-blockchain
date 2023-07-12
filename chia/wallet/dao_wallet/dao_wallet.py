@@ -487,6 +487,52 @@ class DAOWallet(WalletProtocol):
     def id(self) -> uint32:
         return self.wallet_info.id
 
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+        puz: Program = Program.to(0)
+        return puz
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        puz_hash: bytes32 = bytes32(Program.to(0).get_tree_hash())
+        return puz_hash
+
+    async def get_new_puzzle(self) -> Program:
+        puz: Program = Program.to(0)
+        return puz
+
+    async def set_name(self, new_name: str) -> None:
+        new_info = dataclasses.replace(self.wallet_info, name=new_name)
+        self.wallet_info = new_info
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
+
+    def get_name(self) -> str:
+        return self.wallet_info.name
+
+    async def get_new_p2_inner_hash(self) -> bytes32:
+        puzzle = await self.get_new_p2_inner_puzzle()
+        return puzzle.get_tree_hash()
+
+    async def get_new_p2_inner_puzzle(self) -> Program:
+        return await self.standard_wallet.get_new_puzzle()
+
+    def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
+        parent_info = None
+        for name, ccparent in self.dao_info.parent_info:
+            if name == coin.parent_coin_info:
+                parent_info = ccparent
+        return parent_info
+
+    async def get_frozen_amount(self) -> uint64:
+        return uint64(0)
+
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
+
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id, unspent_records
+        )
+        return uint128(spendable_am)
+
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
@@ -499,14 +545,6 @@ class DAOWallet(WalletProtocol):
 
         self.log.info(f"Confirmed balance for dao wallet is {amount}")
         return uint128(amount)
-
-    async def get_pending_change_balance(self) -> uint64:
-        # No spendable or receivable value
-        return uint64(0)
-
-    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
-        return uint128(unc_bal)
 
     async def select_coins(
         self,
@@ -522,10 +560,7 @@ class DAOWallet(WalletProtocol):
         There is no need for max/min coin amount or excluded amount becuase the dao treasury should
         always be a single coin with amount 1
         """
-
         spendable_amount: uint128 = await self.get_spendable_balance()
-
-        # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return set()
@@ -554,6 +589,36 @@ class DAOWallet(WalletProtocol):
         assert sum(c.amount for c in coins) >= amount
         return coins
 
+    async def get_pending_change_balance(self) -> uint64:
+        # No spendable or receivable value
+        return uint64(0)
+
+    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
+        return uint128(unc_bal)
+
+    # if asset_id == None: then we get normal XCH
+    async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
+        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
+        return uint128(sum([record.coin.amount for record in records if not record.spent]))
+
+    # if asset_id == None: then we get normal XCH
+    async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
+        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
+        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
+        # TODO: smarter coin selection algorithm
+        total = 0
+        coins = []
+        for record in records:
+            total += record.coin.amount
+            coins.append(record.coin)
+            if total >= amount:
+                break
+        if total < amount:
+            raise ValueError(f"Not enough of that asset_id: {asset_id}")
+        return coins
+
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
@@ -578,12 +643,6 @@ class DAOWallet(WalletProtocol):
                 dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
                 await self.save_info(dao_info)
         return
-
-    async def is_spend_retrievable(self, coin_id: bytes32) -> bool:
-        wallet_node = self.wallet_state_manager.wallet_node
-        peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        children = await wallet_node.fetch_children(coin_id, peer)
-        return len(children) > 0
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -775,40 +834,7 @@ class DAOWallet(WalletProtocol):
         assert chia_tx.spend_bundle is not None
         return chia_tx
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        puz: Program = Program.to(0)
-        return puz
-
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        puz_hash: bytes32 = bytes32(Program.to(0).get_tree_hash())
-        return puz_hash
-
-    async def get_new_puzzle(self) -> Program:
-        puz: Program = Program.to(0)
-        return puz
-
-    async def set_name(self, new_name: str) -> None:
-        new_info = dataclasses.replace(self.wallet_info, name=new_name)
-        self.wallet_info = new_info
-        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
-
-    def get_name(self) -> str:
-        return self.wallet_info.name
-
-    async def get_new_p2_inner_hash(self) -> bytes32:
-        puzzle = await self.get_new_p2_inner_puzzle()
-        return puzzle.get_tree_hash()
-
-    async def get_new_p2_inner_puzzle(self) -> Program:
-        return await self.standard_wallet.get_new_puzzle()
-
-    def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
-        parent_info = None
-        for name, ccparent in self.dao_info.parent_info:
-            if name == coin.parent_coin_info:
-                parent_info = ccparent
-
-        return parent_info
+    
 
     @staticmethod
     async def generate_new_dao_spend(
@@ -2264,42 +2290,6 @@ class DAOWallet(WalletProtocol):
         if tip_height + dao_rules.soft_close_length < self.dao_info.current_height:
             return False
         return True
-
-    async def get_frozen_amount(self) -> uint64:
-        return uint64(0)
-
-    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id, unspent_records
-        )
-        return uint128(spendable_am)
-
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
-
-    # if asset_id == None: then we get normal XCH
-    async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
-        # TODO: Pull coins from DB once they're being stored
-        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
-        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([record.coin.amount for record in records if not record.spent]))
-
-    # if asset_id == None: then we get normal XCH
-    async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
-        # TODO: Pull coins from DB once they're being stored
-        puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
-        records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        # TODO: smarter coin selection algorithm
-        total = 0
-        coins = []
-        for record in records:
-            total += record.coin.amount
-            coins.append(record.coin)
-            if total >= amount:
-                break
-        if total < amount:
-            raise ValueError(f"Not enough of that asset_id: {asset_id}")
-        return coins
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
