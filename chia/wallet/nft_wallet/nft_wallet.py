@@ -1287,9 +1287,7 @@ class NFTWallet:
 
         # Ensure we have a did coin and its next inner puzzle hash
         if did_coin is None:
-            coins = await did_wallet.select_coins(uint64(1))
-            assert coins is not None
-            did_coin = coins.pop()
+            did_coin = await did_wallet.get_coin()
         innerpuz: Program = did_wallet.did_info.current_inner
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()

@@ -378,8 +378,7 @@ class VCWallet:
         _, provider_inner_puzhash, _ = recovery_info
 
         # Generate spend specific nonce
-        coins = await did_wallet.select_coins(uint64(1))
-        assert coins is not None
+        coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
             coins.update(await self.standard_wallet.select_coins(fee))
