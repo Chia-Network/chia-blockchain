@@ -371,7 +371,7 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
 @pytest.mark.asyncio
 async def test_get_plot_filer_info(
-    default_1000_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools
+    default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools
 ) -> None:
     assert sqlite3.threadsafety >= 1
 
@@ -385,7 +385,7 @@ async def test_get_plot_filer_info(
         await BlockStore.create(db_wrapper_2)
         blocks: List[FullBlock] = []
         expected_cc_sp_hashes: List[bytes32] = []
-        for block in default_1000_blocks:
+        for block in default_400_blocks:
             await _validate_and_add_block(bc, block)
             block_record_to_add = bc.block_record(block.header_hash)
             await store.add_full_block(block.header_hash, block, block_record_to_add)
