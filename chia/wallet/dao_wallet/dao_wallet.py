@@ -1745,7 +1745,7 @@ class DAOWallet(WalletProtocol):
                 PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
                 YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
                 TOTAL_VOTES,  # how many people responded
-            ) = curried_args.as_iter()
+            ) = c_a.as_iter()
 
             if TOTAL_VOTES.as_int() < attendance_required.as_int():
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
