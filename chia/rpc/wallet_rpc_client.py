@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -189,7 +189,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
@@ -394,7 +394,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
     ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
@@ -734,7 +734,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -875,7 +875,7 @@ class WalletRpcClient(RpcClient):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
     # NFT wallet
-    async def create_new_nft_wallet(self, did_id, name=None):
+    async def create_new_nft_wallet(self, did_id, name=None) -> dict[str, Any]:
         request: Dict[str, Any] = {
             "wallet_type": "nft_wallet",
             "did_id": did_id,
@@ -986,7 +986,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_count_nfts", request)
         return response
 
-    async def list_nfts(self, wallet_id):
+    async def list_nfts(self, wallet_id) -> dict[str, Any]:
         request: Dict[str, Any] = {"wallet_id": wallet_id, "num": 100_000}
         response = await self.fetch("nft_get_nfts", request)
         return response
@@ -1009,7 +1009,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_set_nft_did", request)
         return response
 
-    async def get_nft_wallet_did(self, wallet_id):
+    async def get_nft_wallet_did(self, wallet_id) -> dict[str, Optional[str]]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response

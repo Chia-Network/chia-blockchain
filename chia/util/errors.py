@@ -318,3 +318,12 @@ class InvalidPathError(Exception):
     def __init__(self, path: Path, error_message: str):
         super().__init__(f"{error_message}: {str(path)!r}")
         self.path = path
+
+
+class CliRpcConnectionError(Exception):
+    """
+    This error is raised when a rpc server cant be reached by the cli async generator & should always be caught by
+    the cli in cmds/chia.py:main.
+    """
+
+    pass

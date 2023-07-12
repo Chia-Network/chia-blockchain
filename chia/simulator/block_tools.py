@@ -76,6 +76,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
     passes_plot_filter,
@@ -140,9 +141,9 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "MAX_FUTURE_TIME": 3600
-        * 24
-        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        "MAX_FUTURE_TIME": 3600 * 24 * 10,
+        "MAX_FUTURE_TIME2": 3600 * 24 * 10,  # After the Fork
         "MEMPOOL_BLOCK_BUFFER": 6,
     }
 )
@@ -682,6 +683,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
 
@@ -979,6 +981,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1130,6 +1133,7 @@ class BlockTools:
                     assert signage_point.cc_vdf is not None
                     cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                # we're creating the genesis block, its height is always 0
                 qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                     constants,
                     cc_challenge,
@@ -1137,6 +1141,7 @@ class BlockTools:
                     seed,
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
+                    uint32(0),
                 )
 
                 # Try each of the proofs of space
@@ -1283,6 +1288,7 @@ class BlockTools:
         seed: bytes,
         difficulty: uint64,
         sub_slot_iters: uint64,
+        height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
@@ -1292,7 +1298,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            if passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
+            prefix_bits = calculate_prefix_bits(constants, height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
@@ -1549,7 +1556,7 @@ def load_block_list(
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
         quality_str = verify_and_get_quality_string(
-            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash
+            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
         )
         assert quality_str is not None
         required_iters: uint64 = calculate_iterations_quality(
@@ -1725,7 +1732,35 @@ def get_full_block_and_block_record(
     return full_block, block_record, block_time_residual
 
 
-def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
+# these are the costs of unknown conditions, as defined chia_rs here:
+# https://github.com/Chia-Network/chia_rs/pull/181
+def compute_cost_table() -> List[int]:
+    A = 17
+    B = 16
+    s = []
+    NUM = 100
+    DEN = 1
+    MAX = 1 << 59
+    for i in range(256):
+        v = str(NUM // DEN)
+        v1 = v[:3] + ("0" * (len(v) - 3))
+        s.append(int(v1))
+        NUM *= A
+        DEN *= B
+        assert NUM < 1 << 64
+        assert DEN < 1 << 64
+        if NUM > MAX:
+            NUM >>= 5
+            DEN >>= 5
+    return s
+
+
+CONDITION_COSTS = compute_cost_table()
+
+
+def compute_cost_test(
+    generator: BlockGenerator, cost_per_byte: int, hard_fork: bool = False
+) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
         clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
@@ -1742,6 +1777,13 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Op
                     condition_cost += ConditionCost.AGG_SIG.value
                 elif condition == ConditionOpcode.CREATE_COIN:
                     condition_cost += ConditionCost.CREATE_COIN.value
+                # after the 2.0 hard fork, two byte conditions (with no leading 0)
+                # have costs. Account for that.
+                elif hard_fork and len(condition) == 2 and condition[0] != 0:
+                    condition_cost += CONDITION_COSTS[condition[1]]
+                elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
+                    arg = cond.rest().first().as_int()
+                    condition_cost += arg * 10000
         return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
@@ -1839,7 +1881,9 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
+            err, cost = compute_cost_test(
+                block_generator, constants.COST_PER_BYTE, hard_fork=height >= constants.HARD_FORK_HEIGHT
+            )
             assert err is None
 
             removal_amount = 0
