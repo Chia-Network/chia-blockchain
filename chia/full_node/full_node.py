@@ -1358,6 +1358,7 @@ class FullNode:
             difficulty,
             sub_slot_iters,
             request.index_from_challenge,
+            uint32(0) if peak is None else peak.height,
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
@@ -2148,6 +2149,7 @@ class FullNode:
                     next_difficulty,
                     next_sub_slot_iters,
                     uint8(0),
+                    uint32(0) if peak is None else peak.height,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)
