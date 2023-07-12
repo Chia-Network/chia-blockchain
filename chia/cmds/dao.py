@@ -124,6 +124,14 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
+    "-pm",
+    "--proposal-minimum",
+    help="The minimum amount (in mojos) that a proposal must use to be created",
+    type=int,
+    default=1,
+    show_default=True,
+)
+@click.option(
     "-fa",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
@@ -162,6 +170,7 @@ def dao_create_cmd(
     pass_percentage: int,
     self_destruct: int,
     oracle_delay: int,
+    proposal_minimum: int,
     filter_amount: int,
     cat_amount: int,
     name: Optional[str],
@@ -171,6 +180,9 @@ def dao_create_cmd(
     import asyncio
 
     from .dao_funcs import create_dao_wallet
+
+    if proposal_minimum % 2 == 0:
+        raise ValueError("Please use an odd mojo amount for proposal minimum amount")
 
     print("Creating new DAO")
 
@@ -183,6 +195,7 @@ def dao_create_cmd(
         "pass_percentage": pass_percentage,
         "self_destruct_length": self_destruct,
         "oracle_spend_delay": oracle_delay,
+        "proposal_minimum_amount": proposal_minimum,
         "filter_amount": filter_amount,
         "amount_of_cats": cat_amount,
         "reuse_puzhash": True if reuse else None,
@@ -191,7 +204,32 @@ def dao_create_cmd(
 
 
 # ----------------------------------------------------------------------------------------
-# TREASURY FUNDS
+# TREASURY INFO
+
+@dao_cmd.command("get-id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="ID of the DAO wallet which will receive the funds", type=int, required=True)
+def dao_get_id_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
+    import asyncio
+
+    from .dao_funcs import get_treasury_id
+
+    extra_params = {
+        "wallet_id": wallet_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_id))
+
 
 
 @dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
@@ -203,11 +241,11 @@ def dao_create_cmd(
     default=None,
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
-@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+@click.option("-i", "--wallet-id", help="ID of the DAO wallet which will receive the funds", type=int, required=True)
 @click.option(
     "-f",
     "--funding-wallet-id",
-    help="The ID of the wallet to send funds from",
+    help="ID of the wallet to send funds from",
     type=int,
     required=True,
 )
@@ -453,6 +491,13 @@ def dao_vote_cmd(
     required=True,
 )
 @click.option(
+    "-d",
+    "--self-destruct",
+    help="If a proposal is broken, use self destruct to force it to close",
+    is_flag=True,
+    default=False,
+)
+@click.option(
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH.",
@@ -472,6 +517,7 @@ def dao_close_proposal_cmd(
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
+    self_destruct: bool,
     fee: str,
     reuse: bool,
 ) -> None:
@@ -483,6 +529,7 @@ def dao_close_proposal_cmd(
         "wallet_id": wallet_id,
         "fee": fee,
         "proposal_id": proposal_id,
+        "self_destruct": self_destruct,
         "reuse_puzhash": True if reuse else None,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, close_proposal))
@@ -505,7 +552,7 @@ def dao_close_proposal_cmd(
 @click.option(
     "-a",
     "--amount",
-    help="The amount of new cats the proposal will mint",
+    help="The amount of CATs (not mojos) to lock in voting mode",
     type=str,
     required=True,
 )

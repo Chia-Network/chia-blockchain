@@ -1392,7 +1392,6 @@ class DAOWallet(WalletProtocol):
         assert tx_record.spend_bundle is not None
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
-        # breakpoint()
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1413,6 +1412,7 @@ class DAOWallet(WalletProtocol):
                 memos=[],
             )
             await self.wallet_state_manager.add_pending_transaction(record)
+            return record
         return full_spend
 
     async def generate_proposal_eve_spend(
@@ -1453,7 +1453,7 @@ class DAOWallet(WalletProtocol):
         previous_votes = []
         lockup_inner_puzhashes = []
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(spend.coin.amount)
+            vote_amounts.append(vote_amount)
             vote_coins.append(spend.coin.name())
             previous_votes.append(
                 get_active_votes_from_lockup_puzzle(
@@ -2313,9 +2313,12 @@ class DAOWallet(WalletProtocol):
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         # TODO: Pull coins from DB once they're being stored
+        wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([record.coin.amount for record in records if not record.spent]))
+        latest = await wallet_node.get_coin_state([cr.coin.name() for cr in records if not cr.spent], peer)
+        return uint128(sum([cr.coin.amount for cr in latest]))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:

@@ -15,6 +15,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
+from chia.wallet.util.wallet_types import WalletType
 
 
 async def add_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -49,6 +50,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
         "pass_percentage": args["pass_percentage"],
         "self_destruct_length": args["self_destruct_length"],
         "oracle_spend_delay": args["oracle_spend_delay"],
+        "proposal_minimum_amount": args["proposal_minimum_amount"],
     }
     amount_of_cats = args["amount_of_cats"]
     filter_amount = args["filter_amount"]
@@ -75,6 +77,12 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_client: WalletRpcClient
     print("CAT Wallet ID: {cat_wallet_id}".format(**res))
     print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
 
+
+async def get_treasury_id(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    res = await wallet_client.dao_get_treasury_id(wallet_id=wallet_id)
+    treasury_id = res["treasury_id"]
+    print(f"Treasury ID: {treasury_id}")
 
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
@@ -127,9 +135,11 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_client: WalletRpcCli
 
     for asset_id, balance in balances.items():
         if asset_id == "null":
-            print(f"XCH: {balance}")
+            mojos = get_mojo_per_unit(WalletType.STANDARD_WALLET)
+            print(f"XCH: {balance / mojos}")
         else:
-            print(f"{asset_id}: {balance}")
+            mojos = get_mojo_per_unit(WalletType.CAT)
+            print(f"{asset_id}: {balance / mojos}")
 
 
 async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -137,7 +147,7 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
     res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
     proposals = res["proposals"]
-    lockup_time = res["lockup_time"]
+    lockup_time = res["proposal_timelock"]
     soft_close_length = res["soft_close_length"]
     print("############################")
     for prop in proposals:
@@ -147,8 +157,6 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
         print("Votes for: {yes_votes}".format(**prop))
         votes_against = prop["amount_voted"] - prop["yes_votes"]
         print(f"Votes against: {votes_against}")
-        close_height = prop["singleton_block_height"] - lockup_time
-        print(f"Closable at block height: {close_height}")
         print("------------------------")
     print(f"Proposals have {soft_close_length} blocks of soft close time.")
     print("############################")
@@ -248,10 +256,12 @@ async def close_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient, f
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
     reuse_puzhash = args["reuse_puzhash"]
+    self_destruct = args["self_destruct"]
     res = await wallet_client.dao_close_proposal(
         wallet_id=wallet_id,
         proposal_id=proposal_id,
         fee=final_fee,
+        self_destruct=self_destruct,
         reuse_puzhash=reuse_puzhash,
     )
     # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
@@ -346,11 +356,14 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
         vote_amount = args["vote_amount"]
     else:
         vote_amount = None
+    wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+    mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+    final_amount: uint64 = uint64(int(Decimal(amount) * mojo_per_unit))
     res = await wallet_client.dao_create_proposal(
         wallet_id=wallet_id,
         proposal_type="spend",
         additions=additions,
-        amount=amount,
+        amount=final_amount,
         inner_address=address,
         vote_amount=vote_amount,
         fee=final_fee,
@@ -358,6 +371,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_client: WalletRpcCl
     )
     if res["success"]:
         print("Successfully created proposal.")
+        print("Proposal ID: {}".format(res["proposal_id"]))
     else:
         print("Failed to create proposal.")
 
