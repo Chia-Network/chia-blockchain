@@ -1160,6 +1160,38 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         )
     ###
 
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(batch_size=1)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        driver_dict=driver_dict,
+    )
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(cancel_all=True)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(asset_id=bytes32([0] * 32))
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(asset_id=cat_asset_id)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+
 
 @pytest.mark.asyncio
 async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
