@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from chiapos import DiskProver, decompresser_context_queue
+from chiapos import DiskProver, decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
@@ -75,7 +75,7 @@ class PlotManager:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
 
-    def configure_decompresser(
+    def configure_decompressor(
         self,
         context_count: int,
         thread_count: int,
@@ -92,7 +92,7 @@ class PlotManager:
                 "Setting max_compression_level_allowed to 7."
             )
             max_compression_level_allowed = 7
-        is_using_gpu = decompresser_context_queue.init(
+        is_using_gpu = decompressor_context_queue.init(
             context_count,
             thread_count,
             disable_cpu_affinity,
@@ -104,7 +104,7 @@ class PlotManager:
         if not is_using_gpu and use_gpu_harvesting:
             log.error(
                 "GPU harvesting failed initialization. "
-                f"Falling back to CPU harvesting: {context_count} decompressers count, {thread_count} threads."
+                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
             )
         self.max_compression_level_allowed = max_compression_level_allowed
 
