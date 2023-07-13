@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -13,6 +13,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues
 from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
@@ -27,7 +28,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -302,155 +303,17 @@ class FarmerAPI:
 
     @api_request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
-        """
-        There are two cases: receiving signatures for sps, or receiving signatures for the block.
-        """
-        if response.sp_hash not in self.farmer.sps:
-            self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
-            return None
-        is_sp_signatures: bool = False
-        sps = self.farmer.sps[response.sp_hash]
-        peak_height = sps[0].peak_height
-        signage_point_index = sps[0].signage_point_index
-        found_sp_hash_debug = False
-        for sp_candidate in sps:
-            if response.sp_hash == response.message_signatures[0][0]:
-                found_sp_hash_debug = True
-                if sp_candidate.reward_chain_sp == response.message_signatures[1][0]:
-                    is_sp_signatures = True
-        if found_sp_hash_debug:
-            assert is_sp_signatures
-
-        pospace = None
-        for plot_identifier, candidate_pospace in self.farmer.proofs_of_space[response.sp_hash]:
-            if plot_identifier == response.plot_identifier:
-                pospace = candidate_pospace
-        assert pospace is not None
-        include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
-
-        computed_quality_string = verify_and_get_quality_string(
-            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
-        )
-        if computed_quality_string is None:
-            self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
+        request = self._process_respond_signatures(response)
+        if request is None:
             return None
 
-        if is_sp_signatures:
-            (
-                challenge_chain_sp,
-                challenge_chain_sp_harv_sig,
-            ) = response.message_signatures[0]
-            reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
-            for sk in self.farmer.get_private_keys():
-                pk = sk.get_g1()
-                if pk == response.farmer_pk:
-                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
-                    assert agg_pk == pospace.plot_public_key
-                    if include_taproot:
-                        taproot_sk: PrivateKey = generate_taproot_sk(response.local_pk, pk)
-                        taproot_share_cc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, challenge_chain_sp, agg_pk)
-                        taproot_share_rc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, reward_chain_sp, agg_pk)
-                    else:
-                        taproot_share_cc_sp = G2Element()
-                        taproot_share_rc_sp = G2Element()
-                    farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_sp, agg_pk)
-                    agg_sig_cc_sp = AugSchemeMPL.aggregate(
-                        [challenge_chain_sp_harv_sig, farmer_share_cc_sp, taproot_share_cc_sp]
-                    )
-                    assert AugSchemeMPL.verify(agg_pk, challenge_chain_sp, agg_sig_cc_sp)
-
-                    # This means it passes the sp filter
-                    farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
-                    agg_sig_rc_sp = AugSchemeMPL.aggregate(
-                        [reward_chain_sp_harv_sig, farmer_share_rc_sp, taproot_share_rc_sp]
-                    )
-                    assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
-
-                    if pospace.pool_public_key is not None:
-                        assert pospace.pool_contract_puzzle_hash is None
-                        pool_pk = bytes(pospace.pool_public_key)
-                        if pool_pk not in self.farmer.pool_sks_map:
-                            self.farmer.log.error(
-                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
-                            )
-                            return None
-
-                        pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
-                        assert pool_target is not None
-                        pool_target_signature: Optional[G2Element] = AugSchemeMPL.sign(
-                            self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
-                        )
-                    else:
-                        assert pospace.pool_contract_puzzle_hash is not None
-                        pool_target = None
-                        pool_target_signature = None
-
-                    request = farmer_protocol.DeclareProofOfSpace(
-                        response.challenge_hash,
-                        challenge_chain_sp,
-                        signage_point_index,
-                        reward_chain_sp,
-                        pospace,
-                        agg_sig_cc_sp,
-                        agg_sig_rc_sp,
-                        self.farmer.farmer_target,
-                        pool_target,
-                        pool_target_signature,
-                    )
-                    self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
-                    msg = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
-                    return None
-
-        else:
-            # This is a response with block signatures
-            for sk in self.farmer.get_private_keys():
-                (
-                    foliage_block_data_hash,
-                    foliage_sig_harvester,
-                ) = response.message_signatures[0]
-                (
-                    foliage_transaction_block_hash,
-                    foliage_transaction_block_sig_harvester,
-                ) = response.message_signatures[1]
-                pk = sk.get_g1()
-                if pk == response.farmer_pk:
-                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
-                    assert agg_pk == pospace.plot_public_key
-                    if include_taproot:
-                        taproot_sk = generate_taproot_sk(response.local_pk, pk)
-                        foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
-                        foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
-                            taproot_sk, foliage_transaction_block_hash, agg_pk
-                        )
-                    else:
-                        foliage_sig_taproot = G2Element()
-                        foliage_transaction_block_sig_taproot = G2Element()
-
-                    foliage_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_data_hash, agg_pk)
-                    foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
-
-                    foliage_agg_sig = AugSchemeMPL.aggregate(
-                        [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot]
-                    )
-                    foliage_block_agg_sig = AugSchemeMPL.aggregate(
-                        [
-                            foliage_transaction_block_sig_harvester,
-                            foliage_transaction_block_sig_farmer,
-                            foliage_transaction_block_sig_taproot,
-                        ]
-                    )
-                    assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
-                    assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
-
-                    request_to_nodes = farmer_protocol.SignedValues(
-                        computed_quality_string,
-                        foliage_agg_sig,
-                        foliage_block_agg_sig,
-                    )
-
-                    msg = make_msg(ProtocolMessageTypes.signed_values, request_to_nodes)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
+        message: Message | None = None
+        if isinstance(request, DeclareProofOfSpace):
+            self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
+            message = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
+        if isinstance(request, SignedValues):
+            message = make_msg(ProtocolMessageTypes.signed_values, request)
+        await self.farmer.server.send_to_all([message], NodeType.FULL_NODE)
 
     """
     FARMER PROTOCOL (FARMER <-> FULL NODE)
@@ -579,3 +442,150 @@ class FarmerAPI:
     @api_request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
+
+    def _process_respond_signatures(
+        self, response: harvester_protocol.RespondSignatures
+    ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
+        """
+        There are two cases: receiving signatures for sps, or receiving signatures for the block.
+        """
+        if response.sp_hash not in self.farmer.sps:
+            self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
+            return None
+        is_sp_signatures: bool = False
+        sps = self.farmer.sps[response.sp_hash]
+        peak_height = sps[0].peak_height
+        signage_point_index = sps[0].signage_point_index
+        found_sp_hash_debug = False
+        for sp_candidate in sps:
+            if response.sp_hash == response.message_signatures[0][0]:
+                found_sp_hash_debug = True
+                if sp_candidate.reward_chain_sp == response.message_signatures[1][0]:
+                    is_sp_signatures = True
+        if found_sp_hash_debug:
+            assert is_sp_signatures
+
+        pospace = None
+        for plot_identifier, candidate_pospace in self.farmer.proofs_of_space[response.sp_hash]:
+            if plot_identifier == response.plot_identifier:
+                pospace = candidate_pospace
+        assert pospace is not None
+        include_taproot: bool = pospace.pool_contract_puzzle_hash is not None
+
+        computed_quality_string = verify_and_get_quality_string(
+            pospace, self.farmer.constants, response.challenge_hash, response.sp_hash, height=peak_height
+        )
+        if computed_quality_string is None:
+            self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
+            return None
+
+        if is_sp_signatures:
+            (
+                challenge_chain_sp,
+                challenge_chain_sp_harv_sig,
+            ) = response.message_signatures[0]
+            reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
+            for sk in self.farmer.get_private_keys():
+                pk = sk.get_g1()
+                if pk == response.farmer_pk:
+                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
+                    assert agg_pk == pospace.plot_public_key
+                    if include_taproot:
+                        taproot_sk: PrivateKey = generate_taproot_sk(response.local_pk, pk)
+                        taproot_share_cc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, challenge_chain_sp, agg_pk)
+                        taproot_share_rc_sp: G2Element = AugSchemeMPL.sign(taproot_sk, reward_chain_sp, agg_pk)
+                    else:
+                        taproot_share_cc_sp = G2Element()
+                        taproot_share_rc_sp = G2Element()
+                    farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_sp, agg_pk)
+                    agg_sig_cc_sp = AugSchemeMPL.aggregate(
+                        [challenge_chain_sp_harv_sig, farmer_share_cc_sp, taproot_share_cc_sp]
+                    )
+                    assert AugSchemeMPL.verify(agg_pk, challenge_chain_sp, agg_sig_cc_sp)
+
+                    # This means it passes the sp filter
+                    farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
+                    agg_sig_rc_sp = AugSchemeMPL.aggregate(
+                        [reward_chain_sp_harv_sig, farmer_share_rc_sp, taproot_share_rc_sp]
+                    )
+                    assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
+
+                    if pospace.pool_public_key is not None:
+                        assert pospace.pool_contract_puzzle_hash is None
+                        pool_pk = bytes(pospace.pool_public_key)
+                        if pool_pk not in self.farmer.pool_sks_map:
+                            self.farmer.log.error(
+                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                            )
+                            return None
+
+                        pool_target: Optional[PoolTarget] = PoolTarget(self.farmer.pool_target, uint32(0))
+                        assert pool_target is not None
+                        pool_target_signature: Optional[G2Element] = AugSchemeMPL.sign(
+                            self.farmer.pool_sks_map[pool_pk], bytes(pool_target)
+                        )
+                    else:
+                        assert pospace.pool_contract_puzzle_hash is not None
+                        pool_target = None
+                        pool_target_signature = None
+
+                    return farmer_protocol.DeclareProofOfSpace(
+                        response.challenge_hash,
+                        challenge_chain_sp,
+                        signage_point_index,
+                        reward_chain_sp,
+                        pospace,
+                        agg_sig_cc_sp,
+                        agg_sig_rc_sp,
+                        self.farmer.farmer_target,
+                        pool_target,
+                        pool_target_signature,
+                    )
+        else:
+            # This is a response with block signatures
+            for sk in self.farmer.get_private_keys():
+                (
+                    foliage_block_data_hash,
+                    foliage_sig_harvester,
+                ) = response.message_signatures[0]
+                (
+                    foliage_transaction_block_hash,
+                    foliage_transaction_block_sig_harvester,
+                ) = response.message_signatures[1]
+                pk = sk.get_g1()
+                if pk == response.farmer_pk:
+                    agg_pk = generate_plot_public_key(response.local_pk, pk, include_taproot)
+                    assert agg_pk == pospace.plot_public_key
+                    if include_taproot:
+                        taproot_sk = generate_taproot_sk(response.local_pk, pk)
+                        foliage_sig_taproot: G2Element = AugSchemeMPL.sign(taproot_sk, foliage_block_data_hash, agg_pk)
+                        foliage_transaction_block_sig_taproot: G2Element = AugSchemeMPL.sign(
+                            taproot_sk, foliage_transaction_block_hash, agg_pk
+                        )
+                    else:
+                        foliage_sig_taproot = G2Element()
+                        foliage_transaction_block_sig_taproot = G2Element()
+
+                    foliage_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_data_hash, agg_pk)
+                    foliage_transaction_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_transaction_block_hash, agg_pk)
+
+                    foliage_agg_sig = AugSchemeMPL.aggregate(
+                        [foliage_sig_harvester, foliage_sig_farmer, foliage_sig_taproot]
+                    )
+                    foliage_block_agg_sig = AugSchemeMPL.aggregate(
+                        [
+                            foliage_transaction_block_sig_harvester,
+                            foliage_transaction_block_sig_farmer,
+                            foliage_transaction_block_sig_taproot,
+                        ]
+                    )
+                    assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
+                    assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
+
+                    return farmer_protocol.SignedValues(
+                        computed_quality_string,
+                        foliage_agg_sig,
+                        foliage_block_agg_sig,
+                    )
+
+        return None
