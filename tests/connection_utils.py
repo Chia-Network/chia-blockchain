@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Tuple, Set
+from typing import Set, Tuple
 
 import aiohttp
 from cryptography import x509
