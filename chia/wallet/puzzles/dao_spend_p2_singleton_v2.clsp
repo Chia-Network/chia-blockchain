@@ -29,6 +29,7 @@
   )
 
   (defun loop_through_list (
+      TREASURY_SINGLETON_STRUCT
       SPEND_AMOUNT
       P2_SINGLETON_PUZHASH
       p2_calculated
@@ -42,6 +43,7 @@
         (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_calculated '$'))
         (if p2_singleton_list
             (loop_through_list
+              TREASURY_SINGLETON_STRUCT
               SPEND_AMOUNT
               P2_SINGLETON_PUZHASH
               (calculate_coin_id (f (f p2_singleton_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_list))))
@@ -49,7 +51,7 @@
               (+ total (f (r (f p2_singleton_list))))
             )
             (c
-              (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT))
+              (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT) (list (f (r TREASURY_SINGLETON_STRUCT))))
               output
             )
         )
@@ -99,6 +101,7 @@
 
   ; for a given asset type, loop through the cat coins and generate the announcements required for each
   (defun for_each_asset (
+      TREASURY_SINGLETON_STRUCT
       CAT_MOD_HASH
       CONDITIONS_FOR_THIS_ASSET_TYPE
       P2_SINGLETON_PUZHASH
@@ -116,12 +119,13 @@
             (sha256tree 0)  ; most coins destroy themselves
             (calculate_delegated_puzzlehash  ; the last coin creates the conditions
               (c
-                (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum))
+                (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) (list (f (r TREASURY_SINGLETON_STRUCT))))
                 CONDITIONS_FOR_THIS_ASSET_TYPE
               )
             )
           )
           (for_each_asset
+            TREASURY_SINGLETON_STRUCT
             CAT_MOD_HASH
             CONDITIONS_FOR_THIS_ASSET_TYPE
             P2_SINGLETON_PUZHASH
@@ -138,6 +142,7 @@
 
   ; loops through the list of ((tailhash conditions))
   (defun for_each_asset_type (
+      TREASURY_SINGLETON_STRUCT
       CAT_MOD_HASH
       P2_SINGLETON_PUZHASH
       LIST_OF_TAILHASH_CONDITIONS
@@ -146,11 +151,13 @@
     )
     (if p2_singleton_tailhash_parent_amount_list
         (for_each_asset_type
+          TREASURY_SINGLETON_STRUCT
           CAT_MOD_HASH
           P2_SINGLETON_PUZHASH
           (r LIST_OF_TAILHASH_CONDITIONS)
           (r p2_singleton_tailhash_parent_amount_list)
           (for_each_asset
+            TREASURY_SINGLETON_STRUCT
             CAT_MOD_HASH
             (if
               (=
@@ -179,12 +186,14 @@
     (c
       (list CREATE_COIN treasury_inner_puzhash ONE (list (f (r TREASURY_SINGLETON_STRUCT))))
       (loop_through_list
+        TREASURY_SINGLETON_STRUCT
         (sum_create_coins CONDITIONS)
         P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
         (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
         (r p2_singleton_parent_amount_list)
         (f (r (f p2_singleton_parent_amount_list)))
         (for_each_asset_type
+          TREASURY_SINGLETON_STRUCT
           CAT_MOD_HASH
           P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
           LIST_OF_TAILHASH_CONDITIONS

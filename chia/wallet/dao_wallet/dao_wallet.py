@@ -1345,6 +1345,7 @@ class DAOWallet(WalletProtocol):
                 memos=[],
             )
             await self.wallet_state_manager.add_pending_transaction(record)
+            return record
         return full_spend
 
     async def generate_proposal_eve_spend(
@@ -1373,7 +1374,7 @@ class DAOWallet(WalletProtocol):
         previous_votes = []
         lockup_inner_puzhashes = []
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(spend.coin.amount)
+            vote_amounts.append(vote_amount)
             vote_coins.append(spend.coin.name())
             previous_votes.append(
                 get_active_votes_from_lockup_puzzle(

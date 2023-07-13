@@ -1211,9 +1211,6 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
     ) -> Dict:
-        """
-        TODO: Rearrange argument list order
-        """
         request: Dict[str, Any] = {
             "wallet_type": "dao_wallet",
             "mode": mode,
@@ -1226,6 +1223,14 @@ class WalletRpcClient(RpcClient):
             "reuse_puzhash": reuse_puzhash,
         }
         response = await self.fetch("create_new_wallet", request)
+        return response
+
+    async def dao_get_treasury_id(
+        self,
+        wallet_id: int,
+    ) -> Dict:
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("dao_get_treasury_id", request)
         return response
 
     async def dao_create_proposal(
@@ -1298,12 +1303,14 @@ class WalletRpcClient(RpcClient):
         self,
         wallet_id: int,
         proposal_id: str,
+        self_destruct: bool,
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "proposal_id": proposal_id,
+            "self_destruct": self_destruct,
             "fee": fee,
             "reuse_puzhash": reuse_puzhash,
         }
