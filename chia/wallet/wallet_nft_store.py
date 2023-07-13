@@ -186,7 +186,7 @@ class WalletNftStore:
         except ValueError:
             count = 50
 
-        sql: str = f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE"
+        sql: str = f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE"
         if wallet_id is not None and did_id is None:
             sql += f" wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
@@ -272,3 +272,8 @@ class WalletNftStore:
             if result.rowcount > 0:
                 return True
             return False
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM users_nfts WHERE wallet_id=?", (wallet_id,))
+            await cursor.close()

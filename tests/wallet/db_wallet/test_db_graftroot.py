@@ -16,7 +16,7 @@ from chia.util.errors import Err
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.merkle_utils import build_merkle_tree, build_merkle_tree_from_binary_tree, simplify_merkle_proof
 
-GRAFTROOT_MOD = load_clvm("graftroot_dl_offers.clvm")
+GRAFTROOT_MOD = load_clvm("graftroot_dl_offers.clsp")
 
 # Always returns the last value
 # (mod solution

@@ -106,7 +106,6 @@ def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionCon
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
@@ -326,7 +325,6 @@ async def test_reader_transaction_is_deferred() -> None:
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
@@ -356,7 +354,6 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
 async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
-
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 

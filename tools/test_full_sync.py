@@ -7,11 +7,12 @@ import cProfile
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, cast
 
 import aiosqlite
 import click
@@ -20,8 +21,8 @@ import zstd
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
-from chia.protocols import full_node_protocol
 from chia.server.outbound_message import Message, NodeType
+from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -48,6 +49,9 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
     if not profile:
         yield
         return
+
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         receive_start_time = time.monotonic()
@@ -108,7 +112,6 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
-
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
@@ -123,10 +126,9 @@ async def run_sync_test(
     logger.addHandler(check_log)
 
     with tempfile.TemporaryDirectory() as root_dir:
-
-        root_path = Path(root_dir)
+        root_path = Path(root_dir, "root")
         if start_at_checkpoint is not None:
-            shutil.copytree(Path(start_at_checkpoint) / ".", root_path, dirs_exist_ok=True)
+            shutil.copytree(start_at_checkpoint, root_path)
 
         chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")
@@ -147,7 +149,7 @@ async def run_sync_test(
         )
 
         try:
-            full_node.set_server(FakeServer())  # type: ignore[arg-type]
+            full_node.set_server(cast(ChiaServer, FakeServer()))
             await full_node._start()
 
             peak = full_node.blockchain.get_peak()
@@ -156,7 +158,7 @@ async def run_sync_test(
             else:
                 height = 0
 
-            peer: WSChiaConnection = FakePeer()  # type: ignore[assignment]
+            peer: WSChiaConnection = cast(WSChiaConnection, FakePeer())
 
             print()
             counter = 0
@@ -192,12 +194,10 @@ async def run_sync_test(
 
                         if keep_up:
                             for b in block_batch:
-                                await full_node.respond_unfinished_block(
-                                    full_node_protocol.RespondUnfinishedBlock(make_unfinished_block(b, constants)), peer
-                                )
-                                await full_node.respond_block(full_node_protocol.RespondBlock(b))
+                                await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
+                                await full_node.add_block(b)
                         else:
-                            success, summary = await full_node.receive_block_batch(block_batch, peer, None)
+                            success, summary = await full_node.add_block_batch(block_batch, peer, None)
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -243,7 +243,7 @@ def main() -> None:
     pass
 
 
-@main.command("run", short_help="run simulated full sync from an existing blockchain db")
+@main.command("run", help="run simulated full sync from an existing blockchain db")
 @click.argument("file", type=click.Path(), required=True)
 @click.option("--db-version", type=int, required=False, default=2, help="the DB version to use in simulated node")
 @click.option("--profile", is_flag=True, required=False, default=False, help="dump CPU profiles for slow batches")
@@ -307,7 +307,7 @@ def run(
     )
 
 
-@main.command("analyze", short_help="generate call stacks for all profiles dumped to current directory")
+@main.command("analyze", help="generate call stacks for all profiles dumped to current directory")
 def analyze() -> None:
     from glob import glob
     from shlex import quote
@@ -319,7 +319,7 @@ def analyze() -> None:
         check_call(f"gprof2dot -f pstats {quote(input_file)} | dot -T png >{quote(output)}", shell=True)
 
 
-@main.command("create-checkpoint", short_help="sync the full node up to specified height and save its state")
+@main.command("create-checkpoint", help="sync the full node up to specified height and save its state")
 @click.argument("file", type=click.Path(), required=True)
 @click.argument("out-file", type=click.Path(), required=True)
 @click.option("--height", type=int, required=True, help="Sync node up to this height")
@@ -335,7 +335,6 @@ async def run_sync_checkpoint(
     root_path: Path,
     max_height: int,
 ) -> None:
-
     root_path.mkdir(parents=True, exist_ok=True)
 
     chia_init(root_path, should_check_keys=False, v1_db=False)
@@ -373,7 +372,7 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                success, _ = await full_node.add_block_batch(block_batch, peer, None)
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -385,7 +384,7 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _ = await full_node.receive_block_batch(block_batch, peer, None)
+                success, _ = await full_node.add_block_batch(block_batch, peer, None)
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 

@@ -16,11 +16,10 @@ def parse_blob(input_bytes: bytes) -> Tuple[bytes, bytes]:
     size = int.from_bytes(size_bytes, "big")
     message_bytes = input_bytes[:size]
     input_bytes = input_bytes[size:]
-    return message_bytes, input_bytes
+    return (message_bytes, input_bytes)
 
 
 def test_protocol_bytes() -> None:
-
     filename: Path = get_network_protocol_filename()
     assert filename.exists()
     with open(filename, "rb") as f:

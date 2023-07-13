@@ -111,6 +111,10 @@ class TestWalletRpc:
 
             assert await client.dl_history(launcher_id) == [new_singleton_record, singleton_record]
 
+            # Test tracking a launcher id that does not exist
+            with pytest.raises(ValueError):
+                await client_2.dl_track_new(bytes32([1] * 32))
+
             await client_2.dl_track_new(launcher_id)
 
             async def is_singleton_generation(rpc_client: WalletRpcClient, lid: bytes32, generation: int) -> bool:

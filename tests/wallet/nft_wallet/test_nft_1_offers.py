@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from secrets import token_bytes
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Optional, Tuple
 
 import pytest
 
@@ -24,6 +24,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
+from tests.wallet.cat_wallet.test_trades import create_tr_for_offer
 
 # from clvm_tools.binutils import disassemble
 
@@ -31,7 +32,7 @@ logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on deb
 
 
 def mempool_not_empty(fnapi: FullNodeSimulator) -> bool:
-    return len(fnapi.full_node.mempool_manager.mempool.spends) > 0
+    return fnapi.full_node.mempool_manager.mempool.size() > 0
 
 
 async def farm_blocks_until(
@@ -46,7 +47,7 @@ async def farm_blocks_until(
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
-    return len(await wallet.get_current_nfts())
+    return await wallet.get_nft_count()
 
 
 @pytest.mark.parametrize(
@@ -54,13 +55,13 @@ async def get_nft_count(wallet: NFTWallet) -> int:
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -121,7 +122,7 @@ async def test_nft_offer_sell_nft(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -161,8 +162,7 @@ async def test_nft_offer_sell_nft(
 
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
+    assert await nft_wallet_taker.get_nft_count() == 0
 
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
@@ -189,7 +189,6 @@ async def test_nft_offer_sell_nft(
     taker_fee = 1
     assert not mempool_not_empty(full_node_api)
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
@@ -201,9 +200,7 @@ async def test_nft_offer_sell_nft(
     assert tx_records is not None
 
     async def maker_0_taker_1() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 0 and len(await nft_wallet_taker.get_current_nfts()) == 1
-        )
+        return await nft_wallet_maker.get_nft_count() == 0 and await nft_wallet_taker.get_nft_count() == 1
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
@@ -224,13 +221,13 @@ async def test_nft_offer_sell_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_request_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -289,7 +286,7 @@ async def test_nft_offer_request_nft(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_taker
     royalty_puzhash = ph_taker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
         wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
@@ -329,11 +326,10 @@ async def test_nft_offer_request_nft(
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = await nft_wallet_maker.get_current_nfts()
-    assert len(coins_maker) == 0
     coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 1
 
+    assert await nft_wallet_maker.get_nft_count() == 0
     nft_to_request = coins_taker[0]
     nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
 
@@ -362,7 +358,6 @@ async def test_nft_offer_request_nft(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -373,9 +368,7 @@ async def test_nft_offer_request_nft(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
     async def maker_1_taker_0() -> bool:
-        return (
-            len(await nft_wallet_maker.get_current_nfts()) == 1 and len(await nft_wallet_taker.get_current_nfts()) == 0
-        )
+        return await nft_wallet_maker.get_nft_count() == 1 and await nft_wallet_taker.get_nft_count() == 0
 
     await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
 
@@ -392,13 +385,13 @@ async def test_nft_offer_request_nft(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_did_to_did(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -457,7 +450,7 @@ async def test_nft_offer_sell_did_to_did(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -517,12 +510,9 @@ async def test_nft_offer_sell_did_to_did(
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
-
     coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = await nft_wallet_taker.get_current_nfts()
-    assert len(coins_taker) == 0
-
+    assert await nft_wallet_taker.get_nft_count() == 0
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
@@ -548,7 +538,6 @@ async def test_nft_offer_sell_did_to_did(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -558,9 +547,9 @@ async def test_nft_offer_sell_did_to_did(
 
     async def maker_0_taker_1() -> bool:
         return (
-            len(await nft_wallet_maker.get_current_nfts()) == 0
+            await nft_wallet_maker.get_nft_count() == 0
             and len(wallet_taker.wallet_state_manager.wallets) == 4
-            and len(await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts()) == 1
+            and await wallet_taker.wallet_state_manager.wallets[4].get_nft_count() == 1
         )
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
@@ -569,7 +558,7 @@ async def test_nft_offer_sell_did_to_did(
     # assert nnew nft wallet is created for taker
     await time_out_assert(20, len, 4, wallet_taker.wallet_state_manager.wallets)
     await time_out_assert(20, get_nft_count, 1, wallet_taker.wallet_state_manager.wallets[4])
-    assert (await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts())[0].nft_id == nft_to_offer_asset_id
+    assert await wallet_taker.wallet_state_manager.wallets[4].nft_store.get_nft_by_id(nft_to_offer_asset_id) is not None
     # assert payments and royalties
     expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
     expected_maker_balance = funds - 2 - maker_fee + xch_requested + expected_royalty
@@ -583,13 +572,13 @@ async def test_nft_offer_sell_did_to_did(
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,zero_royalties",
+    [(True, False), (False, False), (False, True)],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, zero_royalties: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -650,7 +639,7 @@ async def test_nft_offer_sell_nft_for_cat(
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
     royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    royalty_basis_pts = uint16(0 if zero_royalties else 200)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -698,9 +687,7 @@ async def test_nft_offer_sell_nft_for_cat(
     cats_to_mint = 100000
     cats_to_trade = uint64(10000)
     async with wallet_node_maker.wallet_state_manager.lock:
-        full_node_api.full_node.log.warning(
-            f"Mempool size: {len(full_node_api.full_node.mempool_manager.mempool.spends)}"
-        )
+        full_node_api.full_node.log.warning(f"Mempool size: {full_node_api.full_node.mempool_manager.mempool.size()}")
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
         )
@@ -756,7 +743,6 @@ async def test_nft_offer_sell_nft_for_cat(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -958,6 +944,8 @@ async def test_nft_offer_request_nft_for_cat(
                 "000000040000000000000000000000000000000000000000000000000000000000000000ef08c35c6f7a7f1161f38b5f37a03bb66aa0c2bbe0e25c848115e273cac012a20000000000000000ff02ffff01ff02ffff01ff02ffff03ffff18ff2fff3480ffff01ff04ffff04ff20ffff04ff2fff808080ffff04ffff02ff3effff04ff02ffff04ff05ffff04ffff02ff2affff04ff02ffff04ff27ffff04ffff02ffff03ff77ffff01ff02ff36ffff04ff02ffff04ff09ffff04ff57ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ffff011d80ff0180ffff04ffff02ffff03ff77ffff0181b7ffff015780ff0180ff808080808080ffff04ff77ff808080808080ffff02ff3affff04ff02ffff04ff05ffff04ffff02ff0bff5f80ffff01ff8080808080808080ffff01ff088080ff0180ffff04ffff01ffffffff4947ff0233ffff0401ff0102ffffff20ff02ffff03ff05ffff01ff02ff32ffff04ff02ffff04ff0dffff04ffff0bff3cffff0bff34ff2480ffff0bff3cffff0bff3cffff0bff34ff2c80ff0980ffff0bff3cff0bffff0bff34ff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ffff22ffff09ffff0dff0580ff2280ffff09ffff0dff0b80ff2280ffff15ff17ffff0181ff8080ffff01ff0bff05ff0bff1780ffff01ff088080ff0180ff02ffff03ff0bffff01ff02ffff03ffff02ff26ffff04ff02ffff04ff13ff80808080ffff01ff02ffff03ffff20ff1780ffff01ff02ffff03ffff09ff81b3ffff01818f80ffff01ff02ff3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff808080808080ffff01ff04ffff04ff23ffff04ffff02ff36ffff04ff02ffff04ff09ffff04ff53ffff04ffff02ff2effff04ff02ffff04ff05ff80808080ff808080808080ff738080ffff02ff3affff04ff02ffff04ff05ffff04ff1bffff04ff34ff8080808080808080ff0180ffff01ff088080ff0180ffff01ff04ff13ffff02ff3affff04ff02ffff04ff05ffff04ff1bffff04ff17ff8080808080808080ff0180ffff01ff02ffff03ff17ff80ffff01ff088080ff018080ff0180ffffff02ffff03ffff09ff09ff3880ffff01ff02ffff03ffff18ff2dffff010180ffff01ff0101ff8080ff0180ff8080ff0180ff0bff3cffff0bff34ff2880ffff0bff3cffff0bff3cffff0bff34ff2c80ff0580ffff0bff3cffff02ff32ffff04ff02ffff04ff07ffff04ffff0bff34ff3480ff8080808080ffff0bff34ff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2effff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff02ffff03ffff21ff17ffff09ff0bff158080ffff01ff04ff30ffff04ff0bff808080ffff01ff088080ff0180ff018080ffff04ffff01ffa07faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9fffa070ddb91bded411b2b9d272af482e7c8e5b1b63a748cbc6c9a605f0fca8a35aafa0eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9ffff04ffff01ff02ffff01ff02ffff01ff02ff3effff04ff02ffff04ff05ffff04ffff02ff2fff5f80ffff04ff80ffff04ffff04ffff04ff0bffff04ff17ff808080ffff01ff808080ffff01ff8080808080808080ffff04ffff01ffffff0233ff04ff0101ffff02ff02ffff03ff05ffff01ff02ff1affff04ff02ffff04ff0dffff04ffff0bff12ffff0bff2cff1480ffff0bff12ffff0bff12ffff0bff2cff3c80ff0980ffff0bff12ff0bffff0bff2cff8080808080ff8080808080ffff010b80ff0180ffff0bff12ffff0bff2cff1080ffff0bff12ffff0bff12ffff0bff2cff3c80ff0580ffff0bff12ffff02ff1affff04ff02ffff04ff07ffff04ffff0bff2cff2c80ff8080808080ffff0bff2cff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2effff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff02ffff03ff0bffff01ff02ffff03ffff09ff23ff1880ffff01ff02ffff03ffff18ff81b3ff2c80ffff01ff02ffff03ffff20ff1780ffff01ff02ff3effff04ff02ffff04ff05ffff04ff1bffff04ff33ffff04ff2fffff04ff5fff8080808080808080ffff01ff088080ff0180ffff01ff04ff13ffff02ff3effff04ff02ffff04ff05ffff04ff1bffff04ff17ffff04ff2fffff04ff5fff80808080808080808080ff0180ffff01ff02ffff03ffff09ff23ffff0181e880ffff01ff02ff3effff04ff02ffff04ff05ffff04ff1bffff04ff17ffff04ffff02ffff03ffff22ffff09ffff02ff2effff04ff02ffff04ff53ff80808080ff82014f80ffff20ff5f8080ffff01ff02ff53ffff04ff818fffff04ff82014fffff04ff81b3ff8080808080ffff01ff088080ff0180ffff04ff2cff8080808080808080ffff01ff04ff13ffff02ff3effff04ff02ffff04ff05ffff04ff1bffff04ff17ffff04ff2fffff04ff5fff80808080808080808080ff018080ff0180ffff01ff04ffff04ff18ffff04ffff02ff16ffff04ff02ffff04ff05ffff04ff27ffff04ffff0bff2cff82014f80ffff04ffff02ff2effff04ff02ffff04ff818fff80808080ffff04ffff0bff2cff0580ff8080808080808080ff378080ff81af8080ff0180ff018080ffff04ffff01a0a04d9f57764f54a43e4030befb4d80026e870519aaa66334aef8304f5d0393c2ffff04ffff01ffff75ffaf68747470733a2f2f7777772e636869612e6e65742f696d672f6272616e64696e672f636869612d6c6f676f2e73766780ffff68a23078443435383441443436333133394641384330443946363846344235394631383580ffff04ffff01a0fe8a4b4e27a2e29a4d3fc7ce9d527adbcaccbab6ada3903ccf3ba9a769d2d78bffff04ffff01ff02ffff01ff02ffff01ff02ff26ffff04ff02ffff04ff05ffff04ff17ffff04ff0bffff04ffff02ff2fff5f80ff80808080808080ffff04ffff01ffffff82ad4cff0233ffff3e04ff81f601ffffff0102ffff02ffff03ff05ffff01ff02ff2affff04ff02ffff04ff0dffff04ffff0bff32ffff0bff3cff3480ffff0bff32ffff0bff32ffff0bff3cff2280ff0980ffff0bff32ff0bffff0bff3cff8080808080ff8080808080ffff010b80ff0180ff04ffff04ff38ffff04ffff02ff36ffff04ff02ffff04ff05ffff04ff27ffff04ffff02ff2effff04ff02ffff04ffff02ffff03ff81afffff0181afffff010b80ff0180ff80808080ffff04ffff0bff3cff4f80ffff04ffff0bff3cff0580ff8080808080808080ff378080ff82016f80ffffff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff2fffff01ff80ff808080808080808080ff0bff32ffff0bff3cff2880ffff0bff32ffff0bff32ffff0bff3cff2280ff0580ffff0bff32ffff02ff2affff04ff02ffff04ff07ffff04ffff0bff3cff3c80ff8080808080ffff0bff3cff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2effff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff02ffff03ff5fffff01ff02ffff03ffff09ff82011fff3880ffff01ff02ffff03ffff09ffff18ff82059f80ff3c80ffff01ff02ffff03ffff20ff81bf80ffff01ff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff81dfffff04ff82019fffff04ff82017fff80808080808080808080ffff01ff088080ff0180ffff01ff04ff819fffff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff81dfffff04ff81bfffff04ff82017fff808080808080808080808080ff0180ffff01ff02ffff03ffff09ff82011fff2c80ffff01ff02ffff03ffff20ff82017f80ffff01ff04ffff04ff24ffff04ffff0eff10ffff02ff2effff04ff02ffff04ff82019fff8080808080ff808080ffff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff81dfffff04ff81bfffff04ffff02ff0bffff04ff17ffff04ff2fffff04ff82019fff8080808080ff8080808080808080808080ffff01ff088080ff0180ffff01ff02ffff03ffff09ff82011fff2480ffff01ff02ffff03ffff20ffff02ffff03ffff09ffff0122ffff0dff82029f8080ffff01ff02ffff03ffff09ffff0cff82029fff80ffff010280ff1080ffff01ff0101ff8080ff0180ff8080ff018080ffff01ff04ff819fffff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff81dfffff04ff81bfffff04ff82017fff8080808080808080808080ffff01ff088080ff0180ffff01ff04ff819fffff02ff3effff04ff02ffff04ff05ffff04ff0bffff04ff17ffff04ff2fffff04ff81dfffff04ff81bfffff04ff82017fff808080808080808080808080ff018080ff018080ff0180ffff01ff02ff3affff04ff02ffff04ff05ffff04ff0bffff04ff81bfffff04ffff02ffff03ff82017fffff0182017fffff01ff02ff0bffff04ff17ffff04ff2fffff01ff808080808080ff0180ff8080808080808080ff0180ff018080ffff04ffff01a0c5abea79afaa001b5427dfa0c8cf42ca6f38f5841b78f9b3c252733eb2de2726ffff04ffff0180ffff04ffff01ff02ffff01ff02ffff01ff02ffff03ff81bfffff01ff04ff82013fffff04ff80ffff04ffff02ffff03ffff22ff82013fffff20ffff09ff82013fff2f808080ffff01ff04ffff04ff10ffff04ffff0bffff02ff2effff04ff02ffff04ff09ffff04ff8205bfffff04ffff02ff3effff04ff02ffff04ffff04ff09ffff04ff82013fff1d8080ff80808080ff808080808080ff1580ff808080ffff02ff16ffff04ff02ffff04ff0bffff04ff17ffff04ff8202bfffff04ff15ff8080808080808080ffff01ff02ff16ffff04ff02ffff04ff0bffff04ff17ffff04ff8202bfffff04ff15ff8080808080808080ff0180ff80808080ffff01ff04ff2fffff01ff80ff80808080ff0180ffff04ffff01ffffff3f02ff04ff0101ffff822710ff02ff02ffff03ff05ffff01ff02ff3affff04ff02ffff04ff0dffff04ffff0bff2affff0bff2cff1480ffff0bff2affff0bff2affff0bff2cff3c80ff0980ffff0bff2aff0bffff0bff2cff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ff17ffff01ff04ffff04ff10ffff04ffff0bff81a7ffff02ff3effff04ff02ffff04ffff04ff2fffff04ffff04ff05ffff04ffff05ffff14ffff12ff47ff0b80ff128080ffff04ffff04ff05ff8080ff80808080ff808080ff8080808080ff808080ffff02ff16ffff04ff02ffff04ff05ffff04ff0bffff04ff37ffff04ff2fff8080808080808080ff8080ff0180ffff0bff2affff0bff2cff1880ffff0bff2affff0bff2affff0bff2cff3c80ff0580ffff0bff2affff02ff3affff04ff02ffff04ff07ffff04ffff0bff2cff2c80ff8080808080ffff0bff2cff8080808080ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff3effff04ff02ffff04ff09ff80808080ffff02ff3effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01ffa07faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9fffa070ddb91bded411b2b9d272af482e7c8e5b1b63a748cbc6c9a605f0fca8a35aafa0eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9ffff04ffff01a0be0a40552c563b41601c145653140f97d23dd8cc5219b9c8495d2030732d930bffff04ffff01821388ff0180808080ffff04ffff01ff02ffff01ff02ff0affff04ff02ffff04ff03ff80808080ffff04ffff01ffff333effff02ffff03ff05ffff01ff04ffff04ff0cffff04ffff02ff1effff04ff02ffff04ff09ff80808080ff808080ffff02ff16ffff04ff02ffff04ff19ffff04ffff02ff0affff04ff02ffff04ff0dff80808080ff808080808080ff8080ff0180ffff02ffff03ff05ffff01ff04ffff04ff08ff0980ffff02ff16ffff04ff02ffff04ff0dffff04ff0bff808080808080ffff010b80ff0180ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff1effff04ff02ffff04ff09ff80808080ffff02ff1effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ff018080808080ff018080808080ff01808080ffffa022bc8aa311bd79f278be600940f916dd28625cbb05b018d2319a98996bd9130dffffa08a66292fde9ef08198d996eae0ea21677eb478afeabed8030b1bf42c728f7dccff01ffffa08a66292fde9ef08198d996eae0ea21677eb478afeabed8030b1bf42c728f7dcc808080805a57f38a32692d5650280455d12834f31d574f37bd0b09e5fc849d4e6999b16277e01b66aceeced509b7fc53d1045fdca8db774fc7e755fb710ff5f64a98b6b00000000000004e20ff02ffff01ff02ffff01ff02ff5effff04ff02ffff04ffff04ff05ffff04ffff0bff34ff0580ffff04ff0bff80808080ffff04ffff02ff17ff2f80ffff04ff5fffff04ffff02ff2effff04ff02ffff04ff17ff80808080ffff04ffff02ff2affff04ff02ffff04ff82027fffff04ff82057fffff04ff820b7fff808080808080ffff04ff81bfffff04ff82017fffff04ff8202ffffff04ff8205ffffff04ff820bffff80808080808080808080808080ffff04ffff01ffffffff3d46ff02ff333cffff0401ff01ff81cb02ffffff20ff02ffff03ff05ffff01ff02ff32ffff04ff02ffff04ff0dffff04ffff0bff7cffff0bff34ff2480ffff0bff7cffff0bff7cffff0bff34ff2c80ff0980ffff0bff7cff0bffff0bff34ff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ffff22ffff09ffff0dff0580ff2280ffff09ffff0dff0b80ff2280ffff15ff17ffff0181ff8080ffff01ff0bff05ff0bff1780ffff01ff088080ff0180ffff02ffff03ff0bffff01ff02ffff03ffff09ffff02ff2effff04ff02ffff04ff13ff80808080ff820b9f80ffff01ff02ff56ffff04ff02ffff04ffff02ff13ffff04ff5fffff04ff17ffff04ff2fffff04ff81bfffff04ff82017fffff04ff1bff8080808080808080ffff04ff82017fff8080808080ffff01ff088080ff0180ffff01ff02ffff03ff17ffff01ff02ffff03ffff20ff81bf80ffff0182017fffff01ff088080ff0180ffff01ff088080ff018080ff0180ff04ffff04ff05ff2780ffff04ffff10ff0bff5780ff778080ffffff02ffff03ff05ffff01ff02ffff03ffff09ffff02ffff03ffff09ff11ff5880ffff0159ff8080ff0180ffff01818f80ffff01ff02ff26ffff04ff02ffff04ff0dffff04ff0bffff04ffff04ff81b9ff82017980ff808080808080ffff01ff02ff7affff04ff02ffff04ffff02ffff03ffff09ff11ff5880ffff01ff04ff58ffff04ffff02ff76ffff04ff02ffff04ff13ffff04ff29ffff04ffff0bff34ff5b80ffff04ff2bff80808080808080ff398080ffff01ff02ffff03ffff09ff11ff7880ffff01ff02ffff03ffff20ffff02ffff03ffff09ffff0121ffff0dff298080ffff01ff02ffff03ffff09ffff0cff29ff80ff3480ff5c80ffff01ff0101ff8080ff0180ff8080ff018080ffff0109ffff01ff088080ff0180ffff010980ff018080ff0180ffff04ffff02ffff03ffff09ff11ff5880ffff0159ff8080ff0180ffff04ffff02ff26ffff04ff02ffff04ff0dffff04ff0bffff04ff17ff808080808080ff80808080808080ff0180ffff01ff04ff80ffff04ff80ff17808080ff0180ffff02ffff03ff05ffff01ff04ff09ffff02ff56ffff04ff02ffff04ff0dffff04ff0bff808080808080ffff010b80ff0180ff0bff7cffff0bff34ff2880ffff0bff7cffff0bff7cffff0bff34ff2c80ff0580ffff0bff7cffff02ff32ffff04ff02ffff04ff07ffff04ffff0bff34ff3480ff8080808080ffff0bff34ff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2effff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ffff04ffff04ff30ffff04ff5fff808080ffff02ff7effff04ff02ffff04ffff04ffff04ff2fff0580ffff04ff5fff82017f8080ffff04ffff02ff26ffff04ff02ffff04ff0bffff04ff05ffff01ff808080808080ffff04ff17ffff04ff81bfffff04ff82017fffff04ffff02ff2affff04ff02ffff04ff8204ffffff04ffff02ff76ffff04ff02ffff04ff09ffff04ff820affffff04ffff0bff34ff2d80ffff04ff15ff80808080808080ffff04ff8216ffff808080808080ffff04ff8205ffffff04ff820bffff808080808080808080808080ff02ff5affff04ff02ffff04ff5fffff04ff3bffff04ffff02ffff03ff17ffff01ff09ff2dffff02ff2affff04ff02ffff04ff27ffff04ffff02ff76ffff04ff02ffff04ff29ffff04ff57ffff04ffff0bff34ff81b980ffff04ff59ff80808080808080ffff04ff81b7ff80808080808080ff8080ff0180ffff04ff17ffff04ff05ffff04ff8202ffffff04ffff04ffff04ff78ffff04ffff0eff5cffff02ff2effff04ff02ffff04ffff04ff2fffff04ff82017fff808080ff8080808080ff808080ffff04ffff04ff20ffff04ffff0bff81bfff5cffff02ff2effff04ff02ffff04ffff04ff15ffff04ffff10ff82017fffff11ff8202dfff2b80ff8202ff80ff808080ff8080808080ff808080ff138080ff80808080808080808080ff018080ffff04ffff01a037bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7affff04ffff01a01154a99859ed28c863878e885f8e9fbd3ceb5753182d6b3d12d4087fafef410bffff04ffff01ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a6e7261e597db3f409aa18b1e07a6c086d9326d191d80317242e2052d636567a37f764780bcf4c0bb1c93c2bd8dd3582ff018080ff0180808080ffff80ffff01ffff33ffa0bae24162efbd568f89bc7a340798a6118df0189eb9e3f8697bcea27af99f8f79ff822710ffffa0bae24162efbd568f89bc7a340798a6118df0189eb9e3f8697bcea27af99f8f798080ffff33ffa0bae24162efbd568f89bc7a340798a6118df0189eb9e3f8697bcea27af99f8f79ff821388ffffa0bae24162efbd568f89bc7a340798a6118df0189eb9e3f8697bcea27af99f8f798080ffff33ffa0c842b1a384b8633ac25d0f12bd7b614f86a77642ab6426418750f2b0b86bab2aff82138880ffff3cffa0b9dd63822695e7ff30a5a20946b0cf6a6a52c995da862799a5160891b8b095f080ffff3fffa0a9741d1d07c82dd605417c468415a6cb313a28ae8c2f1b2abb7da1493fa0e96680ffff3fffa09f9a55a697604bca0e9b976a5f94f4b7030ab16ba16d6a589271e5881ef9bb5c8080ff8080ffffa0d33666514194537eb192c22b39da069743ae8caadbb953830bdb55ad9acf5aa1ffa0e25b0ff7a50e4afae386cdab538c70983db7f04fa835b45855114f9d790c414aff830186a080ffa09afbe0796f7fd066b1b7fb319eb50484da25ab715f7225480a837ccc62060662ffffa05a57f38a32692d5650280455d12834f31d574f37bd0b09e5fc849d4e6999b162ffa077e01b66aceeced509b7fc53d1045fdca8db774fc7e755fb710ff5f64a98b6b0ff824e2080ffffa05a57f38a32692d5650280455d12834f31d574f37bd0b09e5fc849d4e6999b162ffa0846b58db3bd246785e202eeddfbb46acaf267f011307437cd4e0841f3da751f6ff824e2080ff80ff80809563629e653a9fc3c65f55947883a47e062e6b67394091228ec01352ff78f333e4fb5940aef16e2c6cfed28ea3934dada96f4ce2b629b17cd482eb31f6a6c5590000003a3527bd60ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b080399dec21ec7ab66ed0b43811652c2c27c16e2f304b8e2900d7f510448675ef9d8be70ba19e6b6675c4d9bb5f75ced4ff018080ff80ffff01ffff33ffa06e7173e86f07d4efcd6c8c2950224f6717bdc05810f02ff8d12377e39c3cb7e5ff853a3527bbaf80ffff34ff8201b180ffff3cffa025d8ac4f9d5e441298697b371b918081b084e62b9b0a3350ef2ae95f3c30ada380ffff3dffa03df2fbb189d83a40ef0ab98f30ca043f1ef81b28483afefb79aa57c92807e8818080ff80809afbe0796f7fd066b1b7fb319eb50484da25ab715f7225480a837ccc62060662fe11a6f7b14ab167adaeed8ad7b33bfae414416e27438d92a3f866d9cb93b0980000000000001388ff02ffff01ff02ffff01ff02ff5effff04ff02ffff04ffff04ff05ffff04ffff0bff34ff0580ffff04ff0bff80808080ffff04ffff02ff17ff2f80ffff04ff5fffff04ffff02ff2effff04ff02ffff04ff17ff80808080ffff04ffff02ff2affff04ff02ffff04ff82027fffff04ff82057fffff04ff820b7fff808080808080ffff04ff81bfffff04ff82017fffff04ff8202ffffff04ff8205ffffff04ff820bffff80808080808080808080808080ffff04ffff01ffffffff3d46ff02ff333cffff0401ff01ff81cb02ffffff20ff02ffff03ff05ffff01ff02ff32ffff04ff02ffff04ff0dffff04ffff0bff7cffff0bff34ff2480ffff0bff7cffff0bff7cffff0bff34ff2c80ff0980ffff0bff7cff0bffff0bff34ff8080808080ff8080808080ffff010b80ff0180ffff02ffff03ffff22ffff09ffff0dff0580ff2280ffff09ffff0dff0b80ff2280ffff15ff17ffff0181ff8080ffff01ff0bff05ff0bff1780ffff01ff088080ff0180ffff02ffff03ff0bffff01ff02ffff03ffff09ffff02ff2effff04ff02ffff04ff13ff80808080ff820b9f80ffff01ff02ff56ffff04ff02ffff04ffff02ff13ffff04ff5fffff04ff17ffff04ff2fffff04ff81bfffff04ff82017fffff04ff1bff8080808080808080ffff04ff82017fff8080808080ffff01ff088080ff0180ffff01ff02ffff03ff17ffff01ff02ffff03ffff20ff81bf80ffff0182017fffff01ff088080ff0180ffff01ff088080ff018080ff0180ff04ffff04ff05ff2780ffff04ffff10ff0bff5780ff778080ffffff02ffff03ff05ffff01ff02ffff03ffff09ffff02ffff03ffff09ff11ff5880ffff0159ff8080ff0180ffff01818f80ffff01ff02ff26ffff04ff02ffff04ff0dffff04ff0bffff04ffff04ff81b9ff82017980ff808080808080ffff01ff02ff7affff04ff02ffff04ffff02ffff03ffff09ff11ff5880ffff01ff04ff58ffff04ffff02ff76ffff04ff02ffff04ff13ffff04ff29ffff04ffff0bff34ff5b80ffff04ff2bff80808080808080ff398080ffff01ff02ffff03ffff09ff11ff7880ffff01ff02ffff03ffff20ffff02ffff03ffff09ffff0121ffff0dff298080ffff01ff02ffff03ffff09ffff0cff29ff80ff3480ff5c80ffff01ff0101ff8080ff0180ff8080ff018080ffff0109ffff01ff088080ff0180ffff010980ff018080ff0180ffff04ffff02ffff03ffff09ff11ff5880ffff0159ff8080ff0180ffff04ffff02ff26ffff04ff02ffff04ff0dffff04ff0bffff04ff17ff808080808080ff80808080808080ff0180ffff01ff04ff80ffff04ff80ff17808080ff0180ffff02ffff03ff05ffff01ff04ff09ffff02ff56ffff04ff02ffff04ff0dffff04ff0bff808080808080ffff010b80ff0180ff0bff7cffff0bff34ff2880ffff0bff7cffff0bff7cffff0bff34ff2c80ff0580ffff0bff7cffff02ff32ffff04ff02ffff04ff07ffff04ffff0bff34ff3480ff8080808080ffff0bff34ff8080808080ffff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff2effff04ff02ffff04ff09ff80808080ffff02ff2effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ffff04ffff04ff30ffff04ff5fff808080ffff02ff7effff04ff02ffff04ffff04ffff04ff2fff0580ffff04ff5fff82017f8080ffff04ffff02ff26ffff04ff02ffff04ff0bffff04ff05ffff01ff808080808080ffff04ff17ffff04ff81bfffff04ff82017fffff04ffff02ff2affff04ff02ffff04ff8204ffffff04ffff02ff76ffff04ff02ffff04ff09ffff04ff820affffff04ffff0bff34ff2d80ffff04ff15ff80808080808080ffff04ff8216ffff808080808080ffff04ff8205ffffff04ff820bffff808080808080808080808080ff02ff5affff04ff02ffff04ff5fffff04ff3bffff04ffff02ffff03ff17ffff01ff09ff2dffff02ff2affff04ff02ffff04ff27ffff04ffff02ff76ffff04ff02ffff04ff29ffff04ff57ffff04ffff0bff34ff81b980ffff04ff59ff80808080808080ffff04ff81b7ff80808080808080ff8080ff0180ffff04ff17ffff04ff05ffff04ff8202ffffff04ffff04ffff04ff78ffff04ffff0eff5cffff02ff2effff04ff02ffff04ffff04ff2fffff04ff82017fff808080ff8080808080ff808080ffff04ffff04ff20ffff04ffff0bff81bfff5cffff02ff2effff04ff02ffff04ffff04ff15ffff04ffff10ff82017fffff11ff8202dfff2b80ff8202ff80ff808080ff8080808080ff808080ff138080ff80808080808080808080ff018080ffff04ffff01a037bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7affff04ffff01a01154a99859ed28c863878e885f8e9fbd3ceb5753182d6b3d12d4087fafef410bffff04ffff01ff02ffff01ff02ff0affff04ff02ffff04ff03ff80808080ffff04ffff01ffff333effff02ffff03ff05ffff01ff04ffff04ff0cffff04ffff02ff1effff04ff02ffff04ff09ff80808080ff808080ffff02ff16ffff04ff02ffff04ff19ffff04ffff02ff0affff04ff02ffff04ff0dff80808080ff808080808080ff8080ff0180ffff02ffff03ff05ffff01ff04ffff04ff08ff0980ffff02ff16ffff04ff02ffff04ff0dffff04ff0bff808080808080ffff010b80ff0180ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff1effff04ff02ffff04ff09ff80808080ffff02ff1effff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ff0180808080ffffffa070ddb91bded411b2b9d272af482e7c8e5b1b63a748cbc6c9a605f0fca8a35aafffffa0be0a40552c563b41601c145653140f97d23dd8cc5219b9c8495d2030732d930bff821388ffffa0be0a40552c563b41601c145653140f97d23dd8cc5219b9c8495d2030732d930b80808080ffffa05a57f38a32692d5650280455d12834f31d574f37bd0b09e5fc849d4e6999b162ffa0846b58db3bd246785e202eeddfbb46acaf267f011307437cd4e0841f3da751f6ff824e2080ffa03c137c60b1294a645098a30f1319276c8e4da5e1980bb72f83cdc54c25f6c7e8ffffa09afbe0796f7fd066b1b7fb319eb50484da25ab715f7225480a837ccc62060662ffa0fe11a6f7b14ab167adaeed8ad7b33bfae414416e27438d92a3f866d9cb93b098ff82138880ffffa09afbe0796f7fd066b1b7fb319eb50484da25ab715f7225480a837ccc62060662ffa0bae24162efbd568f89bc7a340798a6118df0189eb9e3f8697bcea27af99f8f79ff82138880ff80ff80808c72a4b73dc1a882c053bc7622df80c3ae95c75c517b3fe2672c4c9f7eb5c13c899fe1caf92b8d2f7087976e48562630152279cc54d0323c5b570a84dcb34de0cea2cc35bceb580df7663c8b465b6c426d4d4cacb5a658d13a05dd463fe47f00"  # noqa: E501
             )
         )
+
+        await trade_manager_maker.save_trade(*create_tr_for_offer(old_maker_offer))
     else:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             offer_dict, driver_dict, fee=maker_fee
@@ -969,7 +957,6 @@ async def test_nft_offer_request_nft_for_cat(
     taker_fee = 1
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
@@ -1237,13 +1224,19 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     [True, False],
 )
 @pytest.mark.parametrize(
-    "forwards_compat",
-    [True, False],
+    "forwards_compat,royalty_pts",
+    [
+        (True, (200, 500, 500)),
+        (False, (200, 500, 500)),
+        (False, (0, 0, 0)),  # test that we can have 0 royalty
+        (False, (10000, 10001, 10005)),  # tests 100% royalty is not allowed
+        (False, (100000, 10001, 10005)),  # 1000% shouldn't work
+    ],
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
 async def test_complex_nft_offer(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, forwards_compat: bool, royalty_pts: Tuple[int, int, int]
 ) -> None:
     """
     This test is going to create an offer where the maker offers 1 NFT and 1 CAT for 2 NFTs, an XCH and a CAT
@@ -1261,7 +1254,6 @@ async def test_complex_nft_offer(
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
-
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -1282,18 +1274,32 @@ async def test_complex_nft_offer(
     for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    blocks_needed = 3
+    if not forwards_compat:
+        for i in range(blocks_needed):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    else:
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
 
     funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
-    funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])
+    if forwards_compat:
+        funds_taker = sum(
+            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)]
+        )
+    else:
+        funds_taker = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, 3 + blocks_needed)
+            ]
+        )
 
     await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
     await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
     await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
     await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
-
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
@@ -1349,16 +1355,17 @@ async def test_complex_nft_offer(
     await time_out_assert(30, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
     await time_out_assert(30, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
-
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
     did_id_taker = bytes32.fromhex(did_wallet_taker.get_my_DID())
     target_puzhash_maker = ph_maker
     target_puzhash_taker = ph_taker
     royalty_puzhash_maker = ph_maker
     royalty_puzhash_taker = ph_taker
-    royalty_basis_pts_maker = uint16(200)
-    royalty_basis_pts_taker_1 = uint16(500)
-    royalty_basis_pts_taker_2 = uint16(500)
+    royalty_basis_pts_maker, royalty_basis_pts_taker_1, royalty_basis_pts_taker_2 = (
+        royalty_pts[0],
+        uint16(royalty_pts[1]),
+        uint16(royalty_pts[2]),
+    )
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
@@ -1372,14 +1379,25 @@ async def test_complex_nft_offer(
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
         ]
     )
+    if royalty_basis_pts_maker > 65535:
+        with pytest.raises(ValueError):
+            await nft_wallet_maker.generate_new_nft(
+                metadata,
+                target_puzhash_maker,
+                royalty_puzhash_maker,
+                royalty_basis_pts_maker,  # type: ignore
+                did_id_maker,
+            )
+        return
+    else:
+        sb_maker = await nft_wallet_maker.generate_new_nft(
+            metadata,
+            target_puzhash_maker,
+            royalty_puzhash_maker,
+            uint16(royalty_basis_pts_maker),
+            did_id_maker,
+        )
 
-    sb_maker = await nft_wallet_maker.generate_new_nft(
-        metadata,
-        target_puzhash_maker,
-        royalty_puzhash_maker,
-        royalty_basis_pts_maker,
-        did_id_maker,
-    )
     sb_taker_1 = await nft_wallet_taker.generate_new_nft(
         metadata,
         target_puzhash_taker,
@@ -1428,9 +1446,14 @@ async def test_complex_nft_offer(
     nft_to_offer_asset_id_maker: bytes32 = maker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_1: bytes32 = taker_nfts[0].nft_id
     nft_to_offer_asset_id_taker_2: bytes32 = taker_nfts[1].nft_id
-    XCH_REQUESTED = 2000000000000
-    CAT_REQUESTED = 100000
-    FEE = uint64(2000000000000)
+    if royalty_basis_pts_maker > 60000:
+        XCH_REQUESTED = 20000
+        CAT_REQUESTED = 1000
+        FEE = uint64(20000)
+    else:
+        XCH_REQUESTED = 2000000000000
+        CAT_REQUESTED = 100000
+        FEE = uint64(2000000000000)
 
     complex_nft_offer = {
         nft_to_offer_asset_id_maker: -1,
@@ -1465,12 +1488,21 @@ async def test_complex_nft_offer(
         assert error is None
         assert success
         assert trade_make is not None
-
-    trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
-        wallet_node_taker.get_full_node_peer(),
-        fee=FEE,
-    )
+    if royalty_basis_pts_maker == 10000:
+        with pytest.raises(ValueError):
+            trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+                old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+                wallet_node_taker.get_full_node_peer(),
+                fee=FEE,
+            )
+        # all done for this test
+        return
+    else:
+        trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+            old_maker_offer if forwards_compat else Offer.from_bytes(trade_make.offer),
+            wallet_node_taker.get_full_node_peer(),
+            fee=FEE,
+        )
     assert trade_take is not None
     assert tx_records is not None
     await full_node_api.process_transaction_records(records=tx_records)
@@ -1478,7 +1510,7 @@ async def test_complex_nft_offer(
     # Now let's make sure the final wallet state is correct
     maker_royalty_summary = NFTWallet.royalty_calculation(
         {
-            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, royalty_basis_pts_maker),
+            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, uint16(royalty_basis_pts_maker)),
         },
         {
             None: uint64(XCH_REQUESTED),
@@ -1533,8 +1565,8 @@ async def test_complex_nft_offer(
     )
     maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
     taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 2, maker_nfts)
-    await time_out_assert(30, len, 1, taker_nfts)
+    assert len(maker_nfts) == 2
+    assert len(taker_nfts) == 1
 
     assert nft_to_offer_asset_id_maker == taker_nfts[0].nft_id
     assert nft_to_offer_asset_id_taker_1 in [nft.nft_id for nft in maker_nfts]
@@ -1606,9 +1638,6 @@ async def test_complex_nft_offer(
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
-    maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
-    taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
-    await time_out_assert(30, len, 3, maker_nfts)
-    await time_out_assert(30, len, 0, taker_nfts)
-
-    assert nft_to_offer_asset_id_maker in [nft.nft_id for nft in maker_nfts]
+    await time_out_assert(20, get_nft_count, 3, basic_nft_wallet_maker)
+    await time_out_assert(20, get_nft_count, 0, basic_nft_wallet_taker)
+    assert await basic_nft_wallet_maker.nft_store.get_nft_by_id(nft_to_offer_asset_id_maker) is not None

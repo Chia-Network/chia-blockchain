@@ -30,7 +30,6 @@ class TestDbUpgrade:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("with_hints", [True, False])
     async def test_blocks(self, default_1000_blocks, with_hints: bool):
-
         blocks = default_1000_blocks
 
         hints: List[Tuple[bytes32, bytes]] = []
@@ -54,7 +53,6 @@ class TestDbUpgrade:
             hints.append((coin_id, hint))
 
         with TempFile() as in_file, TempFile() as out_file:
-
             db_wrapper1 = await DBWrapper2.create(
                 database=in_file,
                 reader_count=1,
@@ -79,7 +77,7 @@ class TestDbUpgrade:
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
                     results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _ = await bc.receive_block(block, results)
+                    result, err, _ = await bc.add_block(block, results)
                     assert err is None
             finally:
                 await db_wrapper1.close()

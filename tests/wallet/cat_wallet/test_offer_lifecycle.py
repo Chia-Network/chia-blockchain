@@ -16,6 +16,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
@@ -23,7 +24,6 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 
 acs = Program.to(1)
@@ -50,7 +50,7 @@ async def generate_coins(
     requested_coins: Dict[Optional[str], List[uint64]],
 ) -> Dict[Optional[str], List[Coin]]:
     await sim.farm_block(acs_ph)
-    parent_coin: Coin = [cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph))][0]
+    parent_coin: Coin = [cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph)][0]
 
     # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
     payments: List[Payment] = []
@@ -60,7 +60,7 @@ async def generate_coins(
             if tail_str:
                 tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
+                payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
@@ -75,7 +75,7 @@ async def generate_coins(
                     )
                 )
             else:
-                payments.append(Payment(acs_ph, amount, []))
+                payments.append(Payment(acs_ph, amount))
 
     # This bundle creates all of the initial coins
     parent_bundle = SpendBundle(
@@ -100,7 +100,7 @@ async def generate_coins(
             tail_hash: bytes32 = str_to_tail_hash(tail_str)
             cat_ph: bytes32 = construct_cat_puzzle(CAT_MOD, tail_hash, acs).get_tree_hash()
             coin_dict[tail_str] = [
-                cr.coin for cr in await (sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
+                cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
             ]
         else:
             coin_dict[None] = list(
@@ -108,7 +108,7 @@ async def generate_coins(
                     lambda c: c.amount < 250000000000,
                     [
                         cr.coin
-                        for cr in await (sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))
+                        for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False)
                     ],
                 )
             )

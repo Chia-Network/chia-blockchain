@@ -172,9 +172,11 @@ class DataStore:
 
         async with self.db_wrapper.writer() as writer:
             if generation is None:
-                existing_generation = await self.get_tree_generation(tree_id=tree_id)
-
-                if existing_generation is None:
+                try:
+                    existing_generation = await self.get_tree_generation(tree_id=tree_id)
+                except Exception as e:
+                    if not str(e).startswith("No generations found for tree ID:"):
+                        raise
                     generation = 0
                 else:
                     generation = existing_generation + 1
@@ -343,12 +345,17 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, tree_id: bytes32) -> None:
+    async def clear_pending_roots(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id, "status": Status.PENDING.value},
-            )
+            pending_root = await self.get_pending_root(tree_id=tree_id)
+
+            if pending_root is not None:
+                await writer.execute(
+                    "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
+                    {"tree_id": tree_id, "status": Status.PENDING.value},
+                )
+
+        return pending_root
 
     async def shift_root_generations(self, tree_id: bytes32, shift_size: int) -> None:
         async with self.db_wrapper.writer():
@@ -456,10 +463,13 @@ class DataStore:
             )
             row = await cursor.fetchone()
 
-        if row is None:
-            raise Exception(f"No generations found for tree ID: {tree_id.hex()}")
-        generation: int = row["MAX(generation)"]
-        return generation
+        if row is not None:
+            generation: Optional[int] = row["MAX(generation)"]
+
+            if generation is not None:
+                return generation
+
+        raise Exception(f"No generations found for tree ID: {tree_id.hex()}")
 
     async def get_tree_root(self, tree_id: bytes32, generation: Optional[int] = None) -> Root:
         async with self.db_wrapper.reader() as reader:

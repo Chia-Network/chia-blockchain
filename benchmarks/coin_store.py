@@ -37,8 +37,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     return additions, hashes
 
 
-async def run_new_block_benchmark(version: int):
-
+async def run_new_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper2 = await setup_db("coin-store-benchmark.db", version)
 
@@ -56,7 +55,6 @@ async def run_new_block_benchmark(version: int):
 
         print("Building database ", end="")
         for height in range(block_height, block_height + NUM_ITERS):
-
             # add some new coins
             additions, hashes = make_coins(2000)
 
@@ -94,7 +92,6 @@ async def run_new_block_benchmark(version: int):
         if verbose:
             print("Profiling mostly additions ", end="")
         for height in range(block_height, block_height + NUM_ITERS):
-
             # add some new coins
             additions, hashes = make_coins(2000)
             total_add += 2000
@@ -193,7 +190,6 @@ async def run_new_block_benchmark(version: int):
         total_remove = 0
         total_time = 0
         for height in range(block_height, block_height + NUM_ITERS):
-
             # add some new coins
             additions, hashes = make_coins(2000)
             total_add += 2000

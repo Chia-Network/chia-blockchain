@@ -170,6 +170,21 @@ class Err(Enum):
     IMPOSSIBLE_HEIGHT_RELATIVE_CONSTRAINTS = 136
     IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS = 137
 
+    ASSERT_MY_BIRTH_SECONDS_FAILED = 138
+    ASSERT_MY_BIRTH_HEIGHT_FAILED = 139
+
+    ASSERT_EPHEMERAL_FAILED = 140
+    EPHEMERAL_RELATIVE_CONDITION = 141
+    # raised if a SOFTFORK condition invokes an unknown extension in mempool
+    # mode
+    INVALID_SOFTFORK_CONDITION = 142
+    # raised if the first argument to the SOFTFORK condition is not a valid
+    # cost. e.g. negative or > UINT64 MAX
+    INVALID_SOFTFORK_COST = 143
+    # raised if a spend issues too many assert spend, assert puzzle,
+    # assert announcement or create announcement
+    TOO_MANY_ANNOUNCEMENTS = 144
+
 
 class ValidationError(Exception):
     def __init__(self, code: Err, error_msg: str = ""):
@@ -303,3 +318,12 @@ class InvalidPathError(Exception):
     def __init__(self, path: Path, error_message: str):
         super().__init__(f"{error_message}: {str(path)!r}")
         self.path = path
+
+
+class CliRpcConnectionError(Exception):
+    """
+    This error is raised when a rpc server cant be reached by the cli async generator & should always be caught by
+    the cli in cmds/chia.py:main.
+    """
+
+    pass

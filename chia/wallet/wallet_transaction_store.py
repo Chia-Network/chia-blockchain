@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -11,7 +12,10 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
+
+log = logging.getLogger(__name__)
 
 
 def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
@@ -152,6 +156,10 @@ class WalletTransactionStore:
         sent_to.append(append_data)
 
         tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
+        if not tx.is_valid():
+            # if the tx is not valid due to repeated failures, we will confirm that we can't spend it
+            log.info(f"Marking tx={tx.name} as confirmed but failed, since it is not spendable due to errors")
+            tx = dataclasses.replace(tx, confirmed=True, confirmed_at_height=uint32(0))
         await self.add_transaction_record(tx)
         return True
 
@@ -178,19 +186,6 @@ class WalletTransactionStore:
         if len(rows) > 0:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
-
-    async def get_transactions_by_height(self, height: uint32) -> List[TransactionRecord]:
-        """
-        Checks DB and cache for TransactionRecord with id: id and returns it.
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            # NOTE: bundle_id is being stored as bytes, not hex
-            rows = list(
-                await conn.execute_fetchall(
-                    "SELECT transaction_record from transaction_record WHERE confirmed_at_height=?", (height,)
-                )
-            )
-        return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
@@ -262,7 +257,15 @@ class WalletTransactionStore:
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_transactions_between(
-        self, wallet_id: int, start, end, sort_key=None, reverse=False, to_puzzle_hash: Optional[bytes32] = None
+        self,
+        wallet_id: int,
+        start,
+        end,
+        sort_key=None,
+        reverse=False,
+        confirmed: Optional[bool] = None,
+        to_puzzle_hash: Optional[bytes32] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
@@ -284,20 +287,51 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
+
+        if type_filter is None:
+            type_filter_str = ""
+        else:
+            type_filter_str = (
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"IN ({','.join([str(x) for x in type_filter.values])})"
+            )
+
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT transaction_record FROM transaction_record WHERE wallet_id=?{puzz_hash_where}"
-                f" {query_str}, rowid"
+                f" {type_filter_str} {confirmed_str} {query_str}, rowid"
                 f" LIMIT {start}, {limit}",
                 (wallet_id,),
             )
 
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
-    async def get_transaction_count_for_wallet(self, wallet_id) -> int:
+    async def get_transaction_count_for_wallet(
+        self,
+        wallet_id: int,
+        confirmed: Optional[bool] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
+    ) -> int:
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
+
+        if type_filter is None:
+            type_filter_str = ""
+        else:
+            type_filter_str = (
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"IN ({','.join([str(x) for x in type_filter.values])})"
+            )
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
-                await conn.execute_fetchall("SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,))
+                await conn.execute_fetchall(
+                    f"SELECT COUNT(*) FROM transaction_record where wallet_id=? {type_filter_str} {confirmed_str}",
+                    (wallet_id,),
+                )
             )
         return 0 if len(rows) == 0 else rows[0][0]
 

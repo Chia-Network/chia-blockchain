@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
@@ -16,7 +17,6 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
@@ -35,7 +35,7 @@ class CATOuterPuzzle:
         _, tail_hash, inner_puzzle = args
         constructor_dict = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.as_python().hex(),
+            "tail": "0x" + tail_hash.atom.hex(),
         }
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:

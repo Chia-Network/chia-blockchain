@@ -74,6 +74,7 @@ arg_parser.add_argument("--per", type=str, choices=["directory", "file"], requir
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 arg_parser.add_argument("--only", action="append", default=[])
 arg_parser.add_argument("--duplicates", type=int, default=1)
+arg_parser.add_argument("--timeout-multiplier", type=float, default=1)
 args = arg_parser.parse_args()
 
 if args.verbose:
@@ -110,7 +111,7 @@ for path in test_paths:
     for_matrix = {
         "check_resource_usage": conf["check_resource_usage"],
         "enable_pytest_monitor": "-p monitor" if conf["check_resource_usage"] else "",
-        "job_timeout": conf["job_timeout"],
+        "job_timeout": round(conf["job_timeout"] * args.timeout_multiplier),
         "pytest_parallel_args": pytest_parallel_args,
         "checkout_blocks_and_plots": conf["checkout_blocks_and_plots"],
         "install_timelord": conf["install_timelord"],

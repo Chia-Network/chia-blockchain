@@ -13,11 +13,11 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
+SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clvm")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clvm")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clvm")
+P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clsp")
+P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]

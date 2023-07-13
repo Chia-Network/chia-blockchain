@@ -74,7 +74,7 @@ DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
 
-MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
 
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -14,7 +15,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import make_msg
+from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
@@ -29,15 +30,20 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    log: logging.Logger
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):
+        self.log = logging.getLogger(__name__)
         self.harvester = harvester
+
+    def ready(self) -> bool:
+        return True
 
     @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -53,7 +59,7 @@ class HarvesterAPI:
     @api_request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
         The harvester does a few things:
@@ -131,6 +137,22 @@ class HarvesterAPI:
                                 proof_xs = plot_info.prover.get_full_proof(
                                     sp_challenge_hash, index, self.harvester.parallel_read
                                 )
+                            except RuntimeError as e:
+                                if str(e) == "GRResult_NoProof received":
+                                    self.harvester.log.info(
+                                        f"Proof dropped due to line point compression for {filename}"
+                                    )
+                                    self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                else:
+                                    self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
+                                    self.harvester.log.error(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                continue
                             except Exception as e:
                                 self.harvester.log.error(f"Exception fetching full proof for {filename}. {e}")
                                 self.harvester.log.error(
@@ -189,7 +211,7 @@ class HarvesterAPI:
                 # This is being executed at the beginning of the slot
                 total += 1
                 if passes_plot_filter(
-                    self.harvester.constants,
+                    new_challenge.filter_prefix_bits,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
@@ -205,13 +227,12 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > 5:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds "
-                    f"to minimize risk of losing rewards."
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f" to minimize risk of losing rewards."
                 )
             else:
                 pass
-                # If you want additional logs, uncomment the following line
-                # self.harvester.log.debug(f"Looking up qualities on {filename} took: {time_taken}")
+                # self.harvester.log.info(f"Looking up qualities on {filename} took: {time_taken}")
             for response in sublist:
                 total_proofs_found += 1
                 msg = make_msg(ProtocolMessageTypes.new_proof_of_space, response)
@@ -246,7 +267,7 @@ class HarvesterAPI:
         )
 
     @api_request()
-    async def request_signatures(self, request: harvester_protocol.RequestSignatures):
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also
@@ -295,7 +316,7 @@ class HarvesterAPI:
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
     @api_request()
-    async def request_plots(self, _: harvester_protocol.RequestPlots):
+    async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
         for plot in plots:
@@ -316,5 +337,5 @@ class HarvesterAPI:
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
     @api_request()
-    async def plot_sync_response(self, response: PlotSyncResponse):
+    async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         self.harvester.plot_sync_sender.set_response(response)

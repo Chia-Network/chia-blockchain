@@ -27,7 +27,6 @@ def block_to_block_record(
     header_block: Optional[HeaderBlock],
     sub_slot_iters: Optional[uint64] = None,
 ) -> BlockRecord:
-
     if full_block is None:
         assert header_block is not None
         block: Union[HeaderBlock, FullBlock] = header_block
@@ -99,7 +98,6 @@ def header_block_to_sub_block_record(
     prev_transaction_block_height: uint32,
     ses: Optional[SubEpochSummary],
 ) -> BlockRecord:
-
     reward_claims_incorporated = (
         block.transactions_info.reward_claims_incorporated if block.transactions_info is not None else None
     )
@@ -144,6 +142,12 @@ def header_block_to_sub_block_record(
     timestamp = block.foliage_transaction_block.timestamp if block.foliage_transaction_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None
 
+    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+        # Edge case of first sp (start of slot), where sp_iters == 0
+        cc_sp_hash: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
+    else:
+        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+
     return BlockRecord(
         block.header_hash,
         block.prev_header_hash,
@@ -162,6 +166,8 @@ def header_block_to_sub_block_record(
         deficit,
         overflow,
         prev_transaction_block_height,
+        block.reward_chain_block.pos_ss_cc_challenge_hash,
+        cc_sp_hash,
         timestamp,
         prev_transaction_block_hash,
         fees,

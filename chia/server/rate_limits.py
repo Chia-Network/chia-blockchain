@@ -72,7 +72,6 @@ class RateLimiter:
         rate_limits = get_rate_limits_to_use(our_capabilities, peer_capabilities)
 
         try:
-
             limits: RLSettings = rate_limits["default_settings"]
             if message_type in rate_limits["rate_limits_tx"]:
                 limits = rate_limits["rate_limits_tx"][message_type]

@@ -4,7 +4,7 @@ import enum
 from typing import Any
 
 
-# See chia/wallet/puzzles/condition_codes.clvm
+# See chia/wallet/puzzles/condition_codes.clib
 class ConditionOpcode(bytes, enum.Enum):
     # AGG_SIG is ascii "1"
 
@@ -33,6 +33,9 @@ class ConditionOpcode(bytes, enum.Enum):
     ASSERT_MY_PARENT_ID = bytes([71])
     ASSERT_MY_PUZZLEHASH = bytes([72])
     ASSERT_MY_AMOUNT = bytes([73])
+    ASSERT_MY_BIRTH_SECONDS = bytes([74])
+    ASSERT_MY_BIRTH_HEIGHT = bytes([75])
+    ASSERT_EPHEMERAL = bytes([76])
 
     # the conditions below ensure that we're "far enough" in the future
 
@@ -51,6 +54,10 @@ class ConditionOpcode(bytes, enum.Enum):
     # block index
     ASSERT_BEFORE_HEIGHT_RELATIVE = bytes([86])
     ASSERT_BEFORE_HEIGHT_ABSOLUTE = bytes([87])
+
+    # to be activated with the 2.0 hard fork.
+    # the first parameter is always the cost of the condition
+    SOFTFORK = bytes([90])
 
     # A condition that is always true and always ignore all arguments
     REMARK = bytes([1])

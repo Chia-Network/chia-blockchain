@@ -356,8 +356,8 @@ fi
 
 echo ""
 echo "Chia blockchain install.sh complete."
-echo "For assistance join us on Keybase in the #support chat channel:"
-echo "https://keybase.io/team/chia_network.public"
+echo "For assistance join us on Discord in the #support chat channel:"
+echo "https://discord.gg/chia"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
 echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"

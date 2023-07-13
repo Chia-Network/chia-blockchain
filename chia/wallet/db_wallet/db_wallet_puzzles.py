@@ -14,10 +14,10 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
-SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
-SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clvm")
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clvm")
-P2_PARENT = load_clvm_maybe_recompile("p2_parent.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
+GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clsp")
+P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
 
 
 def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:

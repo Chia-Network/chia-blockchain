@@ -157,7 +157,6 @@ class BlockHeightMap:
     # time until we hit a match in the existing map, at which point we can
     # assume all previous blocks have already been populated
     async def _load_blocks_from(self, height: uint32, prev_hash: bytes32) -> None:
-
         while height > 0:
             # load 5000 blocks at a time
             window_end = max(0, height - 5000)
@@ -175,7 +174,6 @@ class BlockHeightMap:
 
             async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
-
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)
                     ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
 
@@ -195,7 +193,6 @@ class BlockHeightMap:
                 assert height == entry[0] + 1
                 height = entry[0]
                 if entry[2] is not None:
-
                     if (
                         self.get_hash(height) == prev_hash
                         and height in self.__sub_epoch_summaries

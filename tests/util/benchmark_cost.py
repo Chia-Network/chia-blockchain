@@ -32,7 +32,6 @@ def float_to_str(f):
 
 
 def run_and_return_cost_time(chialisp):
-
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"

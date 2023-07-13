@@ -8,7 +8,7 @@ from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
 
 
-@click.command("peer", short_help="Show, or modify peering connections", no_args_is_help=True)
+@click.command("peer", help="Show, or modify peering connections", no_args_is_help=True)
 @click.option(
     "-p",
     "--rpc-port",
@@ -22,7 +22,7 @@ from chia.cmds.peer_funcs import peer_async
 @click.option(
     "-c", "--connections", help="List connections to the specified service", is_flag=True, type=bool, default=False
 )
-@click.option("-a", "--add-connection", help="Connect to another remote Chia service by ip:port", type=str, default="")
+@click.option("-a", "--add-connection", help="Connect specified Chia service to ip:port", type=str, default="")
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )

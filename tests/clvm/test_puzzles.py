@@ -5,12 +5,13 @@ from unittest import TestCase
 
 from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
+from chia.util.ints import uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -19,6 +20,7 @@ from chia.wallet.puzzles import (
     p2_m_of_n_delegate_direct,
     p2_puzzle_hash,
 )
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
 
 from ..core.make_block_generator import int_to_public_key
@@ -28,7 +30,6 @@ T1 = CoinTimestamp(1, 10000000)
 T2 = CoinTimestamp(5, 10003000)
 
 MAX_BLOCK_COST_CLVM = int(1e18)
-COST_PER_BYTE = int(12000)
 
 
 def secret_exponent_for_index(index: int) -> int:
@@ -64,7 +65,7 @@ def do_test_spend(
     this time, signatures are not verified.
     """
 
-    coin_db = CoinStore()
+    coin_db = CoinStore(DEFAULT_CONSTANTS)
 
     puzzle_hash = puzzle_reveal.get_tree_hash()
 
@@ -75,7 +76,7 @@ def do_test_spend(
     coin_spend = CoinSpend(coin, puzzle_reveal, solution)
 
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:
@@ -96,19 +97,14 @@ def do_test_spend(
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
     # the coin we get from coin_db.farm_coin only has amount 1024, so we can
     # only make small payments to avoid failing with MINTING_COIN
     payments = [
         (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
         (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
-    conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
+    conditions = Program.to([make_create_coin_condition(ph, uint64(amount), []) for ph, amount in payments])
     return payments, conditions
-
-
-def make_create_coin_condition(puzzle_hash, amount):
-    return Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount])
 
 
 class TestPuzzles(TestCase):

@@ -4,7 +4,7 @@ import os
 import pickle
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
@@ -16,7 +16,7 @@ from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
-async def create_blockchain(constants: ConsensusConstants, db_version: int):
+async def create_blockchain(constants: ConsensusConstants, db_version: int) -> Tuple[Blockchain, DBWrapper2, Path]:
     db_path = Path(tempfile.NamedTemporaryFile().name)
 
     if db_path.exists():
@@ -35,14 +35,14 @@ def persistent_blocks(
     db_name: str,
     bt: BlockTools,
     seed: bytes = b"",
-    empty_sub_slots=0,
+    empty_sub_slots: int = 0,
     normalized_to_identity_cc_eos: bool = False,
     normalized_to_identity_icc_eos: bool = False,
     normalized_to_identity_cc_sp: bool = False,
     normalized_to_identity_cc_ip: bool = False,
-    block_list_input: List[FullBlock] = None,
+    block_list_input: Optional[List[FullBlock]] = None,
     time_per_block: Optional[float] = None,
-):
+) -> List[FullBlock]:
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
     if block_list_input is None:
@@ -100,7 +100,7 @@ def new_test_db(
     normalized_to_identity_icc_eos: bool = False,  # ICC_EOS
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
-):
+) -> List[FullBlock]:
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
         num_of_blocks,

@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import ReceiveBlockResult
+from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
@@ -89,11 +89,11 @@ class WalletBlockchain(BlockchainInterface):
             await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
-    async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
+    async def add_block(self, block: HeaderBlock) -> Tuple[AddBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
+            return AddBlockResult.ALREADY_HAVE_BLOCK, None
         if not self.contains_block(block.prev_header_hash) and block.height > 0:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, None
+            return AddBlockResult.DISCONNECTED_BLOCK, None
         if (
             len(block.finished_sub_slots) > 0
             and block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
@@ -110,9 +110,9 @@ class WalletBlockchain(BlockchainInterface):
             self.constants, self, block, False, difficulty, sub_slot_iters, False
         )
         if error is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error.code
+            return AddBlockResult.INVALID_BLOCK, error.code
         if required_iters is None:
-            return ReceiveBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
+            return AddBlockResult.INVALID_BLOCK, Err.INVALID_POSPACE
 
         # We are passing in sub_slot_iters here so we don't need to backtrack until the start of the epoch to find
         # the sub slot iters and difficulty. This allows us to keep the cache small.
@@ -127,7 +127,7 @@ class WalletBlockchain(BlockchainInterface):
                 latest_timestamp = None
             self._height_to_hash[block_record.height] = block_record.header_hash
             await self.set_peak_block(block, latest_timestamp)
-            return ReceiveBlockResult.NEW_PEAK, None
+            return AddBlockResult.NEW_PEAK, None
         elif block_record.weight > self._peak.weight:
             if block_record.prev_hash == self._peak.header_hash:
                 fork_height: int = self._peak.height
@@ -147,8 +147,8 @@ class WalletBlockchain(BlockchainInterface):
             self._difficulty = uint64(block_record.weight - self.block_record(block_record.prev_hash).weight)
             await self.set_peak_block(block, latest_timestamp)
             await self.clean_block_records()
-            return ReceiveBlockResult.NEW_PEAK, None
-        return ReceiveBlockResult.ADDED_AS_ORPHAN, None
+            return AddBlockResult.NEW_PEAK, None
+        return AddBlockResult.ADDED_AS_ORPHAN, None
 
     async def _rollback_to_height(self, height: int) -> None:
         if self._peak is None:

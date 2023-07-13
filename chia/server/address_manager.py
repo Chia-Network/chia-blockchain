@@ -300,7 +300,7 @@ class AddressManager:
     def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int) -> None:
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
-        if not addr.is_valid(self.allow_private_subnets):
+        if addr.ip.is_private and not self.allow_private_subnets:
             return None
         if info is None:
             return None
@@ -365,7 +365,7 @@ class AddressManager:
             addr.host,
             addr.port,
         )
-        if not peer_info.is_valid(self.allow_private_subnets):
+        if peer_info.ip.is_private and not self.allow_private_subnets:
             return False
         (info, node_id) = self.find_(peer_info)
         if info is not None and info.peer_info == peer_info:
@@ -554,7 +554,7 @@ class AddressManager:
             rand_pos = randrange(len(self.random_pos) - n) + n
             self.swap_random_(n, rand_pos)
             info = self.map_info[self.random_pos[n]]
-            if not info.peer_info.is_valid(self.allow_private_subnets):
+            if info.peer_info.ip.is_private and not self.allow_private_subnets:
                 continue
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(

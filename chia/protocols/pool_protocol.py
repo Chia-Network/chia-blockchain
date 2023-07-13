@@ -173,5 +173,5 @@ def get_current_authentication_token(timeout: uint8) -> uint64:
 
 
 # Validate a given authentication token against our local time
-def validate_authentication_token(token: uint64, timeout: uint8):
+def validate_authentication_token(token: uint64, timeout: uint8) -> bool:
     return abs(token - get_current_authentication_token(timeout)) <= timeout

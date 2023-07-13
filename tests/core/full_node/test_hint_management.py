@@ -26,6 +26,8 @@ spends: List[Spend] = [
         uint64(5),
         None,
         None,
+        None,
+        None,
         [
             (phs[2], uint64(123), b""),
             (phs[4], uint64(3), b"1" * 32),
@@ -38,6 +40,8 @@ spends: List[Spend] = [
         phs[0],
         None,
         uint64(6),
+        None,
+        None,
         None,
         None,
         [
@@ -53,6 +57,8 @@ spends: List[Spend] = [
         phs[7],
         None,
         uint64(2),
+        None,
+        None,
         None,
         None,
         [
@@ -77,7 +83,7 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     br: Optional[BlockRecord] = empty_blockchain.get_peak()
     assert br is not None
     sbc: SpendBundleConditions = SpendBundleConditions(
-        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0)
+        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0
     )
     npc_res = [NPCResult(None, None, uint64(0)), NPCResult(None, sbc, uint64(0))]
 
@@ -99,7 +105,7 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     br: Optional[BlockRecord] = empty_blockchain.get_peak()
     assert br is not None
     sbc: SpendBundleConditions = SpendBundleConditions(
-        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0)
+        spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0
     )
     npc_res = [NPCResult(None, None, uint64(0)), NPCResult(None, sbc, uint64(0))]
 

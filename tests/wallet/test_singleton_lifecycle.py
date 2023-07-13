@@ -17,11 +17,11 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.full_node.test_conditions import check_spend_bundle_validity, initial_blocks
 
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
+P2_SINGLETON_MOD = load_clvm("p2_singleton.clsp")
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -112,7 +112,7 @@ async def test_only_odd_coins_0(bt):
     conditions = Program.to(condition_list)
     coin_spend = CoinSpend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
     spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
-    coins_added, coins_removed = await check_spend_bundle_validity(bt, blocks, spend_bundle)
+    coins_added, coins_removed, _ = await check_spend_bundle_validity(bt, blocks, spend_bundle)
 
     coin_set_added = set([_.coin for _ in coins_added])
     coin_set_removed = set([_.coin for _ in coins_removed])

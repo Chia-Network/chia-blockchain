@@ -15,64 +15,44 @@ SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
 async def get_harvesters_summary(farmer_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    farmer_client: Optional[FarmerRpcClient]
-    async with get_any_service_client("farmer", farmer_rpc_port) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
-        if farmer_client is not None:
-            return await farmer_client.get_harvesters_summary()
-    return None
+    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
+        return await farmer_client.get_harvesters_summary()
 
 
 async def get_blockchain_state(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    client: Optional[FullNodeRpcClient]
-    async with get_any_service_client("full_node", rpc_port) as node_config_fp:
-        client, _, _ = node_config_fp
-        if client is not None:
-            return await client.get_blockchain_state()
-    return None
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
+        return await client.get_blockchain_state()
 
 
 async def get_average_block_time(rpc_port: Optional[int]) -> float:
-    client: Optional[FullNodeRpcClient]
-    async with get_any_service_client("full_node", rpc_port) as node_config_fp:
-        client, _, _ = node_config_fp
-        if client is not None:
-            blocks_to_compare = 500
-            blockchain_state = await client.get_blockchain_state()
-            curr: Optional[BlockRecord] = blockchain_state["peak"]
-            if curr is None or curr.height < (blocks_to_compare + 100):
-                return SECONDS_PER_BLOCK
-            while curr is not None and curr.height > 0 and not curr.is_transaction_block:
-                curr = await client.get_block_record(curr.prev_hash)
-            if curr is None or curr.timestamp is None or curr.height is None:
-                # stupid mypy
-                return SECONDS_PER_BLOCK
-            past_curr = await client.get_block_record_by_height(curr.height - blocks_to_compare)
-            while past_curr is not None and past_curr.height > 0 and not past_curr.is_transaction_block:
-                past_curr = await client.get_block_record(past_curr.prev_hash)
-            if past_curr is None or past_curr.timestamp is None or past_curr.height is None:
-                # stupid mypy
-                return SECONDS_PER_BLOCK
-            return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
-    return SECONDS_PER_BLOCK
+    async with get_any_service_client(FullNodeRpcClient, rpc_port) as (client, _):
+        blocks_to_compare = 500
+        blockchain_state = await client.get_blockchain_state()
+        curr: Optional[BlockRecord] = blockchain_state["peak"]
+        if curr is None or curr.height < (blocks_to_compare + 100):
+            return SECONDS_PER_BLOCK
+        while curr is not None and curr.height > 0 and not curr.is_transaction_block:
+            curr = await client.get_block_record(curr.prev_hash)
+        if curr is None or curr.timestamp is None or curr.height is None:
+            # stupid mypy
+            return SECONDS_PER_BLOCK
+        past_curr = await client.get_block_record_by_height(curr.height - blocks_to_compare)
+        while past_curr is not None and past_curr.height > 0 and not past_curr.is_transaction_block:
+            past_curr = await client.get_block_record(past_curr.prev_hash)
+        if past_curr is None or past_curr.timestamp is None or past_curr.height is None:
+            # stupid mypy
+            return SECONDS_PER_BLOCK
+        return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
 
 
 async def get_wallets_stats(wallet_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
-    wallet_client: Optional[WalletRpcClient]
-    async with get_any_service_client("wallet", wallet_rpc_port, login_to_wallet=False) as node_config_fp:
-        wallet_client, _, _ = node_config_fp
-        if wallet_client is not None:
-            return await wallet_client.get_farmed_amount()
-    return None
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (wallet_client, _):
+        return await wallet_client.get_farmed_amount()
 
 
 async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[List[Dict[str, Any]]]:
-    farmer_client: Optional[FarmerRpcClient]
-    async with get_any_service_client("farmer", farmer_rpc_port) as node_config_fp:
-        farmer_client, _, _ = node_config_fp
-        if farmer_client is not None:
-            return await farmer_client.get_signage_points()
-    return None
+    async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
+        return await farmer_client.get_signage_points()
 
 
 async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
@@ -145,7 +125,7 @@ async def summary(
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
-        def process_harvesters(harvester_peers_in: dict):
+        def process_harvesters(harvester_peers_in: Dict[str, Dict[str, Any]]) -> None:
             for harvester_peer_id, harvester_dict in harvester_peers_in.items():
                 syncing = harvester_dict["syncing"]
                 if syncing is not None and syncing["initial"]:

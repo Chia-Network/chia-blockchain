@@ -24,7 +24,6 @@ from chia.util.path import path_from_root
 
 
 async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
-
     profile_dir = path_from_root(root_path, f"profile-{service}")
     log.info("Starting profiler. saving to %s" % profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
@@ -70,7 +69,6 @@ if __name__ == "__main__":
                 # ncalls  tottime  percall  cumtime  percall filename:lineno(function)
                 # 1    0.000    0.000    0.000    0.000 <function>
                 for line in f:
-
                     if " function calls " in line and " in " in line and " seconds":
                         # 304307 function calls (291692 primitive calls) in 1.031 seconds
                         assert total == 0
@@ -160,8 +158,7 @@ profiler.py <profile-directory> <first-slot> <last-slot>
 
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
-
-    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     log.info("Starting memory profiler. saving to %s" % profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 

@@ -23,7 +23,7 @@ def create_introducer_service(
     config: Dict[str, Any],
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
-) -> Service[Introducer]:
+) -> Service[Introducer, IntroducerAPI]:
     service_config = config[SERVICE_NAME]
 
     if advertised_port is None:
@@ -39,7 +39,6 @@ def create_introducer_service(
         peer_api=node__api,
         node_type=NodeType.INTRODUCER,
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         network_id=network_id,
         advertised_port=advertised_port,
         connect_to_daemon=connect_to_daemon,

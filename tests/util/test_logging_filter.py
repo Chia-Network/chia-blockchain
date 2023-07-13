@@ -11,7 +11,6 @@ from chia.util.logging import TimedDuplicateFilter
 
 
 def test_logging_filter(caplog: pytest.LogCaptureFixture) -> None:
-
     log_interval_secs = 1
     num_logs = 11
     sleep_secs = 0.095
@@ -32,7 +31,6 @@ def test_logging_filter(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_dont_filter_non_matches(caplog: pytest.LogCaptureFixture) -> None:
-
     log = logging.getLogger()
     log.addFilter(TimedDuplicateFilter("Filter this log message.*", 10))
 
