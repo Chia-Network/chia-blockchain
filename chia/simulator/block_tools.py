@@ -728,7 +728,7 @@ class BlockTools:
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
                             if self.plot_id_passed_previous_filters(
                                 uint32(latest_block.height + 1), plot_id, cc_sp_output_hash, block_list
-                            ) is True:
+                            ):
                                 continue
                         additions = None
                         removals = None
