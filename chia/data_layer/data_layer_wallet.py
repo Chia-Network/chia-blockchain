@@ -918,7 +918,8 @@ class DataLayerWallet:
         elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
 
-    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
+    # This function, though in use, is currently untested because it never runs due to other design choices
+    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:  # pragma: no cover
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our

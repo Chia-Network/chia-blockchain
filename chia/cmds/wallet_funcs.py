@@ -811,7 +811,9 @@ async def cancel_offer(
 
         confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
         if confirmation in ["y", "yes"]:
-            await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
+            await wallet_client.cancel_offer(
+                offer_id, CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint), secure=secure, fee=fee
+            )
             print(f"Cancelled offer with ID {trade_record.trade_id}")
             if secure:
                 print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")

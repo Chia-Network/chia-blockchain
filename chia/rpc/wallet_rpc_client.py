@@ -826,8 +826,10 @@ class WalletRpcClient(RpcClient):
 
         return records
 
-    async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
-        await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
+    async def cancel_offer(self, trade_id: bytes32, tx_config: TXConfig, fee=uint64(0), secure: bool = True):
+        await self.fetch(
+            "cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee, **tx_config.to_json_dict()}
+        )
 
     async def cancel_offers(
         self,

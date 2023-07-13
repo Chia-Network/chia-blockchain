@@ -1129,13 +1129,13 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     trade_record = await wallet_2_rpc.take_offer(offer, DEFAULT_TX_CONFIG, fee=uint64(1))
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
-    await wallet_1_rpc.cancel_offer(offer.name(), secure=False)
+    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, secure=False)
 
     trade_record = await wallet_1_rpc.get_offer(offer.name(), file_contents=True)
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
-    await wallet_1_rpc.cancel_offer(offer.name(), fee=uint64(1), secure=True)
+    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, fee=uint64(1), secure=True)
 
     trade_record = await wallet_1_rpc.get_offer(offer.name())
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
@@ -1685,6 +1685,21 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     )
     assert len(excluded_test) == 2
     for coin in excluded_test:
+        assert coin != coin_300[0]
+
+    # test backwards compatibility in the RPC
+    identical_test = (
+        await client_2.fetch(
+            "select_coins",
+            {
+                "amount": 1300,
+                "wallet_id": 1,
+                "exclude_coins": [c.to_json_dict() for c in coin_300],
+            },
+        )
+    )["coins"]
+    assert len(identical_test) == 2
+    for coin in identical_test:
         assert coin != coin_300[0]
 
     # test get coins

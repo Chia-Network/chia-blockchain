@@ -862,6 +862,9 @@ class DataLayer:
             trade_id=trade_id,
             secure=secure,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         if not secure:
