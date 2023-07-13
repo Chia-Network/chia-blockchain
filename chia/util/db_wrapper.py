@@ -74,15 +74,15 @@ def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> No
     file.write(line)
 
 
-async def get_host_parameter_limit(connection: aiosqlite.Connection) -> int:
+def get_host_parameter_limit() -> int:
+    # NOTE: This does not account for dynamically adjusted limits since it makes a
+    #       separate db and connection.  If aiosqlite adds support we should use it.
     if sys.version_info >= (3, 11):
-        raw_connection = connection._connection
-        if raw_connection is None:
-            raise Exception("underlying sqlite connection not available")
+        connection = sqlite3.connect(":memory:")
 
         # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
         limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
-        host_parameter_limit = raw_connection.getlimit(limit_number)
+        host_parameter_limit = connection.getlimit(limit_number)
     else:
         # guessing based on defaults, seems you can't query
 
@@ -118,7 +118,6 @@ class DBWrapper2:
     def __init__(
         self,
         connection: aiosqlite.Connection,
-        host_parameter_limit: int,
         db_version: int = 1,
         log_file: Optional[TextIO] = None,
     ) -> None:
@@ -131,7 +130,7 @@ class DBWrapper2:
         self._current_writer = None
         self._savepoint_name = 0
         self._log_file = log_file
-        self.host_parameter_limit = host_parameter_limit
+        self.host_parameter_limit = get_host_parameter_limit()
 
     @classmethod
     async def create(
@@ -160,14 +159,7 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        host_parameter_limit = await get_host_parameter_limit(connection=write_connection)
-
-        self = cls(
-            connection=write_connection,
-            host_parameter_limit=host_parameter_limit,
-            db_version=db_version,
-            log_file=log_file,
-        )
+        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
 
         for index in range(reader_count):
             read_connection = await _create_connection(
