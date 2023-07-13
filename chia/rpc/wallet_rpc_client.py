@@ -469,12 +469,13 @@ class WalletRpcClient(RpcClient):
         return response
 
     async def did_message_spend(
-        self, wallet_id: int, puzzle_announcements: List[str], coin_announcements: List[str]
+        self, wallet_id: int, puzzle_announcements: List[str], coin_announcements: List[str], tx_config: TXConfig
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "coin_announcements": coin_announcements,
             "puzzle_announcements": puzzle_announcements,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("did_message_spend", request)
         return response

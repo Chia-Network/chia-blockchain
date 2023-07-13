@@ -986,7 +986,12 @@ async def did_message_spend(
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
-            response = await wallet_client.did_message_spend(did_wallet_id, puzzle_announcements, coin_announcements)
+            response = await wallet_client.did_message_spend(
+                did_wallet_id,
+                puzzle_announcements,
+                coin_announcements,
+                CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+            )
             print(f"Message Spend Bundle: {response['spend_bundle']}")
         except Exception as e:
             print(f"Failed to update DID metadata: {e}")

@@ -720,33 +720,26 @@ class DIDWallet:
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_assert: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_assert: Optional[Set[Announcement]] = None,
-        new_innerpuzzle: Optional[Program] = None,
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
-        if new_innerpuzzle is None:
-            if tx_config.reuse_puzhash:
-                new_innerpuzzle_hash = innerpuz.get_tree_hash()
-                uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
-                assert uncurried is not None
-                p2_ph = uncurried[0].get_tree_hash()
-            else:
-                p2_ph = await self.standard_wallet.get_puzzle_hash(new=False)
-                new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-                    p2_ph,
-                    self.did_info.backup_ids,
-                    self.did_info.num_of_backup_ids_needed,
-                    self.did_info.origin_coin.name(),
-                    did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-                )
-        else:
-            new_innerpuzzle_hash = new_innerpuzzle.get_tree_hash()
-            uncurried = did_wallet_puzzles.uncurry_innerpuz(new_innerpuzzle)
+        if tx_config.reuse_puzhash:
+            new_innerpuzzle_hash = innerpuz.get_tree_hash()
+            uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
             assert uncurried is not None
             p2_ph = uncurried[0].get_tree_hash()
+        else:
+            p2_ph = await self.standard_wallet.get_puzzle_hash(new=False)
+            new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+                p2_ph,
+                self.did_info.backup_ids,
+                self.did_info.num_of_backup_ids_needed,
+                self.did_info.origin_coin.name(),
+                did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+            )
         p2_solution = self.standard_wallet.make_solution(
             primaries=[Payment(new_innerpuzzle_hash, uint64(coin.amount), [p2_ph])],
             puzzle_announcements=puzzle_announcements,

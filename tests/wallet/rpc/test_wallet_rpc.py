@@ -1298,6 +1298,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_1_id = wallet_1.id()
 
@@ -1388,6 +1389,37 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     )
     metadata = json.loads(did_wallet_2.did_info.metadata)
     assert metadata["Twitter"] == "Https://test"
+
+    last_did_coin = await did_wallet_2.get_coin()
+    bundle = SpendBundle.from_json_dict(
+        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG))["spend_bundle"]
+    )
+    await env.full_node.rpc_client.push_tx(bundle)
+    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_2_node)
+
+    next_did_coin = await did_wallet_2.get_coin()
+    assert next_did_coin.parent_coin_info == last_did_coin.name()
+    last_did_coin = next_did_coin
+
+    bundle = SpendBundle.from_json_dict(
+        (
+            await wallet_2_rpc.did_message_spend(
+                did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+            )
+        )["spend_bundle"]
+    )
+    await env.full_node.rpc_client.push_tx(bundle)
+    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_2_node)
+
+    next_did_coin = await did_wallet_2.get_coin()
+    assert next_did_coin.parent_coin_info == last_did_coin.name()
+    assert next_did_coin.puzzle_hash == last_did_coin.puzzle_hash
 
 
 @pytest.mark.asyncio
