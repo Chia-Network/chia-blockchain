@@ -577,7 +577,6 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
-        # TODO: review
         # sqlite on python3.7 on windows has issues with large variable substitutions
         assert len(header_hashes) < 901
         header_hashes_db: Sequence[Union[bytes32, str]]
