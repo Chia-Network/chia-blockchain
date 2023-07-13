@@ -595,9 +595,12 @@ class DAOWallet(WalletProtocol):
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
         # Get the parent coin spend
+        if coin.amount == 101:
+            breakpoint()
         cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
         parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
-
+        if coin.amount == 101:
+            breakpoint()
         # check if it's a singleton and add to singleton_store
         singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
         if singleton_id:
@@ -1533,6 +1536,7 @@ class DAOWallet(WalletProtocol):
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
             vote_amount, proposal_id, is_yes_vote, proposal_puzzle=proposal_info.current_innerpuz
         )
+        breakpoint()
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -2039,7 +2043,7 @@ class DAOWallet(WalletProtocol):
         )
 
         treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
-
+        breakpoint()
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
@@ -2466,8 +2470,9 @@ class DAOWallet(WalletProtocol):
 
         c_a, curried_args = uncurry_proposal(puzzle)
         (
-            SINGLETON_STRUCT,
             DAO_PROPOSAL_TIMER_MOD_HASH,
+            SINGLETON_MOD_HASH,
+            SINGLETON_LAUNCHER_PUZHASH,
             CAT_MOD_HASH,
             DAO_FINISHED_STATE_HASH,
             _DAO_TREASURY_MOD_HASH,
@@ -2477,6 +2482,7 @@ class DAOWallet(WalletProtocol):
         ) = curried_args.as_iter()
         (
             curry_one,
+            proposal_id,
             proposed_puzzle_hash,
             yes_votes,
             total_votes,

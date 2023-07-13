@@ -114,16 +114,23 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
         DAO_FINISHED_STATE_HASH,
         CAT_MOD_HASH,
         cat_tail_hash,
-    ).get_tree_hash()
-    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
-        singleton_struct,
-        DAO_PROPOSAL_MOD_HASH,
+    )
+
+    proposal_self_hash = DAO_PROPOSAL_MOD.curry(
         DAO_PROPOSAL_TIMER_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_HASH,
         CAT_MOD_HASH,
         DAO_FINISHED_STATE_HASH,
-        LOCKUP_SELF_HASH,
         DAO_TREASURY_MOD_HASH,
+        LOCKUP_SELF_HASH,
         cat_tail_hash,
+        treasury_id,
+    ).get_tree_hash()
+
+    proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
+        singleton_struct,
+        proposal_self_hash,
         dao_rules.proposal_minimum_amount,
         get_p2_singleton_puzzle(
             treasury_id
@@ -204,13 +211,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
     curried_args = uncurry_proposal_validator(proposal_validator)
     (
         SINGLETON_STRUCT,
-        PROPOSAL_MOD_HASH,
-        PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        LOCKUP_MOD_HASH,
-        TREASURY_MOD_HASH,
-        CAT_TAIL_HASH,
+        PROPOSAL_SELF_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
         PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
@@ -368,7 +369,6 @@ def get_proposal_puzzle(
     u for update only
     d for dangerous (can do anything)
     """
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
     lockup_puzzle: Program = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_HASH,
@@ -390,8 +390,9 @@ def get_proposal_puzzle(
     # YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     # TOTAL_VOTES  ; how many people responded
     curry_one = DAO_PROPOSAL_MOD.curry(
-        singleton_struct,
         DAO_PROPOSAL_TIMER_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_HASH,
         CAT_MOD_HASH,
         DAO_FINISHED_STATE_HASH,
         DAO_TREASURY_MOD_HASH,
@@ -399,8 +400,10 @@ def get_proposal_puzzle(
         cat_tail_hash,
         treasury_id,
     )
+
     puzzle = curry_one.curry(
         curry_one.get_tree_hash(),
+        proposal_id,
         proposed_puzzle_hash,
         votes_sum,
         total_votes,
@@ -422,8 +425,9 @@ def get_proposal_timer_puzzle(
         cat_tail_hash,
     )
     PROPOSAL_SELF_HASH = DAO_PROPOSAL_MOD.curry(
-        parent_singleton_struct,
         DAO_PROPOSAL_TIMER_MOD_HASH,
+        SINGLETON_MOD_HASH,
+        SINGLETON_LAUNCHER_HASH,
         CAT_MOD_HASH,
         DAO_FINISHED_STATE_HASH,
         DAO_TREASURY_MOD_HASH,
@@ -455,13 +459,7 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
     curried_args = uncurry_proposal_validator(proposal_validator)
     (
         SINGLETON_STRUCT,
-        PROPOSAL_MOD_HASH,
-        PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        LOCKUP_SELF_HASH,
-        TREASURY_MOD_HASH,
-        CAT_TAIL_HASH,
+        PROPOSAL_SELF_HASH,
         PROPOSAL_MINIMUM_AMOUNT,
         PAYOUT_PUZHASH,
     ) = curried_args.as_iter()
@@ -531,8 +529,9 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
     if solution.at("rrrrrrf") == Program.to(0):
         c_a, curried_args = uncurry_proposal(puzzle_reveal)
         (
-            singleton_struct,
             DAO_PROPOSAL_TIMER_MOD_HASH,
+            SINGLETON_MOD_HASH,
+            SINGLETON_LAUNCHER_PUZHASH,
             CAT_MOD_HASH,
             DAO_FINISHED_STATE_HASH,
             DAO_TREASURY_MOD_HASH,
@@ -542,6 +541,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
         ) = curried_args.as_iter()
         (
             curry_one,
+            proposal_id,
             proposed_puzzle_hash,
             yes_votes,
             total_votes,
@@ -557,7 +557,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             # Vote Type: YES
             new_yes_votes = yes_votes.as_int() + added_votes
         return get_proposal_puzzle(
-            proposal_id=singleton_struct.rest().first().as_atom(),
+            proposal_id=proposal_id.as_atom(),
             cat_tail_hash=cat_tail_hash.as_atom(),
             treasury_id=treasury_id.as_atom(),
             votes_sum=new_yes_votes,
@@ -570,8 +570,9 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
         if mod == DAO_PROPOSAL_MOD:
             c_a, curried_args = uncurry_proposal(puzzle_reveal)
             (
-                SINGLETON_STRUCT,
                 DAO_PROPOSAL_TIMER_MOD_HASH,
+                SINGLETON_MOD_HASH,
+                SINGLETON_LAUNCHER_PUZHASH,
                 CAT_MOD_HASH,
                 DAO_FINISHED_STATE_HASH,
                 DAO_TREASURY_MOD_HASH,
@@ -581,6 +582,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             ) = curried_args.as_iter()
             (
                 curry_one,
+                proposal_id,
                 proposed_puzzle_hash,
                 yes_votes,
                 total_votes,
@@ -598,33 +600,27 @@ def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
     return create_singleton_puzzle(finished_inner_puz, proposal_id)
 
 
-def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
-    curried_args = uncurry_treasury(treasury_puzzle)
-    (
-        _DAO_TREASURY_MOD_HASH,
-        proposal_validator,
-        proposal_timelock,
-        soft_close_length,
-        attendance_required,
-        pass_percentage,
-        self_destruct_length,
-        oracle_spend_delay,
-    ) = curried_args
-
-    curried_args = uncurry_proposal_validator(proposal_validator)
-    (
-        SINGLETON_STRUCT,
-        PROPOSAL_MOD_HASH,
-        PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        LOCKUP_SELF_HASH,
-        TREASURY_MOD_HASH,
-        CAT_TAIL_HASH,
-        PROPOSAL_MINIMUM_AMOUNT,
-        PAYOUT_PUZHASH,
-    ) = curried_args.as_iter()
-    return bytes32(CAT_TAIL_HASH.as_atom())
+# def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
+#     curried_args = uncurry_treasury(treasury_puzzle)
+#     (
+#         _DAO_TREASURY_MOD_HASH,
+#         proposal_validator,
+#         proposal_timelock,
+#         soft_close_length,
+#         attendance_required,
+#         pass_percentage,
+#         self_destruct_length,
+#         oracle_spend_delay,
+#     ) = curried_args
+#
+#     curried_args = uncurry_proposal_validator(proposal_validator)
+#     (
+#         SINGLETON_STRUCT,
+#         PROPOSAL_SELF_HASH,
+#         PROPOSAL_MINIMUM_AMOUNT,
+#         PAYOUT_PUZHASH,
+#     ) = curried_args.as_iter()
+#     return bytes32(CAT_TAIL_HASH.as_atom())
 
 
 def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:

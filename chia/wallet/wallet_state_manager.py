@@ -1157,12 +1157,14 @@ class WalletStateManager:
         (
             # ; second hash
             SELF_HASH,
+            PROPOSAL_ID,
             PROPOSED_PUZ_HASH,
             YES_VOTES,
             TOTAL_VOTES,
             # ; first hash
-            SINGLETON_STRUCT,
             PROPOSAL_TIMER_MOD_HASH,
+            SINGLETON_MOD_HASH,
+            SINGLETON_LAUNCHER_PUZHASH,
             CAT_MOD_HASH,
             DAO_FINISHED_STATE_MOD_HASH,
             TREASURY_MOD_HASH,

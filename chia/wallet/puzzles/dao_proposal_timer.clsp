@@ -36,6 +36,7 @@
         (sha256 ONE proposal_total_votes)
         (sha256 ONE proposal_yes_votes)
         (sha256 ONE proposal_innerpuzhash)
+        (sha256 ONE (f (r PROPOSAL_SINGLETON_STRUCT)))
         (sha256 ONE PROPOSAL_SELF_HASH)
       )
     )
