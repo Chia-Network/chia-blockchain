@@ -384,7 +384,7 @@ class FarmerAPI:
         self.farmer.state_changed("new_signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})
 
     @api_request()
-    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> None:
+    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
         if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return None
@@ -399,8 +399,17 @@ class FarmerAPI:
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
         )
 
-        msg = make_msg(ProtocolMessageTypes.request_signatures, request)
-        await self.farmer.server.send_to_specific([msg], node_id)
+        response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
+        if response is None or not isinstance(response, harvester_protocol.RespondSignatures):
+            self.farmer.log.error(f"Invalid response from harvester {node_id} for request_signatures: {response}")
+            return None
+
+        signed_values = self._process_respond_signatures(response)
+        if signed_values is None:
+            return None
+        assert isinstance(signed_values, SignedValues)
+
+        return make_msg(ProtocolMessageTypes.signed_values, signed_values)
 
     @api_request()
     async def farming_info(self, request: farmer_protocol.FarmingInfo) -> None:
