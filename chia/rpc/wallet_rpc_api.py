@@ -33,7 +33,7 @@ from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.misc import UInt32Range, VersionedBlob
+from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -47,7 +47,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo, DIDVersion
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -1978,7 +1978,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            bytes32.from_bytes(bytes(recovery_list_hash)[1:]),
+            recovery_list_hash.atom,
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,
@@ -2144,7 +2144,7 @@ class WalletRpcApi:
                 coin_state.coin,
                 uint32(coin_state.created_height),
                 peer,
-                VersionedBlob(DIDVersion.V1.value, bytes(did_data)),
+                did_data,
             )
             return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
 
