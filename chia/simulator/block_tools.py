@@ -727,7 +727,7 @@ class BlockTools:
                         plot_id = get_plot_id(proof_of_space)
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
                             if self.plot_id_passed_previous_filters(
-                                latest_block.height + 1, plot_id, cc_sp_output_hash, block_list
+                                uint32(latest_block.height + 1), plot_id, cc_sp_output_hash, block_list
                             ) is True:
                                 continue
                         additions = None
@@ -1025,7 +1025,7 @@ class BlockTools:
                         plot_id = get_plot_id(proof_of_space)
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
                             if self.plot_id_passed_previous_filters(
-                                latest_block.height + 1, plot_id, cc_sp_output_hash, block_list
+                                uint32(latest_block.height + 1), plot_id, cc_sp_output_hash, block_list
                             ):
                                 continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
