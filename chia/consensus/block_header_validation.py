@@ -23,7 +23,12 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import get_plot_id, passes_plot_filter, verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_prefix_bits,
+    get_plot_id,
+    passes_plot_filter,
+    verify_and_get_quality_string,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -497,10 +502,11 @@ def validate_unfinished_header_block(
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         curr_sp = cc_sp_hash
         sp_count = 1
+        prefix_bits = calculate_prefix_bits(constants, height)
 
         while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
             if passes_plot_filter(
-                constants,
+                prefix_bits,
                 plot_id,
                 curr_optional_block_record.pos_ss_cc_challenge_hash,
                 curr_optional_block_record.cc_sp_hash,

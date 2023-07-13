@@ -543,7 +543,9 @@ class BlockTools:
         return WalletTool(self.constants, self.pool_master_sk)
 
     # Verifies if the given plot passed any of the previous `UNIQUE_PLOTS_WINDOW` plot filters.
-    def plot_id_passed_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
+    def plot_id_passed_previous_filters(
+        self, height: uint32, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]
+    ) -> bool:
         curr_sp_hash = cc_sp_hash
         sp_count = 1
         for block in reversed(blocks):
@@ -556,7 +558,8 @@ class BlockTools:
                 cc_sp_hash = challenge
             else:
                 cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            if passes_plot_filter(self.constants, plot_id, challenge, cc_sp_hash):
+            prefix_bits = calculate_prefix_bits(self.constants, height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
                 return True
             if curr_sp_hash != cc_sp_hash:
                 sp_count += 1
@@ -723,7 +726,9 @@ class BlockTools:
                         assert latest_block.header_hash in blocks
                         plot_id = get_plot_id(proof_of_space)
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list) is True:
+                            if self.plot_id_passed_previous_filters(
+                                latest_block.height + 1, plot_id, cc_sp_output_hash, block_list
+                            ) is True:
                                 continue
                         additions = None
                         removals = None
@@ -1019,7 +1024,9 @@ class BlockTools:
                         assert last_timestamp is not None
                         plot_id = get_plot_id(proof_of_space)
                         if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                            if self.plot_id_passed_previous_filters(
+                                latest_block.height + 1, plot_id, cc_sp_output_hash, block_list
+                            ):
                                 continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
