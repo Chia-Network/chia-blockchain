@@ -33,7 +33,6 @@ from chia.util.ws_message import create_payload, create_payload_dict
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
 
-
 chiapos_version = pkg_resources.get_distribution("chiapos").version
 
 
