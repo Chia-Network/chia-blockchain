@@ -321,6 +321,15 @@ class FarmerAPI:
 
     @api_request()
     async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
+        if new_signage_point.challenge_chain_sp not in self.farmer.sps:
+            self.farmer.sps[new_signage_point.challenge_chain_sp] = []
+        if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
+            self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
+            return
+
+        # Mark this SP as known, so we do not process it multiple times
+        self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
+
         try:
             pool_difficulties: List[PoolDifficulty] = []
             for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
@@ -354,8 +363,11 @@ class FarmerAPI:
 
             msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
             await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
-            if new_signage_point.challenge_chain_sp not in self.farmer.sps:
-                self.farmer.sps[new_signage_point.challenge_chain_sp] = []
+        except Exception as exception:
+            # Remove here, as we want to reprocess the SP should it be sent again
+            self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)
+
+            raise exception
         finally:
             # Age out old 24h information for every signage point regardless
             # of any failures.  Note that this still lets old data remain if
@@ -368,11 +380,6 @@ class FarmerAPI:
 
                     pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
 
-        if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
-            self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
-            return
-
-        self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
         self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = uint64(int(time.time()))
         self.farmer.state_changed("new_signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})
 
