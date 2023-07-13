@@ -404,6 +404,7 @@ class FarmerAPI:
             self.farmer.log.error(f"Invalid response from harvester {node_id} for request_signatures: {response}")
             return None
 
+        # Use the same processing as for unsolicited respond signature requests
         signed_values = self._process_respond_signatures(response)
         if signed_values is None:
             return None
@@ -463,7 +464,8 @@ class FarmerAPI:
         self, response: harvester_protocol.RespondSignatures
     ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
         """
-        There are two cases: receiving signatures for sps, or receiving signatures for the block.
+        Processing the responded signatures happens when receiving an unsolicited request for an SP or when receiving
+        the signed values response for a block from a harvester.
         """
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
