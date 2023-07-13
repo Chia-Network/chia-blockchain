@@ -80,7 +80,9 @@ async def get_host_parameter_limit(connection: aiosqlite.Connection) -> int:
         if raw_connection is None:
             raise Exception("underlying sqlite connection not available")
 
-        host_parameter_limit = raw_connection.getlimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=1101
+        host_parameter_limit = raw_connection.getlimit(limit_number)
     else:
         # guessing based on defaults, seems you can't query
 
