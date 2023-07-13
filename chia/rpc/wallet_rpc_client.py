@@ -829,6 +829,28 @@ class WalletRpcClient(RpcClient):
     async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
+    async def cancel_offers(
+        self,
+        tx_config: TXConfig,
+        fee=uint64(0),
+        secure: bool = True,
+        batch_size: int = 5,
+        cancel_all: bool = False,
+        asset_id: Optional[bytes32] = None,
+    ) -> None:
+        await self.fetch(
+            "cancel_offers",
+            {
+                "secure": secure,
+                "batch_fee": fee,
+                "secure": secure,
+                "batch_size": batch_size,
+                "cancel_all": cancel_all,
+                "asset_id": None if asset_id is None else asset_id.hex(),
+                **tx_config.to_json_dict(),
+            },
+        )
+
     # NFT wallet
     async def create_new_nft_wallet(self, did_id, name=None) -> dict[str, Any]:
         request: Dict[str, Any] = {
