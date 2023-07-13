@@ -33,7 +33,7 @@ class TestRpcClient:
     root_path: Optional[Path] = None
     config: Optional[Dict[str, Any]] = None
     create_called: bool = field(init=False, default=False)
-    rpc_log: Dict[str, Tuple[Any, ...]] = field(init=False, default_factory=dict)
+    rpc_log: Dict[str, List[Tuple[Any, ...]]] = field(init=False, default_factory=dict)
 
     async def create(self, _: str, rpc_port: uint16, root_path: Path, config: Dict[str, Any]) -> None:
         self.rpc_port = rpc_port
@@ -41,7 +41,12 @@ class TestRpcClient:
         self.config = config
         self.create_called = True
 
-    def check_log(self, expected_calls: Dict[str, Optional[Tuple[Any, ...]]]) -> None:
+    def add_to_log(self, method_name: str, args: Tuple[Any, ...]) -> None:
+        if method_name not in self.rpc_log:
+            self.rpc_log[method_name] = []
+        self.rpc_log[method_name].append(args)
+
+    def check_log(self, expected_calls: Dict[str, Optional[List[Tuple[Any, ...]]]]) -> None:
         for k, v in expected_calls.items():
             assert k in self.rpc_log
             if v is not None:  # None means we don't care about the value used when calling the rpc.
@@ -89,15 +94,15 @@ class TestFullNodeRpcClient(TestRpcClient):
             "block_max_cost": DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             "node_id": "7991a584ae4784ab7525bda352ea9b155ce2ac108d361afc13d5964a0f33fa6d",
         }
-        self.rpc_log["get_blockchain_state"] = ()
+        self.add_to_log("get_blockchain_state", ())
         return response
 
     async def get_block_record_by_height(self, height: int) -> Optional[BlockRecord]:
-        self.rpc_log["get_block_record_by_height"] = (height,)
+        self.add_to_log("get_block_record_by_height", (height,))
         return cast(BlockRecord, create_test_block_record(height=uint32(height)))
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        self.rpc_log["get_block_record"] = (header_hash,)
+        self.add_to_log("get_block_record", (header_hash,))
         return cast(BlockRecord, create_test_block_record(header_hash=header_hash))
 
 
