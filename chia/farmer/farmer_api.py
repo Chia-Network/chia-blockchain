@@ -465,7 +465,7 @@ class FarmerAPI:
     ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
         """
         Processing the responded signatures happens when receiving an unsolicited request for an SP or when receiving
-        the signed values response for a block from a harvester.
+        the signature response for a block from a harvester.
         """
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
