@@ -145,7 +145,7 @@ class ServeInThread:
 
 @pytest.mark.asyncio
 async def test_loop() -> None:
-    allowed_over_connections = 0 if sys.platform == "win32" and sys.version_info >= (3, 8) else 100
+    allowed_over_connections = 0 if sys.platform == "win32" else 100
 
     print(" ==== launching serve.py")
     with subprocess.Popen(
