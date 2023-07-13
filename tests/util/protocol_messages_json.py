@@ -2494,3 +2494,7 @@ respond_compact_proof_of_time_json: Dict[str, Any] = {
     "height": 386395693,
     "field_vdf": 224,
 }
+
+error_without_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": None}
+
+error_with_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}

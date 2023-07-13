@@ -13,6 +13,7 @@ from chia.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from chia.protocols.shared_protocol import Error
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -38,7 +39,13 @@ from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegment, SubEpochData, SubSlotData, WeightProof
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.errors import Err
+from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
+
+# SHARED PROTOCOL
+error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)
+error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", bytes(b"extra data"))
+
 
 ### FARMER PROTOCOL
 new_signage_point = farmer_protocol.NewSignagePoint(
