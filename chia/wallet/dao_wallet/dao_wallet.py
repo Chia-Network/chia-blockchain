@@ -620,62 +620,52 @@ class DAOWallet(WalletProtocol):
         return coins
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
-        """Notification from wallet state manager that wallet has been received."""
+        """
+        Notification from wallet state manager that a coin has been received.
+        This can be either a treasury coin update or funds added to the treasury
+        """
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
-        # Get the parent coin spend
-        cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
-        parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
+        try:
+            # Get the parent coin spend
+            cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
+            parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
 
-        # check if it's a singleton and add to singleton_store
-        singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
-        if singleton_id:
-            await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
-        else:
-            # funding coin
-            asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
-            if asset_id not in self.dao_info.assets:
-                new_asset_list = self.dao_info.assets.copy()
-                new_asset_list.append(asset_id)
-                dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
-                await self.save_info(dao_info)
+            # check if it's a singleton and add to singleton_store
+            singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
+            if singleton_id:
+                await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
+            else:
+                # funding coin
+                asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
+                if asset_id not in self.dao_info.assets:
+                    new_asset_list = self.dao_info.assets.copy()
+                    new_asset_list.append(asset_id)
+                    dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
+                    await self.save_info(dao_info)
+        except Exception as e:
+            self.log.error(f"Error occurred during dao wallet coin addition: {e}")
         return
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        cat_tail_hash: bytes32 = cat_wallet.cat_info.limitations_program_hash
-        return cat_tail_hash
+        return cat_wallet.cat_info.limitations_program_hash
 
     async def adjust_filter_level(self, new_filter_level: uint64) -> None:
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            self.dao_info.current_treasury_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            new_filter_level,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
+        dao_info = dataclasses.replace(self.dao_info, filter_below_vote_amount=new_filter_level)
         await self.save_info(dao_info)
 
     async def clear_finished_proposals_from_memory(self) -> None:
-        new_list = []
-        for prop_info in self.dao_info.proposals_list:
-            if prop_info.closed is False or prop_info.closed is None:
-                new_list.append(prop_info)
-            else:
-                dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-                # this is expensive, but a worthwhile check
-                for lci in dao_cat_wallet.dao_cat_info.locked_coins:
-                    if prop_info.proposal_id in lci.active_votes:
-                        new_list.append(prop_info)  # keep it
+        dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
+        new_list = [
+            prop_info for prop_info in self.dao_info.proposals_list
+            if not prop_info.closed
+            or prop_info.closed is None
+            or any(prop_info.proposal_id in lci.active_votes for lci in dao_cat_wallet.dao_cat_info.locked_coins)
+        ]
         dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
         await self.save_info(dao_info)
         return
@@ -768,20 +758,14 @@ class DAOWallet(WalletProtocol):
 
         assert cat_wallet is not None
         cat_wallet_id = cat_wallet.wallet_info.id
-
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,  # treasury_id: bytes32
-            uint32(cat_wallet_id),  # cat_wallet_id: int
-            uint32(0),  # dao_wallet_id: int
-            self.dao_info.proposals_list,  # proposals_list: List[ProposalInfo]
-            self.dao_info.parent_info,  # treasury_id: bytes32
-            child_coin,  # current_coin
-            current_inner_puz,  # current innerpuz
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
+        dao_info = dataclasses.replace(
+            self.dao_info,
+            cat_wallet_id=uint32(cat_wallet_id),
+            dao_cat_wallet_id=uint32(0),
+            current_treasury_coin=child_coin,
+            current_treasury_innerpuz=current_inner_puz,
         )
+        await self.save_info(dao_info)
 
         future_parent = LineageProof(
             child_coin.parent_coin_info,
@@ -789,8 +773,6 @@ class DAOWallet(WalletProtocol):
             uint64(child_coin.amount),
         )
         await self.add_parent(child_coin.name(), future_parent)
-
-        await self.save_info(dao_info)
         assert self.dao_info.parent_info is not None
 
         # get existing xch funds for treasury
@@ -833,8 +815,6 @@ class DAOWallet(WalletProtocol):
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
-
-    
 
     @staticmethod
     async def generate_new_dao_spend(
@@ -1265,9 +1245,7 @@ class DAOWallet(WalletProtocol):
         if not new_proposal_validator:
             assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
             new_proposal_validator = get_proposal_validator(self.dao_info.current_treasury_innerpuz)
-            # assert isinstance(new_proposal_validator, Program)
-        puzzle = get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
-        return puzzle
+        return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
 
     async def generate_mint_proposal_innerpuz(
         self,
