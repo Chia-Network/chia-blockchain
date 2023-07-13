@@ -131,6 +131,7 @@ class DBWrapper2:
         self._current_writer = None
         self._savepoint_name = 0
         self._log_file = log_file
+        self.host_parameter_limit = host_parameter_limit
 
     @classmethod
     async def create(
