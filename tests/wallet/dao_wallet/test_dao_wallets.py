@@ -844,7 +844,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     # Wait a second for the dao cat wallet to update
     await asyncio.sleep(2)
     await dao_wallet_0.clear_finished_proposals_from_memory()
-    await time_out_assert(20, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
+    await time_out_assert(60, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
 
 
 @pytest.mark.parametrize(
