@@ -595,12 +595,10 @@ class DAOWallet(WalletProtocol):
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
         # Get the parent coin spend
-        if coin.amount == 101:
-            breakpoint()
+
         cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
         parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
-        if coin.amount == 101:
-            breakpoint()
+
         # check if it's a singleton and add to singleton_store
         singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
         if singleton_id:
