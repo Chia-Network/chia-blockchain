@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Set
 
 import aiohttp
 from cryptography import x509
@@ -54,7 +54,7 @@ async def add_dummy_connection_wsc(
 
     ca_crt_path: Path
     ca_key_path: Path
-    authenticated_client_types = {NodeType.HARVESTER}
+    authenticated_client_types: Set[NodeType] = {NodeType.HARVESTER}
     if type in authenticated_client_types:
         private_ca_crt_path, private_ca_key_path = private_ssl_ca_paths(server.root_path, config)
         ca_crt_path = private_ca_crt_path
