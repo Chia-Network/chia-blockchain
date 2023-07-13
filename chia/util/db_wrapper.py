@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import functools
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
@@ -73,9 +74,29 @@ def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> No
     file.write(line)
 
 
+async def get_host_parameter_limit(connection: aiosqlite.Connection) -> int:
+    if sys.version_info >= (3, 11):
+        raw_connection = connection._connection
+        if raw_connection is None:
+            raise Exception("underlying sqlite connection not available")
+
+        host_parameter_limit = raw_connection.getlimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+    else:
+        # guessing based on defaults, seems you can't query
+
+        # https://www.sqlite.org/changes.html#version_3_32_0
+        # Increase the default upper bound on the number of parameters from 999 to 32766.
+        if sqlite3.sqlite_version_info >= (3, 32, 0):
+            host_parameter_limit = 32766
+        else:
+            host_parameter_limit = 999
+    return host_parameter_limit
+
+
 @final
 class DBWrapper2:
     db_version: int
+    host_parameter_limit: int
     _lock: asyncio.Lock
     _read_connections: asyncio.Queue[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
@@ -95,6 +116,7 @@ class DBWrapper2:
     def __init__(
         self,
         connection: aiosqlite.Connection,
+        host_parameter_limit: int,
         db_version: int = 1,
         log_file: Optional[TextIO] = None,
     ) -> None:
@@ -135,7 +157,14 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
+        host_parameter_limit = await get_host_parameter_limit(connection=write_connection)
+
+        self = cls(
+            connection=write_connection,
+            host_parameter_limit=host_parameter_limit,
+            db_version=db_version,
+            log_file=log_file,
+        )
 
         for index in range(reader_count):
             read_connection = await _create_connection(
