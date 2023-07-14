@@ -60,6 +60,8 @@ def validate_clvm_and_signature(
     the NPCResult and a cache of the new pairings validated (if not error)
     """
 
+    additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
+
     try:
         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
         program = simple_solution_generator(bundle)
@@ -74,7 +76,7 @@ def validate_clvm_and_signature(
         pks: List[bytes48] = []
         msgs: List[bytes] = []
         assert result.conds is not None
-        pks, msgs = pkm_pairs(result.conds, constants.agg_sig_additional_data())
+        pks, msgs = pkm_pairs(result.conds, additional_data)
 
         # Verify aggregated signature
         cache: LRUCache[bytes32, GTElement] = LRUCache(10000)

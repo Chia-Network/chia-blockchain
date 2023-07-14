@@ -68,17 +68,17 @@ def mk_agg_sig_conditions(
 )
 def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
     conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
-    pks, msgs = pkm_pairs(conds, {opcode: b"foobar"})
+    pks, msgs = pkm_pairs(conds, b"foobar")
     result_aligned = [(x, y) for x, y in zip(pks, msgs)]
     conditions_dict = {opcode: [ConditionWithArgs(opcode, [PK1, b"msg1"]), ConditionWithArgs(opcode, [PK2, b"msg2"])]}
-    result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, {opcode: b"foobar"})
+    result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
     assert result_aligned == result2
 
 
 class TestPkmPairs:
     def test_empty_list(self) -> None:
         conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, {ConditionOpcode.AGG_SIG_ME: b"foobar"})
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
@@ -96,7 +96,7 @@ class TestPkmPairs:
     )
     def test_no_agg_sigs(self, opcode: ConditionOpcode) -> None:
         conds = mk_agg_sig_conditions(opcode, agg_sig_data=[])
-        pks, msgs = pkm_pairs(conds, {opcode: b"foobar"})
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []
 
@@ -114,7 +114,7 @@ class TestPkmPairs:
     )
     def test_agg_sig_conditions(self, opcode: ConditionOpcode, value: bytes) -> None:
         conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
-        pks, msgs = pkm_pairs(conds, {opcode: b"foobar"})
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK1), bytes(PK2)]
         assert msgs == [b"msg1" + value + b"foobar", b"msg2" + value + b"foobar"]
 
@@ -134,7 +134,7 @@ class TestPkmPairs:
         conds = mk_agg_sig_conditions(
             opcode, agg_sig_data=[], agg_sig_unsafe_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
         )
-        pks, msgs = pkm_pairs(conds, {opcode: b"foobar"})
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK1), bytes(PK2)]
         assert msgs == [b"msg1", b"msg2"]
 
@@ -154,7 +154,7 @@ class TestPkmPairs:
         conds = mk_agg_sig_conditions(
             opcode, agg_sig_data=[(bytes48(PK1), b"msg1")], agg_sig_unsafe_data=[(bytes48(PK2), b"msg2")]
         )
-        pks, msgs = pkm_pairs(conds, {opcode: b"foobar"})
+        pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK2), bytes(PK1)]
         assert msgs == [b"msg2", b"msg1" + value + b"foobar"]
 
@@ -175,16 +175,16 @@ class TestPkmPairs:
             opcode, agg_sig_data=[], agg_sig_unsafe_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
         )
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, {opcode: b"msg1"})
+            pkm_pairs(conds, b"msg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, {opcode: b"sg1"})
+            pkm_pairs(conds, b"sg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, {opcode: b"msg2"})
+            pkm_pairs(conds, b"msg2")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, {opcode: b"g2"})
+            pkm_pairs(conds, b"g2")
 
 
 class TestPkmPairsForConditionDict:
@@ -204,20 +204,20 @@ class TestPkmPairsForConditionDict:
         ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
         conds = {ASU: [ConditionWithArgs(ASU, [PK1, b"msg1"]), ConditionWithArgs(ASU, [PK2, b"msg2"])]}
-        tuples = pkm_pairs_for_conditions_dict(conds, TEST_COIN, {opcode: b"msg10"})
+        tuples = pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg10")
         assert tuples == [(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, TEST_COIN, {opcode: b"msg1"})
+            pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, TEST_COIN, {opcode: b"sg1"})
+            pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"sg1")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, TEST_COIN, {opcode: b"msg2"})
+            pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg2")
 
         with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, TEST_COIN, {opcode: b"g2"})
+            pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"g2")
 
 
 class TestParseSexpCondition:

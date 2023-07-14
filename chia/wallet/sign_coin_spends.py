@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Dict, List
+from typing import Any, List
 
 import blspy
 from blspy import AugSchemeMPL
 
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 
@@ -15,7 +14,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 async def sign_coin_spends(
     coin_spends: List[CoinSpend],
     secret_key_for_public_key_f: Any,  # Potentially awaitable function from G1Element => Optional[PrivateKey]
-    additional_data: Dict[ConditionOpcode, bytes],
+    additional_data: bytes,
     max_cost: int,
 ) -> SpendBundle:
     """

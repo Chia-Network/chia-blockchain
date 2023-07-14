@@ -466,7 +466,7 @@ class Wallet:
         return await sign_coin_spends(
             coin_spends,
             self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.agg_sig_additional_data(),
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
@@ -541,7 +541,7 @@ class Wallet:
         spend_bundle: SpendBundle = await sign_coin_spends(
             transaction,
             self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.agg_sig_additional_data(),
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 

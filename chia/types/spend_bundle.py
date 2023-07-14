@@ -9,7 +9,6 @@ from blspy import AugSchemeMPL, G2Element
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, recurse_jsonify, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
@@ -69,9 +68,7 @@ class SpendBundle(Streamable):
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(
-        self, agg_sig_additional_data: Dict[ConditionOpcode, bytes] = DEFAULT_CONSTANTS.agg_sig_additional_data()
-    ) -> None:
+    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
     # TODO: this should be removed

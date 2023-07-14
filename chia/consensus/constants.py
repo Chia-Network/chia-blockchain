@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -42,13 +41,7 @@ class ConsensusConstants:
     # Used as the initial cc rc challenges, as well as first block back pointers, and first SES back pointer
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     GENESIS_CHALLENGE: bytes32
-    # Forks of chia should change these values to provide replay attack protection
-    AGG_SIG_PARENT_ADDITIONAL_DATA: bytes
-    AGG_SIG_PUZZLE_ADDITIONAL_DATA: bytes
-    AGG_SIG_AMOUNT_ADDITIONAL_DATA: bytes
-    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA: bytes
-    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA: bytes
-    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA: bytes
+    # Forks of chia should change this value to provide replay attack protection
     AGG_SIG_ME_ADDITIONAL_DATA: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32  # The block at height must pay out to this pool puzzle hash
     GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: bytes32  # The block at height must pay out to this farmer puzzle hash
@@ -106,14 +99,3 @@ class ConsensusConstants:
                 filtered_changes[k] = v
 
         return dataclasses.replace(self, **filtered_changes)
-
-    def agg_sig_additional_data(self) -> Dict[ConditionOpcode, bytes]:
-        return {
-            ConditionOpcode.AGG_SIG_PARENT: self.AGG_SIG_PARENT_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_PUZZLE: self.AGG_SIG_PUZZLE_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_AMOUNT: self.AGG_SIG_AMOUNT_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT: self.AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT: self.AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE: self.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA,
-            ConditionOpcode.AGG_SIG_ME: self.AGG_SIG_ME_ADDITIONAL_DATA,
-        }

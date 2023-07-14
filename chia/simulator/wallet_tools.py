@@ -15,7 +15,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
-from chia.util.condition_tools import conditions_dict_for_solution
+from chia.util.condition_tools import agg_sig_additional_data, conditions_dict_for_solution
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
@@ -177,6 +177,7 @@ class WalletTool:
 
     def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
         signatures = []
+        data = agg_sig_additional_data(self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
         for coin_spend in coin_spends:  # noqa
             secret_key = self.get_private_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
@@ -190,21 +191,17 @@ class WalletTool:
                 signatures.append(signature)
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT, []):
-                msg = (
-                    cwa.vars[1]
-                    + bytes(coin_spend.coin.parent_coin_info)
-                    + self.constants.AGG_SIG_PARENT_ADDITIONAL_DATA
-                )
+                msg = cwa.vars[1] + bytes(coin_spend.coin.parent_coin_info) + data[ConditionOpcode.AGG_SIG_PARENT]
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PUZZLE, []):
-                msg = cwa.vars[1] + bytes(coin_spend.coin.puzzle_hash) + self.constants.AGG_SIG_PUZZLE_ADDITIONAL_DATA
+                msg = cwa.vars[1] + bytes(coin_spend.coin.puzzle_hash) + data[ConditionOpcode.AGG_SIG_PUZZLE]
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_AMOUNT, []):
-                msg = cwa.vars[1] + int_to_bytes(coin_spend.coin.amount) + self.constants.AGG_SIG_AMOUNT_ADDITIONAL_DATA
+                msg = cwa.vars[1] + int_to_bytes(coin_spend.coin.amount) + data[ConditionOpcode.AGG_SIG_AMOUNT]
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
 
@@ -213,7 +210,7 @@ class WalletTool:
                     cwa.vars[1]
                     + bytes(coin_spend.coin.puzzle_hash)
                     + int_to_bytes(coin_spend.coin.amount)
-                    + self.constants.AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA
+                    + data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT]
                 )
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
@@ -223,7 +220,7 @@ class WalletTool:
                     cwa.vars[1]
                     + bytes(coin_spend.coin.parent_coin_info)
                     + int_to_bytes(coin_spend.coin.amount)
-                    + self.constants.AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA
+                    + data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT]
                 )
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
@@ -233,13 +230,13 @@ class WalletTool:
                     cwa.vars[1]
                     + bytes(coin_spend.coin.parent_coin_info)
                     + bytes(coin_spend.coin.puzzle_hash)
-                    + self.constants.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA
+                    + data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE]
                 )
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
 
             for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-                msg = cwa.vars[1] + bytes(coin_spend.coin.name()) + self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                msg = cwa.vars[1] + bytes(coin_spend.coin.name()) + data[ConditionOpcode.AGG_SIG_ME]
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 signatures.append(signature)
 

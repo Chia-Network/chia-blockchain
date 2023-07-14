@@ -183,7 +183,7 @@ class VCWallet:
         spend_bundle = await sign_coin_spends(
             coin_spends,
             self.standard_wallet.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.agg_sig_additional_data(),
+            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
         now = uint64(int(time.time()))
@@ -301,7 +301,7 @@ class VCWallet:
             await sign_coin_spends(
                 [coin_spend],
                 self.standard_wallet.secret_key_store.secret_key_for_public_key,
-                self.wallet_state_manager.constants.agg_sig_additional_data(),
+                self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
             )
         ]

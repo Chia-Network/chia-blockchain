@@ -9,7 +9,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -90,7 +89,7 @@ def do_test_spend(
     # make sure we can actually sign the solution
     signatures = []
     for coin_spend in spend_bundle.coin_spends:
-        signature = key_lookup.signature_for_solution(coin_spend, {ConditionOpcode.AGG_SIG_ME: bytes([2] * 32)})
+        signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)
     return SpendBundle(spend_bundle.coin_spends, AugSchemeMPL.aggregate(signatures))
 
