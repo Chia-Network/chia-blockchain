@@ -1575,7 +1575,7 @@ async def test_dao_rpc_client(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, fee=fee)
+        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
         assert close["success"]
 
         for i in range(1, num_blocks):
@@ -2023,7 +2023,7 @@ async def test_dao_cat_exits(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, fee=fee)
+        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
         assert close["success"]
 
         for i in range(1, num_blocks):
