@@ -344,8 +344,7 @@
                     (calculate_timer_puzhash
                       PROPOSAL_TIMER_MOD_HASH
                       SELF_HASH
-                      ; SINGLETON_STRUCT
-                      (c SINGLETON_MOD_HASH (c SINGLETON_ID LAUNCHER_PUZZLE_HASH))
+                      (c SINGLETON_MOD_HASH (c SINGLETON_ID LAUNCHER_PUZZLE_HASH))  ; SINGLETON_STRUCT
                     )
                     0
                   )
