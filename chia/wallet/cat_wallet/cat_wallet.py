@@ -92,7 +92,7 @@ class CATWallet:
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         name: Optional[str] = None,
-    ) -> "CATWallet":
+    ) -> CATWallet:
         self = CATWallet()
         self.cost_of_single_tx = None
         self.standard_wallet = wallet

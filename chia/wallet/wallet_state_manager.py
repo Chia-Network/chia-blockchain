@@ -1824,7 +1824,7 @@ class WalletStateManager:
                     and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)
                 ):
                     coins_removed = tx.spend_bundle.removals()
-                    trade_coins_removed = set([])
+                    trade_coins_removed = set()
                     trade = None
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)

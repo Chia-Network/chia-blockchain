@@ -21,7 +21,7 @@ class CATLineageStore:
     table_name: str
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> "CATLineageStore":
+    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> CATLineageStore:
         self = cls()
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper

@@ -51,7 +51,7 @@ class BlockHeightMap:
     __ses_filename: Path
 
     @classmethod
-    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> "BlockHeightMap":
+    async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> BlockHeightMap:
         self = BlockHeightMap()
         self.db = db
 

@@ -47,7 +47,7 @@ class DataStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, database: Union[str, Path], uri: bool = False) -> "DataStore":
+    async def create(cls, database: Union[str, Path], uri: bool = False) -> DataStore:
         db_wrapper = await DBWrapper2.create(
             database=database,
             uri=uri,

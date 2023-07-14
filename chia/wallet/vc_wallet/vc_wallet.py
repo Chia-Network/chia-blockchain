@@ -267,7 +267,7 @@ class VCWallet:
                 fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
             )
             if coin_announcements is None:
-                coin_announcements = set((announcement_to_make,))
+                coin_announcements = {announcement_to_make}
             else:
                 coin_announcements.add(announcement_to_make)  # pragma: no cover
         else:

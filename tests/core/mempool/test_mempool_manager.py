@@ -839,7 +839,7 @@ coins = make_test_coins()
     ],
 )
 def test_can_replace(existing_items: List[MempoolItem], new_item: MempoolItem, expected: bool) -> None:
-    removals = set(c.name() for c in new_item.spend_bundle.removals())
+    removals = {c.name() for c in new_item.spend_bundle.removals()}
     assert can_replace(existing_items, removals, new_item) == expected
 
 
@@ -1421,10 +1421,10 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
         full_node_api: FullNodeSimulator,
         spent_coin_id: bytes32,
     ) -> Set[bytes32]:
-        return set(
+        return {
             i.spend_bundle_name
             for i in full_node_api.full_node.mempool_manager.mempool.get_items_by_coin_id(spent_coin_id)
-        )
+        }
 
     async def send_to_mempool(
         full_node: FullNodeSimulator, spend_bundle: SpendBundle, *, expecting_conflict: bool = False
