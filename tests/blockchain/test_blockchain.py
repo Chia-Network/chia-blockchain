@@ -3641,8 +3641,13 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 @pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
 @pytest.mark.asyncio
 async def test_soft_fork3_activation(
-    blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
+    consensus_mode, blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
 ):
+    # We don't run Mode.SOFT_FORK3, since this is already parametrized by this test.
+    # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
+    # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipped test")
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
