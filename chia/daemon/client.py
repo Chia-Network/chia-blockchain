@@ -5,7 +5,7 @@ import json
 import ssl
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 
