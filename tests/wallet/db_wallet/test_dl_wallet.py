@@ -331,7 +331,12 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_rebase(self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_rebase(
+        self,
+        self_hostname: str,
+        two_wallet_nodes: SimulatorsAndWallets,
+        trusted: bool,
+    ) -> None:  # pragma: no cover
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
