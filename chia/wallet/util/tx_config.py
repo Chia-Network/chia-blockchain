@@ -98,7 +98,8 @@ class CoinSelectionConfigLoader(Streamable):
             excluded_coin_ids: List[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:
                 json_dict["excluded_coin_ids"] = [*excluded_coin_ids, *json_dict["excluded_coin_ids"]]
-            json_dict["excluded_coin_ids"] = excluded_coin_ids
+            else:
+                json_dict["excluded_coin_ids"] = excluded_coin_ids
         return super().from_json_dict(json_dict)
 
     # This function is purely for ergonomics
