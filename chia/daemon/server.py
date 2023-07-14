@@ -91,13 +91,11 @@ if getattr(sys, "frozen", False):
 
     def executable_for_service(service_name: str) -> str:
         application_path = os.path.dirname(sys.executable)
+        executable = name_map[service_name]
         if sys.platform == "win32" or sys.platform == "cygwin":
-            executable = name_map[service_name]
-            path = f"{application_path}/{executable}.exe"
-            return path
+            return f"{application_path}/{executable}.exe"
         else:
-            path = f"{application_path}/{name_map[service_name]}"
-            return path
+            return f"{application_path}/{executable}"
 
 else:
     application_path = os.path.dirname(__file__)
