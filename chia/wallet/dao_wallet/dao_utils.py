@@ -547,7 +547,10 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             total_votes,
         ) = c_a.as_iter()
 
-        added_votes = solution.at("ff").as_int()
+        added_votes = 0
+        for vote_amount in solution.first().as_iter():
+            added_votes += vote_amount.as_int()
+
         new_total_votes = total_votes.as_int() + added_votes
 
         if solution.at("rf") == Program.to(0):
@@ -587,6 +590,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
                 yes_votes,
                 total_votes,
             ) = c_a.as_iter()
+            SINGLETON_STRUCT = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_PUZHASH)))
         else:
             SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
 

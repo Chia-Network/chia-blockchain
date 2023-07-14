@@ -1534,7 +1534,7 @@ class DAOWallet(WalletProtocol):
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
             vote_amount, proposal_id, is_yes_vote, proposal_puzzle=proposal_info.current_innerpuz
         )
-        breakpoint()
+
         # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
         # vote_info_or_money_receiver_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
         # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
@@ -1618,6 +1618,7 @@ class DAOWallet(WalletProtocol):
             assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
         spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
+
         if push:
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -1744,6 +1745,7 @@ class DAOWallet(WalletProtocol):
             c_a, curried_args = uncurry_proposal(proposal_info.current_innerpuz)
             (
                 SELF_HASH,
+                PROPOSAL_ID,
                 PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
                 YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
                 TOTAL_VOTES,  # how many people responded
@@ -2041,7 +2043,7 @@ class DAOWallet(WalletProtocol):
         )
 
         treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
-        breakpoint()
+
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
@@ -2432,7 +2434,7 @@ class DAOWallet(WalletProtocol):
         if current_coin is None:
             raise ValueError("get_most_recent_singleton_coin_from_coin_spend failed")
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
-
+        assert current_coin.puzzle_hash == curry_singleton(singleton_id, current_innerpuz).get_tree_hash()
         # check if our parent puzzle was the finished state
         if puzzle.uncurry()[0] == DAO_FINISHED_STATE:
             ended = True
@@ -2493,7 +2495,9 @@ class DAOWallet(WalletProtocol):
         if solution.at("rrrrrrf").as_int() == 0:
             # we need to add the vote amounts from the solution to get accurate totals
             is_yes_vote = solution.at("rf").as_int()
-            votes_added = solution.at("ff").as_int()
+            votes_added = 0
+            for vote_amount in solution.first().as_iter():
+                votes_added += vote_amount.as_int()
         else:
             # If we have entered the finished state
             # TODO: we need to alert the user that they can free up their coins
