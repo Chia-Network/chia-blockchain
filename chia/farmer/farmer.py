@@ -5,6 +5,7 @@ import json
 import logging
 import time
 import traceback
+from math import floor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -41,7 +42,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
 from chia.wallet.derive_keys import (
@@ -121,6 +122,9 @@ class Farmer:
         self.last_config_access_time: float = 0
 
         self.all_root_sks: List[PrivateKey] = []
+
+        # Use to find missing signage points. (new_signage_point, time)
+        self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -669,6 +673,36 @@ class Farmer:
         if receiver is None:
             raise KeyError(f"Receiver missing for {node_id}")
         return receiver
+
+    def check_missing_signage_points(
+        self, timestamp: uint64, new_signage_point: farmer_protocol.NewSignagePoint
+    ) -> Optional[Tuple[uint64, uint32]]:
+        if self.prev_signage_point is None:
+            self.prev_signage_point = (timestamp, new_signage_point)
+            return None
+
+        prev_time, prev_sp = self.prev_signage_point
+        self.prev_signage_point = (timestamp, new_signage_point)
+
+        if prev_sp.challenge_hash == new_signage_point.challenge_hash:
+            missing_sps = new_signage_point.signage_point_index - prev_sp.signage_point_index - 1
+            if missing_sps > 0:
+                return timestamp, uint32(missing_sps)
+            return None
+
+        actual_sp_interval_seconds = float(timestamp - prev_time)
+        if actual_sp_interval_seconds <= 0:
+            return None
+
+        expected_sp_interval_seconds = self.constants.SUB_SLOT_TIME_TARGET / self.constants.NUM_SPS_SUB_SLOT
+        allowance = 1.6  # Should be chosen from the range (1 <= allowance < 2)
+        if actual_sp_interval_seconds < expected_sp_interval_seconds * allowance:
+            return None
+
+        skipped_sps = uint32(floor(actual_sp_interval_seconds / expected_sp_interval_seconds))
+        if skipped_sps <= 0:
+            return None
+        return timestamp, skipped_sps
 
     async def _periodically_update_pool_state_task(self) -> None:
         time_slept = 0
