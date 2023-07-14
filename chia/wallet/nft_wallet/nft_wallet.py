@@ -52,7 +52,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -164,43 +163,34 @@ class NFTWallet:
         return nft_coin
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[Streamable]
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
             return
-        wallet_node = self.wallet_state_manager.wallet_node
-        cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
-        if not coin_states:
-            # farm coin
-            return
-        assert coin_states
-        parent_coin = coin_states[0].coin
-        cs = await fetch_coin_spend(height, parent_coin, peer)
-        assert cs is not None
-        await self.puzzle_solution_received(cs, peer)
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend, peer: WSChiaConnection) -> None:
+        assert parent_coin_data is not None, "Parent coin data cannot be none."
+        assert isinstance(parent_coin_data, UncurriedNFT), "Invalid coin data structure"
+        await self.puzzle_solution_received(coin, parent_coin_data, peer)
+
+    async def puzzle_solution_received(self, coin: Coin, uncurried_nft: UncurriedNFT, peer: WSChiaConnection) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
-        coin_name = coin_spend.coin.name()
-        puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
-
-        uncurried_nft = UncurriedNFT.uncurry(*puzzle.uncurry())
         assert uncurried_nft is not None
+        assert uncurried_nft.coin_spend is not None
+        assert uncurried_nft.coin_state is not None
         self.log.debug(
             "found the info for NFT coin %s %s %s",
-            coin_name.hex(),
+            coin.name().hex(),
             uncurried_nft.inner_puzzle,
             uncurried_nft.singleton_struct,
         )
         singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
-        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
+        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, uncurried_nft.coin_spend.solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         self.log.debug("Got back updated metadata: %s", metadata)
         derivation_record: Optional[
@@ -222,7 +212,9 @@ class NFTWallet:
         mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+                uncurried_nft, uncurried_nft.coin_spend.solution.to_program(), p2_puzzle
+            )
             minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
         else:
             inner_puzzle = p2_puzzle
@@ -237,7 +229,7 @@ class NFTWallet:
             nft_puzzles.create_full_puzzle_with_nft_puzzle(singleton_id, uncurried_nft.inner_puzzle),
         )
         child_puzzle_hash = child_puzzle.get_tree_hash()
-        for new_coin in compute_additions(coin_spend):
+        for new_coin in compute_additions(uncurried_nft.coin_spend):
             self.log.debug(
                 "Comparing addition: %s with %s, amount: %s ",
                 new_coin.puzzle_hash,
@@ -251,16 +243,11 @@ class NFTWallet:
             raise ValueError("Couldn't generate child puzzle for NFT")
 
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
-        # all is well, lets add NFT to our local db
-        parent_coin = None
-        confirmed_height = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_name], peer=peer
+        # all is well, lets add NFT to our local db:
+        parent_coin = uncurried_nft.coin_state.coin
+        confirmed_height = (
+            None if uncurried_nft.coin_state.spent_height is None else uint32(uncurried_nft.coin_state.spent_height)
         )
-
-        if coin_states is not None:
-            parent_coin = coin_states[0].coin
-            confirmed_height = None if coin_states[0].spent_height is None else uint32(coin_states[0].spent_height)
 
         if parent_coin is None or confirmed_height is None:
             raise ValueError("Error finding parent")

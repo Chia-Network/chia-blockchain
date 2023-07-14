@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import multiprocessing.context
 import time
@@ -687,6 +688,9 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
+            uncurried_nft = dataclasses.replace(
+                uncurried_nft, coin_state=parent_coin_state, coin_spend=coin_spend
+            )
             return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state), uncurried_nft
 
         # Check if the coin is a DID
