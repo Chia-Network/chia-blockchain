@@ -516,7 +516,8 @@ def validate_unfinished_header_block(
             if curr_optional_block_record.cc_sp_hash != curr_sp:
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash
-            curr_optional_block_record = blocks.try_block_record(curr_optional_block_record.prev_hash)
+            if sp_count < constants.UNIQUE_PLOTS_WINDOW:
+                curr_optional_block_record = blocks.get_block_record_from_db(curr_optional_block_record.prev_hash)
 
     # 6. check signage point index
     # no need to check negative values as this is uint 8
