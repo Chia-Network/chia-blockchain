@@ -35,12 +35,16 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 class TestDLWallet:
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "trusted,reuse_puzhash",
+        [
+            (True, True),
+            (True, False),
+            (False, False),
+        ],
     )
     @pytest.mark.asyncio
     async def test_initial_creation(
-        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
     ) -> None:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -69,7 +73,7 @@ class TestDLWallet:
 
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
-                current_root, DEFAULT_TX_CONFIG, fee=uint64(1999999999999)
+                current_root, DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash), fee=uint64(1999999999999)
             )
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
