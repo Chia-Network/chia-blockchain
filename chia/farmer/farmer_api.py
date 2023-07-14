@@ -3,14 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.farmer.farmer import Farmer
+from chia.farmer.farmer import Farmer, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
@@ -41,17 +41,7 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint8, uint32, uint64
-
-
-def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
-    for index, [timestamp, points] in enumerate(pairs):
-        if timestamp >= before:
-            if index == 0:
-                return pairs
-            if index > 0:
-                return pairs[index:]
-    return []
+from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:
@@ -158,12 +148,22 @@ class FarmerAPI:
                 pool_state_dict: Dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
                 pool_url = pool_state_dict["pool_config"].pool_url
                 if pool_url == "":
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "missing_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
 
                 if pool_state_dict["current_difficulty"] is None:
                     self.farmer.log.warning(
                         f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
                         f"check communication with the pool, skipping this partial to {pool_url}."
+                    )
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "missing_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
                     )
                     return
 
@@ -180,6 +180,11 @@ class FarmerAPI:
                     self.farmer.log.info(
                         f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"
                     )
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "invalid_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
 
                 authentication_token_timeout = pool_state_dict["authentication_token_timeout"]
@@ -187,6 +192,11 @@ class FarmerAPI:
                     self.farmer.log.warning(
                         f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
                         f", check communication with the pool."
+                    )
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "missing_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
                     )
                     return
 
@@ -213,6 +223,11 @@ class FarmerAPI:
                 response: Any = await peer.call_api(HarvesterAPI.request_signatures, request)
                 if not isinstance(response, harvester_protocol.RespondSignatures):
                     self.farmer.log.error(f"Invalid response from harvester: {response}")
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "invalid_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
 
                 assert len(response.message_signatures) == 1
@@ -237,6 +252,11 @@ class FarmerAPI:
                 )
                 if authentication_sk is None:
                     self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "missing_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
 
                 authentication_signature = AugSchemeMPL.sign(authentication_sk, m_to_sign)
@@ -249,8 +269,12 @@ class FarmerAPI:
                 self.farmer.log.info(
                     f"Submitting partial for {post_partial_request.payload.launcher_id.hex()} to {pool_url}"
                 )
-                pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
-                pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
+                self.farmer.increment_pool_stats(
+                    p2_singleton_puzzle_hash,
+                    "points_found",
+                    count=pool_state_dict["current_difficulty"],
+                    value=pool_state_dict["current_difficulty"],
+                )
                 self.farmer.log.debug(f"POST /partial request {post_partial_request}")
                 try:
                     async with aiohttp.ClientSession() as session:
@@ -268,7 +292,16 @@ class FarmerAPI:
                                         f"Error in pooling: "
                                         f"{pool_response['error_code'], pool_response['error_message']}"
                                     )
-                                    pool_state_dict["pool_errors_24h"].append(pool_response)
+
+                                    self.farmer.increment_pool_stats(
+                                        p2_singleton_puzzle_hash, "pool_errors", value=pool_response
+                                    )
+
+                                    if pool_response["error_code"] == PoolErrorCode.TOO_LATE.value:
+                                        self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "stale_partials")
+                                    else:
+                                        self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "invalid_partials")
+
                                     if pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
                                         self.farmer.log.error(
                                             "Partial not good enough, forcing pool farmer update to "
@@ -277,14 +310,27 @@ class FarmerAPI:
                                         pool_state_dict["next_farmer_update"] = 0
                                         await self.farmer.update_pool_state()
                                 else:
+                                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "valid_partials")
                                     new_difficulty = pool_response["new_difficulty"]
-                                    pool_state_dict["points_acknowledged_since_start"] += new_difficulty
-                                    pool_state_dict["points_acknowledged_24h"].append((time.time(), new_difficulty))
+                                    self.farmer.increment_pool_stats(
+                                        p2_singleton_puzzle_hash,
+                                        "points_acknowledged",
+                                        count=new_difficulty,
+                                        value=new_difficulty,
+                                    )
                                     pool_state_dict["current_difficulty"] = new_difficulty
                             else:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
                 except Exception as e:
                     self.farmer.log.error(f"Error connecting to pool: {e}")
+
+                    error_resp = {"error_code": uint16(PoolErrorCode.REQUEST_FAILED.value), "error_message": str(e)}
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "pool_errors", value=error_resp)
+                    self.farmer.increment_pool_stats(p2_singleton_puzzle_hash, "invalid_partials")
+                    self.farmer.state_changed(
+                        "failed_partial",
+                        {"p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex()},
+                    )
                     return
 
                 self.farmer.state_changed(
@@ -499,7 +545,11 @@ class FarmerAPI:
             # the client isn't receiving signage points.
             cutoff_24h = time.time() - (24 * 60 * 60)
             for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-                for key in ["points_found_24h", "points_acknowledged_24h"]:
+                for key in [
+                    "points_found_24h",
+                    "points_acknowledged_24h",
+                    "pool_errors_24h",
+                ]:
                     if key not in pool_dict:
                         continue
 
