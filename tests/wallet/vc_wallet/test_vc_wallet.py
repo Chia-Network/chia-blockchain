@@ -259,6 +259,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
+    await time_out_assert(15, cr_cat_wallet_0.get_confirmed_balance, 10)
 
     # Check the other wallet recieved it
     await time_out_assert_not_none(
@@ -331,6 +332,14 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     )
     vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
+
+    # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
+    with pytest.raises(ValueError):
+        tx = await client_0.cat_spend(
+            cr_cat_wallet_0.id(),
+            uint64(10),
+            wallet_1_addr,
+        )
 
     # Test melting a CRCAT
     tx = await client_1.cat_spend(

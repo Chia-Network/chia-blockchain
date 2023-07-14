@@ -3569,7 +3569,7 @@ class WalletRpcApi:
         :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional paramaters for a 'new_puzhash'
         for the vc to end up at and 'new_proof_hash' & 'provider_inner_puzhash' which can be used to update the vc's
         proofs. Also standard 'fee' & 'reuse_puzhash' parameters for the transaction.
-        :return: a list of all relevant 'transactions' to perform this spend
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
         @streamable
@@ -3637,7 +3637,7 @@ class WalletRpcApi:
         """
         Revoke an on chain VC provided the correct DID is available
         :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
-        :return: all relevant 'transactions'
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
         @streamable
@@ -3668,7 +3668,8 @@ class WalletRpcApi:
         Moving any "pending approval" CR-CATs into the spendable balance of the wallet
         :param request: Required 'wallet_id'. Optional 'min_amount_to_claim' (deafult: full balance).
         Standard transaction params 'fee' & 'reuse_puzhash'.
-        :return: all relevant 'transactions'
+        :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates:
+        (CRCAT TX + fee TX)
         """
 
         @streamable

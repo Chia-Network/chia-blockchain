@@ -420,6 +420,18 @@ class VCWallet:
     async def add_vc_authorization(
         self, offer: Offer, solver: Solver, reuse_puzhash: Optional[bool] = None
     ) -> Tuple[Offer, Solver]:
+        """
+        This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
+        The only coins types that it looks for to approve are CR-CATs at the moment.
+        It will approve a CR-CAT spend if it meets one of the following conditions:
+          - It is coming to this wallet (we know we have a valid VC)
+          - It is going back to the same puzzle hash it came from (it is change)
+          - It is going to the "pending approval" state (we can defer authorization to another user's VC)
+          - It is going to the OFFER_MOD (known puzzlehash, intermediate custody-less state, no VC needed)
+
+        Note that the second requirement above means that to make a valid offer of CR-CATs for something else, you must
+        send the change back to it's original puzzle hash or else a taker wallet will not approve it.
+        """
         if reuse_puzhash is None:
             reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
             if reuse_puzhash_config is None:
@@ -471,7 +483,7 @@ class VCWallet:
                 is not None
             )
             outputs_ok: bool = True
-            for cc in [c for c in crcat_spend.inner_conditions if c.at("f") == 51]:
+            for cc in [c for c in crcat_spend.inner_conditions if c.at("f").as_int() == 51]:
                 if not (
                     (  # it's coming to us
                         await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(bytes32(cc.at("rf").atom))

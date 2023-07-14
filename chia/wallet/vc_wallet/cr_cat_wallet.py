@@ -899,6 +899,10 @@ class CRCATWallet(CATWallet):
         )
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        """
+        This matches coins that are either CRCATs with the hint as the inner puzzle, or CRCATs in the pending approval
+        state that will come to us once claimed.
+        """
         return (
             construct_cat_puzzle(
                 CAT_MOD,
