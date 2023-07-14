@@ -79,8 +79,8 @@ def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tupl
     for pk, msg in conditions.agg_sig_unsafe:
         ret[0].append(bytes48(pk))
         ret[1].append(msg)
-        for dissallowed in data.values():
-            if msg.endswith(dissallowed):
+        for disallowed in data.values():
+            if msg.endswith(disallowed):
                 raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
