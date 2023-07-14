@@ -269,10 +269,10 @@ if sys.platform == "win32":
                 try:
                     return await self._chia_accept(listener)
                 except OSError as exc:
-                    if exc.winerror not in (
+                    if exc.winerror not in (  # pylint: disable=E1101
                         _winapi.ERROR_NETNAME_DELETED,
                         _winapi.ERROR_OPERATION_ABORTED,
-                    ):  # pylint: disable=E1101
+                    ):
                         raise
 
         def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
@@ -300,10 +300,10 @@ if sys.platform == "win32":
                     raise
                 except OSError as exc:
                     # https://github.com/python/cpython/issues/93821#issuecomment-1157945855
-                    if exc.winerror not in (
+                    if exc.winerror not in (  # pylint: disable=E1101
                         _winapi.ERROR_NETNAME_DELETED,
                         _winapi.ERROR_OPERATION_ABORTED,
-                    ):  # pylint: disable=E1101
+                    ):
                         raise
 
             future = self._register(ov, listener, finish_accept)  # pylint: disable=assignment-from-no-return
