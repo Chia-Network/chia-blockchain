@@ -49,6 +49,7 @@ farming_info_json: Dict[str, Any] = {
     "passed": 1390832181,
     "proofs": 908923578,
     "total_plots": 2259819406,
+    "lookup_time": 3942498,
 }
 
 signed_values_json: Dict[str, Any] = {
