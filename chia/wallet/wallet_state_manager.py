@@ -1155,18 +1155,22 @@ class WalletStateManager:
         coin_spend: CoinSpend,
     ) -> Optional[WalletIdentifier]:
         (
-            SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-            PROPOSAL_MOD_HASH,
+            # ; second hash
+            SELF_HASH,
+            PROPOSAL_ID,
+            PROPOSED_PUZ_HASH,
+            YES_VOTES,
+            TOTAL_VOTES,
+            # ; first hash
             PROPOSAL_TIMER_MOD_HASH,
+            SINGLETON_MOD_HASH,
+            SINGLETON_LAUNCHER_PUZHASH,
             CAT_MOD_HASH,
             DAO_FINISHED_STATE_MOD_HASH,
             TREASURY_MOD_HASH,
-            LOCKUP_MOD_HASH,
+            LOCKUP_SELF_HASH,
             CAT_TAIL_HASH,
             TREASURY_ID,
-            YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-            TOTAL_VOTES,  # how many people responded
-            INNERPUZHASH,
         ) = uncurried_args
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DAO:

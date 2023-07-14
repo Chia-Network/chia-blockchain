@@ -3,15 +3,8 @@
 ; It creates/asserts announcements to pair it with the finishing spend of a proposal
 
 (mod (
-    PROPOSAL_MOD_HASH
-    PROPOSAL_TIMER_MOD_HASH
-    LOCKUP_MOD_HASH
-    DAO_FINISHED_STATE_HASH
-    CAT_MOD_HASH
-    CAT_TAIL_HASH
-    (@ MY_PARENT_SINGLETON_STRUCT (SINGLETON_MOD_HASH SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
-    TREASURY_ID
-    treasury_mod_hash
+    PROPOSAL_SELF_HASH
+    MY_PARENT_SINGLETON_STRUCT
     proposal_yes_votes
     proposal_total_votes
     proposal_innerpuzhash
@@ -30,46 +23,21 @@
     )
   )
 
-  ; PROPOSAL_MOD_HASH
-  ; CAT_MOD_HASH
-  ; LOCKUP_MOD_HASH
-  ; CAT_TAIL_HASH
-  ; MY_PARENT_SINGLETON_STRUCT
-  ; treasury_mod_hash
-  ; PROPOSAL_TIMER_MOD_HASH
-  ; TREASURY_ID
-  ; proposal_yes_votes
-  ; proposal_total_votes
-  ; proposal_innerpuzhash
   (defun calculate_proposal_puzzlehash (
-      PROPOSAL_MOD_HASH
-      CAT_MOD_HASH
-      LOCKUP_MOD_HASH
-      DAO_FINISHED_STATE_HASH
-      CAT_TAIL_HASH
-      proposal_singleton_struct
-      TREASURY_MOD_HASH
-      PROPOSAL_TIMER_MOD_HASH
-      TREASURY_ID
-      YES_VOTES
-      TOTAL_VOTES
-      INNERPUZHASH
+      PROPOSAL_SINGLETON_STRUCT
+      PROPOSAL_SELF_HASH
+      proposal_yes_votes
+      proposal_total_votes
+      proposal_innerpuzhash
     )
     (calculate_singleton_puzzle_hash
-      proposal_singleton_struct
-      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
-        (sha256 ONE INNERPUZHASH)
-        (sha256 ONE TOTAL_VOTES)
-        (sha256 ONE YES_VOTES)
-        (sha256 ONE TREASURY_ID)
-        (sha256 ONE CAT_TAIL_HASH)
-        (sha256 ONE LOCKUP_MOD_HASH)
-        (sha256 ONE TREASURY_MOD_HASH)
-        (sha256 ONE DAO_FINISHED_STATE_HASH)
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
-        (sha256 ONE PROPOSAL_MOD_HASH)
-        (sha256tree proposal_singleton_struct)
+      PROPOSAL_SINGLETON_STRUCT
+      (puzzle-hash-of-curried-function PROPOSAL_SELF_HASH
+        (sha256 ONE proposal_total_votes)
+        (sha256 ONE proposal_yes_votes)
+        (sha256 ONE proposal_innerpuzhash)
+        (sha256 ONE (f (r PROPOSAL_SINGLETON_STRUCT)))
+        (sha256 ONE PROPOSAL_SELF_HASH)
       )
     )
   )
@@ -82,15 +50,8 @@
       ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256
         (calculate_proposal_puzzlehash
-          PROPOSAL_MOD_HASH
-          CAT_MOD_HASH
-          LOCKUP_MOD_HASH
-          DAO_FINISHED_STATE_HASH
-          CAT_TAIL_HASH
           MY_PARENT_SINGLETON_STRUCT
-          treasury_mod_hash
-          PROPOSAL_TIMER_MOD_HASH
-          TREASURY_ID
+          PROPOSAL_SELF_HASH
           proposal_yes_votes
           proposal_total_votes
           proposal_innerpuzhash
@@ -103,15 +64,8 @@
       (sha256
         parent_parent
         (calculate_proposal_puzzlehash
-          PROPOSAL_MOD_HASH
-          CAT_MOD_HASH
-          LOCKUP_MOD_HASH
-          DAO_FINISHED_STATE_HASH
-          CAT_TAIL_HASH
           MY_PARENT_SINGLETON_STRUCT
-          treasury_mod_hash
-          PROPOSAL_TIMER_MOD_HASH
-          TREASURY_ID
+          PROPOSAL_SELF_HASH
           0
           0
           proposal_innerpuzhash
