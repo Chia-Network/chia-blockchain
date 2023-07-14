@@ -40,7 +40,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
     DAO_TREASURY_MOD,
-    DAO_TREASURY_MOD_HASH,
     SINGLETON_LAUNCHER,
     create_cat_launcher_for_singleton_id,
     curry_cat_eve,
@@ -51,6 +50,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_curry_vals_from_proposal_puzzle,
     get_dao_rules_from_update_proposal,
     get_finished_state_puzzle,
+    get_finished_state_inner_puzzle,
     get_innerpuz_from_lockup_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
@@ -2193,8 +2193,7 @@ class DAOWallet(WalletProtocol):
 
         sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
         spends.append(sb)
-        if finished_puz is None:
-            finished_puz = DAO_FINISHED_STATE  # this shouldn't happen
+
         if not spends:
             raise ValueError("No proposals are available for release")
 
@@ -2433,6 +2432,7 @@ class DAOWallet(WalletProtocol):
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
         if current_coin is None:
             raise ValueError("get_most_recent_singleton_coin_from_coin_spend failed")
+
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
         assert current_coin.puzzle_hash == curry_singleton(singleton_id, current_innerpuz).get_tree_hash()
         # check if our parent puzzle was the finished state
@@ -2465,7 +2465,7 @@ class DAOWallet(WalletProtocol):
                     return
 
         # check if we are the finished state
-        if current_innerpuz == get_finished_state_puzzle(singleton_id):
+        if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
             ended = True
 
         c_a, curried_args = uncurry_proposal(puzzle)

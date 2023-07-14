@@ -41,9 +41,9 @@
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
 
-  (defun calculate_finished_state (singleton_struct dao_finished_state)
-    (puzzle-hash-of-curried-function dao_finished_state
-      (sha256 ONE dao_finished_state)
+  (defun calculate_finished_state (singleton_struct DAO_FINISHED_STATE_MOD_HASH)
+    (puzzle-hash-of-curried-function DAO_FINISHED_STATE_MOD_HASH
+      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
       (sha256tree singleton_struct)
     )
   )
@@ -218,7 +218,7 @@
       ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
       (if (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
         (list
-          (list CREATE_COIN (calculate_finished_state (c SINGLETON_MOD_HASH (c TREASURY_ID LAUNCHER_PUZZLE_HASH)) DAO_FINISHED_STATE_MOD_HASH) ONE (list TREASURY_ID))
+          (list CREATE_COIN (calculate_finished_state (c SINGLETON_MOD_HASH (c SINGLETON_ID LAUNCHER_PUZZLE_HASH)) DAO_FINISHED_STATE_MOD_HASH) ONE (list TREASURY_ID))
           (list ASSERT_HEIGHT_RELATIVE self_destruct_time)
           (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
             (sha256

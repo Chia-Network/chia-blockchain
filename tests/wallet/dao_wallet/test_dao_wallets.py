@@ -673,6 +673,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     await asyncio.sleep(1)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+        await asyncio.sleep(2)
 
     # Check the proposal is saved
     assert len(dao_wallet_0.dao_info.proposals_list) == 2
@@ -814,7 +815,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Give the wallet nodes a second
     await asyncio.sleep(1)
-    for i in range(1, 12):
+    for i in range(1, 20):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
     # Check the proposal is passed and closable

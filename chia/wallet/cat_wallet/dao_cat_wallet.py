@@ -27,11 +27,10 @@ from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE_HASH,
-    DAO_PROPOSAL_TIMER_MOD_HASH,
-    DAO_TREASURY_MOD_HASH,
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_innerpuz_from_lockup_puzzle,
+    get_finished_state_inner_puzzle,
     get_lockup_puzzle,
 )
 from chia.wallet.derivation_record import DerivationRecord
@@ -41,7 +40,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
-from chia.wallet.singleton import create_singleton_puzzle_hash
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
@@ -600,13 +598,13 @@ class DAOCATWallet:
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
 
         for lci_proposals_tuple in locked_coins:
-            proposal_curry_vals = []
+            proposal_innerpuzhashes = []
             coin = lci_proposals_tuple[0].coin
             proposals = lci_proposals_tuple[1]
 
             for proposal_id in proposals:
-                YES_VOTES, TOTAL_VOTES, INNERPUZ = dao_wallet.get_proposal_curry_values(proposal_id)
-                proposal_curry_vals.append([YES_VOTES, TOTAL_VOTES, INNERPUZ])
+                INNERPUZ = get_finished_state_inner_puzzle(proposal_id)
+                proposal_innerpuzhashes.append(INNERPUZ)
             # new_innerpuzzle = await cat_wallet.get_new_inner_puzzle()
             # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
             # inner_solution
@@ -622,7 +620,7 @@ class DAOCATWallet:
                     0,
                     coin.amount,
                     proposals,
-                    proposal_curry_vals,
+                    proposal_innerpuzhashes,
                     0,
                     0,
                     0,
