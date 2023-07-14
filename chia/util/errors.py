@@ -4,6 +4,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, List, Optional
 
+from click import ClickException
+
 
 class Err(Enum):
     # temporary errors. Don't blacklist
@@ -328,10 +330,9 @@ class InvalidPathError(Exception):
         self.path = path
 
 
-class CliRpcConnectionError(Exception):
+class CliRpcConnectionError(ClickException):
     """
-    This error is raised when a rpc server cant be reached by the cli async generator & should always be caught by
-    the cli in cmds/chia.py:main.
+    This error is raised when a rpc server cant be reached by the cli async generator
     """
 
     pass

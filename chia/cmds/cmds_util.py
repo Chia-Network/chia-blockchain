@@ -60,17 +60,16 @@ async def validate_client_connection(
     node_type: str,
     rpc_port: int,
     consume_errors: bool = True,
-) -> bool:
-    connected: bool = True
+) -> None:
     try:
         await rpc_client.healthz()
     except ClientConnectorError:
         if not consume_errors:
             raise
-        connected = False
-        print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
-        print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
-    return connected
+        raise CliRpcConnectionError(  # this error is handled by click.
+            f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}"
+            f"\nThis is normal if {node_type.replace('_', ' ')} is still starting up"
+        )
 
 
 @asynccontextmanager
@@ -99,12 +98,11 @@ async def get_any_service_client(
     node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
     try:
         # check if we can connect to node
-        connected = await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
-        if not connected:
-            raise CliRpcConnectionError
+        await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError):
+            # CliRpcConnectionError will be handled by click.
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
@@ -113,8 +111,11 @@ async def get_any_service_client(
         await node_client.await_closed()
 
 
-async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> Optional[int]:
+async def get_wallet(
+    root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]
+) -> Tuple[Optional[int], str]:
     selected_fingerprint: Optional[int] = None
+    error: str = "No Fingerprint Selected"
     keychain_proxy: Optional[KeychainProxy] = None
     all_keys: List[KeyData] = []
 
@@ -196,14 +197,14 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
             log_in_response = await wallet_client.log_in(selected_fingerprint)
 
             if log_in_response["success"] is False:
-                print(f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}")
+                error = f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}"
                 selected_fingerprint = None
     finally:
         # Closing the keychain proxy takes a moment, so we wait until after the login is complete
         if keychain_proxy is not None:
             await keychain_proxy.close()
 
-    return selected_fingerprint
+    return selected_fingerprint, error
 
 
 @asynccontextmanager
@@ -211,9 +212,13 @@ async def get_wallet_client(
     wallet_rpc_port: Optional[int] = None,
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
+    consume_errors: bool = True,
 ) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
-        new_fp = await get_wallet(root_path, wallet_client, fingerprint)
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path, consume_errors) as (
+        wallet_client,
+        config,
+    ):
+        new_fp, error = await get_wallet(root_path, wallet_client, fingerprint)
         if new_fp is None:
-            raise CliRpcConnectionError  # this is caught by the main cli function
+            raise CliRpcConnectionError(error)  # this is a click error, so it will be printed nicely
         yield wallet_client, new_fp, config
