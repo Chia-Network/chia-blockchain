@@ -4,7 +4,7 @@ It is the official policy of the Chia Blockchain project to end support for soft
 Chia blockchain project intends that if the original maintainer no longer supports a given version (software or operating system), the Chia Blockchain project does not intend to support it either following shortly after the end of official support. 
 
 ## Long term support conflicts
-In the event that a long term support version of an operating system uses a default python version that has lost official support, we also intend to end support for that operating system version as well. To avoid issues with installation of a new python version via chia install, breaking crucial operating system components. 
+If a long-term support version of an operating system uses a default Python version that has lost official support, we also intend to end support for that operating system version, so as to avoid issues with installing a new Python version via Chia install, which may break crucial operating system components.
 
 ## More information
 For more information please contact hello@chia.net or reach out on the community Discord. 
