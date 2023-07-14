@@ -91,7 +91,7 @@ class DAOWallet(WalletProtocol):
     This is a wallet in the sense that it conforms to the interface needed by WalletStateManager.
     It is not a user-facing wallet. A user cannot spend or receive XCH though a wallet of this type.
 
-    Wallets of type CAT and DAO_CAT are be the user-facing wallets which hold the voting tokens a user
+    Wallets of type CAT and DAO_CAT are the user-facing wallets which hold the voting tokens a user
     owns. The DAO Wallet is used for state-tracking of the Treasury Singleton and its associated
     Proposals.
 
@@ -262,7 +262,7 @@ class DAOWallet(WalletProtocol):
         dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
         await self.save_info(dao_info)
 
-        # add treasury id to interested puzzle hashes so we can folllow treasury funds
+        # add treasury id to interested puzzle hashes. This is hinted in funding coins so we can track them
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         return self
 
@@ -599,9 +599,13 @@ class DAOWallet(WalletProtocol):
 
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
+        # We're looking up the details of the coins from the node to ensure that we get the right balance
+        wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([record.coin.amount for record in records if not record.spent]))
+        latest = await wallet_node.get_coin_state([cr.coin.name() for cr in records if not cr.spent], peer)
+        return uint128(sum([cr.coin.amount for cr in latest]))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
