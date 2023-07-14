@@ -2073,6 +2073,7 @@ plot_json: Dict[str, Any] = {
     "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
     "file_size": 3368414292564311420,
     "time_modified": 2573238947935295522,
+    "compression_level": 0,
 }
 
 request_plots_json: Dict[str, Any] = {}
@@ -2088,6 +2089,7 @@ respond_plots_json: Dict[str, Any] = {
             "plot_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
             "file_size": 3368414292564311420,
             "time_modified": 2573238947935295522,
+            "compression_level": 0,
         }
     ],
     "failed_to_open_filenames": ["str"],

@@ -73,6 +73,7 @@ class ExpectedResult:
                 G1Element(),
                 uint64(0),
                 uint64(0),
+                uint8(0),
             )
 
         self.valid_count += len(list_plots)
@@ -193,6 +194,7 @@ class Environment:
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert plot.prover.get_size() == delta.valid.additions[path].size
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
+            assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
             assert plot.pool_contract_puzzle_hash == delta.valid.additions[path].pool_contract_puzzle_hash
             assert plot.plot_public_key == delta.valid.additions[path].plot_public_key
@@ -253,6 +255,7 @@ class Environment:
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert plot_info.prover.get_size() == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
+                assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
                 assert plot_info.pool_contract_puzzle_hash == receiver.plots()[str(path)].pool_contract_puzzle_hash
                 assert plot_info.plot_public_key == receiver.plots()[str(path)].plot_public_key

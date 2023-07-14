@@ -30,7 +30,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint64
+from chia.util.ints import int16, uint8, uint64
 from chia.util.misc import to_batches
 from tests.plot_sync.util import start_harvester_service
 
@@ -274,6 +274,9 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
         def get_size(self) -> int:
             return self.size
+
+        def get_compression_level(self) -> uint8:
+            return uint8(0)
 
     return [
         PlotInfo(
