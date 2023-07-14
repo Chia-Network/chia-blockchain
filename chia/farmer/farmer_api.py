@@ -532,8 +532,8 @@ class FarmerAPI:
         msg = make_msg(ProtocolMessageTypes.request_signatures, request)
         await self.farmer.server.send_to_specific([msg], node_id)
 
-    @api_request()
-    async def farming_info(self, request: farmer_protocol.FarmingInfo) -> None:
+    @api_request(peer_required=True)
+    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection) -> None:
         self.farmer.state_changed(
             "new_farming_info",
             {
@@ -544,6 +544,8 @@ class FarmerAPI:
                     "proofs": request.proofs,
                     "total_plots": request.total_plots,
                     "timestamp": request.timestamp,
+                    "node_id": peer.peer_node_id,
+                    "lookup_time": request.lookup_time,
                 }
             },
         )
