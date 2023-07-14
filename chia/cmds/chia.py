@@ -27,7 +27,7 @@ from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
-from chia.util.errors import KeychainCurrentPassphraseIsInvalid
+from chia.util.errors import CliRpcConnectionError, KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
 from chia.util.ssl_check import check_ssl
 
@@ -132,7 +132,10 @@ cli.add_command(dev_cmd)
 
 
 def main() -> None:
-    cli()  # pylint: disable=no-value-for-parameter
+    try:
+        cli()  # pylint: disable=no-value-for-parameter
+    except CliRpcConnectionError:  # this happens when we cant connect to a client and is only comes from the cli code
+        exit(1)
 
 
 if __name__ == "__main__":

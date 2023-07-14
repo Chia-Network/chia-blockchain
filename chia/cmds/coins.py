@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional
+from decimal import Decimal
+from typing import Optional, Sequence
 
 import click
-
-from chia.cmds.cmds_util import execute_with_wallet
-from chia.util.config import load_config, selected_network_address_prefix
 
 
 @click.group("coins", help="Manage your wallets coins")
@@ -64,25 +62,25 @@ def list_cmd(
     show_unconfirmed: bool,
     min_amount: str,
     max_amount: str,
-    coins_to_exclude: List[str],
-    amounts_to_exclude: List[int],
+    coins_to_exclude: Sequence[str],
+    amounts_to_exclude: Sequence[int],
     paginate: Optional[bool],
 ) -> None:
-    config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
-    address_prefix = selected_network_address_prefix(config)
-    extra_params = {
-        "id": id,
-        "max_coin_amount": max_amount,
-        "min_coin_amount": min_amount,
-        "excluded_amounts": amounts_to_exclude,
-        "excluded_coin_ids": coins_to_exclude,
-        "addr_prefix": address_prefix,
-        "show_unconfirmed": show_unconfirmed,
-        "paginate": paginate,
-    }
     from .coin_funcs import async_list
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_list))
+    asyncio.run(
+        async_list(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            max_coin_amount=Decimal(max_amount),
+            min_coin_amount=Decimal(min_amount),
+            excluded_amounts=amounts_to_exclude,
+            excluded_coin_ids=coins_to_exclude,
+            show_unconfirmed=show_unconfirmed,
+            paginate=paginate,
+        )
+    )
 
 
 @coins_cmd.command("combine", help="Combine dust coins")
@@ -156,27 +154,30 @@ def combine_cmd(
     id: int,
     target_amount: str,
     min_amount: str,
-    amounts_to_exclude: List[int],
+    amounts_to_exclude: Sequence[str],
     number_of_coins: int,
     max_amount: str,
     fee: str,
-    input_coins: List[str],
+    input_coins: Sequence[str],
     largest_first: bool,
 ) -> None:
-    extra_params = {
-        "id": id,
-        "target_coin_amount": target_amount,
-        "min_coin_amount": min_amount,
-        "excluded_amounts": amounts_to_exclude,
-        "number_of_coins": number_of_coins,
-        "max_amount": max_amount,
-        "fee": fee,
-        "target_coin_ids": list(input_coins),
-        "largest": largest_first,
-    }
     from .coin_funcs import async_combine
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_combine))
+    asyncio.run(
+        async_combine(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            max_coin_amount=Decimal(max_amount),
+            min_coin_amount=Decimal(min_amount),
+            excluded_amounts=amounts_to_exclude,
+            number_of_coins=number_of_coins,
+            target_coin_amount=Decimal(target_amount),
+            target_coin_ids_str=input_coins,
+            largest_first=largest_first,
+        )
+    )
 
 
 @coins_cmd.command("split", help="Split up larger coins")
@@ -222,13 +223,16 @@ def split_cmd(
     amount_per_coin: str,
     target_coin_id: str,
 ) -> None:
-    extra_params = {
-        "id": id,
-        "number_of_coins": number_of_coins,
-        "fee": fee,
-        "amount_per_coin": amount_per_coin,
-        "target_coin_id": target_coin_id,
-    }
     from .coin_funcs import async_split
 
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_split))
+    asyncio.run(
+        async_split(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_id=id,
+            fee=Decimal(fee),
+            number_of_coins=number_of_coins,
+            amount_per_coin=Decimal(amount_per_coin),
+            target_coin_id_str=target_coin_id,
+        )
+    )
