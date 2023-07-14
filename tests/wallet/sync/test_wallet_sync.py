@@ -666,7 +666,7 @@ class TestWalletSync:
             (10, 10000000000, 1),  # everything is dust
             (10, 10000000000, 10000000000),  # max dust threshold, dust is same size so not filtered
             # Test with more coins
-            (100, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
+            (105, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
         ],
     )
     async def test_dusted_wallet(
