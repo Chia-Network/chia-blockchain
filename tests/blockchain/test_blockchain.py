@@ -3669,14 +3669,24 @@ async def test_soft_fork3_activation(
         peak = b.get_peak()
         assert peak is not None
 
+        # We expect to add all blocks here (25 blocks), either because `unique_plots_window`=1 means we're not
+        # checking any extra plot filter, or `unique_plots_window`=True means `BlockTools` produced blocks
+        # that respect CHIP-13.
         if bt_respects_soft_fork3 or unique_plots_window == 1:
             assert peak.height == 24
         else:
+            # Here we have `bt_respects_soft_fork3`=False, which means the produced blocks by `BlockTools` will not
+            # respect the CHIP-13 condition. We expect not adding blocks at some point after the soft fork 3
+            # activation height (`soft_fork3_height`).
             if soft_fork3_height == 0:
+                # We're not adding all blocks, since at some point `BlockTools` will break the CHIP-13 condition with
+                # very high likelyhood.
                 assert peak.height < 24
             elif soft_fork3_height == 10:
+                # We're not adding all blocks, but we've added all of them until the soft fork 3 activated (height 10)
                 assert peak.height < 24 and peak.height >= 9
             else:
+                # Soft fork 3 will activate in the future (height 100), so we're adding all blocks.
                 assert peak.height == 24
 
         await db_wrapper.close()

@@ -952,8 +952,6 @@ class TestFullNodeStore:
         store = FullNodeStore(blockchain.constants)
         peak = None
         peak_full_block = None
-        if blockchain.constants.SOFT_FORK3_HEIGHT == 0:
-            pytest.skip("Test temporarily skipped.")
         for block in default_1000_blocks:
             next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
                 blockchain.constants, True, peak, blockchain

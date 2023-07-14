@@ -502,9 +502,9 @@ def validate_unfinished_header_block(
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         curr_sp = cc_sp_hash
         sp_count = 1
-        prefix_bits = calculate_prefix_bits(constants, height)
 
         while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
+            prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
             if passes_plot_filter(
                 prefix_bits,
                 plot_id,
