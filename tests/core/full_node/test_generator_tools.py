@@ -10,13 +10,18 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
+parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 phs = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 spends: List[Spend] = [
     Spend(
         coin_ids[0],
+        parent_ids[0],
         phs[0],
+        123,
         None,
         uint64(5),
+        None,
+        None,
         None,
         None,
         [
@@ -25,13 +30,23 @@ spends: List[Spend] = [
             (phs[4], uint64(0), b"1" * 300),
         ],
         [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
         0,
     ),
     Spend(
         coin_ids[1],
+        parent_ids[1],
         phs[0],
+        123,
         None,
         uint64(2),
+        None,
+        None,
         None,
         None,
         [
@@ -40,13 +55,19 @@ spends: List[Spend] = [
             (phs[7], uint64(0), b"1" * 300),
         ],
         [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
         0,
     ),
 ]
 
 
 def test_tx_removals_and_additions() -> None:
-    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0))
+    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0)
     expected_rems = [coin_ids[0], coin_ids[1]]
     expected_additions = []
     for spend in spends:

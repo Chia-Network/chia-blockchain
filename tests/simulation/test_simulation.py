@@ -15,7 +15,7 @@ from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWallets, setup_full_system
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
@@ -56,12 +56,6 @@ async def extra_node(self_hostname):
             db_version=1,
         ):
             yield service._api
-
-
-@pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
-        yield _
 
 
 class TestSimulation:
@@ -418,40 +412,6 @@ class TestSimulation:
             for coin in coins:
                 coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
                 assert coin_record is not None
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        argnames="amounts",
-        argvalues=[
-            *[pytest.param([uint64(1)] * n, id=f"1 mojo x {n}") for n in [0, 1, 10, 49, 51, 103]],
-            *[
-                pytest.param(list(uint64(x) for x in range(1, n + 1)), id=f"incrementing x {n}")
-                for n in [1, 10, 49, 51, 103]
-            ],
-        ],
-    )
-    async def test_create_coins_with_amounts(
-        self,
-        self_hostname: str,
-        amounts: List[uint64],
-        simulator_and_wallet: SimulatorsAndWallets,
-    ) -> None:
-        [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
-
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
-
-        # Avoiding an attribute hint issue below.
-        assert wallet_node.wallet_state_manager is not None
-
-        wallet = wallet_node.wallet_state_manager.main_wallet
-
-        await full_node_api.farm_rewards_to_wallet(amount=sum(amounts), wallet=wallet)
-        # Get some more coins.  The creator helper doesn't get you all the coins you
-        # need yet.
-        await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
-        coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
-
-        assert sorted(coin.amount for coin in coins) == sorted(amounts)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

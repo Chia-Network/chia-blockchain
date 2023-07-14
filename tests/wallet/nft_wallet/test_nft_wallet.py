@@ -62,7 +62,7 @@ async def wait_rpc_state_condition(
                 f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}",
             )
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.3)
 
 
 async def make_new_block_with(resp: Dict, full_node_api: FullNodeSimulator, ph: bytes32) -> SpendBundle:
@@ -164,10 +164,8 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
-    coins = await nft_wallet_0.get_current_nfts()
-    assert len(coins) == 0
-    coins = await nft_wallet_1.get_current_nfts()
-    assert len(coins) == 1
+    assert await nft_wallet_0.get_nft_count() == 0
+    assert await nft_wallet_1.get_nft_count() == 1
 
 
 @pytest.mark.parametrize(
@@ -1326,8 +1324,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
         [dict(wallet_id=nft_wallet_1_id)],
         lambda x: len(x["nft_list"]) > 1 and x["nft_list"][0].owner_did,
     )
-    assert len(await wallet_node_0.wallet_state_manager.wallets[nft_wallet_0_id].get_current_nfts()) == 2
-
+    assert await wallet_node_0.wallet_state_manager.wallets[nft_wallet_0_id].get_nft_count() == 2
     coins = resp["nft_list"]
     assert len(coins) == 2
     assert coins[0].owner_did.hex() == hex_did_id
@@ -1463,8 +1460,9 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
         30, api_1.nft_get_nfts, [{"wallet_id": 2}], lambda x: len(x["nft_list"]) == 2
     )
     coins = coins_response["nft_list"]
-    assert coins[0].launcher_id == nft1.launcher_id
-    assert coins[1].launcher_id == nft2.launcher_id
+    nft_set = {nft1.launcher_id, nft2.launcher_id}
+    assert coins[1].launcher_id in nft_set
+    assert coins[0].launcher_id in nft_set
     assert coins[0].owner_did is None
     assert coins[1].owner_did is None
 

@@ -47,7 +47,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
             sent_to=[],
         )
-        await trade_store.add_trade_record(tr1)
+        await trade_store.add_trade_record(tr1, offer_name=bytes32(token_bytes(32)))
 
         tr2_name: bytes32 = bytes32(token_bytes(32))
         tr2 = TradeRecord(
@@ -63,7 +63,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
         )
-        await trade_store.add_trade_record(tr2)
+        await trade_store.add_trade_record(tr2, offer_name=bytes32(token_bytes(32)))
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == {
             coin_1.name(),
@@ -87,7 +87,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
         )
-        await trade_store.add_trade_record(tr2_1)
+        await trade_store.add_trade_record(tr2_1, offer_name=bytes32(token_bytes(32)))
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == {
             coin_2.name()

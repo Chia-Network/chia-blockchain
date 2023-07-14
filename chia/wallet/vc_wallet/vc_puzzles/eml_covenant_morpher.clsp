@@ -1,0 +1,75 @@
+; This is a PARENT_MORPHER for use with covenant_layer.clsp
+
+; Is is used to prove that the parent was a singleton -> exigent metadata layer (w/ covenant_layer in TP) puzzle stack
+(mod
+  (
+    ; We curry twice: first, all of the static information we need, then the hash of the program with all of that info
+    ; this allows use to be more efficient when calculating our own hash (a (q . SELF_HASH) (c SELF_HASH 1))
+    ; curried first - a bunch of info to create a singleton -> ownership layer puzzle stack
+    COVENANT_MOD_HASH
+    EML_MOD_HASH
+    ADAPTER_MOD_HASH
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH_HASH
+    TP_HASH
+    ; curried second
+    SELF_HASH  ; tree hash of all the other hashes above
+    ; Truths
+    COVENANT_INITIAL_PUZZLE_HASH
+    PREVIOUS_INNER_PUZHASH
+    ; solution
+    previous_metadata_hash  ; pre-treehashed METADATA from our parent's EML
+    my_singleton_id  ; no need to commit to this, our parent is guaranteed to be a singleton with the same ID as ours
+  )
+
+  (include curry.clib)
+
+  (defconstant ONE 1)
+
+  (defun main
+    (
+      EML_MOD_HASH
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_HASH_HASH
+      PREVIOUS_INNER_PUZHASH
+      previous_metadata_hash
+      my_singleton_id
+      tp_hash
+    )
+
+    (curry_hashes SINGLETON_MOD_HASH
+      (sha256 TWO
+        (sha256 ONE SINGLETON_MOD_HASH)
+        (sha256 TWO
+          (sha256 ONE my_singleton_id)
+          SINGLETON_LAUNCHER_HASH_HASH
+        )
+      )
+      (curry_hashes EML_MOD_HASH
+        (sha256 ONE EML_MOD_HASH)
+        previous_metadata_hash
+        tp_hash
+        (sha256 ONE tp_hash)
+        PREVIOUS_INNER_PUZHASH
+      )
+    )
+  )
+
+  (main
+    EML_MOD_HASH
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH_HASH
+    PREVIOUS_INNER_PUZHASH
+    previous_metadata_hash
+    my_singleton_id
+    (curry_hashes ADAPTER_MOD_HASH
+      (curry_hashes COVENANT_MOD_HASH
+        (sha256 ONE COVENANT_INITIAL_PUZZLE_HASH)
+        (curry_hashes SELF_HASH
+          (sha256 ONE SELF_HASH)
+        )
+        TP_HASH
+      )
+    )
+  )
+)

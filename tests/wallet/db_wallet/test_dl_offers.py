@@ -57,13 +57,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_compat: b
     wsm_maker = wallet_node_maker.wallet_state_manager
     wsm_taker = wallet_node_taker.wallet_state_manager
 
-    wallet_maker = wsm_maker.main_wallet
-    wallet_taker = wsm_taker.main_wallet
-
     async with wsm_maker.lock:
-        dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker, wallet_maker)
+        dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker)
     async with wsm_taker.lock:
-        dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker, wallet_taker)
+        dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker)
 
     MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     TAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
@@ -91,7 +88,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_compat: b
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker, peer)
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker, peer)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
@@ -221,6 +217,9 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_compat: b
         ]
     }
 
+    wallet_maker = wsm_maker.main_wallet
+    wallet_taker = wsm_taker.main_wallet
+
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
@@ -264,10 +263,8 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     assert wallet_node.wallet_state_manager is not None
     wsm = wallet_node.wallet_state_manager
 
-    wallet = wsm.main_wallet
-
     async with wsm.lock:
-        dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm, wallet)
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm)
 
     ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     root, _ = build_merkle_tree(ROWS)
@@ -337,13 +334,10 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_
     wsm_maker = wallet_node_maker.wallet_state_manager
     wsm_taker = wallet_node_taker.wallet_state_manager
 
-    wallet_maker = wsm_maker.main_wallet
-    wallet_taker = wsm_taker.main_wallet
-
     async with wsm_maker.lock:
-        dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker, wallet_maker)
+        dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker)
     async with wsm_taker.lock:
-        dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker, wallet_taker)
+        dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker)
 
     MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     TAKER_ROWS = [bytes32([i] * 32) for i in range(10, 20)]
@@ -387,7 +381,6 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_2, taker_root)
 
     peer = wallet_node_taker.get_full_node_peer()
-    assert peer is not None
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_1, peer)
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_2, peer)
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_1, peer)
@@ -504,6 +497,9 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool, forwards_
     )
     assert offer_taker is not None
     assert tx_records is not None
+
+    wallet_maker = wsm_maker.main_wallet
+    wallet_taker = wsm_taker.main_wallet
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)

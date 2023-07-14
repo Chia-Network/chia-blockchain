@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
+from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -64,6 +65,23 @@ class PlotRefreshResult:
     processed: int = 0
     remaining: int = 0
     duration: float = 0
+
+
+@final
+@dataclass
+class Params:
+    size: int
+    num: int
+    buffer: int
+    num_threads: int
+    buckets: int
+    tmp_dir: Path
+    tmp2_dir: Optional[Path]
+    final_dir: Path
+    plotid: Optional[str]
+    memo: Optional[str]
+    nobitfield: bool
+    stripe_size: int = 65536
 
 
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:

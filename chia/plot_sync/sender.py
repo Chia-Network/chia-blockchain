@@ -26,8 +26,8 @@ from chia.protocols.harvester_protocol import (
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint32, uint64
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -118,8 +118,7 @@ class Sender:
             await self.await_closed()
         if self._task is None:
             self._task = asyncio.create_task(self._run())
-            # TODO, Add typing in PlotManager
-            if not self._plot_manager.initial_refresh() or self._sync_id != 0:  # type:ignore[no-untyped-call]
+            if not self._plot_manager.initial_refresh() or self._sync_id != 0:
                 self._reset()
         else:
             raise AlreadyStartedError()
@@ -151,10 +150,10 @@ class Sender:
         self._messages.clear()
         if self._task is not None:
             self.sync_start(self._plot_manager.plot_count(), True)
-            for remaining, batch in list_to_batches(
+            for batch in to_batches(
                 list(self._plot_manager.plots.values()), self._plot_manager.refresh_parameter.batch_size
             ):
-                self.process_batch(batch, remaining)
+                self.process_batch(batch.entries, batch.remaining)
             self.sync_done([], 0)
 
     async def _wait_for_response(self) -> bool:
@@ -252,8 +251,8 @@ class Sender:
         if len(data) == 0:
             self._add_message(message_type, payload_type, [], True)
             return
-        for remaining, batch in list_to_batches(data, self._plot_manager.refresh_parameter.batch_size):
-            self._add_message(message_type, payload_type, batch, remaining == 0)
+        for batch in to_batches(data, self._plot_manager.refresh_parameter.batch_size):
+            self._add_message(message_type, payload_type, batch.entries, batch.remaining == 0)
 
     def sync_start(self, count: float, initial: bool) -> None:
         log.debug(f"sync_start {self}: count {count}, initial {initial}")

@@ -39,6 +39,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
@@ -63,6 +67,7 @@ jobs:
             matrix: '3.7'
             exclude_from:
               limited: True
+              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -71,6 +76,7 @@ jobs:
             matrix: '3.8'
             exclude_from:
               limited: True
+              main: True
           - name: '3.9'
             file_name: '3.9'
             action: '3.9'
@@ -85,6 +91,7 @@ jobs:
             matrix: '3.10'
             exclude_from:
               limited: True
+              main: True
           - name: '3.11'
             file_name: '3.11'
             action: '3.11'
@@ -93,6 +100,7 @@ jobs:
             matrix: '3.11'
             exclude_from:
               limited: True
+              main: True
         exclude:
           - os:
               matrix: macos
@@ -116,6 +124,7 @@ jobs:
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
+      CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
 
@@ -128,6 +137,11 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
@@ -182,19 +196,14 @@ jobs:
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
-      - name: Checkout test blocks and plots (macOS, Ubuntu)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
+      - name: Checkout test blocks and plots
+        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
-
-      - name: Checkout test blocks and plots (Windows)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
-        run: |
-          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+          mkdir "${GITHUB_WORKSPACE}/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'

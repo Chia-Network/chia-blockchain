@@ -30,7 +30,7 @@ class CrawlerRpcApi:
 
         return payloads
 
-    async def get_peer_counts(self, _request: Dict) -> EndpointResult:
+    async def get_peer_counts(self, _request: Dict[str, Any]) -> EndpointResult:
         ipv6_addresses_count = 0
         for host in self.service.best_timestamp_per_peer.keys():
             try:
@@ -54,7 +54,7 @@ class CrawlerRpcApi:
         }
         return data
 
-    async def get_ips_after_timestamp(self, _request: Dict) -> EndpointResult:
+    async def get_ips_after_timestamp(self, _request: Dict[str, Any]) -> EndpointResult:
         after = _request.get("after", None)
         if after is None:
             raise ValueError("`after` is required and must be a unix timestamp")

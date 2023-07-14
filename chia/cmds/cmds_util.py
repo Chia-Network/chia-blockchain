@@ -4,7 +4,7 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiohttp import ClientConnectorError
 
@@ -15,10 +15,12 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint16
 from chia.util.keychain import KeyData
 from chia.wallet.transaction_record import TransactionRecord
@@ -29,7 +31,19 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "full_node": FullNodeRpcClient,
     "harvester": HarvesterRpcClient,
     "data_layer": DataLayerRpcClient,
+    "simulator": SimulatorFullNodeRpcClient,
 }
+
+node_config_section_names: Dict[Type[RpcClient], str] = {
+    FarmerRpcClient: "farmer",
+    WalletRpcClient: "wallet",
+    FullNodeRpcClient: "full_node",
+    HarvesterRpcClient: "harvester",
+    DataLayerRpcClient: "data_layer",
+    SimulatorFullNodeRpcClient: "full_node",
+}
+
+_T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
 
 
 def transaction_submitted_msg(tx: TransactionRecord) -> str:
@@ -45,59 +59,53 @@ async def validate_client_connection(
     rpc_client: RpcClient,
     node_type: str,
     rpc_port: int,
-    root_path: Path,
-    fingerprint: Optional[int],
-    login_to_wallet: bool,
-) -> Optional[int]:
+    consume_errors: bool = True,
+) -> bool:
+    connected: bool = True
     try:
         await rpc_client.healthz()
-        if type(rpc_client) == WalletRpcClient and login_to_wallet:
-            fingerprint = await get_wallet(root_path, rpc_client, fingerprint)
-            if fingerprint is None:
-                rpc_client.close()
     except ClientConnectorError:
+        if not consume_errors:
+            raise
+        connected = False
         print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
         print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
-        rpc_client.close()
-    await rpc_client.await_closed()  # if close is not already called this does nothing
-    return fingerprint
+    return connected
 
 
 @asynccontextmanager
 async def get_any_service_client(
-    node_type: str,
+    client_type: Type[_T_RpcClient],
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
-    fingerprint: Optional[int] = None,
-    login_to_wallet: bool = True,
-) -> AsyncIterator[Tuple[Optional[Any], Dict[str, Any], Optional[int]]]:
+    consume_errors: bool = True,
+) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
 
-    if node_type not in NODE_TYPES.keys():
+    node_type = node_config_section_names.get(client_type)
+    if node_type is None:
         # Click already checks this, so this should never happen
-        raise ValueError(f"Invalid node type: {node_type}")
+        raise ValueError(f"Invalid client type requested: {client_type.__name__}")
     # load variables from config file
-    config = load_config(root_path, "config.yaml", fill_missing_services=node_type == "data_layer")
+    config = load_config(root_path, "config.yaml", fill_missing_services=issubclass(client_type, DataLayerRpcClient))
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    node_client = await NODE_TYPES[node_type].create(self_hostname, uint16(rpc_port), root_path, config)
+    node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
     try:
-        # check if we can connect to node, and if we can then validate
-        # fingerprint access, otherwise return fingerprint and shutdown client
-        fingerprint = await validate_client_connection(
-            node_client, node_type, rpc_port, root_path, fingerprint, login_to_wallet
-        )
-        if node_client.session.closed:
-            yield None, config, fingerprint
-        else:
-            yield node_client, config, fingerprint
+        # check if we can connect to node
+        connected = await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
+        if not connected:
+            raise CliRpcConnectionError
+        yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
+        if not consume_errors or isinstance(e, CliRpcConnectionError):
+            raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
     finally:
@@ -198,14 +206,14 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
     return selected_fingerprint
 
 
-async def execute_with_wallet(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    extra_params: Dict[str, Any],
-    function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
-) -> None:
-    wallet_client: Optional[WalletRpcClient]
-    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as (wallet_client, _, new_fp):
-        if wallet_client is not None:
-            assert new_fp is not None  # wallet only sanity check
-            await function(extra_params, wallet_client, new_fp)
+@asynccontextmanager
+async def get_wallet_client(
+    wallet_rpc_port: Optional[int] = None,
+    fingerprint: Optional[int] = None,
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
+        new_fp = await get_wallet(root_path, wallet_client, fingerprint)
+        if new_fp is None:
+            raise CliRpcConnectionError  # this is caught by the main cli function
+        yield wallet_client, new_fp, config

@@ -39,7 +39,7 @@ NUM_ITERS = 20000
 random.seed(123456789)
 
 
-async def run_add_block_benchmark(version: int):
+async def run_add_block_benchmark(version: int) -> None:
     verbose: bool = "--verbose" in sys.argv
     db_wrapper: DBWrapper2 = await setup_db("block-store-benchmark.db", version)
 
@@ -203,6 +203,8 @@ async def run_add_block_benchmark(version: int):
                 deficit,
                 deficit == 16,
                 prev_transaction_height,
+                bytes32([0] * 32),
+                bytes32([0] * 32),
                 timestamp if is_transaction else None,
                 prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
                 None if fees == 0 else fees,

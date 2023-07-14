@@ -20,19 +20,19 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from tests.core.make_block_generator import int_to_public_key
 
-SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
-DID_MOD = load_clvm("did_innerpuz.clvm")
-NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
-NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
+SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clsp")
+LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
+DID_MOD = load_clvm("did_innerpuz.clsp")
+NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clsp")
+NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clsp")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clsp")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-OFFER_MOD = load_clvm("settlement_payments.clvm")
+OFFER_MOD = load_clvm("settlement_payments.clsp")
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
-NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clvm")
+NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clsp")
 
 
 def test_nft_transfer_puzzle_hashes():

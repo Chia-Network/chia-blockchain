@@ -15,7 +15,7 @@ from _pytest.fixtures import SubRequest
 
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
-from chia.types.blockchain_format.tree_hash import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.core.data_layer.util import (
     ChiaRoot,
     Example,
