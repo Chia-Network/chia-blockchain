@@ -65,7 +65,7 @@ def agg_sig_additional_data(agg_sig_data: bytes) -> Dict[ConditionOpcode, bytes]
         ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
         ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
     ]:
-        ret[code] = std_hash(agg_sig_data + bytes(ConditionOpcode.AGG_SIG_PARENT))
+        ret[code] = std_hash(agg_sig_data + code)
 
     ret[ConditionOpcode.AGG_SIG_ME] = agg_sig_data
     return ret

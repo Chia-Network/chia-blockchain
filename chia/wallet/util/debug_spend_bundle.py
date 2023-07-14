@@ -200,5 +200,5 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print(f"aggregated signature check pass: {validates}")
     print(f"pks: {pks}")
     print(f"msgs: {[msg.hex() for msg in msgs]}")
-    print(f"add_data: {agg_sig_additional_data.get(ConditionOpcode.AGG_SIG_ME, bytes()).hex()}")
+    print(f"add_data: {agg_sig_additional_data.hex()}")
     print(f"signature: {spend_bundle.aggregated_signature}")

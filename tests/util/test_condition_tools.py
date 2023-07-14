@@ -14,6 +14,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
+from chia.util.hash import std_hash
 
 H1 = bytes32(b"a" * 32)
 H2 = bytes32(b"b" * 32)
@@ -114,9 +115,10 @@ class TestPkmPairs:
     )
     def test_agg_sig_conditions(self, opcode: ConditionOpcode, value: bytes) -> None:
         conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
+        addendum = b"foobar" if opcode == ConditionOpcode.AGG_SIG_ME else std_hash(b"foobar" + opcode)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK1), bytes(PK2)]
-        assert msgs == [b"msg1" + value + b"foobar", b"msg2" + value + b"foobar"]
+        assert msgs == [b"msg1" + value + addendum, b"msg2" + value + addendum]
 
     @pytest.mark.parametrize(
         "opcode",
@@ -154,9 +156,10 @@ class TestPkmPairs:
         conds = mk_agg_sig_conditions(
             opcode, agg_sig_data=[(bytes48(PK1), b"msg1")], agg_sig_unsafe_data=[(bytes48(PK2), b"msg2")]
         )
+        addendum = b"foobar" if opcode == ConditionOpcode.AGG_SIG_ME else std_hash(b"foobar" + opcode)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK2), bytes(PK1)]
-        assert msgs == [b"msg2", b"msg1" + value + b"foobar"]
+        assert msgs == [b"msg2", b"msg1" + value + addendum]
 
     @pytest.mark.parametrize(
         "opcode",
@@ -188,19 +191,7 @@ class TestPkmPairs:
 
 
 class TestPkmPairsForConditionDict:
-    @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-            ConditionOpcode.AGG_SIG_ME,
-        ],
-    )
-    def test_agg_sig_unsafe_restriction(self, opcode: ConditionOpcode) -> None:
+    def test_agg_sig_unsafe_restriction(self) -> None:
         ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
         conds = {ASU: [ConditionWithArgs(ASU, [PK1, b"msg1"]), ConditionWithArgs(ASU, [PK2, b"msg2"])]}
