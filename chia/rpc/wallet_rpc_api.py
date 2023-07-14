@@ -71,7 +71,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.singleton import create_singleton_puzzle, SINGLETON_LAUNCHER_PUZZLE_HASH
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -205,6 +205,7 @@ class WalletRpcApi:
             "/dao_parse_proposal": self.dao_parse_proposal,
             "/dao_vote_on_proposal": self.dao_vote_on_proposal,
             "/dao_get_treasury_balance": self.dao_get_treasury_balance,
+            "/dao_get_treasury_id": self.dao_get_treasury_id,
             "/dao_close_proposal": self.dao_close_proposal,
             "/dao_exit_lockup": self.dao_exit_lockup,
             "/dao_adjust_filter_level": self.dao_adjust_filter_level,
@@ -2419,6 +2420,13 @@ class WalletRpcApi:
             balances[asset_id] = balance
         return {"success": True, "balances": balances}
 
+    async def dao_get_treasury_id(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
+        assert dao_wallet is not None
+        treasury_id = dao_wallet.dao_info.treasury_id
+        return {"treasury_id": treasury_id}
+
     async def dao_send_to_lockup(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
@@ -2447,7 +2455,7 @@ class WalletRpcApi:
         return {
             "success": True,
             "proposals": proposal_list,
-            "lockup_time": dao_rules.proposal_timelock,
+            "proposal_timelock": dao_rules.proposal_timelock,
             "soft_close_length": dao_rules.soft_close_length,
         }
 
@@ -2550,9 +2558,11 @@ class WalletRpcApi:
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None
+        proposal_id = [coin.name() for coin in tx.removals if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH][0]
         return {
             "success": True,
-            "tx_id": tx.name().hex(),
+            "tx_id": tx.name.hex(),
+            "proposal_id": proposal_id,
         }
 
     async def dao_vote_on_proposal(self, request) -> EndpointResult:
@@ -2592,12 +2602,13 @@ class WalletRpcApi:
             genesis_id = bytes32.from_hexstr(request["genesis_id"])
         else:
             genesis_id = None
+        self_destruct = request.get("self_destruct", None)
         tx = await dao_wallet.create_proposal_close_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             genesis_id,
             fee,
-            # genesis_id,
             push=True,
+            self_destruct=self_destruct,
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None

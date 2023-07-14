@@ -90,6 +90,7 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
+        WalletType.DAO,
     }:  # pragma: no cover
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:

@@ -14,7 +14,7 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_pu
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_struct_for_id
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -54,49 +54,13 @@ P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 log = logging.Logger(__name__)
 
 
-def singleton_struct_for_id(id: bytes32) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (id, SINGLETON_LAUNCHER_HASH)))
-    return singleton_struct
-
-
 def create_cat_launcher_for_singleton_id(id: bytes32) -> Program:
-    singleton_struct = singleton_struct_for_id(id)
+    singleton_struct = get_singleton_struct_for_id(id)
     return DAO_CAT_LAUNCHER.curry(singleton_struct)
 
 
 def curry_cat_eve(next_puzzle_hash: bytes32) -> Program:
     return DAO_CAT_EVE.curry(next_puzzle_hash)
-
-
-def create_new_proposal_puzzle(
-    proposal_id: bytes32,
-    cat_tail_hash: bytes32,
-    treasury_id: bytes32,
-    proposed_puzzle_hash: bytes32,
-) -> Program:
-    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (proposal_id, SINGLETON_LAUNCHER_HASH)))
-    LOCKUP_SELF_HASH: Program = DAO_LOCKUP_MOD.curry(
-        SINGLETON_MOD_HASH,
-        SINGLETON_LAUNCHER_HASH,
-        DAO_FINISHED_STATE_HASH,
-        CAT_MOD_HASH,
-        cat_tail_hash,
-    )
-    puzzle: Program = DAO_PROPOSAL_MOD.curry(
-        singleton_struct,
-        DAO_PROPOSAL_MOD_HASH,
-        DAO_PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        DAO_TREASURY_MOD_HASH,
-        LOCKUP_SELF_HASH,
-        cat_tail_hash,
-        treasury_id,
-        0,
-        0,
-        proposed_puzzle_hash,
-    )
-    return puzzle
 
 
 def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash: bytes32) -> Program:
@@ -160,17 +124,6 @@ def get_proposal_validator(treasury_puz: Program) -> Program:
     _, uncurried_args = treasury_puz.uncurry()
     validator: Program = uncurried_args.rest().first()
     return validator
-
-
-def create_announcement_condition_for_nft_spend(
-    # treasury_id: bytes32, TODO: is treasury_id needed here?
-    nft_id: bytes32,
-    target_address: bytes32,
-) -> Tuple[Program, Program]:
-    # TODO: this delegated puzzle does not actually work with NFTs - need to copy more of the code later
-    delegated_puzzle = Program.to([(1, [[51, target_address, 1]])])
-    announcement_condition = Program.to([62, Program.to([nft_id, delegated_puzzle.get_tree_hash()]).get_tree_hash()])
-    return announcement_condition, delegated_puzzle
 
 
 def get_update_proposal_puzzle(dao_rules: DAORules, proposal_validator: Program) -> Program:
@@ -285,16 +238,6 @@ def get_lockup_puzzle(
         innerpuz,
     )
     return puzzle
-
-
-def get_latest_lockup_puzzle_for_coin_spend(parent_spend: CoinSpend, inner_puzzle: Optional[Program] = None) -> Program:
-    puzzle = get_inner_puzzle_from_singleton(parent_spend.puzzle_reveal)
-    assert isinstance(puzzle, Program)
-    solution = parent_spend.solution.to_program().rest().rest().first()
-    if solution.first() == Program.to(0):
-        return puzzle
-    new_proposal_id = solution.rest().rest().rest().first().as_atom()
-    return add_proposal_to_active_list(puzzle, new_proposal_id, inner_puzzle)
 
 
 def add_proposal_to_active_list(
@@ -605,29 +548,6 @@ def get_finished_state_puzzle(proposal_id: bytes32) -> Program:
     return curry_singleton(proposal_id, get_finished_state_inner_puzzle(proposal_id))
 
 
-# def get_cat_tail_hash_from_treasury_puzzle(treasury_puzzle: Program) -> bytes32:
-#     curried_args = uncurry_treasury(treasury_puzzle)
-#     (
-#         _DAO_TREASURY_MOD_HASH,
-#         proposal_validator,
-#         proposal_timelock,
-#         soft_close_length,
-#         attendance_required,
-#         pass_percentage,
-#         self_destruct_length,
-#         oracle_spend_delay,
-#     ) = curried_args
-#
-#     curried_args = uncurry_proposal_validator(proposal_validator)
-#     (
-#         SINGLETON_STRUCT,
-#         PROPOSAL_SELF_HASH,
-#         PROPOSAL_MINIMUM_AMOUNT,
-#         PAYOUT_PUZHASH,
-#     ) = curried_args.as_iter()
-#     return bytes32(CAT_TAIL_HASH.as_atom())
-
-
 def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
     prog = Program.from_bytes(bytes(solution))
     return prog.at("rrfrrrrrf")
@@ -714,18 +634,6 @@ def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
         return "update", curried_args
     else:
         raise ValueError("Unrecognised proposal type")
-
-
-def uncurry_spend_p2_singleton(spend_puzzle: Program) -> Program:
-    try:
-        mod, curried_args = spend_puzzle.uncurry()
-    except ValueError as e:
-        log.debug("Cannot uncurry spend puzzle: error: %s", e)
-        raise e
-
-    if mod != SPEND_P2_SINGLETON_MOD:
-        raise ValueError("Not a spend p2_singleton mod.")
-    return curried_args
 
 
 def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program:
