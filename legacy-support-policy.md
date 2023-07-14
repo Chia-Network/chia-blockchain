@@ -1,5 +1,5 @@
 # Legacy Software and Operating System support policy
-It is the official policy of the Chia Blockchain project to officially end support for software, (in particular python versions) as well as for operating systems. 
+It is the official policy of the Chia Blockchain project to end support for software, (in particular python versions) as well as for operating systems. 
 
 Chia blockchain project intends that if the release team of the given software or operating system has officially ended support for that version that this project will no longer support it. 
 
