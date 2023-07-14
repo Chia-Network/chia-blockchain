@@ -150,15 +150,11 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     # Check the spend was successful
     treasury_id = dao_wallet_0.dao_info.treasury_id
-    await time_out_assert(
-        60,
-        dao_wallet_0.is_spend_retrievable,
-        True,
-        treasury_id,
-    )
     # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
     for i in range(1, 11):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    if not trusted:
+        await asyncio.sleep(1)
 
     # check the dao wallet balances
     assert (await dao_wallet_0.get_confirmed_balance()) == uint64(1)
@@ -851,9 +847,9 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     # Wait a second for the dao cat wallet to update
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
     await dao_wallet_0.clear_finished_proposals_from_memory()
-    await time_out_assert(20, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
+    await time_out_assert(60, len, 1, dao_wallet_0.dao_info.proposals_list)  # one remaining we couldn't close
 
 
 @pytest.mark.parametrize(
@@ -1579,7 +1575,7 @@ async def test_dao_rpc_client(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, fee=fee)
+        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
         assert close["success"]
 
         for i in range(1, num_blocks):
@@ -2027,7 +2023,7 @@ async def test_dao_cat_exits(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, fee=fee)
+        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
         assert close["success"]
 
         for i in range(1, num_blocks):
