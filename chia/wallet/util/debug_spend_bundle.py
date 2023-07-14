@@ -42,7 +42,7 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
+def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.agg_sig_additional_data()) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
     its clvm.
@@ -77,7 +77,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
+        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
             pks.append(G1Element.from_bytes(pk_bytes))
             msgs.append(m)
         print()
@@ -200,5 +200,5 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print(f"aggregated signature check pass: {validates}")
     print(f"pks: {pks}")
     print(f"msgs: {[msg.hex() for msg in msgs]}")
-    print(f"add_data: {agg_sig_additional_data.hex()}")
+    print(f"add_data: {agg_sig_additional_data.get(ConditionOpcode.AGG_SIG_ME, bytes()).hex()}")
     print(f"signature: {spend_bundle.aggregated_signature}")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Tuple
 
-from clvm.casts import int_from_bytes
+from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -13,9 +13,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
-
-# TODO: review each `assert` and consider replacing with explicit checks
-#       since asserts can be stripped with python `-OO` flag
 
 
 def parse_sexp_to_condition(sexp: Program) -> ConditionWithArgs:
@@ -55,41 +52,151 @@ def parse_sexp_to_conditions(sexp: Program) -> List[ConditionWithArgs]:
     return [parse_sexp_to_condition(s) for s in sexp.as_iter()]
 
 
-def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
+def pkm_pairs(
+    conditions: SpendBundleConditions, additional_data: Dict[ConditionOpcode, bytes]
+) -> Tuple[List[bytes48], List[bytes]]:
     ret: Tuple[List[bytes48], List[bytes]] = ([], [])
 
     for pk, msg in conditions.agg_sig_unsafe:
         ret[0].append(bytes48(pk))
         ret[1].append(msg)
-        if msg.endswith(additional_data):
-            raise ConsensusError(Err.INVALID_CONDITION)
+        for dissallowed in additional_data.values():
+            if msg.endswith(dissallowed):
+                raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
+        for pk, msg in spend.agg_sig_parent:
+            ret[0].append(bytes48(pk))
+            ret[1].append(msg + spend.parent_id + additional_data[ConditionOpcode.AGG_SIG_PARENT])
+
+        for pk, msg in spend.agg_sig_puzzle:
+            ret[0].append(bytes48(pk))
+            ret[1].append(msg + spend.puzzle_hash + additional_data[ConditionOpcode.AGG_SIG_PUZZLE])
+
+        for pk, msg in spend.agg_sig_amount:
+            ret[0].append(bytes48(pk))
+            ret[1].append(msg + int_to_bytes(spend.coin_amount) + additional_data[ConditionOpcode.AGG_SIG_AMOUNT])
+
+        for pk, msg in spend.agg_sig_puzzle_amount:
+            ret[0].append(bytes48(pk))
+            ret[1].append(
+                msg
+                + spend.puzzle_hash
+                + int_to_bytes(spend.coin_amount)
+                + additional_data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT]
+            )
+
+        for pk, msg in spend.agg_sig_parent_amount:
+            ret[0].append(bytes48(pk))
+            ret[1].append(
+                msg
+                + spend.parent_id
+                + int_to_bytes(spend.coin_amount)
+                + additional_data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT]
+            )
+
+        for pk, msg in spend.agg_sig_parent_puzzle:
+            ret[0].append(bytes48(pk))
+            ret[1].append(
+                msg + spend.parent_id + spend.puzzle_hash + additional_data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE]
+            )
+
         for pk, msg in spend.agg_sig_me:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + spend.coin_id + additional_data)
+            ret[1].append(msg + spend.coin_id + additional_data[ConditionOpcode.AGG_SIG_ME])
+
     return ret
 
 
+def validate_cwa(cwa: ConditionWithArgs) -> None:
+    if (
+        len(cwa.vars) != 2
+        or len(cwa.vars[0]) != 48
+        or len(cwa.vars[1]) > 1024
+        or cwa.vars[0] is None
+        or cwa.vars[1] is None
+    ):
+        raise ConsensusError(Err.INVALID_CONDITION)
+
+
 def pkm_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]], coin_name: bytes32, additional_data: bytes
+    conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
+    coin: Coin,
+    additional_data: Dict[ConditionOpcode, bytes],
 ) -> List[Tuple[bytes48, bytes]]:
-    assert coin_name is not None
     ret: List[Tuple[bytes48, bytes]] = []
 
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_UNSAFE, []):
-        assert len(cwa.vars) == 2
-        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
-        assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        if cwa.vars[1].endswith(additional_data):
-            raise ConsensusError(Err.INVALID_CONDITION)
+        validate_cwa(cwa)
+        for disallowed in additional_data.values():
+            if cwa.vars[1].endswith(disallowed):
+                raise ConsensusError(Err.INVALID_CONDITION)
         ret.append((bytes48(cwa.vars[0]), cwa.vars[1]))
 
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT, []):
+        validate_cwa(cwa)
+        ret.append(
+            (
+                bytes48(cwa.vars[0]),
+                cwa.vars[1] + coin.parent_coin_info + additional_data[ConditionOpcode.AGG_SIG_PARENT],
+            )
+        )
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PUZZLE, []):
+        validate_cwa(cwa)
+        ret.append(
+            (bytes48(cwa.vars[0]), cwa.vars[1] + coin.puzzle_hash + additional_data[ConditionOpcode.AGG_SIG_PUZZLE])
+        )
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_AMOUNT, []):
+        validate_cwa(cwa)
+        ret.append(
+            (
+                bytes48(cwa.vars[0]),
+                cwa.vars[1] + int_to_bytes(coin.amount) + additional_data[ConditionOpcode.AGG_SIG_AMOUNT],
+            )
+        )
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, []):
+        validate_cwa(cwa)
+        ret.append(
+            (
+                bytes48(cwa.vars[0]),
+                cwa.vars[1]
+                + coin.puzzle_hash
+                + int_to_bytes(coin.amount)
+                + additional_data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT],
+            )
+        )
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT_AMOUNT, []):
+        validate_cwa(cwa)
+        ret.append(
+            (
+                bytes48(cwa.vars[0]),
+                cwa.vars[1]
+                + coin.parent_coin_info
+                + int_to_bytes(coin.amount)
+                + additional_data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT],
+            )
+        )
+
+    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT_PUZZLE, []):
+        validate_cwa(cwa)
+        ret.append(
+            (
+                bytes48(cwa.vars[0]),
+                cwa.vars[1]
+                + coin.parent_coin_info
+                + coin.puzzle_hash
+                + additional_data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE],
+            )
+        )
+
     for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-        assert len(cwa.vars) == 2
-        assert len(cwa.vars[0]) == 48 and len(cwa.vars[1]) <= 1024
-        assert cwa.vars[0] is not None and cwa.vars[1] is not None
-        ret.append((bytes48(cwa.vars[0]), cwa.vars[1] + coin_name + additional_data))
+        validate_cwa(cwa)
+        ret.append((bytes48(cwa.vars[0]), cwa.vars[1] + coin.name() + additional_data[ConditionOpcode.AGG_SIG_ME]))
+
     return ret
 
 
