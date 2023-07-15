@@ -7,6 +7,6 @@ when the original maintainer of the software deems it End of Life (EOL) or stops
 
 If a long-term support version of an operating system uses a default Python version that has lost official support, we also intend to end support for that operating system version, so as to avoid issues with installing a new Python version via Chia install, which may break crucial operating system components.
 
-## More information
+## More Information
 
 For more information, please contact hello@chia.net or reach out on the community Discord.
