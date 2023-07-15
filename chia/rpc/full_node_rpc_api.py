@@ -169,48 +169,53 @@ class FullNodeRpcApi:
             sync_progress_height = uint32(0)
 
         average_block_time = uint32(0)
-        space = {"space": uint128(0)}
-
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             # Average over the last day
-            older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
-            assert older_header_hash is not None
-            older_block_hex = older_header_hash.hex()
+            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
+            assert header_hash is not None
+            older_block_hex = header_hash.hex()
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
 
             try:
-                newer_block: Optional[BlockRecord] = (
-                    await self.get_block_record({"header_hash": peak.header_hash.hex()})
-                )["block_record"]
-                while newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
-                    newer_block = (await self.get_block_record({"header_hash": newer_block.prev_hash.hex()}))[
-                        "block_record"
-                    ]
-            except ValueError:
-                newer_block = None
-
-            if newer_block is not None:
-                older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
-                try:
-                    older_block: Optional[BlockRecord] = (
-                        (await self.get_block_record({"header_hash": older_header_hash.hex()}))["block_record"]
-                        if older_header_hash is not None
+                newer_block = peak
+                if newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
+                    prev_hash = newer_block.prev_transaction_block_hash
+                    newer_block = (
+                        self.service.blockchain.try_block_record(prev_hash)
+                        if prev_hash is not None
                         else None
                     )
-                    while older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
-                        older_block = (await self.get_block_record({"header_hash": older_block.prev_hash.hex()}))[
-                            "block_record"
-                        ]
-                except ValueError:
-                    older_block = None
+                    if newer_block is None:
+                        newer_block = await self.service.blockchain.get_block_record_from_db(prev_hash)
 
-                if older_block is not None and newer_block.timestamp is not None and older_block.timestamp is not None:
-                    average_block_time = uint32(
-                        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+                if newer_block is not None and newer_block.timestamp is not None:
+                    header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
+                    older_block: Optional[BlockRecord] = (
+                        self.service.blockchain.try_block_record(header_hash)
+                        if header_hash is not None
+                        else None
                     )
+                    if header_hash is not None and older_block is None:
+                        older_block = await self.service.blockchain.get_block_record_from_db(header_hash)
+
+                    if older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
+                        prev_hash = older_block.prev_transaction_block_hash
+                        if prev_hash:
+                            older_block = self.service.blockchain.try_block_record(prev_hash)
+                            if older_block is None:
+                                older_block = await self.service.blockchain.get_block_record_from_db(prev_hash)
+
+                    if older_block is not None and older_block.timestamp is not None:
+                        average_block_time = uint32(
+                            (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+                        )
+            except ValueError:
+                pass
+        else:
+            space = {"space": uint128(0)}
 
         if self.service.mempool_manager is not None:
             mempool_size = self.service.mempool_manager.mempool.size()
