@@ -139,6 +139,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
+  dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
@@ -152,9 +154,11 @@ seeder:
   minimum_version_count: 100
   domain_name: "seeder.example.com."
   nameserver: "example.com."
+  # Optional secondary nameserver
+  nameserver2: None
   ttl: 300
   soa:
-    rname: "hostmaster.example.com."
+    rname: "admin@example.com"
     serial_number: 1619105223
     refresh: 10800
     retry: 10800

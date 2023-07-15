@@ -16,11 +16,6 @@ chia.rpc.rpc_client
 chia.rpc.util
 chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
-chia.seeder.crawl_store
-chia.seeder.crawler
-chia.seeder.dns_server
-chia.seeder.peer_record
-chia.seeder.start_crawler
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services

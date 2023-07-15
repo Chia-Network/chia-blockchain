@@ -4,7 +4,7 @@ import logging
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 def create_full_node_crawler_service(
     root_path: pathlib.Path,
-    config: Dict,
+    config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
 ) -> Service[Crawler, CrawlerAPI]:
@@ -35,7 +35,7 @@ def create_full_node_crawler_service(
     crawler = Crawler(
         service_config,
         root_path=root_path,
-        consensus_constants=consensus_constants,
+        constants=consensus_constants,
     )
     api = CrawlerAPI(crawler)
 
