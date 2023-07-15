@@ -7,6 +7,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.ints import uint32
@@ -32,6 +33,23 @@ class BlockCache(BlockchainInterface):
         self._sub_epoch_summaries = sub_epoch_summaries
         self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
+
+    def get_peak(self) -> Optional[BlockRecord]:
+        assert False
+
+    def get_peak_height(self) -> Optional[uint32]:
+        assert False
+
+    async def get_header_block_by_height(
+        self, height: int, header_hash: bytes32, tx_filter: bool = True
+    ) -> Optional[HeaderBlock]:
+        assert False
+
+    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
+        assert False
+
+    async def warmup(self, fork_point: uint32) -> None:
+        assert False
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
