@@ -385,7 +385,8 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
-    result = await wallet_rpc_client.get_farmed_amount()
+    get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(2))
 
     expected_result = {
         "blocks_won": 2,
@@ -393,12 +394,11 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 2,
-        "last_time_farmed": result["last_time_farmed"],  # time cannot be predicted so skipping test here
+        "last_time_farmed": get_timestamp_for_height_result,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
-
-    assert result == expected_result
+    assert get_farmed_amount_result == expected_result
 
 
 @pytest.mark.asyncio

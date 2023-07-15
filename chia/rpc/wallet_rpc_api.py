@@ -2982,7 +2982,6 @@ class WalletRpcApi:
             # handle that presently.  Existing code would have raised an exception
             # anyway if this were to fail and we already have an assert below.
             assert height is not None
-            timestamp = await self.service.get_timestamp_for_height(height)
             if record.type == TransactionType.FEE_REWARD:
                 base_farmer_reward = calculate_base_farmer_reward(height)
                 fee_amount += record.amount - base_farmer_reward
@@ -2990,7 +2989,7 @@ class WalletRpcApi:
                 blocks_won += 1
             if height > last_height_farmed:
                 last_height_farmed = height
-                last_time_farmed = timestamp
+                last_time_farmed = await self.service.get_timestamp_for_height(height)
             amount += record.amount
 
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
