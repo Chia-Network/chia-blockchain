@@ -35,6 +35,7 @@ class HarvesterRpcApi:
 
         if change == "farming_info":
             payloads.append(create_payload_dict("farming_info", change_data, self.service_name, "metrics"))
+            payloads.append(create_payload_dict("farming_info", change_data, self.service_name, "wallet_ui"))
 
         if change == "add_connection":
             payloads.append(create_payload_dict("add_connection", change_data, self.service_name, "metrics"))
