@@ -130,13 +130,15 @@ def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[Lis
     if fingerprints is None:
         keys = all_keys
     else:
+        assert isinstance(fingerprints, list)
         keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
         keys = []
         for fingerprint in fingerprints:
-            if fingerprint not in keys_by_fingerprint:
-                missing_fingerprints.add(fingerprint)
+            f = uint32(fingerprint)
+            if f not in keys_by_fingerprint:
+                missing_fingerprints.add(f)
             else:
-                keys.append(keys_by_fingerprint[fingerprint])
+                keys.append(keys_by_fingerprint[f])
     return keys, missing_fingerprints
 
 
