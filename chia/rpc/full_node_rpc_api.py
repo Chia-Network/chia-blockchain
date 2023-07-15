@@ -180,7 +180,7 @@ class FullNodeRpcApi:
             )
 
             try:
-                newer_block = peak
+                newer_block: Optional[BlockRecord] = peak
                 if newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
                     prev_hash = newer_block.prev_transaction_block_hash
                     newer_block = self.service.blockchain.try_block_record(prev_hash) if prev_hash is not None else None
