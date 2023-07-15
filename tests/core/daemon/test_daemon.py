@@ -55,6 +55,14 @@ class WalletAddressCase:
     marks: Marks = ()
 
 
+@dataclass
+class KeysForPlotCase:
+    id: str
+    request: Dict[str, Any]
+    response: Dict[str, Any]
+    marks: Marks = ()
+
+
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
 @dataclass
 class Service:
@@ -98,6 +106,11 @@ class Daemon:
 
     async def get_wallet_addresses(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.get_wallet_addresses(
+            cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
+        )
+
+    async def get_keys_for_plot(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.get_keys_for_plot(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
@@ -594,6 +607,74 @@ async def test_get_wallet_addresses(
         monkeypatch.setattr(Keychain, "get_keys", get_keys_no_secrets)
 
     assert case.response == await daemon.get_wallet_addresses(case.request)
+
+
+@datacases(
+    KeysForPlotCase(
+        id="no params",
+        request={},
+        response={
+            "success": True,
+            "keys": {
+                test_key_data.fingerprint: {
+                    "farmer_public_key": "b800fa5c8fe8890bf9b8c8ad7e981aa3face3ae2296f7df7673e9b63ddeccbac9723cfe9968b7530179cd7183d261b3e",
+                    "pool_public_key": "b1b0d8e777e3b1e79f33bc8707c74c8e4907fd8c3da870d781803f647b17f3cc6250f09362f25699eb0ee385c57a2e01",
+                },
+                test_key_data_2.fingerprint: {
+                    "farmer_public_key": "a96a194fe76043b4867fa154b1fcda6709257699a720cc10af68a8414d9bf08cee0945becf9b36a1c76d5b04d379bc7f",
+                    "pool_public_key": "837646f1378b1194aa1054b8869dcea5006cb173730ceeb90e9b9bb7f5d73e481775d20a1726fec3ef140c5b9cdbd4b3",
+                },
+            },
+        },
+    ),
+    KeysForPlotCase(
+        id="list of fingerprints",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "keys": {
+                test_key_data.fingerprint: {
+                    "farmer_public_key": "b800fa5c8fe8890bf9b8c8ad7e981aa3face3ae2296f7df7673e9b63ddeccbac9723cfe9968b7530179cd7183d261b3e",
+                    "pool_public_key": "b1b0d8e777e3b1e79f33bc8707c74c8e4907fd8c3da870d781803f647b17f3cc6250f09362f25699eb0ee385c57a2e01",
+                },
+            },
+        },
+    ),
+    KeysForPlotCase(
+        id="invalid fingerprint",
+        request={"fingerprints": [999999]},
+        response={
+            "success": False,
+            "error": "key(s) not found for fingerprint(s) {999999}",
+        },
+    ),
+)
+@pytest.mark.asyncio
+async def test_get_keys_for_plot(
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: KeysForPlotCase,
+):
+    daemon = mock_daemon_with_config_and_keys
+    assert case.response == await daemon.get_keys_for_plot(case.request)
+
+
+@datacases(
+    KeysForPlotCase(
+        id="invalid request format",
+        request={"fingerprints": test_key_data.fingerprint},
+        response={},
+    ),
+)
+@pytest.mark.asyncio
+async def test_get_keys_for_plot_error(
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: KeysForPlotCase,
+):
+    daemon = mock_daemon_with_config_and_keys
+    with pytest.raises(Exception):
+        await daemon.get_keys_for_plot(case.request)
 
 
 @pytest.mark.asyncio
