@@ -183,20 +183,14 @@ class FullNodeRpcApi:
                 newer_block = peak
                 if newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
                     prev_hash = newer_block.prev_transaction_block_hash
-                    newer_block = (
-                        self.service.blockchain.try_block_record(prev_hash)
-                        if prev_hash is not None
-                        else None
-                    )
+                    newer_block = self.service.blockchain.try_block_record(prev_hash) if prev_hash is not None else None
                     if newer_block is None:
                         newer_block = await self.service.blockchain.get_block_record_from_db(prev_hash)
 
                 if newer_block is not None and newer_block.timestamp is not None:
                     header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
                     older_block: Optional[BlockRecord] = (
-                        self.service.blockchain.try_block_record(header_hash)
-                        if header_hash is not None
-                        else None
+                        self.service.blockchain.try_block_record(header_hash) if header_hash is not None else None
                     )
                     if header_hash is not None and older_block is None:
                         older_block = await self.service.blockchain.get_block_record_from_db(header_hash)
