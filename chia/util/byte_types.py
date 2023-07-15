@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
-
-from typing_extensions import SupportsIndex
+from typing import BinaryIO, Iterable, SupportsBytes, SupportsIndex, Type, TypeVar, Union
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
