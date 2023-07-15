@@ -43,7 +43,7 @@ def assert_default_values(receiver: Receiver) -> None:
     assert receiver.keys_missing() == []
     assert receiver.duplicates() == []
     assert receiver.total_plot_size() == 0
-    assert receiver.total_effective_plot_size() == float(0)
+    assert receiver.total_effective_plot_size() == 0
 
 
 async def dummy_callback(_: bytes32, __: Delta) -> None:
