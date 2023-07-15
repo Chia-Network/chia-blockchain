@@ -184,8 +184,8 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
     receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
-    receiver._total_effective_plot_size = sum(
-        UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values()
+    receiver._total_effective_plot_size = int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
     sync_steps: List[SyncStepData] = [
         SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
