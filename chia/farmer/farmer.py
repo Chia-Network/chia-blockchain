@@ -76,6 +76,7 @@ def increment_pool_stats(
     pool_states: Dict[bytes32, Any],
     p2_singleton_puzzlehash: bytes32,
     name: str,
+    current_time: float,
     count: int = 1,
     value: Optional[Union[int, Dict[str, Any]]] = None,
 ) -> None:
@@ -93,7 +94,7 @@ def increment_pool_stats(
         # Age out old 24h information for every signage point regardless
         # of any failures.  Note that this still lets old data remain if
         # the client isn't receiving signage points.
-        cutoff_24h = time.time() - (24 * 60 * 60)
+        cutoff_24h = current_time - (24 * 60 * 60)
         pool_state[f"{name}_24h"] = strip_old_entries(pairs=pool_state[f"{name}_24h"], before=cutoff_24h)
     return
 
@@ -297,6 +298,7 @@ class Farmer:
             self.pool_state,
             p2_singleton_puzzle_hash,
             "pool_errors",
+            time.time(),
             value=ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict(),
         )
 
@@ -368,6 +370,7 @@ class Farmer:
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
+                                time.time(),
                                 value=response,
                             )
                         self.log.log(log_level, f"GET /farmer response: {response}")
@@ -415,6 +418,7 @@ class Farmer:
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
+                                time.time(),
                                 value=response,
                             )
                         self.log.log(log_level, f"POST /farmer response: {response}")
@@ -462,6 +466,7 @@ class Farmer:
                                 self.pool_state,
                                 pool_config.p2_singleton_puzzle_hash,
                                 "pool_errors",
+                                time.time(),
                                 value=response,
                             )
                         self.log.log(log_level, f"PUT /farmer response: {response}")

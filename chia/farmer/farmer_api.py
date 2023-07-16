@@ -152,6 +152,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "missing_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -168,6 +169,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "missing_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -192,6 +194,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "invalid_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -209,6 +212,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "missing_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -243,6 +247,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "invalid_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -276,6 +281,7 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "missing_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
@@ -297,6 +303,7 @@ class FarmerAPI:
                     self.farmer.pool_state,
                     p2_singleton_puzzle_hash,
                     "points_found",
+                    time.time(),
                     count=pool_state_dict["current_difficulty"],
                     value=pool_state_dict["current_difficulty"],
                 )
@@ -322,6 +329,7 @@ class FarmerAPI:
                                         self.farmer.pool_state,
                                         p2_singleton_puzzle_hash,
                                         "pool_errors",
+                                        time.time(),
                                         value=pool_response,
                                     )
 
@@ -330,12 +338,14 @@ class FarmerAPI:
                                             self.farmer.pool_state,
                                             p2_singleton_puzzle_hash,
                                             "stale_partials",
+                                            time.time(),
                                         )
                                     else:
                                         increment_pool_stats(
                                             self.farmer.pool_state,
                                             p2_singleton_puzzle_hash,
                                             "invalid_partials",
+                                            time.time(),
                                         )
 
                                     if pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
@@ -350,14 +360,16 @@ class FarmerAPI:
                                         self.farmer.pool_state,
                                         p2_singleton_puzzle_hash,
                                         "valid_partials",
+                                        time.time(),
                                     )
                                     new_difficulty = pool_response["new_difficulty"]
                                     increment_pool_stats(
                                         self.farmer.pool_state,
                                         p2_singleton_puzzle_hash,
                                         "points_acknowledged",
-                                        count=new_difficulty,
-                                        value=new_difficulty,
+                                        time.time(),
+                                        new_difficulty,
+                                        new_difficulty,
                                     )
                                     pool_state_dict["current_difficulty"] = new_difficulty
                             else:
@@ -370,12 +382,14 @@ class FarmerAPI:
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "pool_errors",
+                        time.time(),
                         value=error_resp,
                     )
                     increment_pool_stats(
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
                         "invalid_partials",
+                        time.time(),
                     )
                     self.farmer.state_changed(
                         "failed_partial",
