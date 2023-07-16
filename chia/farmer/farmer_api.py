@@ -10,7 +10,7 @@ from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from chia.farmer.farmer import Farmer, strip_old_entries, increment_pool_stats
+from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import (
