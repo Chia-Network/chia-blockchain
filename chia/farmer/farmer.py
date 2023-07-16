@@ -87,9 +87,9 @@ def increment_pool_stats(
         pool_state[f"{name}_since_start"] += count
     if f"{name}_24h" in pool_state:
         if value is None:
-            pool_state[f"{name}_24h"].append((uint32(time.time()), pool_state["current_difficulty"]))
+            pool_state[f"{name}_24h"].append((uint32(current_time), pool_state["current_difficulty"]))
         else:
-            pool_state[f"{name}_24h"].append((uint32(time.time()), value))
+            pool_state[f"{name}_24h"].append((uint32(current_time), value))
 
         # Age out old 24h information for every signage point regardless
         # of any failures.  Note that this still lets old data remain if
