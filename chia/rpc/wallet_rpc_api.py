@@ -2967,7 +2967,6 @@ class WalletRpcApi:
         fee_amount = 0
         blocks_won = 0
         last_height_farmed = 0
-        last_time_farmed = 0
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
@@ -2989,9 +2988,11 @@ class WalletRpcApi:
                 blocks_won += 1
             if height > last_height_farmed:
                 last_height_farmed = height
-                last_time_farmed = await self.service.get_timestamp_for_height(height)
             amount += record.amount
 
+        last_time_farmed = (
+            await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
+        )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
