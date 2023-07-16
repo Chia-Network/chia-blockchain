@@ -12,7 +12,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, default_kwargs
 from chia.farmer.farmer import increment_pool_stats, strip_old_entries
 from chia.pools.pool_config import PoolWalletConfig
-from chia.protocols import farmer_protocol
+from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -77,19 +77,19 @@ class DummyHarvesterPeer:
     def __init__(self, return_valid_response: bool):
         self.return_invalid_response = return_valid_response
 
-    async def send_message(self, arg1: Any):
+    async def send_message(self, arg1: Any) -> None:
         pass
 
-    async def call_api(self, arg1: Any, arg2: Any):
+    async def call_api(self, arg1: Any, request: harvester_protocol.RequestSignatures) -> Any:
         if self.return_invalid_response:
             return 0
         return RespondSignatures(
-            plot_identifier="test",
-            challenge_hash=bytes32(token_bytes(32)),
-            sp_hash=bytes32(token_bytes(32)),
+            plot_identifier=request.plot_identifier,
+            challenge_hash=request.challenge_hash,
+            sp_hash=request.sp_hash,
             local_pk=G1Element(),
             farmer_pk=G1Element(),
-            message_signatures=[(bytes32.from_bytes(b"ff" * 32)), G2Element()],
+            message_signatures=[(bytes32.from_bytes(b"ff" * 32), G2Element())],
         )
 
 
@@ -106,7 +106,7 @@ class NewProofOfSpaceCase:
     plot_challenge: bytes32
     plot_public_key: G1Element
     pool_public_key: Optional[G1Element]
-    pool_contract_puzzle_hash: Optional[bytes32]
+    pool_contract_puzzle_hash: bytes32
     height: uint32
     proof: bytes
     pool_config: PoolWalletConfig
@@ -127,7 +127,7 @@ class NewProofOfSpaceCase:
         authentication_token_timeout: Optional[uint8],
         use_invalid_peer_response: bool,
         expected_pool_stats: Dict[str, Any],
-    ):
+    ) -> NewProofOfSpaceCase:
         p2_singleton_puzzle_hash = bytes32.fromhex("302e05a1e6af431c22043ae2a9a8f71148c955c372697cb8ab348160976283df")
         pool_config = PoolWalletConfig(
             launcher_id=bytes32.fromhex("ae4ef3b9bfe68949691281a015a9c16630fc8f66d48c19ca548fb80768791afa"),
@@ -193,7 +193,7 @@ class NewProofOfSpaceCase:
         ),
     ],
 )
-def test_strip_old_entries(case: StripOldEntriesCase):
+def test_strip_old_entries(case: StripOldEntriesCase) -> None:
     assert strip_old_entries(case.pairs, case.before) == case.expected_result
 
 
@@ -277,7 +277,7 @@ def test_strip_old_entries(case: StripOldEntriesCase):
         ),
     ],
 )
-def test_increment_pool_stats(case: IncrementPoolStatsCase):
+def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
     increment_pool_stats(
         case.pool_states, case.p2_singleton_puzzle_hash, case.name, case.current_time, case.count, case.value
     )
@@ -468,7 +468,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
     constant_kwargs = default_kwargs.copy()
     constant_kwargs["POOL_SUB_SLOT_ITERS"] = case.sub_slot_iters
-    farmer_api.farmer.constants = ConsensusConstants(**constant_kwargs)
+    farmer_api.farmer.constants = ConsensusConstants(**constant_kwargs)  # type: ignore
     farmer_api.farmer.sps[case.sp_hash] = [sp]
     farmer_api.farmer.pool_state[p2_singleton_puzzle_hash] = {
         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
@@ -502,10 +502,10 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     peer: Any = DummyHarvesterPeer(case.use_invalid_peer_response)
     await farmer_api.new_proof_of_space(new_pos, peer)
 
-    def assert_stats_since_start(name: str):
+    def assert_stats_since_start(name: str) -> None:
         assert farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name] == case.expected_pool_state[name]
 
-    def assert_stats_24h(name: str):
+    def assert_stats_24h(name: str) -> None:
         assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]) == len(case.expected_pool_state[name])
         for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]):
             assert stat[1] == case.expected_pool_state[name][i]
