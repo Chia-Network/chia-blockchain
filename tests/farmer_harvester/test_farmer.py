@@ -157,14 +157,22 @@ class NewProofOfSpaceCase:
             plot_challenge=bytes32.fromhex("7580e4c366dc2c94c37ce44943f9629a3cd6e027d7b24cd014adeaa578d4b0a2"),
             plot_public_key=G1Element.from_bytes(
                 bytes.fromhex(
-                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3ed69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
+                    "a6126295fbf0f50dbed8dc41e236241413fdc8a97e650e3e"
+                    "d69d66d0921d3236f8961cc1cf8c1b195521c2d9143048e2"
                 )
             ),
             pool_public_key=None,
             pool_contract_puzzle_hash=p2_singleton_puzzle_hash,
             height=uint32(1),
             proof=bytes.fromhex(
-                "2aa93f8c112c274d3c707d94d0a0e07b6710d96fca284baa198ca4632ee1f591edad47d97e854aec76dc08519614a0d17253fc24fbaab66f558b2f6afd2210acac09b48e01fd0b8334eae94d55db5df28c80c03a586ce8afe3b986e6aceef4d493a7c0b1bf30baaafedc1ef9af6a1eee911e3873e9229a0bf18cfc95bcfc3dac36522c84a85fd16a3ff501b44024e371bbf7a3ee9d4ded6e05c82e95083ea5ead2d64e4a46e0550e98fc56b30760b4bcf439ac0ee675e157fcfecd4b294c6d14987883e3659777c68d6a6962c770a66817f4dc641b5823b077093df10da031c14b32005bf38eb53944bf3bc5a1d19c21e3b96759b7f557b4668687b7a8a36344"
+                "2aa93f8c112c274d3c707d94d0a0e07b6710d96fca284baa198ca4632ee1f591"
+                "edad47d97e854aec76dc08519614a0d17253fc24fbaab66f558b2f6afd2210ac"
+                "ac09b48e01fd0b8334eae94d55db5df28c80c03a586ce8afe3b986e6aceef4d4"
+                "93a7c0b1bf30baaafedc1ef9af6a1eee911e3873e9229a0bf18cfc95bcfc3dac"
+                "36522c84a85fd16a3ff501b44024e371bbf7a3ee9d4ded6e05c82e95083ea5ea"
+                "d2d64e4a46e0550e98fc56b30760b4bcf439ac0ee675e157fcfecd4b294c6d14"
+                "987883e3659777c68d6a6962c770a66817f4dc641b5823b077093df10da031c1"
+                "4b32005bf38eb53944bf3bc5a1d19c21e3b96759b7f557b4668687b7a8a36344"
             ),
             pool_config=pool_config,
             pool_difficulty=pool_difficulty,
