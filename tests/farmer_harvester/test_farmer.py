@@ -17,7 +17,7 @@ from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint16
+from chia.util.ints import uint8, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment
 from tests.util.misc import Marks
 
@@ -498,9 +498,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         assert farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name] == case.expected_pool_state[name]
 
     def assert_stats_24h(name: str):
-        assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]) == len(
-            case.expected_pool_state[name]
-        )
+        assert len(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]) == len(case.expected_pool_state[name])
         for i, stat in enumerate(farmer_api.farmer.pool_state[p2_singleton_puzzle_hash][name]):
             assert stat[1] == case.expected_pool_state[name][i]
 
