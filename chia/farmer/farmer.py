@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -70,6 +70,32 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
             if index > 0:
                 return pairs[index:]
     return []
+
+
+def increment_pool_stats(
+    pool_states: Dict[bytes32, Any],
+    p2_singleton_puzzlehash: bytes32,
+    name: str,
+    count: int = 1,
+    value: Optional[Union[int, Dict[str, Any]]] = None,
+) -> None:
+    if p2_singleton_puzzlehash not in pool_states:
+        return
+    pool_state = pool_states[p2_singleton_puzzlehash]
+    if f"{name}_since_start" in pool_state:
+        pool_state[f"{name}_since_start"] += count
+    if f"{name}_24h" in pool_state:
+        if value is None:
+            pool_state[f"{name}_24h"].append((uint32(time.time()), pool_state["current_difficulty"]))
+        else:
+            pool_state[f"{name}_24h"].append((uint32(time.time()), value))
+
+        # Age out old 24h information for every signage point regardless
+        # of any failures.  Note that this still lets old data remain if
+        # the client isn't receiving signage points.
+        cutoff_24h = time.time() - (24 * 60 * 60)
+        pool_state[f"{name}_24h"] = strip_old_entries(pairs=pool_state[f"{name}_24h"], before=cutoff_24h)
+    return
 
 
 """
@@ -267,7 +293,8 @@ class Farmer:
 
     def handle_failed_pool_response(self, p2_singleton_puzzle_hash: bytes32, error_message: str) -> None:
         self.log.error(error_message)
-        self.increment_pool_stats(
+        increment_pool_stats(
+            self.pool_state,
             p2_singleton_puzzle_hash,
             "pool_errors",
             value=ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict(),
@@ -337,8 +364,11 @@ class Farmer:
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
-                            self.increment_pool_stats(
-                                pool_config.p2_singleton_puzzle_hash, "pool_errors", value=response
+                            increment_pool_stats(
+                                self.pool_state,
+                                pool_config.p2_singleton_puzzle_hash,
+                                "pool_errors",
+                                value=response,
                             )
                         self.log.log(log_level, f"GET /farmer response: {response}")
                         return response
@@ -381,8 +411,11 @@ class Farmer:
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
-                            self.increment_pool_stats(
-                                pool_config.p2_singleton_puzzle_hash, "pool_errors", value=response
+                            increment_pool_stats(
+                                self.pool_state,
+                                pool_config.p2_singleton_puzzle_hash,
+                                "pool_errors",
+                                value=response,
                             )
                         self.log.log(log_level, f"POST /farmer response: {response}")
                         return response
@@ -425,8 +458,11 @@ class Farmer:
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
-                            self.increment_pool_stats(
-                                pool_config.p2_singleton_puzzle_hash, "pool_errors", value=response
+                            increment_pool_stats(
+                                self.pool_state,
+                                pool_config.p2_singleton_puzzle_hash,
+                                "pool_errors",
+                                value=response,
                             )
                         self.log.log(log_level, f"PUT /farmer response: {response}")
                     else:
@@ -701,32 +737,6 @@ class Farmer:
         if receiver is None:
             raise KeyError(f"Receiver missing for {node_id}")
         return receiver
-
-    def increment_pool_stats(
-        self,
-        p2_singleton_puzzle_hash: bytes32,
-        name: str,
-        count: int = 1,
-        value: Any = None,
-    ) -> None:
-        pool_state = self.pool_state[p2_singleton_puzzle_hash]
-        if pool_state is None:
-            return
-        if f"{name}_since_start" in pool_state:
-            pool_state[f"{name}_since_start"] += count
-        if f"{name}_24h" in pool_state:
-            if value is None:
-                pool_state[f"{name}_24h"].append((uint32(time.time()), pool_state["current_difficulty"]))
-            else:
-                pool_state[f"{name}_24h"].append((uint32(time.time()), value))
-
-            # Age out old 24h information for every signage point regardless
-            # of any failures.  Note that this still lets old data remain if
-            # the client isn't receiving signage points.
-            cutoff_24h = time.time() - (24 * 60 * 60)
-            self.pool_state[p2_singleton_puzzle_hash][f"{name}_24h"] = strip_old_entries(
-                pairs=pool_state[f"{name}_24h"], before=cutoff_24h
-            )
 
     async def _periodically_update_pool_state_task(self) -> None:
         time_slept = 0
