@@ -10,6 +10,7 @@ import aiohttp
 import pytest
 from aiohttp.web_ws import WebSocketResponse
 
+from chia.daemon.client import connect_to_daemon
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
     GetKeyRequest,
@@ -316,6 +317,25 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
 
     # Mock daemon server with net_config set for mainnet
     return Daemon(services={}, connections={}, net_config=config)
+
+
+@pytest.fixture(scope="function")
+async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daemon):
+    keychain = Keychain()
+
+    # populate the keychain with some test keys
+    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_private_key(test_key_data_2.mnemonic_str())
+
+    daemon = get_daemon
+    client = await connect_to_daemon(
+        daemon.self_hostname,
+        daemon.daemon_port,
+        50 * 1000 * 1000,
+        daemon.ssl_context,
+        heartbeat=daemon.heartbeat,
+    )
+    return client
 
 
 @pytest.mark.asyncio
@@ -678,6 +698,21 @@ async def test_get_keys_for_plot_error(
     daemon = mock_daemon_with_config_and_keys
     with pytest.raises(ValueError, match="fingerprints must be a list of integer"):
         await daemon.get_keys_for_plot(case.request)
+
+
+@pytest.mark.asyncio
+async def test_get_keys_for_plot_client(daemon_client_with_config_and_keys):
+    client = await daemon_client_with_config_and_keys
+    response = await client.get_keys_for_plot()
+    assert response["data"]["success"] is True
+    assert len(response["data"]["keys"]) == 2
+    assert str(test_key_data.fingerprint) in response["data"]["keys"]
+    assert str(test_key_data_2.fingerprint) in response["data"]["keys"]
+    response = await client.get_keys_for_plot([test_key_data.fingerprint])
+    assert response["data"]["success"] is True
+    assert len(response["data"]["keys"]) == 1
+    assert str(test_key_data.fingerprint) in response["data"]["keys"]
+    assert str(test_key_data_2.fingerprint) not in response["data"]["keys"]
 
 
 @pytest.mark.asyncio
