@@ -861,6 +861,12 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
 
 
 @pytest.fixture(scope="function")
+def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        return config
+
+
+@pytest.fixture(scope="function")
 def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> Dict[str, Any]:
     with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
         if prefix is not None:

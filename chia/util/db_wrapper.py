@@ -149,6 +149,7 @@ class DBWrapper2:
         if log_path is None:
             log_file = None
         else:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
             log_file = log_path.open("a", encoding="utf-8")
         write_connection = await _create_connection(database=database, uri=uri, log_file=log_file, name="writer")
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
