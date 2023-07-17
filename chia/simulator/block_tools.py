@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import compute_merkle_set_root
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -44,6 +44,7 @@ from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
     simple_solution_generator,
+    simple_solution_generator_backrefs,
 )
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
@@ -721,14 +722,20 @@ class BlockTools:
 
                         block_generator: Optional[BlockGenerator]
                         if transaction_data is not None:
-                            if type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -1003,14 +1010,20 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None and type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if previous_generator is not None and type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1762,7 +1775,9 @@ def compute_cost_test(
 ) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD._run(
+            INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, generator.program, block_program_args
+        )
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
