@@ -139,7 +139,7 @@ async def summary(
                     PlotStats.total_effective_plot_size += total_effective_plot_size_harvester
                     PlotStats.total_plots += plot_count_harvester
                     print(
-                        f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)} raw, "
+                        f"   {plot_count_harvester} plots of size: {format_bytes(total_plot_size_harvester)} on-disk, "
                         f"{format_bytes(total_effective_plot_size_harvester)}e (effective)"
                     )
 
