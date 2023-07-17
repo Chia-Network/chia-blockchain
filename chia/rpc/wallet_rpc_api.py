@@ -1846,7 +1846,7 @@ class WalletRpcApi:
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
-                    if key in offer.driver_dict:
+                    if key in offer.arbitrage():
                         records.append(trade)
                         continue
 
