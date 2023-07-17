@@ -33,7 +33,7 @@ def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, 
     return coin_record
 
 
-async def get_nearest_transaction_block(blockchain: Blockchain, block: Optional[BlockRecord]):
+async def get_nearest_transaction_block(blockchain: Blockchain, block: Optional[BlockRecord]) -> Optional[BlockRecord]:
     if block is None or block.height == 0:
         return None
     elif block.is_transaction_block:
@@ -44,12 +44,12 @@ async def get_nearest_transaction_block(blockchain: Blockchain, block: Optional[
         return None
     tb = await blockchain.get_block_record_from_db(prev_hash)
 
-    return tb if tb is not None and tb.timestamp is not None else None
+    return tb if tb is not None else None
 
 
 async def get_average_block_time(blockchain: Blockchain, newer_block: Optional[BlockRecord]) -> Optional[uint32]:
     newer_block = await get_nearest_transaction_block(blockchain, newer_block)
-    if newer_block is None:
+    if newer_block is None or newer_block.timestamp is None:
         return None
 
     prev_height = uint32(max(1, newer_block.height - 4608))
@@ -59,7 +59,7 @@ async def get_average_block_time(blockchain: Blockchain, newer_block: Optional[B
     older_block: Optional[BlockRecord] = await blockchain.get_block_record_from_db(prev_hash)
 
     older_block = await get_nearest_transaction_block(blockchain, older_block)
-    if older_block is None:
+    if older_block is None or older_block.timestamp is None:
         return None
 
     average_block_time = uint32(
@@ -204,7 +204,7 @@ class FullNodeRpcApi:
         else:
             sync_progress_height = uint32(0)
 
-        average_block_time = uint32(0)
+        average_block_time: Optional[uint32] = None
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             # Average over the last day
@@ -216,7 +216,7 @@ class FullNodeRpcApi:
             )
 
             try:
-                average_block_time = get_average_block_time(self.service.blockchain, peak)
+                average_block_time = await get_average_block_time(self.service.blockchain, peak)
             except Exception as e:
                 tb = traceback.format_exc()
                 self.service.log.warning(f"Searching blocks failed - exception: {e}, traceback: {tb}")
