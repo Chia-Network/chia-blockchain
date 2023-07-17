@@ -7,9 +7,11 @@ import pytest
 from blspy import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
+from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import get_signage_point
@@ -422,6 +424,88 @@ class TestRpc:
             assert "signage_point" not in res
             assert res["eos"] == selected_eos
             assert res["reverted"]
+
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_get_blockchain_state(self, one_wallet_and_one_simulator_services, self_hostname):
+        num_blocks = 5
+        nodes, _, bt = one_wallet_and_one_simulator_services
+        (full_node_service_1,) = nodes
+        full_node_api_1 = full_node_service_1._api
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
+            await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
+            state = await client.get_blockchain_state()
+            assert state["peak"] is None
+            assert not state["sync"]["sync_mode"]
+            assert state["difficulty"] > 0
+            assert state["sub_slot_iters"] > 0
+            assert state["space"] == 0
+            assert state["average_block_time"] is None
+
+            blocks: List[FullBlock] = bt.get_consecutive_blocks(num_blocks)
+            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
+
+            for block in blocks:
+                unf = UnfinishedBlock(
+                    block.finished_sub_slots,
+                    block.reward_chain_block.get_unfinished(),
+                    block.challenge_chain_sp_proof,
+                    block.reward_chain_sp_proof,
+                    block.foliage,
+                    block.foliage_transaction_block,
+                    block.transactions_info,
+                    block.transactions_generator,
+                    [],
+                )
+                await full_node_api_1.full_node.add_unfinished_block(unf, None)
+                await full_node_api_1.full_node.add_block(block, None)
+
+            state = await client.get_blockchain_state()
+
+            assert state["space"] > 0
+            assert state["average_block_time"] > 0
+
+            block_records: List[BlockRecord] = [
+                await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
+            ]
+            first_non_transaction_block_index = -1
+            for i, b in enumerate(block_records):
+                if not b.is_transaction_block:
+                    first_non_transaction_block_index = i
+                    break
+            # Genesis block(height=0) must be a transaction block
+            # so first_non_transaction_block_index != 0
+            assert first_non_transaction_block_index > 0
+
+            transaction_blocks: List[BlockRecord] = [b for b in block_records if b.is_transaction_block]
+            non_transaction_block: List[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
+            assert len(transaction_blocks) > 0
+            assert len(non_transaction_block) > 0
+            assert transaction_blocks[0] == await get_nearest_transaction_block(
+                full_node_api_1.full_node.blockchain, transaction_blocks[0]
+            )
+
+            nearest_transaction_block = block_records[first_non_transaction_block_index - 1]
+            expected_nearest_transaction_block = await get_nearest_transaction_block(
+                full_node_api_1.full_node.blockchain, block_records[first_non_transaction_block_index]
+            )
+            assert expected_nearest_transaction_block == nearest_transaction_block
+            # When supplying genesis block, there are no older blocks so `None` should be returned
+            assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[0], 4608) is None
+            assert (
+                await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[-1], 4608) is not None
+            )
 
         finally:
             # Checks that the RPC manages to stop the node

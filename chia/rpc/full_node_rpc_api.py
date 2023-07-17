@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import BlockchainMutexPriority
+from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -30,6 +30,46 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, bool]:
     coin_record["spent"] = coin_record["spent_block_index"] > 0
     return coin_record
+
+
+async def get_nearest_transaction_block(blockchain: Blockchain, block: BlockRecord) -> BlockRecord:
+    if block.is_transaction_block:
+        return block
+
+    prev_hash = blockchain.height_to_hash(block.prev_transaction_block_height)
+    # Genesis block is a transaction block, so theoretically `prev_hash` of all blocks
+    # other than genesis block cannot be `None`.
+    assert prev_hash
+
+    tb = await blockchain.get_block_record_from_db(prev_hash)
+    assert tb
+
+    return tb
+
+
+async def get_average_block_time(
+    blockchain: Blockchain,
+    base_block: BlockRecord,
+    height_distance: int,
+) -> Optional[uint32]:
+    newer_block = await get_nearest_transaction_block(blockchain, base_block)
+    if newer_block.height < 1:
+        return None
+
+    prev_height = uint32(max(newer_block.height - 1, newer_block.height - height_distance))
+    prev_hash = blockchain.height_to_hash(prev_height)
+    assert prev_hash
+    prev_block = await blockchain.get_block_record_from_db(prev_hash)
+    assert prev_block
+
+    older_block = await get_nearest_transaction_block(blockchain, prev_block)
+
+    assert newer_block.timestamp is not None and older_block.timestamp is not None
+
+    average_block_time = uint32(
+        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+    )
+    return average_block_time
 
 
 class FullNodeRpcApi:
@@ -129,6 +169,7 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
+                    "average_block_time": None,
                     "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
@@ -167,6 +208,7 @@ class FullNodeRpcApi:
         else:
             sync_progress_height = uint32(0)
 
+        average_block_time: Optional[uint32] = None
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             # Average over the last day
@@ -176,6 +218,7 @@ class FullNodeRpcApi:
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
+            average_block_time = await get_average_block_time(self.service.blockchain, peak, 4608)
         else:
             space = {"space": uint128(0)}
 
@@ -213,6 +256,7 @@ class FullNodeRpcApi:
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
+                "average_block_time": average_block_time,
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
                 "mempool_fees": mempool_fees,
