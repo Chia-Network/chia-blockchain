@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "electron-builder": "^24.0.0",
-    "lerna": "^5.6.2"
+    "electron-builder": "^24.4.0",
+    "lerna": "^7.0.0"
   }
 }

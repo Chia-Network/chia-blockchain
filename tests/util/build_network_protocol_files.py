@@ -139,6 +139,11 @@ def visit_timelord_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_compact_proof_of_time, "respond_compact_proof_of_time")
 
 
+def visit_shared_protocol(visitor: Callable[[Any, str], None]) -> None:
+    visitor(error_without_data, "error_without_data")
+    visitor(error_with_data, "error_with_data")
+
+
 def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
     visit_farmer_protocol(visitor)
     visit_full_node(visitor)
@@ -147,6 +152,7 @@ def visit_all_messages(visitor: Callable[[Any, str], None]) -> None:
     visit_introducer_protocol(visitor)
     visit_pool_protocol(visitor)
     visit_timelord_protocol(visitor)
+    visit_shared_protocol(visitor)
 
 
 def get_protocol_bytes() -> bytes:
@@ -255,7 +261,7 @@ def test_protocol_json() -> None:
     return result
 
 
-if __name__ == "__main__":
+def main() -> None:
     get_network_protocol_filename().write_bytes(get_protocol_bytes())
 
     name_to_function = {
@@ -275,3 +281,7 @@ if __name__ == "__main__":
             check=True,
             cwd=tests_dir,
         )
+
+
+if __name__ == "__main__":
+    main()

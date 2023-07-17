@@ -3,19 +3,19 @@ from __future__ import annotations
 import os
 import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
-    "anyio==3.6.2",
-    "boto3==1.26.148",  # AWS S3 for DL s3 plugin
-    "blspy==1.0.16",  # Signature library
-    "chiavdf==1.0.8",  # timelord and vdf verification
+    "anyio==3.7.0",
+    "blspy==2.0.2",  # Signature library
+    "boto3==1.26.161",  # AWS S3 for DL s3 plugin
+    "chiavdf==1.0.9",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
-    "chiapos==1.0.11",  # proof of space
+    "chiapos==2.0.0b4",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.7",
+    "chia_rs==0.2.9",
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
@@ -23,8 +23,8 @@ dependencies = [
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.0",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.12.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "cryptography==41.0.1",  # Python cryptography library for TLS - keyring conflict
+    "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
@@ -33,7 +33,7 @@ dependencies = [
     "dnspython==2.3.0",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.6.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.6.3",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.1",
     "psutil==5.9.4",
@@ -63,7 +63,7 @@ dev_dependencies = [
     "black==23.3.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.11.0",
+    "pyinstaller==5.13.0",
     "types-aiofiles",
     "types-cryptography",
     "types-pkg_resources",
@@ -82,7 +82,7 @@ kwargs = dict(
     description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8.1, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
     extras_require=dict(
@@ -90,45 +90,7 @@ kwargs = dict(
         upnp=upnp_dependencies,
         legacy_keyring=legacy_keyring_dependencies,
     ),
-    packages=[
-        "build_scripts",
-        "chia",
-        "chia.cmds",
-        "chia.clvm",
-        "chia.consensus",
-        "chia.daemon",
-        "chia.data_layer",
-        "chia.full_node",
-        "chia.timelord",
-        "chia.farmer",
-        "chia.harvester",
-        "chia.introducer",
-        "chia.plot_sync",
-        "chia.plotters",
-        "chia.plotting",
-        "chia.pools",
-        "chia.protocols",
-        "chia.rpc",
-        "chia.seeder",
-        "chia.server",
-        "chia.simulator",
-        "chia.types.blockchain_format",
-        "chia.types",
-        "chia.util",
-        "chia.wallet",
-        "chia.wallet.db_wallet",
-        "chia.wallet.puzzles",
-        "chia.wallet.cat_wallet",
-        "chia.wallet.did_wallet",
-        "chia.wallet.nft_wallet",
-        "chia.wallet.trading",
-        "chia.wallet.util",
-        "chia.wallet.vc_wallet",
-        "chia.wallet.vc_wallet.vc_puzzles",
-        "chia.wallet.vc_wallet.cr_puzzles",
-        "chia.ssl",
-        "mozilla-ca",
-    ],
+    packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
     entry_points={
         "console_scripts": [
             "chia = chia.cmds.chia:main",

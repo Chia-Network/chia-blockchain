@@ -65,7 +65,11 @@ class CostLogger:
     def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, INFINITE_COST, mempool_mode=True, height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT
+            program,
+            INFINITE_COST,
+            mempool_mode=True,
+            height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT,
+            constants=DEFAULT_CONSTANTS,
         )
         self.cost_dict[descriptor] = npc_result.cost
         cost_to_subtract: int = 0
@@ -418,7 +422,7 @@ class SimClient:
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
         coin_record = await self.service.coin_store.get_coin_record(coin_id)
         assert coin_record is not None
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin)
+        spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin, 0)
         return CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:

@@ -62,7 +62,7 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from sys import exit
+        import sys
 
         from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
@@ -77,7 +77,7 @@ def cli(
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:
                 print("Invalid passphrase")
-            exit(1)
+            sys.exit(1)
         except Exception as e:
             print(f"Failed to read passphrase: {e}")
 

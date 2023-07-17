@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 1.8.2 Chia blockchain 2023-06-28
+
+### Added
+- Add `chia wallet vcs` command for Verifiable Credential operations
+- Add `chia wallet clawback` command for clawback operations
+- Add `chia wallet did` commands `get_details`, `update_metadata`, `find_lost`, `message_spend`, `transfer`
+- Add wallet RPC `get_coin_records`
+- Add wallet RPC `get_wallet_balances`
+- Add `type_filter` to wallet RPCs `get_transaction_count` and `get_transactions`
+- Add `confirmed` boolean to wallet RPC `get_transactions`
+
+### Changed
+- Identical spend aggregation
+- CAT wallet now will hint to CAT change
+- Move to Discord in docs and install scripts
+- Data_layer: Avoid redundant coin state fetching
+- Output `plotid` when we find an invalid proof of space
+- Improve help text for deprecated `chia show` commands. Thanks (@notpeter)
+- Have the simulator not rely on `chia_root` as originally implemented.
+- Fork infrastructure
+- Update `--fee` options to indicate units are in XCH
+- Made the CLI instructions for `--fix-ssl-permissions` more user friendly
+- Check all peers when subscribing/tracking to new DL singleton
+- Updated `chiavdf` to `1.0.9`
+
+### Fixed
+- Fix `chia wallet make_offer` short-option collision on `-r` (Fixes #14874) (Thanks @yyolk)
+- Fix `GENERATOR_MOD2` to have the same cost as `GENERATOR_MOD`
+- Subscribe to the change children of CATs
+- Offer shows network's XCH like TXCH on `testnet10` (Fixes #13393) (Thanks @yyolk)
+- Move `WalletPeers` init to the end of `_start_with_fingerprint` (Fixes #15142)
+- Fix coin state sorting
+- Refactor mutiproc prevalidation
+- Use spendable instead of confirmed balance for offers
+- Remove unnecessary filtering of `state_changed` messages for the UI
+- End-of-slot challenge optimization
+
 ## 1.8.1 Chia blockchain 2023-05-17
 
 ### Changed
