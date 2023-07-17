@@ -32,17 +32,17 @@ def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, 
     return coin_record
 
 
-async def get_nearest_transaction_block(blockchain: Blockchain, block: BlockRecord) -> Optional[BlockRecord]:
+async def get_nearest_transaction_block(blockchain: Blockchain, block: BlockRecord) -> BlockRecord:
     if block.is_transaction_block:
         return block
 
-    prev_hash = block.prev_transaction_block_hash
-    if prev_hash is None:
-        return None
+    prev_hash = blockchain.height_to_hash(block.prev_transaction_block_height)
+    # Genesis block is a transaction block, so theoretically `prev_hash` of all blocks
+    # other than genesis block cannot be `None`.
+    assert prev_hash
 
     tb = await blockchain.get_block_record_from_db(prev_hash)
-    if tb is None or not tb.is_transaction_block:
-        return None
+    assert tb
 
     return tb
 
@@ -53,20 +53,18 @@ async def get_average_block_time(
     height_distance: int,
 ) -> Optional[uint32]:
     newer_block = await get_nearest_transaction_block(blockchain, base_block)
-    if newer_block is None or newer_block.timestamp is None:
+    if newer_block.height < 1:
         return None
 
-    prev_height = uint32(max(1, newer_block.height - height_distance))
+    prev_height = uint32(max(newer_block.height - 1, newer_block.height - height_distance))
     prev_hash = blockchain.height_to_hash(prev_height)
-    if prev_hash is None:
-        return None
+    assert prev_hash
     prev_block = await blockchain.get_block_record_from_db(prev_hash)
-    if prev_block is None:
-        return None
+    assert prev_block
 
     older_block = await get_nearest_transaction_block(blockchain, prev_block)
-    if older_block is None or older_block.timestamp is None:
-        return None
+
+    assert newer_block.timestamp is not None and older_block.timestamp is not None
 
     average_block_time = uint32(
         (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
