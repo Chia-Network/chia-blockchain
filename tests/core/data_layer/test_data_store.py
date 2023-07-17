@@ -8,8 +8,9 @@ import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
+import aiosqlite
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -529,6 +530,22 @@ async def test_inserting_duplicate_key_fails(
             reference_node_hash=first_hash,
             side=Side.RIGHT,
             hint_keys_values=hint_keys_values,
+        )
+
+
+@pytest.mark.asyncio()
+async def test_inserting_invalid_length_hash_raises_original_exception(
+    data_store: DataStore,
+) -> None:
+    with pytest.raises(aiosqlite.IntegrityError):
+        # casting since we are testing an invalid case
+        await data_store._insert_node(
+            node_hash=cast(bytes32, b"\x05"),
+            node_type=NodeType.TERMINAL,
+            left_hash=None,
+            right_hash=None,
+            key=b"\x06",
+            value=b"\x07",
         )
 
 

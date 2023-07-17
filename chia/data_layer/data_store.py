@@ -233,10 +233,7 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
-            result = await cursor.fetchone()
-
-            if result is None:
+            try:
                 await writer.execute(
                     """
                     INSERT INTO node(hash, node_type, left, right, key, value)
@@ -244,12 +241,29 @@ class DataStore:
                     """,
                     values,
                 )
-            else:
+            except aiosqlite.IntegrityError as e:
+                if not e.args[0].startswith("UNIQUE constraint"):
+                    # UNIQUE constraint failed: node.hash
+                    raise
+
+                async with writer.execute(
+                    "SELECT * FROM node WHERE hash == :hash LIMIT 1",
+                    {"hash": node_hash},
+                ) as cursor:
+                    result = await cursor.fetchone()
+
+                if result is None:
+                    # some ideas for causes:
+                    #   an sqlite bug
+                    #   bad queries in this function
+                    #   unexpected db constraints
+                    raise Exception("Unable to find conflicting row") from e  # pragma: no cover
+
                 result_dict = dict(result)
                 if result_dict != values:
                     raise Exception(
                         f"Requested insertion of node with matching hash but other values differ: {node_hash}"
-                    )
+                    ) from None
 
     async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
         if node_type == NodeType.INTERNAL:
