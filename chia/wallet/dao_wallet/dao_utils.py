@@ -14,7 +14,7 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_pu
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_struct_for_id
+from chia.wallet.singleton import get_singleton_struct_for_id
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -35,15 +35,11 @@ SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_RESALE_PREVENTION: Program = load_clvm("dao_resale_prevention_layer.clsp")
-DAO_RESALE_PREVENTION_HASH: bytes32 = DAO_RESALE_PREVENTION.get_tree_hash()
 DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clsp")
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
 DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")
 P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
-DAO_SAFE_PAYMENT_MOD: Program = load_clvm("dao_safe_payment.clsp")
-DAO_SAFE_PAYMENT_MOD_HASH: bytes32 = DAO_SAFE_PAYMENT_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")
