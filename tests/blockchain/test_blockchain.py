@@ -2040,7 +2040,7 @@ class TestBodyValidation:
         # before the 2.0 hard fork, these conditions do not exist
         # but WalletTool still lets us create them, and aggregate them into the
         # block signature. When the pre-hard fork node sees them, the conditions
-        # are ignored, but the aggregate signature us corrupt.
+        # are ignored, but the aggregate signature is corrupt.
         if consensus_mode != Mode.HARD_FORK_2_0 and opcode in [
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
