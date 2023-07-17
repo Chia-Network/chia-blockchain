@@ -15,17 +15,17 @@ from chia.util.network import is_localhost
 SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 
-async def get_harvesters_summary(farmer_rpc_port: Optional[int], root_path: Path = None) -> Optional[Dict[str, Any]]:
+async def get_harvesters_summary(farmer_rpc_port: Optional[int], root_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
     async with get_any_service_client(FarmerRpcClient, farmer_rpc_port, root_path) as (farmer_client, _):
         return await farmer_client.get_harvesters_summary()
 
 
-async def get_blockchain_state(rpc_port: Optional[int], root_path: Path = None) -> Optional[Dict[str, Any]]:
+async def get_blockchain_state(rpc_port: Optional[int], root_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
     async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
         return await client.get_blockchain_state()
 
 
-async def get_average_block_time(rpc_port: Optional[int], root_path: Path = None) -> float:
+async def get_average_block_time(rpc_port: Optional[int], root_path: Optional[Path] = None) -> float:
     async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
         blocks_to_compare = 500
         blockchain_state = await client.get_blockchain_state()
@@ -46,7 +46,7 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path = None
         return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
 
 
-async def get_wallets_stats(wallet_rpc_port: Optional[int], root_path: Path = None) -> Optional[Dict[str, Any]]:
+async def get_wallets_stats(wallet_rpc_port: Optional[int], root_path: Optional[Path] = None) -> Optional[Dict[str, Any]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, _):
         return await wallet_client.get_farmed_amount()
 
@@ -79,7 +79,7 @@ async def summary(
     wallet_rpc_port: Optional[int],
     harvester_rpc_port: Optional[int],
     farmer_rpc_port: Optional[int],
-    root_path: Path = None,
+    root_path: Optional[Path] = None,
 ) -> None:
     harvesters_summary = await get_harvesters_summary(farmer_rpc_port, root_path)
     blockchain_state = await get_blockchain_state(rpc_port, root_path)

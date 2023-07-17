@@ -4,11 +4,14 @@ import re
 from typing import Tuple
 
 import pytest
+from _pytest.capture import CaptureFixture
 
 from chia.cmds.farm_funcs import summary
 from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -19,9 +22,13 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 
 @pytest.mark.asyncio
 async def test_farm_summary_command(
-    capsys,
+    capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: Tuple[
-        Service, Service, Service[FullNode, FullNodeSimulator], Service[WalletNode, WalletNodeAPI], BlockTools
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Service[FullNode, FullNodeSimulator],
+        Service[WalletNode, WalletNodeAPI],
+        BlockTools,
     ],
 ) -> None:
     harvester_service, farmer_service, full_node_service, wallet_service, bt = farmer_one_harvester_simulator_wallet
@@ -36,6 +43,10 @@ async def test_farm_summary_command(
     receiver = farmer.plot_sync_receivers[harvester.server.node_id]
     # And wait until the first sync from the harvester to the farmer is done
     await time_out_assert(20, receiver.initial_sync, False)
+
+    assert full_node_service.rpc_server and full_node_service.rpc_server.webserver
+    assert wallet_service.rpc_server and wallet_service.rpc_server.webserver
+    assert farmer_service.rpc_server and farmer_service.rpc_server.webserver
 
     full_node_rpc_port = full_node_service.rpc_server.webserver.listen_port
     wallet_rpc_port = wallet_service.rpc_server.webserver.listen_port
