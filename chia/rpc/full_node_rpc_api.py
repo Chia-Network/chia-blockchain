@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain import BlockchainMutexPriority
+from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -30,6 +31,41 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, bool]:
     coin_record["spent"] = coin_record["spent_block_index"] > 0
     return coin_record
+
+
+async def get_nearest_transaction_block(blockchain: Blockchain, block: Optional[BlockRecord]):
+    if block is None or block.height == 0:
+        return None
+    elif block.is_transaction_block:
+        return block
+
+    prev_hash = block.prev_transaction_block_hash
+    if prev_hash is None:
+        return None
+    tb = await blockchain.get_block_record_from_db(prev_hash)
+
+    return tb if tb is not None and tb.timestamp is not None else None
+
+
+async def get_average_block_time(blockchain: Blockchain, newer_block: Optional[BlockRecord]) -> Optional[uint32]:
+    newer_block = await get_nearest_transaction_block(blockchain, newer_block)
+    if newer_block is None:
+        return None
+
+    prev_height = uint32(max(1, newer_block.height - 4608))
+    prev_hash = blockchain.height_to_hash(prev_height)
+    if prev_hash is None:
+        return None
+    older_block: Optional[BlockRecord] = await blockchain.get_block_record_from_db(prev_hash)
+
+    older_block = await get_nearest_transaction_block(blockchain, older_block)
+    if older_block is None:
+        return None
+
+    average_block_time = uint32(
+        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+    )
+    return average_block_time
 
 
 class FullNodeRpcApi:
@@ -180,34 +216,11 @@ class FullNodeRpcApi:
             )
 
             try:
-                newer_block: Optional[BlockRecord] = peak
-                if newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
-                    prev_hash = newer_block.prev_transaction_block_hash
-                    newer_block = self.service.blockchain.try_block_record(prev_hash) if prev_hash is not None else None
-                    if newer_block is None and prev_hash is not None:
-                        newer_block = await self.service.blockchain.get_block_record_from_db(prev_hash)
-
-                if newer_block is not None and newer_block.timestamp is not None:
-                    header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
-                    older_block: Optional[BlockRecord] = (
-                        self.service.blockchain.try_block_record(header_hash) if header_hash is not None else None
-                    )
-                    if header_hash is not None and older_block is None:
-                        older_block = await self.service.blockchain.get_block_record_from_db(header_hash)
-
-                    if older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
-                        prev_hash = older_block.prev_transaction_block_hash
-                        if prev_hash:
-                            older_block = self.service.blockchain.try_block_record(prev_hash)
-                            if older_block is None:
-                                older_block = await self.service.blockchain.get_block_record_from_db(prev_hash)
-
-                    if older_block is not None and older_block.timestamp is not None:
-                        average_block_time = uint32(
-                            (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
-                        )
-            except ValueError:
-                pass
+                average_block_time = get_average_block_time(self.service.blockchain, peak)
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.service.log.warning(f"Searching blocks failed - exception: {e}, traceback: {tb}")
+                space = {"space": uint128(0)}
         else:
             space = {"space": uint128(0)}
 
