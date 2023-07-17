@@ -29,6 +29,7 @@ from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
 
@@ -612,21 +613,19 @@ async def test_get_wallet_addresses(
 @datacases(
     KeysForPlotCase(
         id="no params",
+        # When not specifying exact fingerprints, `get_keys_for_plot` returns
+        # all farmer_pk/pool_pk data for available fingerprints
         request={},
         response={
             "success": True,
             "keys": {
                 test_key_data.fingerprint: {
-                    "farmer_public_key": "b800fa5c8fe8890bf9b8c8ad7e981aa3face3ae2296f7df7"
-                    "673e9b63ddeccbac9723cfe9968b7530179cd7183d261b3e",
-                    "pool_public_key": "b1b0d8e777e3b1e79f33bc8707c74c8e4907fd8c3da870d7"
-                    "81803f647b17f3cc6250f09362f25699eb0ee385c57a2e01",
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data.private_key).get_g1()).hex(),
                 },
                 test_key_data_2.fingerprint: {
-                    "farmer_public_key": "a96a194fe76043b4867fa154b1fcda6709257699a720cc10"
-                    "af68a8414d9bf08cee0945becf9b36a1c76d5b04d379bc7f",
-                    "pool_public_key": "837646f1378b1194aa1054b8869dcea5006cb173730ceeb9"
-                    "0e9b9bb7f5d73e481775d20a1726fec3ef140c5b9cdbd4b3",
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data_2.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data_2.private_key).get_g1()).hex(),
                 },
             },
         },
@@ -638,10 +637,8 @@ async def test_get_wallet_addresses(
             "success": True,
             "keys": {
                 test_key_data.fingerprint: {
-                    "farmer_public_key": "b800fa5c8fe8890bf9b8c8ad7e981aa3face3ae2296f7df7"
-                    "673e9b63ddeccbac9723cfe9968b7530179cd7183d261b3e",
-                    "pool_public_key": "b1b0d8e777e3b1e79f33bc8707c74c8e4907fd8c3da870d7"
-                    "81803f647b17f3cc6250f09362f25699eb0ee385c57a2e01",
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data.private_key).get_g1()).hex(),
                 },
             },
         },
@@ -679,7 +676,7 @@ async def test_get_keys_for_plot_error(
     case: KeysForPlotCase,
 ):
     daemon = mock_daemon_with_config_and_keys
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="fingerprints must be a list of integer"):
         await daemon.get_keys_for_plot(case.request)
 
 

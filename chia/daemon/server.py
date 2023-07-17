@@ -130,7 +130,8 @@ def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[Lis
     if fingerprints is None:
         keys = all_keys
     else:
-        assert isinstance(fingerprints, list)
+        if not isinstance(fingerprints, list):
+            raise ValueError("fingerprints must be a list of integer")
         keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
         keys = []
         for fingerprint in fingerprints:
