@@ -226,6 +226,3 @@ class WalletBlockchain(BlockchainInterface):
 
         for header_hash in to_remove:
             del self._block_records[header_hash]
-
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        return self._block_records.get(header_hash, None)
