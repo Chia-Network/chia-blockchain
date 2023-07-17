@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import aiosqlite
-from dnslib import AAAA, CNAME, MX, NS, QTYPE, RR, SOA, A, DNSHeader, DNSRecord
+from dnslib import AAAA, MX, NS, QTYPE, RR, SOA, A, DNSHeader, DNSRecord
 
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
