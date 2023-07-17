@@ -457,13 +457,8 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
             for block in blocks:
-                if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
-                    finished_ss = block.finished_sub_slots[:-1]
-                else:
-                    finished_ss = block.finished_sub_slots
-
                 unf = UnfinishedBlock(
-                    finished_ss,
+                    block.finished_sub_slots,
                     block.reward_chain_block.get_unfinished(),
                     block.challenge_chain_sp_proof,
                     block.reward_chain_sp_proof,
