@@ -201,10 +201,6 @@ class DNSServer:
 
             records = {
                 D: IPs,
-                D.ns1: [A(IP)],  # MX and NS records must never point to a CNAME alias (RFC 2181 section 10.3)
-                D.ns2: [A(IP)],
-                D.mail: [A(IP)],
-                D.andrei: [CNAME(D)],
             }
 
             qname = request.q.qname
