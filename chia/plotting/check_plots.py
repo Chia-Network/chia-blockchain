@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
+import multiprocessing
 from collections import Counter
 from pathlib import Path
+from threading import Lock
 from time import sleep, time
 from typing import List, Optional
 
@@ -53,7 +55,25 @@ def check_plots(
         refresh_callback=plot_refresh_callback,
     )
 
-    context_count = config["harvester"].get("parallel_decompressers_count", 5)
+    context_count = config["harvester"].get("parallel_decompressor_count", 5)
+    thread_count = config["harvester"].get("decompressor_thread_count", 0)
+    if thread_count == 0:
+        thread_count = multiprocessing.cpu_count() // 2
+    disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
+    max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
+    use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
+    gpu_index = config["harvester"].get("gpu_index", 0)
+    enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
+
+    plot_manager.configure_decompressor(
+        context_count,
+        thread_count,
+        disable_cpu_affinity,
+        max_compression_level_allowed,
+        use_gpu_harvesting,
+        gpu_index,
+        enforce_gpu_index,
+    )
 
     if num is not None:
         if num == 0:
@@ -116,18 +136,12 @@ def check_plots(
 
     with plot_manager:
 
-        def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int) -> None:
+        def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int, lock: Lock) -> None:
             nonlocal total_good_plots
             nonlocal total_size
             nonlocal bad_plots_list
 
             pr = plot_info.prover
-            log.info(f"Testing plot {plot_path} k={pr.get_size()}")
-            if plot_info.pool_public_key is not None:
-                log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
-            if plot_info.pool_contract_puzzle_hash is not None:
-                pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
-                log.info(f"\t{'Pool contract address:':<23} {pca}")
 
             # Look up local_sk from plot to save locked memory
             (
@@ -136,8 +150,17 @@ def check_plots(
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
             local_sk = master_sk_to_local_sk(local_master_sk)
-            log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-            log.info(f"\t{'Local sk:' :<23} {local_sk}")
+
+            with lock:
+                log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+                if plot_info.pool_public_key is not None:
+                    log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
+                if plot_info.pool_contract_puzzle_hash is not None:
+                    pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
+                    log.info(f"\t{'Pool contract address:':<23} {pca}")
+                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+
             total_proofs = 0
             caught_exception: bool = False
             for i in range(num_start, num_end):
@@ -169,8 +192,13 @@ def check_plots(
                                 log.info(f"\tFinding proof took: {proof_spent_time} ms. Filepath: {plot_path}")
 
                             ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
-                            assert quality_str == ver_quality_str
-                            total_proofs += 1
+                            if quality_str == ver_quality_str:
+                                total_proofs += 1
+                            else:
+                                log.warning(
+                                    f"\tQuality doesn't match with proof. Filepath: {plot_path} "
+                                    "This can occasionally happen with a compressed plot."
+                                )
                         except AssertionError as e:
                             log.error(
                                 f"{type(e)}: {e} error in proving/verifying for plot {plot_path}. Filepath: {plot_path}"
@@ -183,6 +211,13 @@ def check_plots(
                 except SystemExit:
                     log.warning("System is shutting down.")
                     return
+                except RuntimeError as e:
+                    if str(e) == "GRResult_NoProof received":
+                        log.info(f"Proof dropped due to line point compression. Filepath: {plot_path}")
+                        continue
+                    else:
+                        log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
+                        caught_exception = True
                 except Exception as e:
                     log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                     caught_exception = True
@@ -204,9 +239,10 @@ def check_plots(
                 bad_plots_list.append(plot_path)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
+            logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
-                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
+                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end, logger_lock))
 
             for future in concurrent.futures.as_completed(futures):
                 _ = future.result()

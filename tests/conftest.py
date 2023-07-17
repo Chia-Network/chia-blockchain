@@ -101,9 +101,10 @@ def get_keychain():
 class Mode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    SOFT_FORK3 = 2
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0])
+@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3])
 def consensus_mode(request):
     return request.param
 
@@ -112,6 +113,8 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == Mode.PLAIN:
         return test_constants
+    if consensus_mode == Mode.SOFT_FORK3:
+        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
     if consensus_mode == Mode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
@@ -858,6 +861,12 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
     root_path: Path = tmp_chia_root
     create_default_chia_config(root_path)
     return root_path
+
+
+@pytest.fixture(scope="function")
+def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        return config
 
 
 @pytest.fixture(scope="function")

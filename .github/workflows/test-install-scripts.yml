@@ -77,10 +77,6 @@ jobs:
 #         - name: centos:8
 #           type: centos
 #           url: "docker://centos:8"
-        - name: debian:buster
-          type: debian
-          # https://packages.debian.org/buster/python/python3 (3.7)
-          url: "docker://debian:buster"
         - name: debian:bullseye
           type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
@@ -104,10 +100,6 @@ jobs:
         - name: rockylinux:8
           type: rocky
           url: "docker://rockylinux:8"
-        - name: ubuntu:bionic (18.04)
-          type: ubuntu
-          # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
-          url: "docker://ubuntu:bionic"
         - name: ubuntu:focal (20.04)
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
