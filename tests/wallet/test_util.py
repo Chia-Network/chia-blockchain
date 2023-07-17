@@ -49,6 +49,17 @@ def test_cs_config() -> None:
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex(), "0x" + coin_id_to_exclude.hex()],
     }
+    assert CoinSelectionConfigLoader.from_json_dict(
+        {
+            "excluded_coins": [coin_to_exclude.to_json_dict()],
+        }
+    ).override(
+        max_coin_amount=100
+    ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
+        **default_cs_config,
+        "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
+        "max_coin_amount": 100,
+    }
 
 
 def test_tx_config() -> None:
