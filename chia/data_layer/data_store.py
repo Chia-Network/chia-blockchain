@@ -306,12 +306,7 @@ class DataStore:
                     "tree_id": tree_id,
                     "generation": generation,
                 }
-                cursor = await writer.execute(
-                    "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
-                    {"hash": hash, "generation": generation, "tree_id": tree_id},
-                )
-                result = await cursor.fetchone()
-                if result is None:
+                try:
                     await writer.execute(
                         """
                         INSERT INTO ancestors(hash, ancestor, tree_id, generation)
@@ -319,13 +314,34 @@ class DataStore:
                         """,
                         values,
                     )
-                else:
+                except aiosqlite.IntegrityError as e:
+                    if not e.args[0].startswith("UNIQUE constraint"):
+                        # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
+                        raise
+
+                    async with writer.execute(
+                        """
+                        SELECT *
+                        FROM ancestors
+                        WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                        """,
+                        {"hash": hash, "generation": generation, "tree_id": tree_id},
+                    ) as cursor:
+                        result = await cursor.fetchone()
+
+                    if result is None:
+                        # some ideas for causes:
+                        #   an sqlite bug
+                        #   bad queries in this function
+                        #   unexpected db constraints
+                        raise Exception("Unable to find conflicting row") from e  # pragma: no cover
+
                     result_dict = dict(result)
                     if result_dict != values:
                         raise Exception(
                             "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
                             f"{hash} {generation} {tree_id}"
-                        )
+                        ) from None
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
