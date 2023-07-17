@@ -1503,18 +1503,12 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
-    async def test_bad_timestamp(self, bt, with_softfork2):
+    async def test_bad_timestamp(self, bt):
         # 26
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
-            # default for this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0, MAX_FUTURE_TIME=5 * 60, MAX_FUTURE_TIME2=2 * 60)
-            time_delta = 2 * 60 + 1
-        else:
-            constants = bt.constants.replace(MAX_FUTURE_TIME=5 * 60)
-            time_delta = 5 * 60 + 1
+        # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
+        # default for this test
+        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
+        time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
 
@@ -1867,7 +1861,6 @@ class TestBodyValidation:
         assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
@@ -1941,35 +1934,8 @@ class TestBodyValidation:
             (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
-    async def test_timelock_conditions(self, opcode, lock_value, expected, with_softfork2, bt):
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
-        else:
-            constants = bt.constants
-
-            # if the softfork is not active in this test, fixup all the
-            # tests to instead expect NEW_PEAK unconditionally
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-            ]:
-                expected = AddBlockResult.NEW_PEAK
-
-            # before soft-fork 2, the timestamp we compared against was the
-            # current block's timestamp as opposed to the previous tx-block's
-            # timestamp. These conditions used to be valid, before the soft-fork
-            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and lock_value > 0 and lock_value <= 10:
-                expected = AddBlockResult.NEW_PEAK
-
-            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
-                expected = AddBlockResult.NEW_PEAK
-
-        async with make_empty_blockchain(constants) as b:
+    async def test_timelock_conditions(self, opcode, lock_value, expected, bt):
+        async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
                 3,
                 guarantee_transaction_block=True,
@@ -2100,7 +2066,6 @@ class TestBodyValidation:
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
@@ -2165,47 +2130,19 @@ class TestBodyValidation:
             (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
-    async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
+    async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, bt):
+        # we don't allow any birth assertions, not
+        # relative time locks on ephemeral coins. This test is only for
+        # ephemeral coins, so these cases should always fail
+        if opcode in [
+            ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+            ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+        ]:
+            expected = AddBlockResult.INVALID_BLOCK
 
-            # after the softfork, we don't allow any birth assertions, not
-            # relative time locks on ephemeral coins. This test is only for
-            # ephemeral coins, so these cases should always fail
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
-            ]:
-                expected = AddBlockResult.INVALID_BLOCK
-
-        else:
-            constants = bt.constants
-
-            # if the softfork is not active in this test, fixup all the
-            # tests to instead expect NEW_PEAK unconditionally
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-            ]:
-                expected = AddBlockResult.NEW_PEAK
-
-            # before the softfork, we compared ASSERT_SECONDS_* conditions
-            # against the current block's timestamp, so we need to
-            # adjust these test cases
-            if opcode == co.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
-                expected = rbr.NEW_PEAK
-
-            if opcode == co.ASSERT_SECONDS_RELATIVE and lock_value > -10 and lock_value <= 0:
-                expected = rbr.NEW_PEAK
-
-        async with make_empty_blockchain(constants) as b:
+        async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
                 3,
                 guarantee_transaction_block=True,
