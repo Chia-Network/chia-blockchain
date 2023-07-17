@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -33,32 +32,39 @@ def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, 
     return coin_record
 
 
-async def get_nearest_transaction_block(blockchain: Blockchain, block: Optional[BlockRecord]) -> Optional[BlockRecord]:
-    if block is None or block.height == 0:
-        return None
-    elif block.is_transaction_block:
+async def get_nearest_transaction_block(blockchain: Blockchain, block: BlockRecord) -> Optional[BlockRecord]:
+    if block.is_transaction_block:
         return block
 
     prev_hash = block.prev_transaction_block_hash
     if prev_hash is None:
         return None
+
     tb = await blockchain.get_block_record_from_db(prev_hash)
+    if tb is None or not tb.is_transaction_block:
+        return None
 
-    return tb if tb is not None else None
+    return tb
 
 
-async def get_average_block_time(blockchain: Blockchain, newer_block: Optional[BlockRecord]) -> Optional[uint32]:
-    newer_block = await get_nearest_transaction_block(blockchain, newer_block)
+async def get_average_block_time(
+    blockchain: Blockchain,
+    base_block: BlockRecord,
+    height_distance: int,
+) -> Optional[uint32]:
+    newer_block = await get_nearest_transaction_block(blockchain, base_block)
     if newer_block is None or newer_block.timestamp is None:
         return None
 
-    prev_height = uint32(max(1, newer_block.height - 4608))
+    prev_height = uint32(max(1, newer_block.height - height_distance))
     prev_hash = blockchain.height_to_hash(prev_height)
     if prev_hash is None:
         return None
-    older_block: Optional[BlockRecord] = await blockchain.get_block_record_from_db(prev_hash)
+    prev_block = await blockchain.get_block_record_from_db(prev_hash)
+    if prev_block is None:
+        return None
 
-    older_block = await get_nearest_transaction_block(blockchain, older_block)
+    older_block = await get_nearest_transaction_block(blockchain, prev_block)
     if older_block is None or older_block.timestamp is None:
         return None
 
@@ -165,7 +171,7 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
-                    "average_block_time": 0,
+                    "average_block_time": None,
                     "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
@@ -214,13 +220,7 @@ class FullNodeRpcApi:
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
-
-            try:
-                average_block_time = await get_average_block_time(self.service.blockchain, peak)
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.service.log.warning(f"Searching blocks failed - exception: {e}, traceback: {tb}")
-                space = {"space": uint128(0)}
+            average_block_time = await get_average_block_time(self.service.blockchain, peak, 4608)
         else:
             space = {"space": uint128(0)}
 
