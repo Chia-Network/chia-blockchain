@@ -21,6 +21,7 @@ from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
+DnsCallback = Callable[[DNSRecord], Awaitable[DNSRecord]]
 
 
 # DNS snippet taken from: https://gist.github.com/pklaus/b5a7876d4d2cf7271873
@@ -29,49 +30,6 @@ log = logging.getLogger(__name__)
 class DomainName(str):
     def __getattr__(self, item: str) -> DomainName:
         return DomainName(item + "." + self)  # DomainName.NS becomes DomainName("NS.DomainName")
-
-
-class EchoServerProtocol(asyncio.DatagramProtocol):
-    transport: asyncio.DatagramTransport
-    data_queue: asyncio.Queue[tuple[DNSRecord, tuple[str, int]]]
-    callback: Callable[[DNSRecord], Awaitable[Optional[DNSRecord]]]
-
-    def __init__(self, callback: Callable[[DNSRecord], Awaitable[Optional[DNSRecord]]]) -> None:
-        self.data_queue = asyncio.Queue()
-        self.callback = callback
-        asyncio.ensure_future(self.respond())
-
-    def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
-        self.transport = transport  # type: ignore[assignment]
-
-    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
-        try:
-            dns_request: DNSRecord = DNSRecord.parse(data)  # it's better to parse here, so we have a real type.
-        except DNSError as e:
-            log.warning(f"Received invalid DNS request: {e}")
-            return
-        except Exception as e:
-            log.error(f"Exception when receiving a datagram: {e}. Traceback: {traceback.format_exc()}.")
-            return
-        asyncio.ensure_future(self.handler(dns_request, addr))
-
-    async def respond(self) -> None:
-        while True:
-            try:
-                reply, caller = await self.data_queue.get()
-                self.transport.sendto(reply.pack(), caller)
-            except Exception as e:
-                log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
-
-    async def handler(self, data: DNSRecord, caller: tuple[str, int]) -> None:
-        try:
-            data = await self.callback(data)
-            if data is None:
-                return
-            await self.data_queue.put((data, caller))
-        except Exception as e:
-            log.error(f"Exception during DNS record processing: {e}. Traceback: {traceback.format_exc()}.")
 
 
 @dataclass(frozen=True)
@@ -85,6 +43,80 @@ class PeerList:
 
 
 @dataclass
+class UDPDNSServerProtocol(asyncio.DatagramProtocol):
+    """
+    This is a really simple UDP Server, that converts all requests to DNSRecord objects and passes them to the callback.
+    """
+
+    callback: DnsCallback
+    transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
+    data_queue: asyncio.Queue[tuple[DNSRecord, tuple[str, int]]] = asyncio.Queue()
+
+    def __post_init__(self) -> None:
+        asyncio.ensure_future(self.respond())  # This starts the dns respond loop.
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
+        self.transport = transport  # type: ignore[assignment]
+
+    def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
+        dns_request: Optional[DNSRecord] = parse_dns_request(data)
+        if dns_request is None:  # Invalid Request, we can just drop it and move on.
+            return
+        asyncio.ensure_future(self.handler(dns_request, addr))
+
+    async def respond(self) -> None:
+        log.info("UDP DNS responder started.")
+        while self.transport is None:  # we wait for the transport to be set.
+            await asyncio.sleep(0.1)
+        while not self.transport.is_closing():
+            try:
+                reply, caller = await self.data_queue.get()
+                self.transport.sendto(reply.pack(), caller)
+            except Exception as e:
+                log.error(f"Exception while responding to UDP DNS request: {e}. Traceback: {traceback.format_exc()}.")
+        log.info("UDP DNS responder stopped.")
+
+    async def handler(self, data: DNSRecord, caller: tuple[str, int]) -> None:
+        r_data = await get_dns_reply(self.callback, data)  # process the request, returning a DNSRecord response.
+        await self.data_queue.put((r_data, caller))
+
+
+def create_dns_reply(dns_request: DNSRecord) -> DNSRecord:
+    """
+    Creates a DNS response with the correct header and section flags set.
+    """
+    # QR means query response, AA means authoritative answer, RA means recursion available
+    return DNSRecord(DNSHeader(id=dns_request.header.id, qr=1, aa=1, ra=0), q=dns_request.q)
+
+
+def parse_dns_request(data: bytes) -> Optional[DNSRecord]:
+    """
+    Parses the DNS request, and returns a DNSRecord object, or None if the request is invalid.
+    """
+    dns_request: Optional[DNSRecord] = None
+    try:
+        dns_request = DNSRecord.parse(data)
+    except DNSError as e:
+        log.warning(f"Received invalid DNS request: {e}")
+    return dns_request
+
+
+async def get_dns_reply(callback: DnsCallback, dns_request: DNSRecord) -> DNSRecord:
+    """
+    This function calls the callback, and returns SERVFAIL if the callback raises an exception.
+    """
+    try:
+        dns_reply = await callback(dns_request)
+    except Exception as e:
+        log.error(f"Exception during DNS record processing: {e}. Traceback: {traceback.format_exc()}.")
+        # we return an empty response with an error code
+        dns_reply = create_dns_reply(dns_request)  # This is an empty response, with only the header set.
+        dns_reply.header.rcode = RCODE.SERVFAIL
+    return dns_reply
+
+
+@dataclass
 class DNSServer:
     config: Dict[str, Any]
     root_path: Path
@@ -93,8 +125,8 @@ class DNSServer:
     db_connection: aiosqlite.Connection = field(init=False)
     crawl_store: CrawlStore = field(init=False)
     reliable_task: asyncio.Task[None] = field(init=False)
-    transport: asyncio.DatagramTransport = field(init=False)
-    protocol: EchoServerProtocol = field(init=False)
+    udp_transport: asyncio.DatagramTransport = field(init=False)
+    udp_protocol: UDPDNSServerProtocol = field(init=False)
     dns_port: int = field(init=False)
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
@@ -143,14 +175,12 @@ class DNSServer:
         await self.setup_signal_handlers()
         self.db_connection = await aiosqlite.connect(self.db_path, timeout=60)
         self.crawl_store = CrawlStore(self.db_connection)
-        # Get a reference to the event loop as we plan to use
-        # low-level APIs.
+        # Get a reference to the event loop as we plan to use low-level APIs.
         loop = asyncio.get_running_loop()
 
-        # One protocol instance will be created to serve all
-        # client requests.
-        self.transport, self.protocol = await loop.create_datagram_endpoint(
-            lambda: EchoServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
+        # One protocol instance will be created to serve all UDP client requests.
+        self.udp_transport, self.udp_protocol = await loop.create_datagram_endpoint(
+            lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
         )
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
         try:
@@ -158,6 +188,7 @@ class DNSServer:
         finally:  # catches any errors and properly shuts down the server
             if not self.shutdown_event.is_set():
                 await self.stop()
+                log.info("DNS server stopped.")
 
     async def setup_signal_handlers(self) -> None:
         loop = asyncio.get_running_loop()
@@ -171,9 +202,10 @@ class DNSServer:
         asyncio.create_task(self.stop())
 
     async def stop(self) -> None:
-        self.reliable_task.cancel()  # cancel the task
+        log.info("Stopping DNS server...")
+        self.udp_transport.close()  # stop accepting new requests
+        self.reliable_task.cancel()  # cancel the peer update task
         await self.db_connection.close()
-        self.transport.close()
         self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
@@ -244,8 +276,7 @@ class DNSServer:
         This function is called when a DNS request is received, and it returns a DNS response.
         It does not catch any errors as it is called from within a try-except block.
         """
-        # QR means query response, AA means authoritative answer, RA means recursion available
-        reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=0), q=request.q)
+        reply = create_dns_reply(request)
         ttl: int = self.ttl
         ips: List[RD] = []
         ipv4_count = 0
