@@ -157,7 +157,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     info: Dict[str, Any] = {"display_name": "BladeBit Plotter"}
     installed: bool = False
     supported: bool = is_bladebit_supported()
-    cuda_available = is_cudaplot_available(plotters_root_path)
+    cuda_available: bool = is_cudaplot_available(plotters_root_path)
 
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if bladebit_executable_path.exists():
