@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from blspy import G1Element, PrivateKey
 from chiapos import DiskProver
@@ -151,13 +151,14 @@ def remove_plot(path: Path):
         path.unlink()
 
 
-def get_harvester_config(root_path: Path, config: Dict = None) -> Dict:
-    if config is None:
-        config = load_config(root_path, "config.yaml")
+def get_harvester_config(root_path: Path) -> Dict[str, Any]:
+    config = load_config(root_path, "config.yaml")
 
-    plots_refresh_parameter = config["harvester"].get("plots_refresh_parameter")
-    if plots_refresh_parameter is None:
-        plots_refresh_parameter = PlotsRefreshParameter().to_json_dict()
+    plots_refresh_parameter = (
+        config["harvester"].get("plots_refresh_parameter")
+        if config["harvester"].get("plots_refresh_parameter") is not None
+        else PlotsRefreshParameter().to_json_dict()
+    )
 
     return {
         "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting"),
