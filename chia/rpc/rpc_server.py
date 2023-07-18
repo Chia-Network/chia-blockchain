@@ -360,6 +360,8 @@ class RpcServer:
         payload = create_payload("register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)
 
+        log.debug("Server starting message loop")
+
         while True:
             # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
             msg = await ws.receive()
@@ -370,10 +372,23 @@ class RpcServer:
             elif msg.type == WSMsgType.BINARY:
                 log.debug("Received binary data")
             else:
-                if msg.type == WSMsgType.ERROR:
-                    log.error("Error during receive %s" % ws.exception())
-                elif msg.type == WSMsgType.CLOSED:
-                    pass
+                closing_message = "Connection to Daemon problem"
+                level = logging.INFO
+
+                if msg.type == WSMsgType.CLOSED:
+                    message = f"Connection closed Code: {ws.close_code}. {closing_message}"
+                elif msg.type == WSMsgType.CLOSING:
+                    message = f"Connection closing Code: {ws.close_code}. {closing_message}"
+                elif msg.type == WSMsgType.CLOSE:
+                    message = f"Connection close requested Code: {ws.close_code}. {closing_message}"
+                elif msg.type == WSMsgType.ERROR:
+                    level = logging.ERROR
+                    message = f"Websocket exception. {closing_message} {ws.exception()}"
+                else:
+                    level = logging.ERROR
+                    message = f"Unexpected message type. {closing_message} {msg.type}"
+
+                log.log(level=level, msg=message)
 
                 break
 
@@ -384,6 +399,7 @@ class RpcServer:
         async def inner() -> None:
             while not self.shut_down:
                 try:
+                    log.debug(f"Attempting to connect to daemon at ws://{self_hostname}:{daemon_port}")
                     self.client_session = ClientSession()
                     self.websocket = await self.client_session.ws_connect(
                         f"wss://{self_hostname}:{daemon_port}",
@@ -394,11 +410,14 @@ class RpcServer:
                         max_msg_size=max_message_size,
                     )
                     await self.connection(self.websocket)
+                    log.debug("Daemon connection loop exited")
                 except ClientConnectorError:
                     log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
                 except Exception as e:
                     tb = traceback.format_exc()
                     log.warning(f"Exception: {tb} {type(e)}")
+
+                log.debug("Closing connection to daemon and should reconnect in 2 seconds")
                 if self.websocket is not None:
                     await self.websocket.close()
                 if self.client_session is not None:
@@ -407,6 +426,7 @@ class RpcServer:
                 self.client_session = None
                 await asyncio.sleep(2)
 
+        log.debug("Starting connection task")
         self.daemon_connection_task = asyncio.create_task(inner())
 
 
