@@ -41,6 +41,9 @@ async def test_farm_summary_command(
     # Wait for the receiver to show up
     await time_out_assert(20, receiver_available)
     receiver = farmer.plot_sync_receivers[harvester.server.node_id]
+
+    print("receiver available")
+
     # And wait until the first sync from the harvester to the farmer is done
     await time_out_assert(20, receiver.initial_sync, False)
 
