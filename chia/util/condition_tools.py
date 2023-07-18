@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from clvm.casts import int_from_bytes, int_to_bytes
 
@@ -11,7 +11,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -71,6 +71,45 @@ def agg_sig_additional_data(agg_sig_data: bytes) -> Dict[ConditionOpcode, bytes]
     return ret
 
 
+def make_aggsig_final_message(
+    opcode: ConditionOpcode,
+    msg: bytes,
+    spend: Union[Coin, Spend],
+    agg_sig_additional_data: Dict[ConditionOpcode, bytes],
+) -> bytes:
+    if isinstance(spend, Coin):
+        parent_coin_info = bytes(spend.parent_coin_info)
+        puzzle_hash = bytes(spend.puzzle_hash)
+        amount = int_to_bytes(spend.amount)
+        coin_id = bytes(spend.name())
+    elif isinstance(spend, Spend):
+        parent_coin_info = spend.parent_id
+        puzzle_hash = spend.puzzle_hash
+        amount = int_to_bytes(spend.coin_amount)
+        coin_id = spend.coin_id
+    else:
+        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")
+
+    if opcode == ConditionOpcode.AGG_SIG_PARENT:
+        addendum = parent_coin_info
+    elif opcode == ConditionOpcode.AGG_SIG_PUZZLE:
+        addendum = puzzle_hash
+    elif opcode == ConditionOpcode.AGG_SIG_AMOUNT:
+        addendum = amount
+    elif opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT:
+        addendum = puzzle_hash + amount
+    elif opcode == ConditionOpcode.AGG_SIG_PARENT_AMOUNT:
+        addendum = parent_coin_info + amount
+    elif opcode == ConditionOpcode.AGG_SIG_PARENT_PUZZLE:
+        addendum = parent_coin_info + puzzle_hash
+    elif opcode == ConditionOpcode.AGG_SIG_ME:
+        addendum = coin_id
+    else:
+        raise ValueError(f"Expected an AGG_SIG opcode, got {opcode}")
+
+    return msg + addendum + agg_sig_additional_data[opcode]
+
+
 def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
     ret: Tuple[List[bytes48], List[bytes]] = ([], [])
 
@@ -86,35 +125,31 @@ def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tupl
     for spend in conditions.spends:
         for pk, msg in spend.agg_sig_parent:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + spend.parent_id + data[ConditionOpcode.AGG_SIG_PARENT])
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT, msg, spend, data))
 
         for pk, msg in spend.agg_sig_puzzle:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + spend.puzzle_hash + data[ConditionOpcode.AGG_SIG_PUZZLE])
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PUZZLE, msg, spend, data))
 
         for pk, msg in spend.agg_sig_amount:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + int_to_bytes(spend.coin_amount) + data[ConditionOpcode.AGG_SIG_AMOUNT])
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_AMOUNT, msg, spend, data))
 
         for pk, msg in spend.agg_sig_puzzle_amount:
             ret[0].append(bytes48(pk))
-            ret[1].append(
-                msg + spend.puzzle_hash + int_to_bytes(spend.coin_amount) + data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT]
-            )
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, msg, spend, data))
 
         for pk, msg in spend.agg_sig_parent_amount:
             ret[0].append(bytes48(pk))
-            ret[1].append(
-                msg + spend.parent_id + int_to_bytes(spend.coin_amount) + data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT]
-            )
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT_AMOUNT, msg, spend, data))
 
         for pk, msg in spend.agg_sig_parent_puzzle:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + spend.parent_id + spend.puzzle_hash + data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE])
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT_PUZZLE, msg, spend, data))
 
         for pk, msg in spend.agg_sig_me:
             ret[0].append(bytes48(pk))
-            ret[1].append(msg + spend.coin_id + data[ConditionOpcode.AGG_SIG_ME])
+            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_ME, msg, spend, data))
 
     return ret
 
@@ -146,64 +181,18 @@ def pkm_pairs_for_conditions_dict(
                 raise ConsensusError(Err.INVALID_CONDITION)
         ret.append((bytes48(cwa.vars[0]), cwa.vars[1]))
 
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT, []):
-        validate_cwa(cwa)
-        ret.append(
-            (
-                bytes48(cwa.vars[0]),
-                cwa.vars[1] + coin.parent_coin_info + data[ConditionOpcode.AGG_SIG_PARENT],
-            )
-        )
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PUZZLE, []):
-        validate_cwa(cwa)
-        ret.append((bytes48(cwa.vars[0]), cwa.vars[1] + coin.puzzle_hash + data[ConditionOpcode.AGG_SIG_PUZZLE]))
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_AMOUNT, []):
-        validate_cwa(cwa)
-        ret.append(
-            (
-                bytes48(cwa.vars[0]),
-                cwa.vars[1] + int_to_bytes(coin.amount) + data[ConditionOpcode.AGG_SIG_AMOUNT],
-            )
-        )
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, []):
-        validate_cwa(cwa)
-        ret.append(
-            (
-                bytes48(cwa.vars[0]),
-                cwa.vars[1]
-                + coin.puzzle_hash
-                + int_to_bytes(coin.amount)
-                + data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT],
-            )
-        )
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT_AMOUNT, []):
-        validate_cwa(cwa)
-        ret.append(
-            (
-                bytes48(cwa.vars[0]),
-                cwa.vars[1]
-                + coin.parent_coin_info
-                + int_to_bytes(coin.amount)
-                + data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT],
-            )
-        )
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_PARENT_PUZZLE, []):
-        validate_cwa(cwa)
-        ret.append(
-            (
-                bytes48(cwa.vars[0]),
-                cwa.vars[1] + coin.parent_coin_info + coin.puzzle_hash + data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE],
-            )
-        )
-
-    for cwa in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-        validate_cwa(cwa)
-        ret.append((bytes48(cwa.vars[0]), cwa.vars[1] + coin.name() + data[ConditionOpcode.AGG_SIG_ME]))
+    for opcode in [
+        ConditionOpcode.AGG_SIG_PARENT,
+        ConditionOpcode.AGG_SIG_PUZZLE,
+        ConditionOpcode.AGG_SIG_AMOUNT,
+        ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+        ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+        ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ConditionOpcode.AGG_SIG_ME,
+    ]:
+        for cwa in conditions_dict.get(opcode, []):
+            validate_cwa(cwa)
+            ret.append((bytes48(cwa.vars[0]), make_aggsig_final_message(opcode, cwa.vars[1], coin, data)))
 
     return ret
 
