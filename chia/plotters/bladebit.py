@@ -7,7 +7,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
@@ -56,7 +56,6 @@ def is_cudaplot_available(plotters_root_path: Path) -> bool:
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if not bladebit_executable_path.exists():
         return False
-    cuda_available = False
     try:
         proc = run_command(
             [os.fspath(bladebit_executable_path), "cudacheck"],
@@ -65,11 +64,10 @@ def is_cudaplot_available(plotters_root_path: Path) -> bool:
             text=True,
             check=False,
         )
-        cuda_available = proc.returncode == 0
+        return proc.returncode == 0
     except Exception as e:
         print(f"Failed to determine whether bladebit supports cuda: {e}")
-    finally:
-        return cuda_available
+        return False
 
 
 def get_bladebit_src_path(plotters_root_path: Path) -> Path:
@@ -80,13 +78,13 @@ def get_bladebit_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "bladebit"
 
 
-def get_bladebit_exec_path(with_cuda: Optional[bool] = None):
+def get_bladebit_exec_path(with_cuda: bool = False) -> str:
     if with_cuda:
         return "bladebit_cuda.exe" if sys.platform in ["win32", "cygwin"] else "bladebit_cuda"
     return "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
 
 
-def get_bladebit_exec_venv_path(with_cuda: Optional[bool] = None) -> Optional[Path]:
+def get_bladebit_exec_venv_path(with_cuda: bool = False) -> Optional[Path]:
     venv_bin_path = get_venv_bin()
     if not venv_bin_path:
         return None
@@ -94,14 +92,14 @@ def get_bladebit_exec_venv_path(with_cuda: Optional[bool] = None) -> Optional[Pa
     return venv_bin_path / bladebit_exec
 
 
-def get_bladebit_exec_src_path(plotters_root_path: Path, with_cuda: Optional[bool] = None) -> Path:
+def get_bladebit_exec_src_path(plotters_root_path: Path, with_cuda: bool = False) -> Path:
     bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
     build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
     bladebit_exec = get_bladebit_exec_path(with_cuda)
     return bladebit_src_dir / build_dir / bladebit_exec
 
 
-def get_bladebit_exec_package_path(with_cuda: Optional[bool] = None) -> Path:
+def get_bladebit_exec_package_path(with_cuda: bool = False) -> Path:
     bladebit_package_dir = get_bladebit_package_path()
     bladebit_exec = get_bladebit_exec_path(with_cuda)
     return bladebit_package_dir / bladebit_exec
@@ -128,10 +126,12 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
     return get_bladebit_exec_package_path(with_cuda=False)
 
 
-def get_bladebit_version(plotters_root_path: Path):
+def get_bladebit_version(
+    plotters_root_path: Path,
+) -> Union[Tuple[False, str], Tuple[None, str], Tuple[True, List[str]]]:
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if not bladebit_executable_path.exists():
-        # (NotFound, "")
+        # (found=False, "")
         return False, ""
 
     try:
@@ -143,14 +143,15 @@ def get_bladebit_version(plotters_root_path: Path):
             check=False,
         )
         if proc.returncode != 0:
+            # (found=unknown, errMsg)
             return None, proc.stderr.strip()
 
-        # (Found, versionStr)
+        # (found=True, versionStr)
         version_str: str = proc.stdout.strip()
         return True, version_str.split(".")
     except Exception as e:
-        # (Unknown, Exception)
-        return None, e
+        # (found=unknown, errMsg)
+        return None, str(e)
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
@@ -290,10 +291,12 @@ def plot_bladebit(args, chia_root_path, root_path):
             args.connect_to_daemon,
         )
     )
-    if args.plot_type == "ramplot" or args.plot_type == "cudaplot":
+    if args.plot_type == "ramplot" or args.plot_type == "diskplot" or args.plot_type == "cudaplot":
         plot_type = args.plot_type
     else:
         plot_type = "diskplot"
+        print("plot_type is automatically set to diskplot")
+
     call_args = [
         os.fspath(bladebit_executable_path),
         "--threads",

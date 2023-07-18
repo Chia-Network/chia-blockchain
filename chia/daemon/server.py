@@ -795,7 +795,8 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         plot_type = request["plot_type"]
-        assert plot_type == "ramplot" or plot_type == "diskplot" or plot_type == "cudaplot"
+        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+            raise ValueError(f"Unknown plot_type: {plot_type}")
 
         command_args: List[str] = []
 
@@ -856,35 +857,35 @@ class WebSocketServer:
 
         command_args.append("-t")
         command_args.append(t1)
-        if t2:
+        if t2 is not None:
             command_args.append("-2")
             command_args.append(t2)
-        if u:
+        if u is not None:
             command_args.append("-u")
             command_args.append(str(u))
-        if cache:
+        if cache is not None:
             command_args.append("--cache")
             command_args.append(str(cache))
-        if f1_threads:
+        if f1_threads is not None:
             command_args.append("--f1-threads")
             command_args.append(str(f1_threads))
-        if fp_threads:
+        if fp_threads is not None:
             command_args.append("--fp-threads")
             command_args.append(str(fp_threads))
-        if c_threads:
+        if c_threads is not None:
             command_args.append("--c-threads")
             command_args.append(str(c_threads))
-        if p2_threads:
+        if p2_threads is not None:
             command_args.append("--p2-threads")
             command_args.append(str(p2_threads))
-        if p3_threads:
+        if p3_threads is not None:
             command_args.append("--p3-threads")
             command_args.append(str(p3_threads))
-        if alternate:
+        if alternate is not None:
             command_args.append("--alternate")
-        if no_t1_direct:
+        if no_t1_direct is not None:
             command_args.append("--no-t1-direct")
-        if no_t2_direct:
+        if no_t2_direct is not None:
             command_args.append("--no-t2-direct")
 
         return command_args
