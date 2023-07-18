@@ -14,6 +14,7 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expecte
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
+from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
@@ -44,6 +45,7 @@ def assert_default_values(receiver: Receiver) -> None:
     assert receiver.duplicates() == []
     assert receiver.total_plot_size() == 0
     assert receiver.total_effective_plot_size() == 0
+    assert receiver.harvesting_mode() is None
 
 
 async def dummy_callback(_: bytes32, __: Delta) -> None:
@@ -177,6 +179,7 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
             plot_public_key=G1Element(),
             file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
+            compression_level=uint8(0),
         )
         for x in path_list
     ]
@@ -188,7 +191,15 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
         sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
     sync_steps: List[SyncStepData] = [
-        SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
+        SyncStepData(
+            State.idle,
+            receiver.sync_started,
+            PlotSyncStart,
+            False,
+            uint64(0),
+            uint32(len(plot_info_list)),
+            uint8(HarvestingMode.CPU),
+        ),
         SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
         SyncStepData(State.removed, receiver.process_removed, PlotSyncPathList, path_list[0:10], True),
         SyncStepData(State.invalid, receiver.process_invalid, PlotSyncPathList, path_list[20:30], True),
@@ -258,6 +269,7 @@ async def test_to_dict(counts_only: bool) -> None:
         "host": receiver.connection().peer_info.host,
         "port": receiver.connection().peer_info.port,
     }
+    assert plot_sync_dict_1["harvesting_mode"] is None
 
     # We should get equal dicts
     assert plot_sync_dict_1 == receiver.to_dict(counts_only)
@@ -299,6 +311,7 @@ async def test_to_dict(counts_only: bool) -> None:
     )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
+    assert sync_steps[State.idle].args[3] == plot_sync_dict_3["harvesting_mode"]
 
     # Trigger a repeated plot sync
     await receiver.sync_started(
@@ -307,6 +320,7 @@ async def test_to_dict(counts_only: bool) -> None:
             False,
             receiver.last_sync().sync_id,
             uint32(1),
+            uint8(HarvestingMode.CPU),
         )
     )
     assert receiver.to_dict()["syncing"] == {
@@ -369,13 +383,13 @@ async def test_invalid_ids() -> None:
             receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
-                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0)
+                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_last_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_last_sync_id)
             # Test "last_sync_id == new_sync_id"
             invalid_sync_id_match_param = PlotSyncStart(
-                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0)
+                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)
