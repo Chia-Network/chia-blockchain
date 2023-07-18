@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import IntEnum
 from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
@@ -35,7 +34,3 @@ class DIDCoinData(Streamable):
     num_verification: uint16
     singleton_struct: Program
     metadata: Program
-
-
-class DIDVersion(IntEnum):
-    V1 = uint16(1)

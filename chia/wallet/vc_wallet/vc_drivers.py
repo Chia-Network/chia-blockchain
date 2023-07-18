@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from enum import IntEnum
 from typing import Iterator, List, Optional, Tuple, Type, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
@@ -9,7 +8,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -64,10 +63,6 @@ VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
 # (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
 # (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
 ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
-
-
-class VCVersion(IntEnum):
-    V1 = uint16(1)
 
 
 # Hashes

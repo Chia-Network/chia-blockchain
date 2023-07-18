@@ -168,7 +168,7 @@ class UncurriedNFT(Streamable):
             return None
 
         return cls(
-            nft_mod_hash=nft_mod_hash.atom,
+            nft_mod_hash=bytes32(nft_mod_hash.atom),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,

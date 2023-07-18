@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-from enum import IntEnum
-
-from chia.util.ints import uint16
-
 SPACEBUCKS = {
     "asset_id": "a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913",
     "name": "Spacebucks",
@@ -34,8 +30,3 @@ DEFAULT_CATS = {
     STABLY_USDS["asset_id"]: STABLY_USDS,
     CHIA_HOLIDAY_TOKEN["asset_id"]: CHIA_HOLIDAY_TOKEN,
 }
-
-
-class CATVersion(IntEnum):
-    V1 = uint16(1)
-    V2 = uint16(2)

@@ -1978,7 +1978,7 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         did_data: DIDCoinData = DIDCoinData(
             p2_puzzle,
-            recovery_list_hash.atom,
+            bytes32(recovery_list_hash.atom),
             uint16(num_verification.as_int()),
             singleton_struct,
             metadata,

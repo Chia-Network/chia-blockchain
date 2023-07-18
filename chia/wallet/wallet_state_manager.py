@@ -670,13 +670,16 @@ class WalletStateManager:
         cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
-            cat_data: CATCoinData = CATCoinData(cat_mod_hash.atom, tail_program_hash.atom, cat_inner_puzzle)
+            cat_data: CATCoinData = CATCoinData(
+                bytes32(cat_mod_hash.atom), bytes32(tail_program_hash.atom), cat_inner_puzzle
+            )
             return (
                 await self.handle_cat(
                     cat_data,
                     parent_coin_state,
                     coin_state,
                     coin_spend,
+                    peer,
                     fork_height,
                 ),
                 cat_data,
@@ -695,7 +698,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                recovery_list_hash.atom,
+                bytes32(recovery_list_hash.atom),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -866,6 +869,7 @@ class WalletStateManager:
         parent_coin_state: CoinState,
         coin_state: CoinState,
         coin_spend: CoinSpend,
+        peer: WSChiaConnection,
         fork_height: Optional[uint32],
     ) -> Optional[WalletIdentifier]:
         """
@@ -933,7 +937,7 @@ class WalletStateManager:
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = parent_data.singleton_struct.rest().first().atom
+        launch_id: bytes32 = bytes32(parent_data.singleton_struct.rest().first().atom)
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
