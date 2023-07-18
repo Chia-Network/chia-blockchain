@@ -241,6 +241,14 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
         await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT)
     )[0].id
     cr_cat_wallet_0: CRCATWallet = wallet_node_0.wallet_state_manager.wallets[cr_cat_wallet_id_0]
+    assert {
+        "data": bytes(cr_cat_wallet_0.info).hex(),
+        "id": cr_cat_wallet_id_0,
+        "name": cr_cat_wallet_0.get_name(),
+        "type": cr_cat_wallet_0.type(),
+        "authorized_providers": [p.hex() for p in cr_cat_wallet_0.info.authorized_providers],
+        "flags_needed": cr_cat_wallet_0.info.proofs_checker.flags,
+    } == (await client_0.get_wallets(wallet_type=cr_cat_wallet_0.type()))[0]
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     wallet_1_addr = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
     tx = await client_0.cat_spend(

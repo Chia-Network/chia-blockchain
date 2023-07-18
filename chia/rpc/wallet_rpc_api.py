@@ -39,6 +39,7 @@ from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
+from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -605,6 +606,21 @@ class WalletRpcApi:
                 result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
             wallets = result
         response: EndpointResult = {"wallets": wallets}
+        if include_data:
+            response = {
+                "wallets": [
+                    wallet
+                    if wallet.type != WalletType.CRCAT
+                    else {
+                        **wallet.to_json_dict(),
+                        "authorized_providers": [
+                            p.hex() for p in CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
+                        ],
+                        "flags_needed": CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags,
+                    }
+                    for wallet in response["wallets"]
+                ]
+            }
         if self.service.logged_in_fingerprint is not None:
             response["fingerprint"] = self.service.logged_in_fingerprint
         return response
