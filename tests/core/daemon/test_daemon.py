@@ -111,8 +111,8 @@ class Daemon:
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
-    async def get_keys_for_plot(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.get_keys_for_plot(
+    async def get_keys_for_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.get_keys_for_plotting(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
@@ -633,7 +633,7 @@ async def test_get_wallet_addresses(
 @datacases(
     KeysForPlotCase(
         id="no params",
-        # When not specifying exact fingerprints, `get_keys_for_plot` returns
+        # When not specifying exact fingerprints, `get_keys_for_plotting` returns
         # all farmer_pk/pool_pk data for available fingerprints
         request={},
         response={
@@ -673,13 +673,13 @@ async def test_get_wallet_addresses(
     ),
 )
 @pytest.mark.asyncio
-async def test_get_keys_for_plot(
+async def test_get_keys_for_plotting(
     mock_daemon_with_config_and_keys,
     monkeypatch,
     case: KeysForPlotCase,
 ):
     daemon = mock_daemon_with_config_and_keys
-    assert case.response == await daemon.get_keys_for_plot(case.request)
+    assert case.response == await daemon.get_keys_for_plotting(case.request)
 
 
 @datacases(
@@ -690,25 +690,25 @@ async def test_get_keys_for_plot(
     ),
 )
 @pytest.mark.asyncio
-async def test_get_keys_for_plot_error(
+async def test_get_keys_for_plotting_error(
     mock_daemon_with_config_and_keys,
     monkeypatch,
     case: KeysForPlotCase,
 ):
     daemon = mock_daemon_with_config_and_keys
     with pytest.raises(ValueError, match="fingerprints must be a list of integer"):
-        await daemon.get_keys_for_plot(case.request)
+        await daemon.get_keys_for_plotting(case.request)
 
 
 @pytest.mark.asyncio
-async def test_get_keys_for_plot_client(daemon_client_with_config_and_keys):
+async def test_get_keys_for_plotting_client(daemon_client_with_config_and_keys):
     client = await daemon_client_with_config_and_keys
-    response = await client.get_keys_for_plot()
+    response = await client.get_keys_for_plotting()
     assert response["data"]["success"] is True
     assert len(response["data"]["keys"]) == 2
     assert str(test_key_data.fingerprint) in response["data"]["keys"]
     assert str(test_key_data_2.fingerprint) in response["data"]["keys"]
-    response = await client.get_keys_for_plot([test_key_data.fingerprint])
+    response = await client.get_keys_for_plotting([test_key_data.fingerprint])
     assert response["data"]["success"] is True
     assert len(response["data"]["keys"]) == 1
     assert str(test_key_data.fingerprint) in response["data"]["keys"]

@@ -146,9 +146,9 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
-    async def get_keys_for_plot(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
+    async def get_keys_for_plotting(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
         data = {"fingerprints": fingerprints} if fingerprints else {}
-        request = self.format_request("get_keys_for_plot", data)
+        request = self.format_request("get_keys_for_plotting", data)
         response = await self._get(request)
         return response
 
