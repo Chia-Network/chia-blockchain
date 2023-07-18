@@ -129,7 +129,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     ).index
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_xch, tx_config, driver_dict, fee=maker_fee, reuse_puzhash=reuse_puzhash
+        offer_nft_for_xch, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None

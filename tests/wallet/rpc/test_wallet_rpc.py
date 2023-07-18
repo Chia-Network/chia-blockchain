@@ -1290,7 +1290,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         DEFAULT_TX_CONFIG,
         driver_dict=driver_dict,
     )
-    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
     await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, batch_size=1)
     assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
 
