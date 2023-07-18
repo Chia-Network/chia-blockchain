@@ -4,6 +4,7 @@ import re
 from typing import Tuple
 
 import pytest
+from _pytest.capture import CaptureFixture
 
 from chia.cmds.farm_funcs import summary
 from chia.farmer.farmer import Farmer
@@ -21,6 +22,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 
 @pytest.mark.asyncio
 async def test_farm_summary_command(
+    capsys: CaptureFixture[str],
     farmer_one_harvester_simulator_wallet: Tuple[
         Service[Harvester, HarvesterAPI],
         Service[Farmer, FarmerAPI],
@@ -60,3 +62,20 @@ async def test_farm_summary_command(
     await summary(full_node_rpc_port, wallet_rpc_port, None, farmer_rpc_port, bt.root_path)
 
     print("chia farm summary done")
+
+    captured = capsys.readouterr()
+    match = re.search(r"^.+(Farming status:.+)$", captured.out, re.DOTALL)
+    assert match is not None
+    lines = match.group(1).split("\n")
+
+    assert lines[0] == "Farming status: Not synced or not connected to peers"
+    assert "Total chia farmed:" in lines[1]
+    assert "User transaction fees:" in lines[2]
+    assert "Block rewards:" in lines[3]
+    assert "Last height farmed:" in lines[4]
+    assert lines[5] == "Local Harvester"
+    assert "e (effective)" in lines[6]
+    assert "Plot count for all harvesters:" in lines[7]
+    assert "e (effective)" in lines[8]
+    assert "Estimated network space:" in lines[9]
+    assert "Expected time to win:" in lines[10]
