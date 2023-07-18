@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import compute_merkle_set_root
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -44,6 +44,7 @@ from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
     simple_solution_generator,
+    simple_solution_generator_backrefs,
 )
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
@@ -628,6 +629,7 @@ class BlockTools:
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
         sub_slots_finished = 0
+        # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
         # Start at the last block in block list
@@ -720,14 +722,20 @@ class BlockTools:
 
                         block_generator: Optional[BlockGenerator]
                         if transaction_data is not None:
-                            if type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -777,8 +785,6 @@ class BlockTools:
                         else:
                             if guarantee_transaction_block:
                                 continue
-                        if pending_ses:
-                            pending_ses = False
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
@@ -852,9 +858,10 @@ class BlockTools:
                     sub_slot_iters,
                     True,
                 )
-            if pending_ses:
-                sub_epoch_summary: Optional[SubEpochSummary] = None
-            else:
+            # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch or epoch
+            # include the hash in the next sub-slot
+            sub_epoch_summary: Optional[SubEpochSummary] = None
+            if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
                     BlockCache(blocks, height_to_hash=height_to_hash),
@@ -862,16 +869,16 @@ class BlockTools:
                     block_list[-1],
                     False,
                 )
+            if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
-
-            ses_hash: Optional[bytes32]
-            if sub_epoch_summary is not None:
-                ses_hash = sub_epoch_summary.get_hash()
+                ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
+                # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                self.log.info(f"Sub epoch summary: {sub_epoch_summary}")
-            else:
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
+            else:  # the previous block is not the last block of the sub-epoch or epoch
+                pending_ses = False
                 ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
@@ -947,11 +954,12 @@ class BlockTools:
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
-            # Handle overflows: No overflows on new epoch
-            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
+            # Handle overflows: No overflows on new epoch or sub-epoch
+            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and not pending_ses:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
                     constants.NUM_SPS_SUB_SLOT,
@@ -1002,14 +1010,20 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None and type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if previous_generator is not None and type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1060,8 +1074,6 @@ class BlockTools:
                             last_timestamp = full_block.foliage_transaction_block.timestamp
                         elif guarantee_transaction_block:
                             continue
-                        if pending_ses:
-                            pending_ses = False
 
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
@@ -1093,8 +1105,7 @@ class BlockTools:
             if num_blocks < prev_num_of_blocks:
                 num_empty_slots_added += 1
 
-            if new_sub_slot_iters is not None:
-                assert new_difficulty is not None
+            if new_sub_slot_iters is not None and new_difficulty is not None:  # new epoch
                 sub_slot_iters = new_sub_slot_iters
                 difficulty = new_difficulty
 
@@ -1764,7 +1775,9 @@ def compute_cost_test(
 ) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD._run(
+            INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, generator.program, block_program_args
+        )
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 

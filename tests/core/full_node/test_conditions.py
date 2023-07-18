@@ -369,3 +369,68 @@ class TestConditions:
             )
         )
         await check_conditions(bt, conditions)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "prefix, condition, num, expect_err",
+        [
+            # CREATE_COIN_ANNOUNCEMENT
+            ("", "(60 'test')", 1024, None),
+            ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # CREATE_PUZZLE_ANNOUNCEMENT
+            ("", "(62 'test')", 1024, None),
+            ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_PUZZLE_ANNOUNCEMENT
+            ("(62 'test')", "(63 {pann})", 1023, None),
+            ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_COIN_ANNOUNCEMENT
+            ("(60 'test')", "(61 {cann})", 1023, None),
+            ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_SPEND
+            ("", "(64 {coin})", 1024, None),
+            ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_PUZZLE
+            ("", "(65 {ph})", 1024, None),
+            ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        ],
+    )
+    async def test_announce_conditions_limit(
+        self,
+        consensus_mode: Mode,
+        prefix: str,
+        condition: str,
+        num: int,
+        expect_err: Optional[Err],
+        bt: BlockTools,
+    ):
+        """
+        Test that the condition checker accepts more announcements than the new per puzzle limit
+        pre-v2-softfork, and rejects more than the announcement limit afterward.
+        """
+
+        if consensus_mode != Mode.SOFT_FORK3:
+            # before softfork 3, there was no limit on the number of
+            # announcements
+            expect_err = None
+
+        blocks = await initial_blocks(bt)
+        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin_announcement = Announcement(coin.name(), b"test")
+        puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+
+        conditions = b""
+        if prefix != "":
+            conditions += b"\xff" + assemble(prefix).as_bin()
+
+        cond = condition.format(
+            coin="0x" + coin.name().hex(),
+            ph="0x" + EASY_PUZZLE_HASH.hex(),
+            cann="0x" + coin_announcement.name().hex(),
+            pann="0x" + puzzle_announcement.name().hex(),
+        )
+
+        conditions += (b"\xff" + assemble(cond).as_bin()) * num
+        conditions += b"\x80"
+        conditions_program = Program.from_bytes(conditions)
+
+        await check_conditions(bt, conditions_program, expected_err=expect_err, softfork2=True)

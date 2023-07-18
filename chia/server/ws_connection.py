@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 import math
 import time
@@ -20,7 +19,7 @@ from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Capability, Error, Handshake
 from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -28,8 +27,8 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint8, uint16
+from chia.util.errors import ApiError, Err, ProtocolError
+from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -41,6 +40,8 @@ LENGTH_BYTES: int = 4
 
 WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
+
+error_response_version = Version("0.0.35")
 
 
 def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]:
@@ -362,6 +363,11 @@ class WSChiaConnection:
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 
+            if full_message.type == ProtocolMessageTypes.error.value:
+                error = Error.from_bytes(full_message.data)
+                self.api.log.warning(f"ApiError: {error} from {self.peer_node_id}, {self.peer_info}")
+                return None
+
             f = getattr(self.api, message_type, None)
 
             if f is None:
@@ -396,6 +402,15 @@ class WSChiaConnection:
                     return result
                 except asyncio.CancelledError:
                     pass
+                except ApiError as api_error:
+                    self.log.warning(f"ApiError: {api_error} from {self.peer_node_id}, {self.peer_info}")
+                    if self.protocol_version >= error_response_version:
+                        return make_msg(
+                            ProtocolMessageTypes.error,
+                            Error(int16(api_error.code.value), api_error.message, api_error.data),
+                        )
+                    else:
+                        return None
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Exception: {e}, {self.get_peer_logging()}. {tb}")
@@ -497,6 +512,8 @@ class WSChiaConnection:
             return None
         sent_message_type = ProtocolMessageTypes(request.type)
         recv_message_type = ProtocolMessageTypes(response.type)
+        if recv_message_type == ProtocolMessageTypes.error:
+            return Error.from_bytes(response.data)
         if not message_response_ok(sent_message_type, recv_message_type):
             # peer protocol violation
             error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
@@ -532,9 +549,10 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        # Either the result is available below or not, no need to detect the timeout error
-        with contextlib.suppress(asyncio.TimeoutError):
+        try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            self.log.debug(f"Request timeout: {message}")
 
         self.pending_requests.pop(message.id)
         result: Optional[Message] = None

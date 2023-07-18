@@ -49,6 +49,7 @@ farming_info_json: Dict[str, Any] = {
     "passed": 1390832181,
     "proofs": 908923578,
     "total_plots": 2259819406,
+    "lookup_time": 3942498,
 }
 
 signed_values_json: Dict[str, Any] = {
@@ -2494,3 +2495,7 @@ respond_compact_proof_of_time_json: Dict[str, Any] = {
     "height": 386395693,
     "field_vdf": 224,
 }
+
+error_without_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": None}
+
+error_with_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}

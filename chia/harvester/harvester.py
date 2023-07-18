@@ -81,8 +81,8 @@ class Harvester:
         self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
-        context_count = config.get("parallel_decompressers_count", 5)
-        thread_count = config.get("decompresser_thread_count", 0)
+        context_count = config.get("parallel_decompressor_count", 5)
+        thread_count = config.get("decompressor_thread_count", 0)
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2
         disable_cpu_affinity = config.get("disable_cpu_affinity", False)
@@ -92,7 +92,7 @@ class Harvester:
         enforce_gpu_index = config.get("enforce_gpu_index", False)
 
         try:
-            self.plot_manager.configure_decompresser(
+            self.plot_manager.configure_decompressor(
                 context_count,
                 thread_count,
                 disable_cpu_affinity,
@@ -102,7 +102,7 @@ class Harvester:
                 enforce_gpu_index,
             )
         except Exception as e:
-            self.log.error(f"{type(e)} {e} while configuring decompresser.")
+            self.log.error(f"{type(e)} {e} while configuring decompressor.")
             raise
 
     async def _start(self) -> None:

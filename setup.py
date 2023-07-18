@@ -12,10 +12,10 @@ dependencies = [
     "boto3==1.26.161",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.9",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
-    "chiapos==2.0.0b3",  # proof of space
+    "chiapos==2.0.0b4",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.8",
+    "chia_rs==0.2.9",
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.4",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
@@ -82,7 +82,7 @@ kwargs = dict(
     description="Chia blockchain full node, farmer, timelord, and wallet.",
     url="https://chia.net/",
     license="Apache License",
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8.1, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
     extras_require=dict(

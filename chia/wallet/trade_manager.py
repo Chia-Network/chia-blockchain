@@ -24,7 +24,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import OFFER_MOD_OLD_HASH, NotarizedPayment, Offer
+from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -480,7 +480,6 @@ class TradeManager:
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
-        old: bool = False,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -567,7 +566,7 @@ class TradeManager:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints, driver_dict, tx_config, solver, fee, old
+                offer_dict_no_ints, driver_dict, tx_config, solver, fee
             )
 
             if potential_special_offer is not None:
@@ -577,7 +576,7 @@ class TradeManager:
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 requested_payments, all_coins
             )
-            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict, old)
+            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
 
             all_transactions: List[TransactionRecord] = []
             fee_left_to_pay: uint64 = fee
@@ -593,7 +592,7 @@ class TradeManager:
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     tx = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
-                        OFFER_MOD_OLD_HASH if old else Offer.ph(),
+                        Offer.ph(),
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
@@ -607,7 +606,7 @@ class TradeManager:
                     txs = await wallet.generate_signed_transaction(
                         # [abs(offer_dict[id])],
                         amounts,
-                        [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
@@ -618,7 +617,7 @@ class TradeManager:
                     # ATTENTION: new_wallets
                     txs = await wallet.generate_signed_transaction(
                         [abs(offer_dict[id])],
-                        [OFFER_MOD_OLD_HASH if old else Offer.ph()],
+                        [Offer.ph()],
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
@@ -632,7 +631,7 @@ class TradeManager:
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
             )
 
-            offer = Offer(notarized_payments, total_spend_bundle, driver_dict, old)
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 
         except Exception as e:
@@ -791,7 +790,6 @@ class TradeManager:
             offer.driver_dict,
             solver,
             fee=fee,
-            old=offer.old,
         )
         if not result[0] or result[1] is None:
             raise ValueError(result[2])
@@ -854,7 +852,6 @@ class TradeManager:
         tx_config: TXConfig,
         solver: Solver,
         fee: uint64 = uint64(0),
-        old: bool = False,
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
             if (
@@ -864,7 +861,7 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee, old
+                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee
                 )
             elif (
                 puzzle_info.check_type(
@@ -876,7 +873,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee, old
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee
                 )
         return None
 

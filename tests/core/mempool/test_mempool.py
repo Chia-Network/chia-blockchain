@@ -2570,6 +2570,8 @@ class TestPkmPairs:
     h2 = bytes32(b"b" * 32)
     h3 = bytes32(b"c" * 32)
     h4 = bytes32(b"d" * 32)
+    h5 = bytes32(b"e" * 32)
+    h6 = bytes32(b"f" * 32)
 
     pk1 = G1Element.generator()
     pk2 = G1Element.generator()
@@ -2582,7 +2584,29 @@ class TestPkmPairs:
 
     def test_no_agg_sigs(self):
         # one create coin: h1 amount: 1 and not hint
-        spends = [Spend(self.h3, self.h4, None, None, None, None, None, None, [(self.h1, 1, b"")], [], 0)]
+        spends = [
+            Spend(
+                self.h3,
+                self.h5,
+                self.h4,
+                123,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                [(self.h1, 1, b"")],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                0,
+            )
+        ]
         conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
@@ -2592,7 +2616,9 @@ class TestPkmPairs:
         spends = [
             Spend(
                 self.h1,
+                self.h6,
                 self.h2,
+                123,
                 None,
                 None,
                 None,
@@ -2601,6 +2627,12 @@ class TestPkmPairs:
                 None,
                 [],
                 [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
                 0,
             )
         ]
@@ -2618,7 +2650,29 @@ class TestPkmPairs:
         assert msgs == [b"msg1", b"msg2"]
 
     def test_agg_sig_mixed(self):
-        spends = [Spend(self.h1, self.h2, None, None, None, None, None, None, [], [(bytes48(self.pk1), b"msg1")], 0)]
+        spends = [
+            Spend(
+                self.h1,
+                self.h5,
+                self.h2,
+                123,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                [],
+                [(bytes48(self.pk1), b"msg1")],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                0,
+            )
+        ]
         conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0, 0, 0)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]

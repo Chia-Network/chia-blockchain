@@ -34,6 +34,7 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
+from tests.conftest import Mode
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
@@ -54,7 +55,10 @@ log = getLogger(__name__)
 
 class TestWalletSync:
     @pytest.mark.asyncio
-    async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks):
+    async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks, consensus_mode: Mode):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
@@ -155,7 +159,10 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname, consensus_mode: Mode):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -206,8 +213,13 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
+    async def test_almost_recent(
+        self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants, consensus_mode: Mode
+    ):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -288,7 +300,12 @@ class TestWalletSync:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
+    async def test_long_sync_wallet(
+        self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname, consensus_mode: Mode
+    ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -335,7 +352,10 @@ class TestWalletSync:
             )
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname, consensus_mode: Mode):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         num_blocks = 5
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -391,7 +411,12 @@ class TestWalletSync:
             await time_out_assert(60, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_wallet_reorg_get_coinbase(
+        self, two_wallet_nodes, default_400_blocks, self_hostname, consensus_mode: Mode
+    ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -1318,7 +1343,12 @@ class TestWalletSync:
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
     @pytest.mark.asyncio
-    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
+    async def test_bad_peak_mismatch(
+        self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants, consensus_mode
+    ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("only run in PLAIN mode to save time")
+
         full_nodes, wallets, bt = two_wallet_nodes
         wallet_node, wallet_server = wallets[0]
         full_node_api = full_nodes[0]
@@ -1372,8 +1402,11 @@ class TestWalletSync:
 
 @pytest.mark.asyncio
 async def test_long_sync_untrusted_break(
-    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
+    setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog, consensus_mode: Mode
 ):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("only run in PLAIN mode to save time")
+
     full_nodes, [(wallet_node, wallet_server)], bt = setup_two_nodes_and_wallet
     trusted_full_node_api = full_nodes[0]
     trusted_full_node_server = trusted_full_node_api.full_node.server
