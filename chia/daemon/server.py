@@ -416,7 +416,7 @@ class WebSocketServer:
             "get_plotters": self.get_plotters,
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
-            "get_keys_for_plot": self.get_keys_for_plot,
+            "get_keys_for_plotting": self.get_keys_for_plotting,
         }
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -628,7 +628,7 @@ class WebSocketServer:
         response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
         return response
 
-    async def get_keys_for_plot(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         fingerprints = request.get("fingerprints", None)
         keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
         if len(missing_fingerprints) > 0:
