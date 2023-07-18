@@ -245,6 +245,7 @@ class TradeManager:
                 if not secure:
                     self.wallet_state_manager.state_changed("offer_cancelled")
                     await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
+                    continue
 
                 cancellation_additions: List[Coin] = []
                 for coin in Offer.from_bytes(trade.offer).get_cancellation_coins():
