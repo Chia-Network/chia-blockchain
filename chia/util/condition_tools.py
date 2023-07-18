@@ -105,7 +105,7 @@ def make_aggsig_final_message(
     elif opcode == ConditionOpcode.AGG_SIG_ME:
         addendum = coin_id
     else:
-        raise ValueError(f"Expected an AGG_SIG opcode, got {opcode}")
+        raise ValueError("Unexpected opcode")
 
     return msg + addendum + agg_sig_additional_data[opcode]
 
