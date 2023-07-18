@@ -18,6 +18,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
+from blspy import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -36,13 +37,18 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, passphrase_requirements, supports_os_passphrase_storage
+from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
-from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_unhardened,
+)
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -114,6 +120,27 @@ async def ping() -> Dict[str, Any]:
 class Command(Protocol):
     async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         ...
+
+
+def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
+    all_keys = Keychain().get_keys(include_secrets=True)
+    missing_fingerprints = set()
+
+    # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
+    if fingerprints is None:
+        keys = all_keys
+    else:
+        if not isinstance(fingerprints, list):
+            raise ValueError("fingerprints must be a list of integer")
+        keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
+        keys = []
+        for fingerprint in fingerprints:
+            f = uint32(fingerprint)
+            if f not in keys_by_fingerprint:
+                missing_fingerprints.add(f)
+            else:
+                keys.append(keys_by_fingerprint[f])
+    return keys, missing_fingerprints
 
 
 class WebSocketServer:
@@ -394,6 +421,7 @@ class WebSocketServer:
             "get_plotters": self.get_plotters,
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
+            "get_keys_for_plotting": self.get_keys_for_plotting,
         }
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -567,27 +595,14 @@ class WebSocketServer:
         return response
 
     async def get_wallet_addresses(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        all_keys = Keychain().get_keys(include_secrets=True)
         fingerprints = request.get("fingerprints", None)
+        keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
+        if len(missing_fingerprints) > 0:
+            return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
+
         index = request.get("index", 0)
         count = request.get("count", 1)
         non_observer_derivation = request.get("non_observer_derivation", False)
-
-        # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
-        if fingerprints is None:
-            keys = all_keys
-        else:
-            keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
-            keys = []
-            missing_fingerprints = set()
-            for fingerprint in fingerprints:
-                if fingerprint not in keys_by_fingerprint:
-                    missing_fingerprints.add(fingerprint)
-                else:
-                    keys.append(keys_by_fingerprint[fingerprint])
-
-            if len(keys) != len(fingerprints):
-                return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
 
         selected = self.net_config["selected_network"]
         prefix = self.net_config["network_overrides"]["config"][selected]["address_prefix"]
@@ -616,6 +631,27 @@ class WebSocketServer:
             wallet_addresses_by_fingerprint[key.fingerprint] = address_entries
 
         response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
+        return response
+
+    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        fingerprints = request.get("fingerprints", None)
+        keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
+        if len(missing_fingerprints) > 0:
+            return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
+
+        keys_for_plot: Dict[uint32, Any] = {}
+        for key in keys:
+            sk = key.private_key
+            farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
+            pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
+            keys_for_plot[key.fingerprint] = {
+                "farmer_public_key": bytes(farmer_public_key).hex(),
+                "pool_public_key": bytes(pool_public_key).hex(),
+            }
+        response: Dict[str, Any] = {
+            "success": True,
+            "keys": keys_for_plot,
+        }
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
