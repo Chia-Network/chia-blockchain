@@ -599,6 +599,25 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester_simulator_wallet(
+    tmp_path: Path,
+) -> AsyncIterator[
+    Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Service[FullNode, FullNodeSimulator],
+        Service[WalletNode, WalletNodeAPI],
+        BlockTools,
+    ]
+]:
+    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, {}):
+        nodes, wallets, bt = sim_and_wallet
+        async for farmer_harvester in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+            harvester_services, farmer_service, _ = farmer_harvester
+            yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
+
+
+@pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
     async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _

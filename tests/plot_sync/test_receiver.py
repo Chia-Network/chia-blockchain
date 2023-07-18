@@ -10,6 +10,7 @@ from typing import Any, Callable, List, Tuple, Type, Union
 import pytest
 from blspy import G1Element
 
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
@@ -41,6 +42,8 @@ def assert_default_values(receiver: Receiver) -> None:
     assert receiver.invalid() == []
     assert receiver.keys_missing() == []
     assert receiver.duplicates() == []
+    assert receiver.total_plot_size() == 0
+    assert receiver.total_effective_plot_size() == 0
 
 
 async def dummy_callback(_: bytes32, __: Delta) -> None:
@@ -180,8 +183,10 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
 
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
-    receiver._total_plot_size = sum(plot.file_size for plot in receiver._plots.values())
-
+    receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
+    receiver._total_effective_plot_size = int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+    )
     sync_steps: List[SyncStepData] = [
         SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
         SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
@@ -243,6 +248,9 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    assert plot_sync_dict_1["total_effective_plot_size"] == int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+    )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
@@ -286,6 +294,9 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    assert plot_sync_dict_3["total_effective_plot_size"] == int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
+    )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
 
