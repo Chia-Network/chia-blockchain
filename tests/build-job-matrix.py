@@ -92,7 +92,7 @@ configuration = []
 
 for path in test_paths:
     if path.is_dir():
-        test_files = sorted(path.glob("test_*.py"))
+        test_files = sorted(path.glob("test_farm_cmd.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
     else:

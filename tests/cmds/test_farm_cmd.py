@@ -52,7 +52,11 @@ async def test_farm_summary_command(
     wallet_rpc_port = wallet_service.rpc_server.webserver.listen_port
     farmer_rpc_port = farmer_service.rpc_server.webserver.listen_port
 
+    print(f"ports: {full_node_rpc_port}, {wallet_rpc_port}, {farmer_rpc_port}")
+
     await summary(full_node_rpc_port, wallet_rpc_port, None, farmer_rpc_port, bt.root_path)
+
+    print("chia farm summary done")
 
     captured = capsys.readouterr()
     match = re.search(r"^.+(Farming status:.+)$", captured.out, re.DOTALL)
