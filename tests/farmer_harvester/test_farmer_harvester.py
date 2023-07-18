@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from math import floor
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
 from blspy import G1Element
@@ -214,16 +214,14 @@ async def test_missing_signage_point(
 
     original_state_changed_callback = farmer.state_changed_callback
     assert original_state_changed_callback is not None
-    missing_sps: Optional[Tuple[uint64, uint32]] = None
+    number_of_missing_sps: uint32 = uint32(0)
 
     def state_changed(change: str, data: Dict[str, Any]) -> None:
-        nonlocal missing_sps
-        missing_sps = data["missing_signage_points"]
+        nonlocal number_of_missing_sps
+        number_of_missing_sps = data["missing_signage_points"][1]
         original_state_changed_callback(change, data)
 
     farmer.state_changed_callback = state_changed  # type: ignore
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
     await farmer_api.new_signage_point(sp_for_farmer_api)
-    assert missing_sps is not None
-    _, number_of_missing_sps = missing_sps  # type: ignore
     assert number_of_missing_sps == uint32(1)
