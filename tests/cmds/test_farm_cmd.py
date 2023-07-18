@@ -47,6 +47,8 @@ async def test_farm_summary_command(
     # And wait until the first sync from the harvester to the farmer is done
     await time_out_assert(20, receiver.initial_sync, False)
 
+    print("initial sync is OK")
+
     assert full_node_service.rpc_server and full_node_service.rpc_server.webserver
     assert wallet_service.rpc_server and wallet_service.rpc_server.webserver
     assert farmer_service.rpc_server and farmer_service.rpc_server.webserver
