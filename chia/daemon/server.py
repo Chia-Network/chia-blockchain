@@ -831,28 +831,52 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         plot_type = request["plot_type"]
-        assert plot_type == "ramplot" or plot_type == "diskplot"
+        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+            raise ValueError(f"Unknown plot_type: {plot_type}")
 
         command_args: List[str] = []
 
-        if plot_type == "ramplot":
-            w = request.get("w", False)  # Warm start
-            m = request.get("m", False)  # Disable NUMA
-            no_cpu_affinity = request.get("no_cpu_affinity", False)
-
-            if w is True:
-                command_args.append("--warmstart")
-            if m is True:
-                command_args.append("--nonuma")
-            if no_cpu_affinity is True:
-                command_args.append("--no-cpu-affinity")
-
-            return command_args
-
-        # if plot_type == "diskplot"
+        # Common options among diskplot, ramplot, cudaplot
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
         no_cpu_affinity = request.get("no_cpu_affinity", False)
+        compress = request.get("compress", None)  # Compression level
+
+        if w is True:
+            command_args.append("--warmstart")
+        if m is True:
+            command_args.append("--nonuma")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+        if compress is not None and str(compress).isdigit():
+            command_args.append("--compress")
+            command_args.append(str(compress))
+
+        # ramplot don't accept any more options
+        if plot_type == "ramplot":
+            return command_args
+
+        # Options only applicable for cudaplot
+        if plot_type == "cudaplot":
+            device_index = request.get("device", None)
+            no_direct_downloads = request.get("no_direct_downloads", False)
+            t1 = request.get("t", None)  # Temp directory
+            t2 = request.get("t2", None)  # Temp2 directory
+
+            if device_index is not None and str(device_index).isdigit():
+                command_args.append("--device")
+                command_args.append(str(device_index))
+            if no_direct_downloads:
+                command_args.append("--no-direct-downloads")
+            if t1 is not None:
+                command_args.append("-t")
+                command_args.append(t1)
+            if t2 is not None:
+                command_args.append("-2")
+                command_args.append(t2)
+            return command_args
+
+        # if plot_type == "diskplot"
         # memo = request["memo"]
         t1 = request["t"]  # Temp directory
         t2 = request.get("t2")  # Temp2 directory
@@ -867,44 +891,37 @@ class WebSocketServer:
         no_t1_direct = request.get("no_t1_direct", False)
         no_t2_direct = request.get("no_t2_direct", False)
 
-        if w is True:
-            command_args.append("--warmstart")
-        if m is True:
-            command_args.append("--nonuma")
-        if no_cpu_affinity is True:
-            command_args.append("--no-cpu-affinity")
-
         command_args.append("-t")
         command_args.append(t1)
-        if t2:
+        if t2 is not None:
             command_args.append("-2")
             command_args.append(t2)
-        if u:
+        if u is not None:
             command_args.append("-u")
             command_args.append(str(u))
-        if cache:
+        if cache is not None:
             command_args.append("--cache")
             command_args.append(str(cache))
-        if f1_threads:
+        if f1_threads is not None:
             command_args.append("--f1-threads")
             command_args.append(str(f1_threads))
-        if fp_threads:
+        if fp_threads is not None:
             command_args.append("--fp-threads")
             command_args.append(str(fp_threads))
-        if c_threads:
+        if c_threads is not None:
             command_args.append("--c-threads")
             command_args.append(str(c_threads))
-        if p2_threads:
+        if p2_threads is not None:
             command_args.append("--p2-threads")
             command_args.append(str(p2_threads))
-        if p3_threads:
+        if p3_threads is not None:
             command_args.append("--p3-threads")
             command_args.append(str(p3_threads))
-        if alternate:
+        if alternate is not None:
             command_args.append("--alternate")
-        if no_t1_direct:
+        if no_t1_direct is not None:
             command_args.append("--no-t1-direct")
-        if no_t2_direct:
+        if no_t2_direct is not None:
             command_args.append("--no-t2-direct")
 
         return command_args
@@ -943,7 +960,7 @@ class WebSocketServer:
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type == "diskplot" or plot_type == "ramplot"
+            assert plot_type == "diskplot" or plot_type == "ramplot" or plot_type == "cudaplot"
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))
