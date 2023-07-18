@@ -154,11 +154,9 @@ seeder:
   minimum_version_count: 100
   domain_name: "seeder.example.com."
   nameserver: "example.com."
-  # Optional secondary nameserver
-  nameserver2: None
   ttl: 300
   soa:
-    rname: "admin@example.com"
+    rname: "hostmaster.example.com" # all @ symbols need to be replaced with . in dns records.
     serial_number: 1619105223
     refresh: 10800
     retry: 10800

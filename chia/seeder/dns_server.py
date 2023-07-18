@@ -7,6 +7,7 @@ import traceback
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address
+from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
@@ -15,7 +16,7 @@ from dnslib import AAAA, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, 
 
 from chia.seeder.crawl_store import CrawlStore
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 
@@ -60,6 +61,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         self.transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
+        log.debug(f"Received UDP DNS request from {addr}.")
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
@@ -82,6 +84,112 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         await self.data_queue.put((r_data, caller))
 
 
+@dataclass
+class TCPDNSServerProtocol(asyncio.BufferedProtocol):
+    """
+    This TCP server is a little more complicated, because we need to handle the length field, however it still
+    converts all requests to DNSRecord objects and passes them to the callback, after receiving the full message.
+    """
+
+    callback: DnsCallback
+    transport: asyncio.Transport = field(init=False)
+    peer_info: str = field(init=False, default="")
+    expected_length: int = 0
+    buffer: bytearray = field(init=False, default=bytearray(2))
+    futures: List[asyncio.Future[None]] = field(init=False, default_factory=list)
+
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
+        self.transport = transport  # type: ignore[assignment]
+        peer_info = self.transport.get_extra_info("peername")
+        self.peer_info = f"{peer_info[0]}:{peer_info[1]}"
+        log.debug(f"TCP connection established with {self.peer_info}.")
+
+    def connection_lost(self, exc: Optional[Exception]) -> None:
+        if exc is not None:
+            log.debug(f"TCP DNS connection lost with {self.peer_info}. Exception: {exc}.")
+        else:
+            log.debug(f"TCP DNS connection closed with {self.peer_info}.")
+        # reset the state of the protocol.
+        for future in self.futures:
+            future.cancel()
+        self.futures = []
+        self.buffer = bytearray(2)
+        self.expected_length = 0
+
+    def get_buffer(self, sizehint: int) -> memoryview:
+        """
+        This is the first function called after connection_made, it returns a buffer that the tcp server will write to.
+        Once a buffer is written to, buffer_updated is called.
+        """
+        return memoryview(self.buffer)
+
+    def buffer_updated(self, nbytes: int) -> None:
+        """
+        This is called whenever the buffer is written to, and it loops through the buffer, grouping them into messages
+        and then dns records.
+        """
+        while not len(self.buffer) == 0:
+            if not self.expected_length:
+                # Length field received (This is the first part of the message)
+                self.expected_length = int.from_bytes(self.buffer, byteorder="big")
+                self.buffer = self.buffer[2:]  # Remove the length field from the buffer.
+
+            if len(self.buffer) >= self.expected_length:
+                # This is the rest of the message (after the length field)
+                message = self.buffer[: self.expected_length]
+                self.buffer = self.buffer[self.expected_length :]  # Remove the message from the buffer
+                self.expected_length = 0  # Reset the expected length
+
+                dns_request: Optional[DNSRecord] = parse_dns_request(message)
+                if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
+                    self.transport.close()
+                    return
+                self.futures.append(asyncio.ensure_future(self.handle_and_respond(dns_request)))
+
+        self.buffer = bytearray(2 if self.expected_length == 0 else self.expected_length)  # Reset the buffer if empty.
+
+    def eof_received(self) -> Optional[bool]:
+        """
+        This is called when the client closes the connection, False or None means we close the connection.
+        True means we keep the connection open.
+        """
+        if len(self.futures) > 0:  # Successful requests
+            if self.expected_length != 0:  # Incomplete requests
+                log.warning(
+                    f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}"
+                )
+            asyncio.ensure_future(self.wait_for_futures())
+            return True  # Keep connection open, until the futures are done.
+        log.warning(f"Received early EOF from {self.peer_info}")
+        return False
+
+    async def wait_for_futures(self) -> None:
+        """
+        Waits for all the futures to complete, and then closes the connection.
+        """
+        await asyncio.gather(*self.futures)
+        self.transport.close()
+
+    async def handle_and_respond(self, data: DNSRecord) -> None:
+        r_data = await get_dns_reply(self.callback, data)  # process the request, returning a DNSRecord response.
+        try:
+            if not self.transport.is_closing():  # If the client closed the connection, we don't want to send anything.
+                self.transport.write(dns_response_to_tcp(r_data))  # send data back to the client
+            log.debug(f"Sent DNS response for {data.q.qname}, to {self.peer_info}.")
+        except Exception as e:
+            log.error(f"Exception while responding to TCP DNS request: {e}. Traceback: {traceback.format_exc()}.")
+
+
+def dns_response_to_tcp(data: DNSRecord) -> bytes:
+    """
+    Converts a DNSRecord response to a TCP DNS response, by adding a 2 byte length field to the start.
+    """
+    dns_response = data.pack()
+    dns_response_length = len(dns_response).to_bytes(2, byteorder="big")
+    return bytes(dns_response_length + dns_response)
+
+
 def create_dns_reply(dns_request: DNSRecord) -> DNSRecord:
     """
     Creates a DNS response with the correct header and section flags set.
@@ -98,7 +206,7 @@ def parse_dns_request(data: bytes) -> Optional[DNSRecord]:
     try:
         dns_request = DNSRecord.parse(data)
     except DNSError as e:
-        log.warning(f"Received invalid DNS request: {e}")
+        log.warning(f"Received invalid DNS request: {e}. Traceback: {traceback.format_exc()}.")
     return dns_request
 
 
@@ -127,11 +235,11 @@ class DNSServer:
     reliable_task: asyncio.Task[None] = field(init=False)
     udp_transport: asyncio.DatagramTransport = field(init=False)
     udp_protocol: UDPDNSServerProtocol = field(init=False)
+    tcp_server: asyncio.Server = field(init=False)
     dns_port: int = field(init=False)
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
     ns1: DomainName = field(init=False)
-    ns2: Optional[DomainName] = field(init=False)
     ns_records: List[RR] = field(init=False)
     ttl: int = field(init=False)
     soa_record: RR = field(init=False)
@@ -152,11 +260,10 @@ class DNSServer:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         # DNS info
         self.domain: DomainName = DomainName(self.config["domain_name"])
+        if not self.domain.endswith("."):
+            self.domain = DomainName(self.domain + ".")  # Make sure the domain ends with a period, as per RFC 1035.
         self.ns1: DomainName = DomainName(self.config["nameserver"])
-        self.ns2: Optional[DomainName] = (
-            DomainName(self.config["nameserver2"]) if self.config.get("nameserver2") else None
-        )
-        self.ns_records: List[NS] = [NS(self.ns1), NS(self.ns2)] if self.ns2 else [NS(self.ns1)]
+        self.ns_records: List[NS] = [NS(self.ns1)]
         self.ttl: int = self.config["ttl"]
         self.soa_record: SOA = SOA(
             mname=self.ns1,  # primary name server
@@ -172,6 +279,7 @@ class DNSServer:
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
+        log.info("Starting DNS server.")
         await self.setup_signal_handlers()
         self.db_connection = await aiosqlite.connect(self.db_path, timeout=60)
         self.crawl_store = CrawlStore(self.db_connection)
@@ -182,7 +290,13 @@ class DNSServer:
         self.udp_transport, self.udp_protocol = await loop.create_datagram_endpoint(
             lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
         )
+        # one protocol instance will be created to serve all TCP client requests.
+        self.tcp_server = await loop.create_server(
+            lambda: TCPDNSServerProtocol(self.dns_response), "::0", self.dns_port
+        )
+
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
+        log.info("DNS server started.")
         try:
             yield
         finally:  # catches any errors and properly shuts down the server
@@ -204,8 +318,10 @@ class DNSServer:
     async def stop(self) -> None:
         log.info("Stopping DNS server...")
         self.udp_transport.close()  # stop accepting new requests
+        self.tcp_server.close()  # stop accepting new requests
         self.reliable_task.cancel()  # cancel the peer update task
         await self.db_connection.close()
+        await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish
         self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
@@ -239,7 +355,7 @@ class DNSServer:
                             log.error(f"Invalid peer: {peer}")
                             continue
                         self.reliable_peers_v6.append(ipv6_peer)
-                log.error(
+                log.info(
                     f"Number of reliable peers discovered in dns server:"
                     f" IPv4 count - {len(self.reliable_peers_v4)}"
                     f" IPv6 count - {len(self.reliable_peers_v6)}"
@@ -277,12 +393,22 @@ class DNSServer:
         It does not catch any errors as it is called from within a try-except block.
         """
         reply = create_dns_reply(request)
+        dns_question: DNSQuestion = request.q  # this is the question / request
+        question_type: int = dns_question.qtype  # the type of the record being requested
+        qname = dns_question.qname  # the name being queried / requested
+        # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
+        # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
+        qname_str = str(qname).lower()
+        if qname_str != self.domain and not qname_str.endswith("." + self.domain):
+            # we don't answer for other domains (we have the not recursive bit set)
+            log.warning(f"Invalid request for {qname_str}, returning REFUSED.")
+            reply.header.rcode = RCODE.REFUSED
+            return reply
+
         ttl: int = self.ttl
         ips: List[RD] = []
         ipv4_count = 0
         ipv6_count = 0
-        dns_question: DNSQuestion = request.q  # this is the question / request
-        question_type: int = dns_question.qtype  # the type of the record being requested
         if question_type is QTYPE.A:
             ipv4_count = 32
         elif question_type is QTYPE.AAAA:
@@ -297,34 +423,25 @@ class DNSServer:
             log.error("No peers found, returning SOA and NS records only.")
             ttl = 60  # 1 minute as we should have some peers very soon
         # we always return the SOA and NS records, so we continue even if there are no peers
-        ips.extend([A(peer) for peer in peers.ipv4])
-        ips.extend([AAAA(peer) for peer in peers.ipv6])
+        ips.extend([A(str(peer)) for peer in peers.ipv4])
+        ips.extend([AAAA(str(peer)) for peer in peers.ipv6])
 
         records: Dict[DomainName, List[RD]] = {  # this is where we can add other records we want to serve
             self.domain: ips,
         }
 
-        qname = dns_question.qname  # the name being queried / requested
-        # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
-        # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
-        qname_str = str(qname).lower()
-        if qname_str == self.domain or qname_str.endswith("." + self.domain):  # if the seeder domain
-            for domain_name, domain_responses in records.items():
-                if domain_name == qname_str:  # if the dns name is the same as the requested name
-                    for response in domain_responses:
-                        rqt: int = getattr(QTYPE, response.__class__.__name__)
-                        if question_type == rqt or (
-                            question_type == RCODE.ANY and (rqt == RCODE.A or rqt == RCODE.AAAA)
-                        ):
-                            reply.add_answer(RR(rname=qname, rtype=rqt, rclass=1, ttl=ttl, rdata=response))
-            if len(reply.rr) == 0:  # if we didn't find any records to return
-                reply.header.rcode = RCODE.NXDOMAIN
-            # always put nameservers and the SOA records
-            for nameserver in self.ns_records:
-                reply.add_auth(RR(rname=self.domain, rtype=QTYPE.NS, rclass=1, ttl=ttl, rdata=nameserver))
-            reply.add_auth(RR(rname=self.domain, rtype=QTYPE.SOA, rclass=1, ttl=ttl, rdata=self.soa_record))
-        else:  # we don't answer for other domains (we have the not recursive bit set)
-            reply.header.rcode = RCODE.REFUSED
+        for domain_name, domain_responses in records.items():
+            if domain_name == qname_str:  # if the dns name is the same as the requested name
+                for response in domain_responses:
+                    rqt: int = getattr(QTYPE, response.__class__.__name__)
+                    if question_type == rqt or (question_type == QTYPE.ANY and (rqt == QTYPE.A or rqt == QTYPE.AAAA)):
+                        reply.add_answer(RR(rname=qname, rtype=rqt, rclass=1, ttl=ttl, rdata=response))
+        if len(reply.rr) == 0:  # if we didn't find any records to return
+            reply.header.rcode = RCODE.NXDOMAIN
+        # always put nameservers and the SOA records
+        for nameserver in self.ns_records:
+            reply.add_auth(RR(rname=self.domain, rtype=QTYPE.NS, rclass=1, ttl=ttl, rdata=nameserver))
+        reply.add_auth(RR(rname=self.domain, rtype=QTYPE.SOA, rclass=1, ttl=ttl, rdata=self.soa_record))
         return reply
 
 
@@ -338,10 +455,14 @@ def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSSer
 
 
 def main() -> None:
+    freeze_support()
     root_path = DEFAULT_ROOT_PATH
-    config = load_config(root_path, "config.yaml", SERVICE_NAME)
+    # TODO: refactor to avoid the double load
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    dns_server = create_dns_server_service(config, root_path)
+    dns_server = create_dns_server_service(service_config, root_path)
     asyncio.run(run_dns_server(dns_server))
 
 
