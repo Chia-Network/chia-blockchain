@@ -123,33 +123,19 @@ def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tupl
                 raise ConsensusError(Err.INVALID_CONDITION)
 
     for spend in conditions.spends:
-        for pk, msg in spend.agg_sig_parent:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_puzzle:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PUZZLE, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_amount:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_AMOUNT, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_puzzle_amount:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_parent_amount:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT_AMOUNT, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_parent_puzzle:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_PARENT_PUZZLE, msg, spend, data))
-
-        for pk, msg in spend.agg_sig_me:
-            ret[0].append(bytes48(pk))
-            ret[1].append(make_aggsig_final_message(ConditionOpcode.AGG_SIG_ME, msg, spend, data))
+        condition_items_pairs = [
+            (ConditionOpcode.AGG_SIG_PARENT, spend.agg_sig_parent),
+            (ConditionOpcode.AGG_SIG_PUZZLE, spend.agg_sig_puzzle),
+            (ConditionOpcode.AGG_SIG_AMOUNT, spend.agg_sig_amount),
+            (ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, spend.agg_sig_puzzle_amount),
+            (ConditionOpcode.AGG_SIG_PARENT_AMOUNT, spend.agg_sig_parent_amount),
+            (ConditionOpcode.AGG_SIG_PARENT_PUZZLE, spend.agg_sig_parent_puzzle),
+            (ConditionOpcode.AGG_SIG_ME, spend.agg_sig_me),
+        ]
+        for condition, items in condition_items_pairs:
+            for pk, msg in items:
+                ret[0].append(bytes48(pk))
+                ret[1].append(make_aggsig_final_message(condition, msg, spend, data))
 
     return ret
 
