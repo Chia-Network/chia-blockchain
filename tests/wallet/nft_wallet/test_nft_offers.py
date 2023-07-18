@@ -320,7 +320,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     cancel_fee = uint64(10)
 
-    txs = await trade_manager_maker.cancel_pending_offer([trade_make.trade_id], fee=cancel_fee, secure=True)
+    txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=cancel_fee, secure=True)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node_api.process_transaction_records(records=txs)

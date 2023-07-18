@@ -641,7 +641,7 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        txs = await trade_manager_maker.cancel_pending_offer([trade_make.trade_id], fee=uint64(0), secure=True)
+        txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=uint64(0), secure=True)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
