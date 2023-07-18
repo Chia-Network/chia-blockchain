@@ -225,5 +225,5 @@ async def test_missing_signage_point(
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
     await farmer_api.new_signage_point(sp_for_farmer_api)
     assert missing_sps is not None
-    _, number_of_missing_sps = missing_sps
+    _, number_of_missing_sps = missing_sps  # type: ignore
     assert number_of_missing_sps == uint32(1)
