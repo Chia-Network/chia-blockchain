@@ -36,9 +36,7 @@ async def get_harvester_config(harvester_rpc_port: Optional[int], root_path: Pat
         return await harvester_client.get_harvester_config()
 
 
-async def update_harvester_config(
-    harvester_rpc_port: Optional[int], root_path: Path, config: Dict[str, Any]
-) -> bool:
+async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: Path, config: Dict[str, Any]) -> bool:
     async with get_any_service_client(HarvesterRpcClient, harvester_rpc_port, root_path) as (harvester_client, _):
         return await harvester_client.update_harvester_config(config)
 
