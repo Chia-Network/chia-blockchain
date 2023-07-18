@@ -93,10 +93,12 @@ configuration = []
 for path in test_paths:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
-        test_file_paths = [file.relative_to(project_root_path) for file in test_files if file.name.endswith("test_farm_cmd.py")]
+        test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
     else:
         paths_for_cli = path.relative_to(project_root_path).as_posix()
+
+
 
     conf = update_config(module_dict(testconfig), dir_config(path))
 
@@ -120,7 +122,8 @@ for path in test_paths:
         "legacy_keyring_required": conf.get("legacy_keyring_required", False),
     }
     for_matrix = dict(sorted(for_matrix.items()))
-    configuration.append(for_matrix)
+    if for_matrix["name"] == "cmds" and paths_for_cli.endswith("test_farm_cmd.py"):
+        configuration.append(for_matrix)
 
 
 configuration_json = json.dumps(configuration)
