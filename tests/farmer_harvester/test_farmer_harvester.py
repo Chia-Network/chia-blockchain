@@ -158,12 +158,12 @@ async def test_farmer_respond_signatures(
 @pytest.mark.asyncio
 async def test_missing_signage_point(
     farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
-):
+) -> None:
     _, farmer_service, bt = farmer_one_harvester
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
 
-    def create_sp(index: int, challenge_hash: bytes32):
+    def create_sp(index: int, challenge_hash: bytes32) -> Tuple[uint64, farmer_protocol.NewSignagePoint]:
         time = uint64(index + 1)
         sp = farmer_protocol.NewSignagePoint(
             challenge_hash, std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(index), uint32(1)
@@ -222,8 +222,8 @@ async def test_missing_signage_point(
         original_state_changed_callback(change, data)
 
     farmer.state_changed_callback = state_changed  # type: ignore
-    _, sp = create_sp(index=2, challenge_hash=std_hash(b"4"))
-    await farmer_api.new_signage_point(sp)
+    _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
+    await farmer_api.new_signage_point(sp_for_farmer_api)
     assert missing_sps is not None
     _, number_of_missing_sps = missing_sps
     assert number_of_missing_sps == uint32(1)
