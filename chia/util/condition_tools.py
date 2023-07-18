@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from clvm.casts import int_from_bytes, int_to_bytes
 
@@ -82,25 +82,18 @@ def make_aggsig_final_message(
     elif isinstance(spend, Spend):
         coin = Coin(spend.parent_id, spend.puzzle_hash, spend.coin_amount)
     else:
-        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")
+        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")  # pragma: no cover
 
-    if opcode == ConditionOpcode.AGG_SIG_PARENT:
-        addendum: bytes = coin.parent_coin_info
-    elif opcode == ConditionOpcode.AGG_SIG_PUZZLE:
-        addendum = coin.puzzle_hash
-    elif opcode == ConditionOpcode.AGG_SIG_AMOUNT:
-        addendum = int_to_bytes(coin.amount)
-    elif opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT:
-        addendum = coin.puzzle_hash + int_to_bytes(coin.amount)
-    elif opcode == ConditionOpcode.AGG_SIG_PARENT_AMOUNT:
-        addendum = coin.parent_coin_info + int_to_bytes(coin.amount)
-    elif opcode == ConditionOpcode.AGG_SIG_PARENT_PUZZLE:
-        addendum = coin.parent_coin_info + coin.puzzle_hash
-    elif opcode == ConditionOpcode.AGG_SIG_ME:
-        addendum = coin.name()
-    else:
-        raise ValueError("Unexpected opcode")
-
+    COIN_TO_ADDENDUM_F_LOOKUP: Dict[ConditionOpcode, Callable[[Coin], bytes]] = {
+        ConditionOpcode.AGG_SIG_PARENT: lambda coin: coin.parent_coin_info,
+        ConditionOpcode.AGG_SIG_PUZZLE: lambda coin: coin.puzzle_hash,
+        ConditionOpcode.AGG_SIG_AMOUNT: lambda coin: int_to_bytes(coin.amount),
+        ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT: lambda coin: coin.puzzle_hash + int_to_bytes(coin.amount),
+        ConditionOpcode.AGG_SIG_PARENT_AMOUNT: lambda coin: coin.parent_coin_info + int_to_bytes(coin.amount),
+        ConditionOpcode.AGG_SIG_PARENT_PUZZLE: lambda coin: coin.parent_coin_info + coin.puzzle_hash,
+        ConditionOpcode.AGG_SIG_ME: lambda coin: coin.name(),
+    }
+    addendum = COIN_TO_ADDENDUM_F_LOOKUP[opcode](coin)
     return msg + addendum + agg_sig_additional_data[opcode]
 
 

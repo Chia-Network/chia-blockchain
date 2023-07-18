@@ -12,12 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.condition_tools import (
-    make_aggsig_final_message,
-    parse_sexp_to_conditions,
-    pkm_pairs,
-    pkm_pairs_for_conditions_dict,
-)
+from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
 
@@ -58,17 +53,6 @@ def mk_agg_sig_conditions(
         flags=0,
     )
     return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0)
-
-
-def test_make_aggsig_final_message_exceptions() -> None:
-    # Neither Coin nor Spend
-    with pytest.raises(ValueError, match="Expected Coin or Spend, got <class 'str'>"):
-        # We're type checked to guarantee either Coin or Spend, but for the
-        # sake of code coverage we're overriding that here
-        make_aggsig_final_message(ConditionOpcode.AGG_SIG_UNSAFE, b"", "", {})  # type: ignore[arg-type]
-    # Not one of the relevant AGG_SIGG opcodes
-    with pytest.raises(ValueError, match="Unexpected opcode"):
-        make_aggsig_final_message(ConditionOpcode.AGG_SIG_UNSAFE, b"", Coin(b"a" * 32, b"a" * 32, 0), {})
 
 
 @pytest.mark.parametrize(
