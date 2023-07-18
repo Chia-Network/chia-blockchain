@@ -321,8 +321,20 @@ class WebSocketServer:
                     break
                 except Exception:
                     self.log.exception(f"Ping error to {service_name}")
-                    self.log.error(f"Ping failed, connection closed to {service_name}.")
-                    self.remove_connection(connection)
+                    service_names = self.remove_connection(connection)
+                    peername = None
+                    if connection._writer is not None:
+                        peername = connection._writer.transport.get_extra_info("peername")
+                    self.log.error(f"Ping failed, connection closed to {service_names} {peername}.")
+                    self.log.error(
+                        "Websocket Properties: "
+                        f"_closed: ({connection.closed}), "
+                        f"_close_code: ({connection.close_code}), "
+                        f"_exception: ({type(connection.exception()).__name__})"
+                    )
+                    ret = await connection.close()
+                    self.log.error(f"Close result: {ret}")
+
                     await connection.close()
         if restart is True:
             self.ping_job = asyncio.create_task(self.ping_task())
