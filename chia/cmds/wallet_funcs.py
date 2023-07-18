@@ -17,6 +17,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType
@@ -403,8 +404,9 @@ async def make_offer(
     requests: Sequence[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
 
         if offers == [] or requests == []:
@@ -683,8 +685,9 @@ async def take_offer(
     d_fee: Decimal,
     file: str,
     examine_only: bool,
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
             filepath = pathlib.Path(file)
             with open(filepath, "r") as ffile:
@@ -800,9 +803,14 @@ async def take_offer(
 
 
 async def cancel_offer(
-    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    d_fee: Decimal,
+    offer_id_hex: str,
+    secure: bool,
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         offer_id = bytes32.from_hexstr(offer_id_hex)
         fee: int = int(d_fee * units["chia"])
 
@@ -959,9 +967,14 @@ async def get_did_info(wallet_rpc_port: Optional[int], fp: Optional[int], coin_i
 
 
 async def update_did_metadata(
-    wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_id: int, metadata: str, reuse_puzhash: bool
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    did_wallet_id: int,
+    metadata: str,
+    reuse_puzhash: bool,
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.update_did_metadata(
                 did_wallet_id,
@@ -983,8 +996,9 @@ async def did_message_spend(
     did_wallet_id: int,
     puzzle_announcements: List[str],
     coin_announcements: List[str],
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.did_message_spend(
                 did_wallet_id,
@@ -1140,12 +1154,13 @@ async def add_uri_to_nft(
     wallet_id: int,
     d_fee: Decimal,
     nft_coin_id: str,
-    uri: str,
-    metadata_uri: str,
-    license_uri: str,
+    uri: Optional[str],
+    metadata_uri: Optional[str],
+    license_uri: Optional[str],
     reuse_puzhash: Optional[bool],
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         try:
             if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
                 raise ValueError("You must provide only one of the URI flags")
@@ -1267,8 +1282,9 @@ async def set_nft_did(
     nft_coin_id: str,
     did_id: str,
     reuse_puzhash: Optional[bool],
+    root_path: pathlib.Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp, root_path) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
         try:
             response = await wallet_client.set_nft_did(
