@@ -703,7 +703,10 @@ async def test_get_not_sent() -> None:
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [tr1, tr3, tr4])
 
-        # the 6th time we call this function, we don't get any unsent txs
+        not_sent = await store.get_not_sent()
+        assert cmp(not_sent, [tr1, tr3, tr4])
+
+        # the 7th time we call this function, we don't get any unsent txs
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [])
 

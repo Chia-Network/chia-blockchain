@@ -5,6 +5,7 @@ import logging
 import multiprocessing
 from collections import Counter
 from pathlib import Path
+from threading import Lock
 from time import sleep, time
 from typing import List, Optional
 
@@ -135,18 +136,12 @@ def check_plots(
 
     with plot_manager:
 
-        def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int) -> None:
+        def process_plot(plot_path: Path, plot_info: PlotInfo, num_start: int, num_end: int, lock: Lock) -> None:
             nonlocal total_good_plots
             nonlocal total_size
             nonlocal bad_plots_list
 
             pr = plot_info.prover
-            log.info(f"Testing plot {plot_path} k={pr.get_size()}")
-            if plot_info.pool_public_key is not None:
-                log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
-            if plot_info.pool_contract_puzzle_hash is not None:
-                pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
-                log.info(f"\t{'Pool contract address:':<23} {pca}")
 
             # Look up local_sk from plot to save locked memory
             (
@@ -155,8 +150,17 @@ def check_plots(
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())
             local_sk = master_sk_to_local_sk(local_master_sk)
-            log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-            log.info(f"\t{'Local sk:' :<23} {local_sk}")
+
+            with lock:
+                log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+                if plot_info.pool_public_key is not None:
+                    log.info(f"\t{'Pool public key:':<23} {plot_info.pool_public_key}")
+                if plot_info.pool_contract_puzzle_hash is not None:
+                    pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
+                    log.info(f"\t{'Pool contract address:':<23} {pca}")
+                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+
             total_proofs = 0
             caught_exception: bool = False
             for i in range(num_start, num_end):
@@ -235,9 +239,10 @@ def check_plots(
                 bad_plots_list.append(plot_path)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
+            logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():
-                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
+                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end, logger_lock))
 
             for future in concurrent.futures.as_completed(futures):
                 _ = future.result()

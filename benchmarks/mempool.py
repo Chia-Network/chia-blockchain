@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
-import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
@@ -32,9 +31,6 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     if not profile:
         yield
         return
-
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         yield
@@ -242,7 +238,29 @@ async def run_mempool_benchmark() -> None:
             npc_result = NPCResult(
                 None,
                 SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, None, None, None, None, None, [], [], 0)],
+                    [
+                        Spend(
+                            coin_id,
+                            bytes32(b" " * 32),
+                            bytes32(b" " * 32),
+                            123,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            0,
+                        )
+                    ],
                     0,
                     0,
                     0,
@@ -274,7 +292,29 @@ async def run_mempool_benchmark() -> None:
             npc_result = NPCResult(
                 None,
                 SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, None, None, None, None, None, [], [], 0)],
+                    [
+                        Spend(
+                            coin_id,
+                            bytes32(b" " * 32),
+                            bytes32(b" " * 32),
+                            123,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            0,
+                        )
+                    ],
                     0,
                     0,
                     0,

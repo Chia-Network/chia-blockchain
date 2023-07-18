@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import zlib
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
@@ -1674,14 +1675,12 @@ class WalletRpcApi:
 
     async def get_offer_summary(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
 
         ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s or old offers
         # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
         from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
@@ -1690,8 +1689,11 @@ class WalletRpcApi:
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
+        ###
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
         bundle = SpendBundle.from_bytes(decompressed_bytes)
         for spend in bundle.coin_spends:
             mod, _ = spend.puzzle_reveal.to_program().uncurry()
@@ -1700,6 +1702,14 @@ class WalletRpcApi:
             ):
                 raise ValueError("CAT1s are no longer supported")
         ###
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
+        offer = Offer.from_bech32(offer_hex)
+        offered, requested, infos = offer.summary()
 
         if request.get("advanced", False):
             return {
@@ -1714,6 +1724,26 @@ class WalletRpcApi:
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
         peer = self.service.get_full_node_peer()
         return {
@@ -1723,6 +1753,26 @@ class WalletRpcApi:
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
@@ -1846,7 +1896,7 @@ class WalletRpcApi:
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
-                    if key in offer.driver_dict:
+                    if key in offer.arbitrage():
                         records.append(trade)
                         continue
 
@@ -2965,7 +3015,8 @@ class WalletRpcApi:
         pool_reward_amount = 0
         farmer_reward_amount = 0
         fee_amount = 0
-        last_height_farmed = 0
+        blocks_won = uint32(0)
+        last_height_farmed = uint32(0)
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
@@ -2978,15 +3029,20 @@ class WalletRpcApi:
             # .get_farming_rewards() above queries for only confirmed records.  This
             # could be hinted by making TransactionRecord generic but streamable can't
             # handle that presently.  Existing code would have raised an exception
-            # anyways if this were to fail and we already have an assert below.
+            # anyway if this were to fail and we already have an assert below.
             assert height is not None
             if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += calculate_base_farmer_reward(height)
+                base_farmer_reward = calculate_base_farmer_reward(height)
+                fee_amount += record.amount - base_farmer_reward
+                farmer_reward_amount += base_farmer_reward
+                blocks_won += 1
             if height > last_height_farmed:
                 last_height_farmed = height
             amount += record.amount
 
+        last_time_farmed = uint32(
+            await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
+        )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
@@ -2994,6 +3050,8 @@ class WalletRpcApi:
             "farmer_reward_amount": farmer_reward_amount,
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
+            "last_time_farmed": last_time_farmed,
+            "blocks_won": blocks_won,
         }
 
     async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:

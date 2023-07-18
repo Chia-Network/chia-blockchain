@@ -27,7 +27,7 @@ from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
-from chia.util.errors import CliRpcConnectionError, KeychainCurrentPassphraseIsInvalid
+from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
 from chia.util.ssl_check import check_ssl
 
@@ -62,7 +62,7 @@ def cli(
         set_keys_root_path(Path(keys_root_path))
 
     if passphrase_file is not None:
-        from sys import exit
+        import sys
 
         from chia.cmds.passphrase_funcs import cache_passphrase, read_passphrase_from_file
 
@@ -77,7 +77,7 @@ def cli(
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:
                 print("Invalid passphrase")
-            exit(1)
+            sys.exit(1)
         except Exception as e:
             print(f"Failed to read passphrase: {e}")
 
@@ -132,10 +132,7 @@ cli.add_command(dev_cmd)
 
 
 def main() -> None:
-    try:
-        cli()  # pylint: disable=no-value-for-parameter
-    except CliRpcConnectionError:  # this happens when we cant connect to a client and is only comes from the cli code
-        exit(1)
+    cli()  # pylint: disable=no-value-for-parameter
 
 
 if __name__ == "__main__":
