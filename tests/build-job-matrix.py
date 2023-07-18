@@ -122,7 +122,7 @@ for path in test_paths:
         "legacy_keyring_required": conf.get("legacy_keyring_required", False),
     }
     for_matrix = dict(sorted(for_matrix.items()))
-    if for_matrix["name"] == "cmds" and paths_for_cli.endswith("test_farm_cmd.py"):
+    if for_matrix["name"] == "cmds":
         configuration.append(for_matrix)
 
 
