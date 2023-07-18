@@ -7,7 +7,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
@@ -128,7 +128,7 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
 
 def get_bladebit_version(
     plotters_root_path: Path,
-) -> Union[Tuple[False, str], Tuple[None, str], Tuple[True, List[str]]]:
+) -> Union[Tuple[Literal[False], str], Tuple[None, str], Tuple[Literal[True], List[str]]]:
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if not bladebit_executable_path.exists():
         # (found=False, "")
