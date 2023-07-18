@@ -4,16 +4,22 @@ import asyncio
 from typing import List, Tuple
 
 import pytest
+from blspy import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.protocols import harvester_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.keychain import generate_mnemonic
+from tests.conftest import HarvesterFarmerEnvironment
 
 
 def farmer_is_started(farmer: Farmer) -> bool:
@@ -111,3 +117,36 @@ async def test_harvester_handshake(
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)
+
+
+@pytest.mark.asyncio
+async def test_farmer_respond_signatures(
+    caplog: pytest.LogCaptureFixture, harvester_farmer_environment: HarvesterFarmerEnvironment
+) -> None:
+    # This test ensures that the farmer correctly rejects invalid RespondSignatures
+    # messages from the harvester.
+    # In this test we're leveraging the fact that the farmer can handle RespondSignatures
+    # messages even though it didn't request them, to cover when the farmer doesn't know
+    # about an sp_hash, so it fails at the sp record check.
+
+    def log_is_ready() -> bool:
+        return len(caplog.text) > 0
+
+    _, _, harvester_service, _, _ = harvester_farmer_environment
+    # We won't have an sp record for this one
+    challenge_hash = bytes32(b"1" * 32)
+    sp_hash = bytes32(b"2" * 32)
+    response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
+        plot_identifier="test",
+        challenge_hash=challenge_hash,
+        sp_hash=sp_hash,
+        local_pk=G1Element(),
+        farmer_pk=G1Element(),
+        message_signatures=[],
+    )
+    msg = make_msg(ProtocolMessageTypes.respond_signatures, response)
+    await harvester_service._node.server.send_to_all([msg], NodeType.FARMER)
+    await time_out_assert(5, log_is_ready)
+    # We fail the sps record check
+    expected_error = f"Do not have challenge hash {challenge_hash}"
+    assert expected_error in caplog.text

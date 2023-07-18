@@ -10,6 +10,7 @@ new_signage_point_json: Dict[str, Any] = {
     "difficulty": 2329045448547720842,
     "sub_slot_iters": 8265724497259558930,
     "signage_point_index": 194,
+    "peak_height": 1,
 }
 
 declare_proof_of_space_json: Dict[str, Any] = {
@@ -48,6 +49,7 @@ farming_info_json: Dict[str, Any] = {
     "passed": 1390832181,
     "proofs": 908923578,
     "total_plots": 2259819406,
+    "lookup_time": 3942498,
 }
 
 signed_values_json: Dict[str, Any] = {
@@ -2023,6 +2025,7 @@ new_signage_point_harvester_json: Dict[str, Any] = {
             "pool_contract_puzzle_hash": "0xc9423123ea65e6923e973b95531b4874570dae942cb757a2daec4a6971753886",
         }
     ],
+    "filter_prefix_bits": 9,
 }
 
 new_proof_of_space_json: Dict[str, Any] = {
@@ -2492,3 +2495,7 @@ respond_compact_proof_of_time_json: Dict[str, Any] = {
     "height": 386395693,
     "field_vdf": 224,
 }
+
+error_without_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": None}
+
+error_with_data_json: Dict[str, Any] = {"code": 1, "message": "Unknown", "data": "0x65787472612064617461"}

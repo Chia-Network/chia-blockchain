@@ -187,6 +187,23 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "failed_partial":
+            payloads.append(
+                create_payload_dict(
+                    "failed_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
         elif change == "proof":
             payloads.append(
                 create_payload_dict(
@@ -283,7 +300,6 @@ class FarmerRpcApi:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
-            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
             pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}

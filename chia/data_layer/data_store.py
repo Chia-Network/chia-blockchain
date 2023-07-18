@@ -47,7 +47,9 @@ class DataStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, database: Union[str, Path], uri: bool = False) -> "DataStore":
+    async def create(
+        cls, database: Union[str, Path], uri: bool = False, sql_log_path: Optional[Path] = None
+    ) -> "DataStore":
         db_wrapper = await DBWrapper2.create(
             database=database,
             uri=uri,
@@ -59,6 +61,7 @@ class DataStore:
             # methods and enable foreign key checking in the tests.
             foreign_keys=True,
             row_factory=aiosqlite.Row,
+            log_path=sql_log_path,
         )
         self = cls(db_wrapper=db_wrapper)
 
@@ -230,10 +233,7 @@ class DataStore:
         }
 
         async with self.db_wrapper.writer() as writer:
-            cursor = await writer.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
-            result = await cursor.fetchone()
-
-            if result is None:
+            try:
                 await writer.execute(
                     """
                     INSERT INTO node(hash, node_type, left, right, key, value)
@@ -241,12 +241,29 @@ class DataStore:
                     """,
                     values,
                 )
-            else:
+            except aiosqlite.IntegrityError as e:
+                if not e.args[0].startswith("UNIQUE constraint"):
+                    # UNIQUE constraint failed: node.hash
+                    raise
+
+                async with writer.execute(
+                    "SELECT * FROM node WHERE hash == :hash LIMIT 1",
+                    {"hash": node_hash},
+                ) as cursor:
+                    result = await cursor.fetchone()
+
+                if result is None:
+                    # some ideas for causes:
+                    #   an sqlite bug
+                    #   bad queries in this function
+                    #   unexpected db constraints
+                    raise Exception("Unable to find conflicting row") from e  # pragma: no cover
+
                 result_dict = dict(result)
                 if result_dict != values:
                     raise Exception(
                         f"Requested insertion of node with matching hash but other values differ: {node_hash}"
-                    )
+                    ) from None
 
     async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
         if node_type == NodeType.INTERNAL:
@@ -289,17 +306,7 @@ class DataStore:
                     "tree_id": tree_id,
                     "generation": generation,
                 }
-                cursor = await writer.execute(
-                    """
-                    SELECT *
-                    FROM ancestors
-                    WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
-                    LIMIT 1
-                    """,
-                    {"hash": hash, "generation": generation, "tree_id": tree_id},
-                )
-                result = await cursor.fetchone()
-                if result is None:
+                try:
                     await writer.execute(
                         """
                         INSERT INTO ancestors(hash, ancestor, tree_id, generation)
@@ -307,13 +314,35 @@ class DataStore:
                         """,
                         values,
                     )
-                else:
+                except aiosqlite.IntegrityError as e:
+                    if not e.args[0].startswith("UNIQUE constraint"):
+                        # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
+                        raise
+
+                    async with writer.execute(
+                        """
+                        SELECT *
+                        FROM ancestors
+                        WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                        LIMIT 1
+                        """,
+                        {"hash": hash, "generation": generation, "tree_id": tree_id},
+                    ) as cursor:
+                        result = await cursor.fetchone()
+
+                    if result is None:
+                        # some ideas for causes:
+                        #   an sqlite bug
+                        #   bad queries in this function
+                        #   unexpected db constraints
+                        raise Exception("Unable to find conflicting row") from e  # pragma: no cover
+
                     result_dict = dict(result)
                     if result_dict != values:
                         raise Exception(
                             "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
                             f"{hash} {generation} {tree_id}"
-                        )
+                        ) from None
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
@@ -350,12 +379,17 @@ class DataStore:
 
         return Root.from_row(row=row)
 
-    async def clear_pending_roots(self, tree_id: bytes32) -> None:
+    async def clear_pending_roots(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.writer() as writer:
-            await writer.execute(
-                "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id, "status": Status.PENDING.value},
-            )
+            pending_root = await self.get_pending_root(tree_id=tree_id)
+
+            if pending_root is not None:
+                await writer.execute(
+                    "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
+                    {"tree_id": tree_id, "status": Status.PENDING.value},
+                )
+
+        return pending_root
 
     async def shift_root_generations(self, tree_id: bytes32, shift_size: int) -> None:
         async with self.db_wrapper.writer():

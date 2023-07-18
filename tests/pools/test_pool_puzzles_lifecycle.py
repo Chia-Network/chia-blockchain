@@ -79,7 +79,7 @@ class TestPoolPuzzles(TestCase):
 
         # Get our starting standard coin created
         START_AMOUNT: uint64 = 1023
-        coin_db = CoinStore()
+        coin_db = CoinStore(DEFAULT_CONSTANTS)
         time = CoinTimestamp(10000000, 1)
         coin_db.farm_coin(starting_ph, time, START_AMOUNT)
         starting_coin: Coin = next(coin_db.all_unspent_coins())
