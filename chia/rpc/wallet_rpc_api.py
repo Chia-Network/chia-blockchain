@@ -1856,10 +1856,7 @@ class WalletRpcApi:
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
-            if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
-            else:
-                await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
+            await wsm.trade_manager.cancel_pending_offers([bytes32(trade_id)], fee=fee, secure=secure)
         return {}
 
     async def cancel_offers(self, request: Dict) -> EndpointResult:
@@ -1881,7 +1878,7 @@ class WalletRpcApi:
         if asset_id is not None and asset_id != "xch":
             key = bytes32.from_hexstr(asset_id)
         while True:
-            records: List[TradeRecord] = []
+            records: Dict[bytes32, TradeRecord] = {}
             trades = await trade_mgr.trade_store.get_trades_between(
                 start,
                 end,
@@ -1892,16 +1889,16 @@ class WalletRpcApi:
             )
             for trade in trades:
                 if cancel_all:
-                    records.append(trade)
+                    records[trade.trade_id] = trade
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
                     if key in offer.arbitrage():
-                        records.append(trade)
+                        records[trade.trade_id] = trade
                         continue
 
             async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+                await trade_mgr.cancel_pending_offers(list(records.keys()), batch_fee, secure, records)
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
             if len(trades) < batch_size:
