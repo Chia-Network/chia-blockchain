@@ -78,32 +78,26 @@ def make_aggsig_final_message(
     agg_sig_additional_data: Dict[ConditionOpcode, bytes],
 ) -> bytes:
     if isinstance(spend, Coin):
-        parent_coin_info = bytes(spend.parent_coin_info)
-        puzzle_hash = bytes(spend.puzzle_hash)
-        amount = int_to_bytes(spend.amount)
-        coin_id = bytes(spend.name())
+        coin = spend
     elif isinstance(spend, Spend):
-        parent_coin_info = spend.parent_id
-        puzzle_hash = spend.puzzle_hash
-        amount = int_to_bytes(spend.coin_amount)
-        coin_id = spend.coin_id
+        coin = Coin(spend.parent_id, spend.puzzle_hash, spend.coin_amount)
     else:
         raise ValueError(f"Expected Coin or Spend, got {type(spend)}")
 
     if opcode == ConditionOpcode.AGG_SIG_PARENT:
-        addendum = parent_coin_info
+        addendum: bytes = coin.parent_coin_info
     elif opcode == ConditionOpcode.AGG_SIG_PUZZLE:
-        addendum = puzzle_hash
+        addendum = coin.puzzle_hash
     elif opcode == ConditionOpcode.AGG_SIG_AMOUNT:
-        addendum = amount
+        addendum = int_to_bytes(coin.amount)
     elif opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT:
-        addendum = puzzle_hash + amount
+        addendum = coin.puzzle_hash + int_to_bytes(coin.amount)
     elif opcode == ConditionOpcode.AGG_SIG_PARENT_AMOUNT:
-        addendum = parent_coin_info + amount
+        addendum = coin.parent_coin_info + int_to_bytes(coin.amount)
     elif opcode == ConditionOpcode.AGG_SIG_PARENT_PUZZLE:
-        addendum = parent_coin_info + puzzle_hash
+        addendum = coin.parent_coin_info + coin.puzzle_hash
     elif opcode == ConditionOpcode.AGG_SIG_ME:
-        addendum = coin_id
+        addendum = coin.name()
     else:
         raise ValueError("Unexpected opcode")
 
