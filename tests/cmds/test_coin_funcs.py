@@ -22,7 +22,7 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: i
 
 
 @pytest.mark.asyncio
-async def test_list(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
+async def test_list_and_combine_and_split(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
     # Wallet environment setup
     num_blocks = 1
     full_nodes, wallets, bt = one_wallet_and_one_simulator_services
@@ -64,31 +64,8 @@ async def test_list(one_wallet_and_one_simulator_services: SimulatorsAndWalletsS
     assert "0 unconfirmed additions" in f.getvalue()
     assert "0 unconfirmed removals" in f.getvalue()
 
+    f.truncate(0)
 
-@pytest.mark.asyncio
-async def test_combine(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
-    # Wallet environment setup
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    assert wallet_service_0.rpc_server is not None
-
-    wallet_node_0.config["trusted_peers"] = {
-        full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-    }
-
-    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    assert wallet_service_0.rpc_server.webserver is not None
-    fingerprint = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
-
-    f = io.StringIO()
     sys.stdin = io.StringIO("y")
     with contextlib.redirect_stdout(f):
         await async_combine(
@@ -109,6 +86,8 @@ async def test_combine(one_wallet_and_one_simulator_services: SimulatorsAndWalle
     assert "Combining 2 coins" in f.getvalue()
     assert "Transaction sent" in f.getvalue()
 
+    f.truncate(0)
+
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
@@ -121,30 +100,6 @@ async def test_combine(one_wallet_and_one_simulator_services: SimulatorsAndWalle
     )
     assert len(coin_set) == 1
 
-
-@pytest.mark.asyncio
-async def test_split(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
-    # Wallet environment setup
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    assert wallet_service_0.rpc_server is not None
-
-    wallet_node_0.config["trusted_peers"] = {
-        full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-    }
-
-    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    assert wallet_service_0.rpc_server.webserver is not None
-    fingerprint = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
-
     target_coin = (
         await wallet_0.select_coins(
             uint64(250_000_000_000),
@@ -152,7 +107,6 @@ async def test_split(one_wallet_and_one_simulator_services: SimulatorsAndWallets
         )
     ).pop()
 
-    f = io.StringIO()
     with contextlib.redirect_stdout(f):
         await async_split(
             wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
@@ -173,8 +127,8 @@ async def test_split(one_wallet_and_one_simulator_services: SimulatorsAndWallets
 
     coin_set = await wallet_0.select_coins(
         uint64(250_000_000_000),
-        CoinSelectionConfigLoader(excluded_coin_amounts=[uint64(1_750_000_000_000), uint64(250_000_000_000)]).autofill(
-            constants=DEFAULT_CONSTANTS
-        ),
+        CoinSelectionConfigLoader(
+            excluded_coin_amounts=[uint64(1_750_000_000_000), uint64(250_000_000_000), uint64(2_000_000_000_000)]
+        ).autofill(constants=DEFAULT_CONSTANTS),
     )
     assert len(coin_set) == 2

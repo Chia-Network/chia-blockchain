@@ -36,7 +36,7 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: i
 
 
 @pytest.mark.asyncio
-async def test_make_and_take_offer(two_wallet_nodes_services: SimulatorsAndWalletsServices) -> None:
+async def test_make_and_take_and_cancel_offer(two_wallet_nodes_services: SimulatorsAndWalletsServices) -> None:
     # Wallet environment setup
     num_blocks = 1
     full_nodes, wallets, bt = two_wallet_nodes_services
@@ -106,57 +106,21 @@ async def test_make_and_take_offer(two_wallet_nodes_services: SimulatorsAndWalle
 
         sys.stdin = io.StringIO("y")
         with contextlib.redirect_stdout(f):
-            await take_offer(
-                wallet_rpc_port=wallet_service_1.rpc_server.webserver.listen_port,
-                fp=fingerprint_1,
+            await cancel_offer(
+                wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
+                fp=fingerprint_0,
                 d_fee=Decimal("0.0"),
-                file="./test.offer",
-                examine_only=False,
-                root_path=wallet_service_1.root_path,
+                offer_id_hex=(await wallet_0.wallet_state_manager.trade_manager.get_all_trades())[0].trade_id.hex(),
+                secure=True,
+                root_path=wallet_service_0.root_path,
             )
 
-        assert "Accepted offer" in f.getvalue()
+        assert "Cancelled offer" in f.getvalue()
+        f.truncate(0)
 
         await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-
-
-@pytest.mark.asyncio
-async def test_make_and_cancel_offer(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
-    # Wallet environment setup
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    assert wallet_service_0.rpc_server is not None
-
-    wallet_node_0.config["trusted_peers"] = {
-        full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-    }
-
-    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    cat_wallet_0: CATWallet = await CATWallet.create_new_cat_wallet(
-        wallet_node_0.wallet_state_manager,
-        wallet_0,
-        {"identifier": "genesis_by_id"},
-        uint64(100),
-        DEFAULT_TX_CONFIG,
-    )
-
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    assert wallet_service_0.rpc_server.webserver is not None
-    fingerprint_0 = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
-
-    with click.testing.CliRunner().isolated_filesystem():
-        f = io.StringIO()
+        await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
         sys.stdin = io.StringIO("y")
         with contextlib.redirect_stdout(f):
@@ -176,70 +140,24 @@ async def test_make_and_cancel_offer(one_wallet_and_one_simulator_services: Simu
 
         sys.stdin = io.StringIO("y")
         with contextlib.redirect_stdout(f):
-            await cancel_offer(
-                wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
-                fp=fingerprint_0,
+            await take_offer(
+                wallet_rpc_port=wallet_service_1.rpc_server.webserver.listen_port,
+                fp=fingerprint_1,
                 d_fee=Decimal("0.0"),
-                offer_id_hex=(await wallet_0.wallet_state_manager.trade_manager.get_all_trades())[0].trade_id.hex(),
-                secure=True,
-                root_path=wallet_service_0.root_path,
+                file="./test.offer",
+                examine_only=False,
+                root_path=wallet_service_1.root_path,
             )
 
-        assert "Cancelled offer" in f.getvalue()
+        assert "Accepted offer" in f.getvalue()
 
         await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
 
 
 @pytest.mark.asyncio
-async def test_update_did_metadata(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
-    # Wallet environment setup
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    assert wallet_service_0.rpc_server is not None
-
-    wallet_node_0.config["trusted_peers"] = {
-        full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-    }
-
-    await wallet_node_0.server.start_client(PeerInfo("127.0.0.1", uint16(full_node_server._port)), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
-    )
-
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-
-    assert wallet_service_0.rpc_server.webserver is not None
-    fingerprint_0 = wallet_0.wallet_state_manager.private_key.get_g1().get_fingerprint()
-
-    f = io.StringIO()
-
-    with contextlib.redirect_stdout(f):
-        await update_did_metadata(
-            wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
-            fp=fingerprint_0,
-            did_wallet_id=did_wallet.id(),
-            metadata='{"meta": "data"}',
-            reuse_puzhash=True,
-            root_path=wallet_service_0.root_path,
-        )
-
-    assert "Successfully updated DID wallet ID: 2" in f.getvalue()
-
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-
-
-@pytest.mark.asyncio
-async def test_did_message_spend(one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices) -> None:
+async def test_update_did_metadata_and_did_message_spend(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+) -> None:
     # Wallet environment setup
     num_blocks = 1
     full_nodes, wallets, bt = one_wallet_and_one_simulator_services
@@ -282,8 +200,21 @@ async def test_did_message_spend(one_wallet_and_one_simulator_services: Simulato
         )
 
     assert "Message Spend Bundle:" in f.getvalue()
+    f.truncate(0)
 
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
+    with contextlib.redirect_stdout(f):
+        await update_did_metadata(
+            wallet_rpc_port=wallet_service_0.rpc_server.webserver.listen_port,
+            fp=fingerprint_0,
+            did_wallet_id=did_wallet.id(),
+            metadata='{"meta": "data"}',
+            reuse_puzhash=True,
+            root_path=wallet_service_0.root_path,
+        )
+
+    assert "Successfully updated DID wallet ID: 2" in f.getvalue()
+
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
 
 
 @pytest.mark.asyncio
