@@ -11,7 +11,7 @@
     TREASURY_ID
     ; second hash
     SELF_HASH
-    SINGLETON_ID  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
+    SINGLETON_ID
     PROPOSED_PUZ_HASH  ; this is what runs if this proposal is successful - the inner puzzle of this proposal
     YES_VOTES  ; yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
     TOTAL_VOTES  ; how many people responded

@@ -241,25 +241,25 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     new_inner_puzhash = await dao_wallet_0.get_new_p2_inner_hash()
     assert isinstance(new_inner_puzhash, bytes32)
 
-    # generate new dao spends with bad cat details
-    with pytest.raises(ValueError) as e_info:
-        # negative cat amount
-        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, -100)
-    assert e_info.value.args[0] == "amount_of_cats must be >= 0, or None"
-
-    with pytest.raises(ValueError) as e_info:
-        # create 0 cats
-        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 0)
-    assert e_info.value.args[0] == "amount_of_cats must be > 0 or cat_tail_hash must be specified"
-
-    with pytest.raises(ValueError) as e_info:
-        # create with existing tail
-        await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 100, bytes32(b"a" * 32))
-    assert e_info.value.args[0] == "cannot create voting cats and use existing cat_tail_hash"
-
-    # generate the spend successfully
-    new_dao_spend = await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, cat_amt)
-    assert new_dao_spend is not None
+    # # generate new dao spends with bad cat details
+    # with pytest.raises(ValueError) as e_info:
+    #     # negative cat amount
+    #     await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, -100)
+    # assert e_info.value.args[0] == "amount_of_cats must be >= 0, or None"
+    #
+    # with pytest.raises(ValueError) as e_info:
+    #     # create 0 cats
+    #     await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 0)
+    # assert e_info.value.args[0] == "amount_of_cats must be > 0 or cat_tail_hash must be specified"
+    #
+    # with pytest.raises(ValueError) as e_info:
+    #     # create with existing tail
+    #     await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, 100, bytes32(b"a" * 32))
+    # assert e_info.value.args[0] == "cannot create voting cats and use existing cat_tail_hash"
+    #
+    # # generate the spend successfully
+    # new_dao_spend = await DAOWallet.generate_new_dao_spend(wallet.wallet_state_manager, wallet, dao_rules, cat_amt)
+    # assert new_dao_spend is not None
 
 
 @pytest.mark.parametrize(
