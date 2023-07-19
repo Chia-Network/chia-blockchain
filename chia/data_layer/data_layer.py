@@ -65,6 +65,7 @@ class DataLayer:
     data_store: DataStore
     db_path: Path
     config: Dict[str, Any]
+    root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
     state_changed_callback: Optional[StateChangedProtocol] = None
@@ -100,17 +101,18 @@ class DataLayer:
             name = None
         self.initialized = False
         self.config = config
+        self.root_path = root_path
         self.connection = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
         self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(root_path, db_path_replaced)
+        self.db_path = path_from_root(self.root_path, db_path_replaced)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
-        self.server_files_location = path_from_root(root_path, server_files_replaced)
+        self.server_files_location = path_from_root(self.root_path, server_files_replaced)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
@@ -131,7 +133,12 @@ class DataLayer:
         self._server = server
 
     async def _start(self) -> None:
-        self.data_store = await DataStore.create(database=self.db_path)
+        sql_log_path: Optional[Path] = None
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        self.data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
 

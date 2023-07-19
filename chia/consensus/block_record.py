@@ -69,6 +69,8 @@ class BlockRecord(Streamable):
     deficit: uint8  # A deficit of 16 is an overflow block after an infusion. Deficit of 15 is a challenge block
     overflow: bool
     prev_transaction_block_height: uint32
+    pos_ss_cc_challenge_hash: bytes32
+    cc_sp_hash: bytes32
 
     # Transaction block (present iff is_transaction_block)
     timestamp: Optional[uint64]

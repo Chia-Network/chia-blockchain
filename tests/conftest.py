@@ -100,9 +100,11 @@ def get_keychain():
 
 class Mode(Enum):
     PLAIN = 0
+    HARD_FORK_2_0 = 1
+    SOFT_FORK3 = 2
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN])
+@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3])
 def consensus_mode(request):
     return request.param
 
@@ -111,6 +113,12 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == Mode.PLAIN:
         return test_constants
+    if consensus_mode == Mode.SOFT_FORK3:
+        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
+    if consensus_mode == Mode.HARD_FORK_2_0:
+        return test_constants.replace(
+            HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
+        )
     raise AssertionError("Invalid Blockchain mode in simulation")
 
 
@@ -591,6 +599,25 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester_simulator_wallet(
+    tmp_path: Path,
+) -> AsyncIterator[
+    Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Service[FullNode, FullNodeSimulator],
+        Service[WalletNode, WalletNodeAPI],
+        BlockTools,
+    ]
+]:
+    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, {}):
+        nodes, wallets, bt = sim_and_wallet
+        async for farmer_harvester in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+            harvester_services, farmer_service, _ = farmer_harvester
+            yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
+
+
+@pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
     async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
@@ -853,6 +880,12 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
     root_path: Path = tmp_chia_root
     create_default_chia_config(root_path)
     return root_path
+
+
+@pytest.fixture(scope="function")
+def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        return config
 
 
 @pytest.fixture(scope="function")
