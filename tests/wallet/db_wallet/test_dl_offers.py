@@ -288,7 +288,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     cancellation_txs = await trade_manager.cancel_pending_offers(
         [offer.trade_id], fee=uint64(2_000_000_000_000), secure=True
     )
-    assert len(cancellation_txs) == 3
+    assert len(cancellation_txs) == 2
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
     await full_node_api.process_transaction_records(records=cancellation_txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
