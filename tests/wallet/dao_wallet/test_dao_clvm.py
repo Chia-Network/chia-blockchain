@@ -476,8 +476,8 @@ def test_validator() -> None:
     # test update
     proposal: Program = proposal_curry_one.curry(
         proposal_curry_one.get_tree_hash(),
-        acs_ph,
         proposal_id,
+        acs_ph,
         950,
         1200,
     )
@@ -841,9 +841,9 @@ def test_proposal_innerpuz() -> None:
     proposal: Program = proposal_curry_one.curry(
         proposal_curry_one.get_tree_hash(),
         proposal_id,
+        spend_p2_singleton_puzhash,
         yes_votes,
         current_votes,
-        spend_p2_singleton_puzhash,
     )
     full_proposal: Program = SINGLETON_MOD.curry(proposal_singleton_struct, proposal)
     full_proposal_puzhash: bytes32 = full_proposal.get_tree_hash()
@@ -881,10 +881,6 @@ def test_proposal_innerpuz() -> None:
     full_proposal_solution = Program.to([lineage_proof, proposal_amt, proposal_solution])
 
     # Run the puzzles
-    # from clvm.casts import int_from_bytes
-    # cds = conditions_dict_for_solution(full_treasury_puz, full_treasury_solution, INFINITE_COST)[ConditionOpcode.CREATE_COIN]
-    # amts = [int_from_bytes(x.vars[1]) for x in cds]
-    # breakpoint()
     treasury_conds: Program = conditions_dict_for_solution(full_treasury_puz, full_treasury_solution, INFINITE_COST)
     proposal_conds: Program = conditions_dict_for_solution(full_proposal, full_proposal_solution, INFINITE_COST)
 
