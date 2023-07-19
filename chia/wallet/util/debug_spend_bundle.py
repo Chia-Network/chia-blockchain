@@ -52,6 +52,9 @@ def recursive_uncurry_dump(
         mod = uncurried_already.mod
         curried_args = uncurried_already.args
     if mod != puzzle:
+        if uncurried_already is None:
+            print(f"{prefix}- <curried puzzle>")
+            prefix = f"{prefix}  "
         print(f"{prefix}- Layer {layer}:")
         print(f"{prefix}  - Mod hash: {mod.get_tree_hash().hex()}")
         for arg in curried_args.as_iter():
