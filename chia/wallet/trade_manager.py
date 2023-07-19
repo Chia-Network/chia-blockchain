@@ -225,99 +225,96 @@ class TradeManager:
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
 
-        async with self.trade_store.db_wrapper.writer():
-            all_txs: List[TransactionRecord] = []
-            bundles: List[SpendBundle] = []
-            fee_to_pay: uint64 = fee
-            for trade_id in trades:
-                if trade_id in trade_cache:
-                    trade = trade_cache[trade_id]
+        all_txs: List[TransactionRecord] = []
+        bundles: List[SpendBundle] = []
+        fee_to_pay: uint64 = fee
+        for trade_id in trades:
+            if trade_id in trade_cache:
+                trade = trade_cache[trade_id]
+            else:
+                potential_trade = await self.trade_store.get_trade_record(trade_id)
+                if potential_trade is None:
+                    self.log.error(f"Cannot find offer {trade_id.hex()}, skip cancellation.")
+                    continue
                 else:
-                    potential_trade = await self.trade_store.get_trade_record(trade_id)
-                    if potential_trade is None:
-                        self.log.error(f"Cannot find offer {trade_id.hex()}, skip cancellation.")
-                        continue
-                    else:
-                        trade = potential_trade
+                    trade = potential_trade
 
-                self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
+            self.log.info(f"Secure-Cancel pending offer with id trade_id {trade_id.hex()}")
 
-                if not secure:
-                    self.wallet_state_manager.state_changed("offer_cancelled")
-                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
+            if not secure:
+                self.wallet_state_manager.state_changed("offer_cancelled")
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
+                continue
+
+            cancellation_additions: List[Coin] = []
+            for coin in Offer.from_bytes(trade.offer).get_cancellation_coins():
+                wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
+
+                if wallet is None:
+                    self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
                     continue
 
-                cancellation_additions: List[Coin] = []
-                for coin in Offer.from_bytes(trade.offer).get_cancellation_coins():
-                    wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
-
-                    if wallet is None:
-                        self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
-                        continue
-
-                    new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
-                    # This should probably not switch on whether or not we're spending a XCH but it has to for now
-                    if wallet.type() == WalletType.STANDARD_WALLET:
-                        if fee_to_pay > coin.amount:
-                            selected_coins: Set[Coin] = await wallet.select_coins(
-                                uint64(fee_to_pay - coin.amount),
-                                exclude=[coin],
-                            )
-                            selected_coins.add(coin)
-                        else:
-                            selected_coins = {coin}
-                        tx: TransactionRecord = await wallet.generate_signed_transaction(
-                            uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
-                            new_ph,
-                            fee=fee_to_pay,
-                            coins=selected_coins,
-                            ignore_max_send_amount=True,
+                new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
+                # This should probably not switch on whether or not we're spending a XCH but it has to for now
+                if wallet.type() == WalletType.STANDARD_WALLET:
+                    if fee_to_pay > coin.amount:
+                        selected_coins: Set[Coin] = await wallet.select_coins(
+                            uint64(fee_to_pay - coin.amount),
+                            exclude=[coin],
                         )
+                        selected_coins.add(coin)
+                    else:
+                        selected_coins = {coin}
+                    tx: TransactionRecord = await wallet.generate_signed_transaction(
+                        uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
+                        new_ph,
+                        fee=fee_to_pay,
+                        coins=selected_coins,
+                        ignore_max_send_amount=True,
+                    )
+                    if tx is not None and tx.spend_bundle is not None:
+                        bundles.append(tx.spend_bundle)
+                        cancellation_additions.extend(tx.spend_bundle.additions())
+                        all_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                else:
+                    # ATTENTION: new_wallets
+                    txs = await wallet.generate_signed_transaction(
+                        [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
+                    )
+                    for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
                             bundles.append(tx.spend_bundle)
                             cancellation_additions.extend(tx.spend_bundle.additions())
                             all_txs.append(dataclasses.replace(tx, spend_bundle=None))
-                    else:
-                        # ATTENTION: new_wallets
-                        txs = await wallet.generate_signed_transaction(
-                            [coin.amount], [new_ph], fee=fee_to_pay, coins={coin}, ignore_max_send_amount=True
-                        )
-                        for tx in txs:
-                            if tx is not None and tx.spend_bundle is not None:
-                                bundles.append(tx.spend_bundle)
-                                cancellation_additions.extend(tx.spend_bundle.additions())
-                                all_txs.append(dataclasses.replace(tx, spend_bundle=None))
-                    fee_to_pay = uint64(0)
+                fee_to_pay = uint64(0)
 
-                    all_txs.append(
-                        TransactionRecord(
-                            confirmed_at_height=uint32(0),
-                            created_at_time=uint64(int(time.time())),
-                            to_puzzle_hash=new_ph,
-                            amount=uint64(coin.amount),
-                            fee_amount=fee,
-                            confirmed=False,
-                            sent=uint32(10),
-                            spend_bundle=None,
-                            additions=cancellation_additions,
-                            removals=[coin],
-                            wallet_id=wallet.id(),
-                            sent_to=[],
-                            trade_id=None,
-                            type=uint32(TransactionType.INCOMING_TX.value),
-                            name=cancellation_additions[0].name(),
-                            memos=[],
-                        )
+                all_txs.append(
+                    TransactionRecord(
+                        confirmed_at_height=uint32(0),
+                        created_at_time=uint64(int(time.time())),
+                        to_puzzle_hash=new_ph,
+                        amount=uint64(coin.amount),
+                        fee_amount=fee,
+                        confirmed=False,
+                        sent=uint32(10),
+                        spend_bundle=None,
+                        additions=cancellation_additions,
+                        removals=[coin],
+                        wallet_id=wallet.id(),
+                        sent_to=[],
+                        trade_id=None,
+                        type=uint32(TransactionType.INCOMING_TX.value),
+                        name=cancellation_additions[0].name(),
+                        memos=[],
                     )
-
-                await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
-            # Aggregate spend bundles to the first tx
-            if len(all_txs) > 0:
-                all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
-            for tx in all_txs:
-                await self.wallet_state_manager.add_pending_transaction(
-                    tx_record=dataclasses.replace(tx, fee_amount=fee)
                 )
+
+            await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
+        # Aggregate spend bundles to the first tx
+        if len(all_txs) > 0:
+            all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
+        for tx in all_txs:
+            await self.wallet_state_manager.add_pending_transaction(tx_record=dataclasses.replace(tx, fee_amount=fee))
 
         return all_txs
 
