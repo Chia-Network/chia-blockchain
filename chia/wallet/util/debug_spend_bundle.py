@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
@@ -12,6 +12,7 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())  # pylint: disable=E1101
 KFA = {v: k for k, v in CONDITIONS.items()}
@@ -42,6 +43,26 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
+def recursive_uncurry_dump(
+    puzzle: Program, layer: int, prefix: str = "", uncurried_already: Optional[UncurriedPuzzle] = None
+) -> None:
+    if uncurried_already is None:
+        mod, curried_args = puzzle.uncurry()
+    else:
+        mod = uncurried_already.mod
+        curried_args = uncurried_already.args
+    if mod != puzzle:
+        print(f"{prefix}- Layer {layer}:")
+        print(f"{prefix}  - Mod hash: {mod.get_tree_hash().hex()}")
+        for arg in curried_args.as_iter():
+            recursive_uncurry_dump(arg, 1, f"{prefix}  ")
+        mod2, curried_args2 = mod.uncurry()
+        if mod2 != mod:
+            recursive_uncurry_dump(mod, layer + 1, prefix, uncurried_already=UncurriedPuzzle(mod2, curried_args2))
+    else:
+        print(f"{prefix}- {bu_disassemble(puzzle)}")
+
+
 def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
     """
     Print a lot of useful information about a `SpendBundle` that might help with debugging
@@ -67,6 +88,10 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
         print(f"  with id {coin_name.hex()}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
+
+        print()
+        print("--- Uncurried Args ---")
+        recursive_uncurry_dump(puzzle_reveal, 1)
 
         if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
             print()
