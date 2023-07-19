@@ -623,9 +623,14 @@ class FarmerAPI:
             self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
             return
 
+        now = uint64(int(time.time()))
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
-        self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = uint64(int(time.time()))
-        self.farmer.state_changed("new_signage_point", {"sp_hash": new_signage_point.challenge_chain_sp})
+        self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
+        missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
+        self.farmer.state_changed(
+            "new_signage_point",
+            {"sp_hash": new_signage_point.challenge_chain_sp, "missing_signage_points": missing_signage_points},
+        )
 
     @api_request()
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> None:

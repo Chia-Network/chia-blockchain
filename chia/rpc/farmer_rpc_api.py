@@ -110,7 +110,9 @@ class FarmerRpcApi:
             pass
         elif change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
+            missing_signage_points = change_data["missing_signage_points"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
+            data["missing_signage_points"] = missing_signage_points
             payloads.append(
                 create_payload_dict(
                     "new_signage_point",
