@@ -556,7 +556,7 @@ class TestCATTrades:
 
         fee = uint64(2_000_000_000_000)
 
-        txs = await trade_manager_maker.cancel_pending_offes([trade_make.trade_id], fee=fee, secure=True)
+        txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=fee, secure=True)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
