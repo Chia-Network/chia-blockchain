@@ -773,7 +773,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 LIMIT 1
                 """,
-                {"root_hash": root.node_hash, "node_type": NodeType.TERMINAL, "path": path},
+                {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
