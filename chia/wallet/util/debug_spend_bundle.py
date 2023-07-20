@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List
 
 from blspy import AugSchemeMPL, G1Element
 from clvm import KEYWORD_FROM_ATOM
@@ -43,27 +43,28 @@ def dump_coin(coin: Coin) -> str:
     return disassemble(coin_as_program(coin))
 
 
-def recursive_uncurry_dump(
-    puzzle: Program, layer: int, prefix: str = "", uncurried_already: Optional[UncurriedPuzzle] = None
-) -> None:
-    if uncurried_already is None:
-        mod, curried_args = puzzle.uncurry()
-    else:
-        mod = uncurried_already.mod
-        curried_args = uncurried_already.args
+def recursive_uncurry_dump(puzzle: Program, layer: int, prefix: str, uncurried_already: UncurriedPuzzle) -> None:
+    mod = uncurried_already.mod
+    curried_args = uncurried_already.args
     if mod != puzzle:
-        if uncurried_already is None:
-            print(f"{prefix}- <curried puzzle>")
-            prefix = f"{prefix}  "
         print(f"{prefix}- Layer {layer}:")
         print(f"{prefix}  - Mod hash: {mod.get_tree_hash().hex()}")
         for arg in curried_args.as_iter():
-            recursive_uncurry_dump(arg, 1, f"{prefix}  ")
+            uncurry_dump(arg, prefix=f"{prefix}  ")
         mod2, curried_args2 = mod.uncurry()
         if mod2 != mod:
-            recursive_uncurry_dump(mod, layer + 1, prefix, uncurried_already=UncurriedPuzzle(mod2, curried_args2))
+            recursive_uncurry_dump(mod, layer + 1, prefix, UncurriedPuzzle(mod2, curried_args2))
     else:
         print(f"{prefix}- {bu_disassemble(puzzle)}")
+
+
+def uncurry_dump(puzzle: Program, prefix: str = "") -> None:
+    mod, curried_args = puzzle.uncurry()
+    if mod != puzzle:
+        print(f"{prefix}- <curried puzzle>")
+        prefix = f"{prefix}  "
+
+    recursive_uncurry_dump(puzzle, 1, prefix, UncurriedPuzzle(mod, curried_args))
 
 
 def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
@@ -94,7 +95,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
 
         print()
         print("--- Uncurried Args ---")
-        recursive_uncurry_dump(puzzle_reveal, 1)
+        uncurry_dump(puzzle_reveal)
 
         if puzzle_reveal.get_tree_hash() != coin_spend.coin.puzzle_hash:
             print()
