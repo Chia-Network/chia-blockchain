@@ -7,6 +7,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
+import pkg_resources
 import pytest
 from aiohttp.web_ws import WebSocketResponse
 
@@ -33,6 +34,8 @@ from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
+
+chiapos_version = pkg_resources.get_distribution("chiapos").version
 
 
 @dataclass
@@ -1219,7 +1222,13 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
         response={
             "success": True,
             "plotters": {
-                "chiapos": {"display_name": "Chia Proof of Space", "installed": True, "version": "2.0.0b4"},
+                "bladebit": {
+                    "can_install": True,
+                    "cuda_support": False,
+                    "display_name": "BladeBit Plotter",
+                    "installed": False,
+                },
+                "chiapos": {"display_name": "Chia Proof of Space", "installed": True, "version": chiapos_version},
                 "madmax": {"can_install": True, "display_name": "madMAx Plotter", "installed": False},
             },
         },
