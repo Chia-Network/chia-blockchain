@@ -2965,7 +2965,8 @@ class WalletRpcApi:
         pool_reward_amount = 0
         farmer_reward_amount = 0
         fee_amount = 0
-        last_height_farmed = 0
+        blocks_won = uint32(0)
+        last_height_farmed = uint32(0)
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
@@ -2978,15 +2979,20 @@ class WalletRpcApi:
             # .get_farming_rewards() above queries for only confirmed records.  This
             # could be hinted by making TransactionRecord generic but streamable can't
             # handle that presently.  Existing code would have raised an exception
-            # anyways if this were to fail and we already have an assert below.
+            # anyway if this were to fail and we already have an assert below.
             assert height is not None
             if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += calculate_base_farmer_reward(height)
+                base_farmer_reward = calculate_base_farmer_reward(height)
+                fee_amount += record.amount - base_farmer_reward
+                farmer_reward_amount += base_farmer_reward
+                blocks_won += 1
             if height > last_height_farmed:
                 last_height_farmed = height
             amount += record.amount
 
+        last_time_farmed = uint32(
+            await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
+        )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
@@ -2994,6 +3000,8 @@ class WalletRpcApi:
             "farmer_reward_amount": farmer_reward_amount,
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
+            "last_time_farmed": last_time_farmed,
+            "blocks_won": blocks_won,
         }
 
     async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:
