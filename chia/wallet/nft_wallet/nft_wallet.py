@@ -167,6 +167,7 @@ class NFTWallet:
         self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
+        # TODO Use coin_data instead of calling peer API
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added

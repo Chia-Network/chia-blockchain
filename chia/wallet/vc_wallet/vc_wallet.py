@@ -95,6 +95,7 @@ class VCWallet:
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
         """
+        # TODO Use coin_data instead of calling peer API
         wallet_node = self.wallet_state_manager.wallet_node
         coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
