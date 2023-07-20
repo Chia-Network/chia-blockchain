@@ -468,7 +468,7 @@ class NFTWallet:
                 self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
             )
             for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
             ):
                 try:
                     sk = pks.get(pk)

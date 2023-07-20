@@ -77,7 +77,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin_name, agg_sig_additional_data):
+        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
             pks.append(G1Element.from_bytes(pk_bytes))
             msgs.append(m)
         print()

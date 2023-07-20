@@ -1798,6 +1798,15 @@ def compute_cost_test(
                 elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
                     arg = cond.rest().first().as_int()
                     condition_cost += arg * 10000
+                elif hard_fork and condition in [
+                    ConditionOpcode.AGG_SIG_PARENT,
+                    ConditionOpcode.AGG_SIG_PUZZLE,
+                    ConditionOpcode.AGG_SIG_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+                ]:
+                    condition_cost += ConditionCost.AGG_SIG.value
         return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
