@@ -17,6 +17,15 @@ from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
+DEFAULT_PARALLEL_DECOMPRESSOR_COUNT = 5
+DEFAULT_DECOMPRESSOR_THREAD_COUNT = 0
+DEFAULT_DISABLE_CPU_AFFINITY = False
+DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED = 7
+DEFAULT_USE_GPU_HARVESTING = False
+DEFAULT_GPU_INDEX = 0
+DEFAULT_ENFORCE_GPU_INDEX = False
+DEFAULT_RECURSIVE_PLOT_SCAN = False
+
 
 @streamable
 @dataclass(frozen=True)
@@ -99,7 +108,7 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
     all_files: Dict[Path, List[Path]] = {}
     config = load_config(root_path, "config.yaml")
-    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", False)
+    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN)
     for directory_name in get_plot_directories(root_path, config):
         try:
             directory = Path(directory_name).resolve()
@@ -161,13 +170,17 @@ def get_harvester_config(root_path: Path) -> Dict[str, Any]:
     )
 
     return {
-        "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting"),
-        "gpu_index": config["harvester"].get("gpu_index"),
-        "enforce_gpu_index": config["harvester"].get("enforce_gpu_index"),
-        "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity"),
-        "parallel_decompressor_count": config["harvester"].get("parallel_decompressor_count"),
-        "decompressor_thread_count": config["harvester"].get("decompressor_thread_count"),
-        "recursive_plot_scan": config["harvester"].get("recursive_plot_scan"),
+        "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING),
+        "gpu_index": config["harvester"].get("gpu_index", DEFAULT_GPU_INDEX),
+        "enforce_gpu_index": config["harvester"].get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX),
+        "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY),
+        "parallel_decompressor_count": config["harvester"].get(
+            "parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT
+        ),
+        "decompressor_thread_count": config["harvester"].get(
+            "decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT
+        ),
+        "recursive_plot_scan": config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN),
         "plots_refresh_parameter": plots_refresh_parameter,
     }
 
