@@ -2417,7 +2417,10 @@ class WalletRpcApi:
         balances = {}
         for asset_id in asset_list:
             balance = await dao_wallet.get_balance_by_asset_type(asset_id=asset_id)
-            balances[asset_id] = balance
+            if asset_id is None:
+                balances["xch"] = balance
+            else:
+                balances[asset_id.hex()] = balance
         return {"success": True, "balances": balances}
 
     async def dao_get_treasury_id(self, request) -> EndpointResult:
