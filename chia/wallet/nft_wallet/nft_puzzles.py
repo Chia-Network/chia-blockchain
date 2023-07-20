@@ -20,18 +20,27 @@ from chia.wallet.util.address_type import AddressType
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clsp")
-NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp")
+NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile(
+    "nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-NFT_METADATA_UPDATER = load_clvm_maybe_recompile("nft_metadata_updater_default.clsp")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clsp")
+NFT_METADATA_UPDATER = load_clvm_maybe_recompile(
+    "nft_metadata_updater_default.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
+    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm_maybe_recompile(
     "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
+    package_or_requirement="chia.wallet.nft_wallet.puzzles",
 )
 STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clsp")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
+    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 
 def create_nft_layer_puzzle_with_curry_params(

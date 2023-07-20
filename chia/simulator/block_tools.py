@@ -84,6 +84,7 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
@@ -123,7 +124,11 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
+
+GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
+    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
+)
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
