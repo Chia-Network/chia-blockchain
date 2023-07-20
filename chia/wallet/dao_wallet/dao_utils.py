@@ -11,7 +11,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_puzzle
-from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
 from chia.wallet.singleton import get_singleton_struct_for_id
@@ -625,9 +625,9 @@ def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
         log.debug("Cannot uncurry spend puzzle: error: %s", e)
         raise e
     if mod == SPEND_P2_SINGLETON_MOD:
-        return "spend", curried_args
+        return ProposalType.SPEND, curried_args
     elif mod == DAO_UPDATE_PROPOSAL_MOD:
-        return "update", curried_args
+        return ProposalType.UPDATE, curried_args
     else:
         raise ValueError("Unrecognised proposal type")
 

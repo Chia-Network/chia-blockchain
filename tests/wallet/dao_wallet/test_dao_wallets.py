@@ -231,10 +231,6 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     await dao_wallet_0.adjust_filter_level(uint64(10))
     assert dao_wallet_0.dao_info.filter_below_vote_amount == uint64(10)
 
-    assert dao_wallet_0.puzzle_for_pk(G1Element()) == Program.to(0)
-    assert dao_wallet_0.puzzle_hash_for_pk(G1Element()) == Program.to(0).get_tree_hash()
-    assert (await dao_wallet_0.get_new_puzzle()) == Program.to(0)
-
     await dao_wallet_0.set_name("Renamed Wallet")
     assert dao_wallet_0.get_name() == "Renamed Wallet"
 

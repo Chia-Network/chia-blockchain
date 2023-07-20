@@ -33,7 +33,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo
+from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo, ProposalType
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
     DAO_PROPOSAL_MOD,
@@ -177,7 +177,6 @@ class DAOWallet(WalletProtocol):
         )
         self.wallet_id = self.wallet_info.id
         std_wallet_id = self.standard_wallet.wallet_id
-        bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
 
         try:
             await self.generate_new_dao(
@@ -186,7 +185,7 @@ class DAOWallet(WalletProtocol):
             )
         except Exception as e_info:
             await wallet_state_manager.user_store.delete_wallet(self.id())
-            self.log.error(f"Failed to create dao wallet: {e_info}")
+            self.log.exception(f"Failed to create dao wallet: {e_info}")
             raise
 
         await self.wallet_state_manager.add_new_wallet(self)
@@ -248,8 +247,6 @@ class DAOWallet(WalletProtocol):
         await self.resync_treasury_state()
         await self.wallet_state_manager.add_new_wallet(self)
         await self.save_info(self.dao_info)
-        if self.wallet_info is None:
-            raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
 
         # Now the dao wallet is created we can create the dao_cat wallet
@@ -287,7 +284,6 @@ class DAOWallet(WalletProtocol):
         self.wallet_info = wallet_info
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
-        self.wallet_info = wallet_info
         self.dao_info = DAOInfo.from_json_dict(json.loads(wallet_info.data))
         self.dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         return self
@@ -298,18 +294,6 @@ class DAOWallet(WalletProtocol):
 
     def id(self) -> uint32:
         return self.wallet_info.id
-
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
-        puz: Program = Program.to(0)
-        return puz
-
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        puz_hash: bytes32 = bytes32(Program.to(0).get_tree_hash())
-        return puz_hash
-
-    async def get_new_puzzle(self) -> Program:
-        puz: Program = Program.to(0)
-        return puz
 
     async def set_name(self, new_name: str) -> None:
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
@@ -432,7 +416,7 @@ class DAOWallet(WalletProtocol):
             if total >= amount:
                 break
         if total < amount:
-            raise ValueError(f"Not enough of that asset_id: {asset_id}")
+            raise ValueError(f"Not enough of asset {asset_id}: {total} < {amount}")
         return coins
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
@@ -463,7 +447,7 @@ class DAOWallet(WalletProtocol):
                     dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
                     await self.save_info(dao_info)
         except Exception as e:
-            self.log.error(f"Error occurred during dao wallet coin addition: {e}")
+            self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
         return
 
     def get_cat_tail_hash(self) -> bytes32:
@@ -487,17 +471,22 @@ class DAOWallet(WalletProtocol):
         return
 
     async def resync_treasury_state(self) -> None:
+        """
+        This is called during create_new_dao_wallet_for_existing_dao.
+        When we want to sync to an existing DAO, we provide the treasury coins singleton ID, and then trace all
+        the child coins until we reach the current DAO treasury coin. We use the puzzle reveal and solution to
+        get the current state of the DAO, and to work out what the tail of the DAO CAT token is.
+        This also captures all the proposals that have been created and their state.
+        """
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
         if peer is None:
             raise ValueError("Could not find any peers to request puzzle and solution from")
 
-        children = await wallet_node.fetch_children(parent_coin_id, peer)
         parent_coin = None
         parent_parent_coin = None
-        assert len(children) > 0
-        while len(children) > 0:
+        while True:
             children = await wallet_node.fetch_children(parent_coin_id, peer)
             if len(children) == 0:
                 break
@@ -600,6 +589,8 @@ class DAOWallet(WalletProtocol):
         # Resync the wallet from when the treasury was created to get the existing funds
         # TODO: Maybe split this out as an option for users since it may be slow?
         if not wallet_node.is_trusted(peer):
+            # Untrusted nodes won't automatically send us the history of all the treasury and proposal coins,
+            # so we have to request them via sync_from_untrusted_close_to_peak
             request = RequestBlockHeader(children_state.created_height)
             response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
             await wallet_node.sync_from_untrusted_close_to_peak(response.header_block, peer)
@@ -853,14 +844,12 @@ class DAOWallet(WalletProtocol):
         await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
         return eve_spend_bundle
 
-    # This has to be in the wallet because we are taking an ID and then searching our stored proposals for that ID
     def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
                 return get_curry_vals_from_proposal_puzzle(prop.inner_puzzle)
         raise ValueError("proposal not found")
 
-    # This has to be in the wallet because we are taking an ID and then searching our stored proposals for that ID
     def get_proposal_puzzle(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
         for prop in self.dao_info.proposals_list:
             if prop.proposal_id == proposal_id:
@@ -911,7 +900,7 @@ class DAOWallet(WalletProtocol):
             ],  # create cat_launcher coin
             [
                 60,
-                Program.to(["m", full_puz.get_tree_hash()]).get_tree_hash(),
+                Program.to([ProposalType.MINT.value, full_puz.get_tree_hash()]).get_tree_hash(),
             ],  # make an announcement for the launcher to assert
         ]
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])
@@ -1329,7 +1318,7 @@ class DAOWallet(WalletProtocol):
             )
 
             proposal_type, curried_args = get_proposal_args(puzzle_reveal)
-            if proposal_type == "spend":
+            if proposal_type == ProposalType.SPEND:
                 (
                     _,
                     _,
@@ -1478,7 +1467,7 @@ class DAOWallet(WalletProtocol):
                     ]
                 )
 
-            elif proposal_type == "update":
+            elif proposal_type == ProposalType.UPDATE:
                 (
                     _,
                     PROPOSAL_VALIDATOR,
@@ -1706,7 +1695,7 @@ class DAOWallet(WalletProtocol):
                 state = await self.get_proposal_state(proposal_id)
                 proposed_puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
                 proposal_type, curried_args = get_proposal_args(proposed_puzzle_reveal)
-                if proposal_type == "spend":
+                if proposal_type == ProposalType.SPEND:
                     cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
                     (
                         _,
@@ -1752,7 +1741,7 @@ class DAOWallet(WalletProtocol):
                     if mint_amount is not None and new_cat_puzhash is not None:
                         dictionary["mint_amount"] = mint_amount
                         dictionary["new_cat_puzhash"] = new_cat_puzhash
-                elif proposal_type == "update":
+                elif proposal_type == ProposalType.UPDATE:
                     dao_rules = get_dao_rules_from_update_proposal(proposed_puzzle_reveal)
                     dictionary = {
                         "state": state,

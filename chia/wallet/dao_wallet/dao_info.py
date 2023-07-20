@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
@@ -52,3 +53,8 @@ class DAORules(Streamable):
     self_destruct_length: uint64
     oracle_spend_delay: uint64
     proposal_minimum_amount: uint64
+
+class ProposalType(Enum):
+    SPEND = "s"
+    UPDATE = "u"
+    MINT = "m"
