@@ -220,8 +220,8 @@ class TradeManager:
         self,
         trades: List[bytes32],
         fee: uint64 = uint64(0),
-        secure: bool = True,
-        trade_cache: Dict[bytes32, TradeRecord] = {},
+        secure: bool = True,  # Cancel with a transaction on chain
+        trade_cache: Dict[bytes32, TradeRecord] = {},  # Optional pre-fetched trade records for optimization
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
 
