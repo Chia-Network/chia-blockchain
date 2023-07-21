@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import itertools
 import logging
+import random
 import re
 import statistics
+from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 
+import aiosqlite
 import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
@@ -40,6 +46,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
+from tests.util.misc import Marks, assert_runtime, datacases
 
 log = logging.getLogger(__name__)
 
@@ -167,8 +174,8 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     key = b"\x01\x02"
     value = b"abc"
 
-    node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == leaf_hash(key=key, value=value)
+    insert_result = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    assert insert_result.node_hash == leaf_hash(key=key, value=value)
 
 
 @pytest.mark.asyncio
@@ -181,7 +188,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
 
     node_hash = None
     for key, expected_generation in zip(keys, itertools.count(start=1)):
-        node_hash = await data_store.insert(
+        insert_result = await data_store.insert(
             key=key,
             value=value,
             tree_id=tree_id,
@@ -189,6 +196,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
             side=None if node_hash is None else Side.LEFT,
             status=Status.COMMITTED,
         )
+        node_hash = insert_result.node_hash
         generation = await data_store.get_tree_generation(tree_id=tree_id)
         generations.append(generation)
         expected.append(expected_generation)
@@ -337,7 +345,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             node_count += 1
             side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
-            node_hash = await data_store.insert(
+            insert_result = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
@@ -346,6 +354,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 use_optimized=False,
                 status=Status.COMMITTED,
             )
+            node_hash = insert_result.node_hash
             if node_hash is not None:
                 generation = await data_store.get_tree_generation(tree_id=tree_id)
                 current_ancestors = await data_store.get_ancestors(node_hash=node_hash, tree_id=tree_id)
@@ -450,13 +459,54 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                 ancestors[node.right_hash] = node_hash
 
 
+@pytest.mark.parametrize(argnames="side", argvalues=list(Side))
+@pytest.mark.asyncio
+async def test_insert_batch_reference_and_side(
+    data_store: DataStore,
+    tree_id: bytes32,
+    side: Side,
+) -> None:
+    insert_result = await data_store.autoinsert(
+        key=b"key1",
+        value=b"value1",
+        tree_id=tree_id,
+        status=Status.COMMITTED,
+    )
+
+    new_root_hash = await data_store.insert_batch(
+        tree_id=tree_id,
+        changelist=[
+            {
+                "action": "insert",
+                "key": b"key2",
+                "value": b"value2",
+                "reference_node_hash": insert_result.node_hash,
+                "side": side,
+            },
+        ],
+    )
+    assert new_root_hash is not None, "batch insert failed or failed to update root"
+
+    parent = await data_store.get_node(new_root_hash)
+    assert isinstance(parent, InternalNode)
+    if side == Side.LEFT:
+        child = await data_store.get_node(parent.left_hash)
+        assert parent.left_hash == child.hash
+    elif side == Side.RIGHT:
+        child = await data_store.get_node(parent.right_hash)
+        assert parent.right_hash == child.hash
+    else:  # pragma: no cover
+        raise Exception("invalid side for test")
+
+
 @pytest.mark.asyncio
 async def test_ancestor_table_unique_inserts(data_store: DataStore, tree_id: bytes32) -> None:
     await add_0123_example(data_store=data_store, tree_id=tree_id)
     hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
     hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
     await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
-    with pytest.raises(Exception):
+    await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
+    with pytest.raises(Exception, match="^Requested insertion of ancestor"):
         await data_store._insert_ancestor_table(hash_1, hash_1, tree_id, 2)
     await data_store._insert_ancestor_table(hash_1, hash_2, tree_id, 2)
 
@@ -495,7 +545,7 @@ async def test_inserting_duplicate_key_fails(
 ) -> None:
     key = b"\x05"
 
-    first_hash = await data_store.insert(
+    insert_result = await data_store.insert(
         key=key,
         value=first_value,
         tree_id=tree_id,
@@ -509,7 +559,7 @@ async def test_inserting_duplicate_key_fails(
             key=key,
             value=second_value,
             tree_id=tree_id,
-            reference_node_hash=first_hash,
+            reference_node_hash=insert_result.node_hash,
             side=Side.RIGHT,
         )
 
@@ -520,9 +570,40 @@ async def test_inserting_duplicate_key_fails(
             key=key,
             value=second_value,
             tree_id=tree_id,
-            reference_node_hash=first_hash,
+            reference_node_hash=insert_result.node_hash,
             side=Side.RIGHT,
             hint_keys_values=hint_keys_values,
+        )
+
+
+@pytest.mark.asyncio()
+async def test_inserting_invalid_length_hash_raises_original_exception(
+    data_store: DataStore,
+) -> None:
+    with pytest.raises(aiosqlite.IntegrityError):
+        # casting since we are testing an invalid case
+        await data_store._insert_node(
+            node_hash=cast(bytes32, b"\x05"),
+            node_type=NodeType.TERMINAL,
+            left_hash=None,
+            right_hash=None,
+            key=b"\x06",
+            value=b"\x07",
+        )
+
+
+@pytest.mark.asyncio()
+async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
+    data_store: DataStore,
+    tree_id: bytes32,
+) -> None:
+    with pytest.raises(aiosqlite.IntegrityError):
+        # casting since we are testing an invalid case
+        await data_store._insert_ancestor_table(
+            left_hash=bytes32(b"\x01" * 32),
+            right_hash=bytes32(b"\x02" * 32),
+            tree_id=tree_id,
+            generation=0,
         )
 
 
@@ -536,8 +617,8 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
-        hashes.append(node_hash)
+        insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+        hashes.append(insert_result.node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
@@ -556,10 +637,10 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         if i == 0 or i > 10:
-            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
+            insert_result = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         else:
             reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
-            node_hash = await data_store.insert(
+            insert_result = await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
@@ -568,9 +649,9 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 hint_keys_values=hint_keys_values,
                 status=Status.COMMITTED,
             )
-            ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
+            ancestors = await data_store.get_ancestors_optimized(insert_result.node_hash, tree_id)
             assert len(ancestors) == i
-        hashes.append(node_hash)
+        hashes.append(insert_result.node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
     too_tall = {hash: height for hash, height in heights.items() if height > 14}
@@ -1042,7 +1123,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
 
 @pytest.mark.asyncio
 async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
-    node_hash = await data_store.insert(
+    insert_result = await data_store.insert(
         key=b"000",
         value=b"000",
         tree_id=tree_id,
@@ -1051,11 +1132,11 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     )
     empty_hash = bytes32([0] * 32)
     invalid_hash = bytes32([0] * 31 + [1])
-    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, node_hash)
+    diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, insert_result.node_hash)
     assert diff_1 == set([DiffData(OperationType.INSERT, b"000", b"000")])
-    diff_2 = await data_store.get_kv_diff(tree_id, node_hash, empty_hash)
+    diff_2 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, empty_hash)
     assert diff_2 == set([DiffData(OperationType.DELETE, b"000", b"000")])
-    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, node_hash)
+    diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, insert_result.node_hash)
     assert diff_3 == set()
 
 
@@ -1266,3 +1347,93 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     await data_store.clear_pending_roots(tree_id=tree_id)
     pending_root = await data_store.get_pending_root(tree_id=tree_id)
     assert pending_root is None
+
+
+@pytest.mark.asyncio
+async def test_clear_pending_roots_returns_root(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.PENDING,
+    )
+
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    cleared_root = await data_store.clear_pending_roots(tree_id=tree_id)
+    assert cleared_root == pending_root
+
+
+@dataclass
+class BatchInsertBenchmarkCase:
+    pre: int
+    count: int
+    limit: float
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return f"pre={self.pre},count={self.count}"
+
+
+@datacases(
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=100,
+        limit=2.2,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=100,
+        limit=2.2,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=1_000,
+        limit=17,
+    ),
+    BatchInsertBenchmarkCase(
+        pre=1_000,
+        count=1_000,
+        limit=19,
+    ),
+)
+@pytest.mark.benchmark
+@pytest.mark.asyncio
+async def test_benchmark_batch_insert_speed(
+    data_store: DataStore,
+    tree_id: bytes32,
+    request: SubRequest,
+    case: BatchInsertBenchmarkCase,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(case.pre + case.count)
+    ]
+
+    pre = changelist[: case.pre]
+    batch = changelist[case.pre : case.pre + case.count]
+
+    if case.pre > 0:
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=pre,
+            status=Status.COMMITTED,
+        )
+
+    with assert_runtime(seconds=case.limit, label=request.node.name):
+        await data_store.insert_batch(
+            tree_id=tree_id,
+            changelist=batch,
+        )

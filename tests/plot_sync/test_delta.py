@@ -15,7 +15,17 @@ log = logging.getLogger(__name__)
 
 
 def dummy_plot(path: str) -> Plot:
-    return Plot(path, uint8(32), bytes32(b"\00" * 32), G1Element(), None, G1Element(), uint64(0), uint64(0))
+    return Plot(
+        filename=path,
+        size=uint8(32),
+        plot_id=bytes32(b"\00" * 32),
+        pool_public_key=G1Element(),
+        pool_contract_puzzle_hash=None,
+        plot_public_key=G1Element(),
+        file_size=uint64(0),
+        time_modified=uint64(0),
+        compression_level=uint8(0),
+    )
 
 
 @pytest.mark.parametrize(

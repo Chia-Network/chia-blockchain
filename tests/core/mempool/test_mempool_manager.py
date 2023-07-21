@@ -159,12 +159,20 @@ def make_test_conds(
             Spend(
                 spend_id,
                 IDENTITY_PUZZLE_HASH,
+                IDENTITY_PUZZLE_HASH,
+                TEST_COIN_AMOUNT,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
                 None if before_height_relative is None else uint32(before_height_relative),
                 None if before_seconds_relative is None else uint64(before_seconds_relative),
                 None if birth_height is None else uint32(birth_height),
                 None if birth_seconds is None else uint64(birth_seconds),
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
                 [],
                 [],
                 0,
@@ -366,7 +374,7 @@ def make_bundle_spends_map_and_fee(
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
-        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
     )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
     return MempoolItem(

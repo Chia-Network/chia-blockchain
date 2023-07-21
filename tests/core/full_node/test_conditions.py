@@ -23,6 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
+from tests.conftest import Mode
 
 from ...blockchain.blockchain_test_utils import _validate_and_add_block
 from .ram_db import create_ram_blockchain
@@ -60,7 +61,7 @@ async def check_spend_bundle_validity(
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
     softfork2: bool = False,
-) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
@@ -95,7 +96,7 @@ async def check_spend_bundle_validity(
             coins_added = []
             coins_removed = []
 
-        return coins_added, coins_removed
+        return coins_added, coins_removed, newest_block
 
     finally:
         # if we don't close the db_wrapper, the test process doesn't exit cleanly
@@ -111,7 +112,7 @@ async def check_conditions(
     expected_err: Optional[Err] = None,
     spend_reward_index: int = -2,
     softfork2: bool = False,
-):
+) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
 
@@ -120,13 +121,79 @@ async def check_conditions(
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
-    await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err, softfork2=softfork2)
+    return await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err, softfork2=softfork2)
 
 
 co = ConditionOpcode
 
 
 class TestConditions:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "opcode, expected_cost",
+        [
+            (0x100, 100),
+            (0x101, 106),
+            (0x102, 112),
+            (0x103, 119),
+            (0x107, 152),
+            (0x1F0, 208000000),
+            # the pattern repeats for every leading byte
+            (0x400, 100),
+            (0x401, 106),
+            (0x4F0, 208000000),
+            (0x4000, 100),
+            (0x4001, 106),
+            (0x40F0, 208000000),
+        ],
+    )
+    async def test_unknown_conditions_with_cost(
+        self,
+        opcode: int,
+        expected_cost: int,
+        bt,
+        consensus_mode: Mode,
+    ):
+        conditions = Program.to(assemble(f"(({opcode} 1337))"))
+        additions, removals, new_block = await check_conditions(bt, conditions)
+
+        if consensus_mode != Mode.HARD_FORK_2_0:
+            # before the hard fork, all unknown conditions have 0 cost
+            expected_cost = 0
+
+        block_base_cost = 761056
+        assert new_block.transactions_info is not None
+        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "condition, expected_cost",
+        [
+            ("((90 1337))", 13370000),
+            ("((90 30000))", 300000000),
+        ],
+    )
+    async def test_softfork_condition(
+        self,
+        condition: str,
+        expected_cost: int,
+        bt,
+        consensus_mode: Mode,
+    ):
+        conditions = Program.to(assemble(condition))
+        additions, removals, new_block = await check_conditions(bt, conditions)
+
+        if consensus_mode != Mode.HARD_FORK_2_0:
+            # the SOFTFORK condition is not recognized before the hard fork
+            expected_cost = 0
+
+        # this includes the cost of the bytes for the condition with 2 bytes
+        # argument. This test works as long as the conditions it's parameterized
+        # on has the same size
+        block_base_cost = 737056
+        assert new_block.transactions_info is not None
+        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize("softfork2", [True, False])
     @pytest.mark.parametrize(
@@ -302,3 +369,68 @@ class TestConditions:
             )
         )
         await check_conditions(bt, conditions)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "prefix, condition, num, expect_err",
+        [
+            # CREATE_COIN_ANNOUNCEMENT
+            ("", "(60 'test')", 1024, None),
+            ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # CREATE_PUZZLE_ANNOUNCEMENT
+            ("", "(62 'test')", 1024, None),
+            ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_PUZZLE_ANNOUNCEMENT
+            ("(62 'test')", "(63 {pann})", 1023, None),
+            ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_COIN_ANNOUNCEMENT
+            ("(60 'test')", "(61 {cann})", 1023, None),
+            ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_SPEND
+            ("", "(64 {coin})", 1024, None),
+            ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_PUZZLE
+            ("", "(65 {ph})", 1024, None),
+            ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        ],
+    )
+    async def test_announce_conditions_limit(
+        self,
+        consensus_mode: Mode,
+        prefix: str,
+        condition: str,
+        num: int,
+        expect_err: Optional[Err],
+        bt: BlockTools,
+    ):
+        """
+        Test that the condition checker accepts more announcements than the new per puzzle limit
+        pre-v2-softfork, and rejects more than the announcement limit afterward.
+        """
+
+        if consensus_mode != Mode.SOFT_FORK3:
+            # before softfork 3, there was no limit on the number of
+            # announcements
+            expect_err = None
+
+        blocks = await initial_blocks(bt)
+        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin_announcement = Announcement(coin.name(), b"test")
+        puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+
+        conditions = b""
+        if prefix != "":
+            conditions += b"\xff" + assemble(prefix).as_bin()
+
+        cond = condition.format(
+            coin="0x" + coin.name().hex(),
+            ph="0x" + EASY_PUZZLE_HASH.hex(),
+            cann="0x" + coin_announcement.name().hex(),
+            pann="0x" + puzzle_announcement.name().hex(),
+        )
+
+        conditions += (b"\xff" + assemble(cond).as_bin()) * num
+        conditions += b"\x80"
+        conditions_program = Program.from_bytes(conditions)
+
+        await check_conditions(bt, conditions_program, expected_err=expect_err, softfork2=True)

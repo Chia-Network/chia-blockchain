@@ -203,6 +203,8 @@ async def run_add_block_benchmark(version: int) -> None:
                 deficit,
                 deficit == 16,
                 prev_transaction_height,
+                bytes32([0] * 32),
+                bytes32([0] * 32),
                 timestamp if is_transaction else None,
                 prev_transaction_block if prev_transaction_block != bytes32([0] * 32) else None,
                 None if fees == 0 else fees,
