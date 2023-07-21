@@ -20,11 +20,10 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.streamable import Streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
@@ -48,13 +47,13 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import WalletProtocol
 
 
 class DIDWallet:
     if TYPE_CHECKING:
-        from chia.wallet.wallet_protocol import WalletProtocol
-
-        _protocol_check: ClassVar[WalletProtocol] = cast("DIDWallet", None)
+        if TYPE_CHECKING:
+            _protocol_check: ClassVar[WalletProtocol[DIDCoinData]] = cast("DIDWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -345,7 +344,7 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, coin_data: Optional[DIDCoinData]):
         """Notification from wallet state manager that wallet has been received."""
         # TODO Use coin_data instead of calling peer API
         parent = self.get_parent_for_coin(coin)

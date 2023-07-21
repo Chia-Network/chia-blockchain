@@ -24,6 +24,7 @@ from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -60,7 +61,7 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 class Wallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
+        _protocol_check: ClassVar[WalletProtocol[ClawbackMetadata]] = cast("Wallet", None)
 
     wallet_info: WalletInfo
     wallet_state_manager: WalletStateManager

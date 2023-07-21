@@ -23,7 +23,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.streamable import Streamable
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -65,7 +64,7 @@ _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 class NFTWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("NFTWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[UncurriedNFT]] = cast("NFTWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -164,7 +163,7 @@ class NFTWallet:
         return nft_coin
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[UncurriedNFT]
     ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         # TODO Use coin_data instead of calling peer API

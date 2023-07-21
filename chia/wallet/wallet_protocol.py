@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypeVar
 
 from blspy import G1Element
 from typing_extensions import NotRequired, Protocol, TypedDict
@@ -11,7 +11,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.streamable import Streamable
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -20,8 +19,10 @@ from chia.wallet.wallet_info import WalletInfo
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
+T = TypeVar("T", contravariant=True)
 
-class WalletProtocol(Protocol):
+
+class WalletProtocol(Protocol[T]):
     @classmethod
     def type(cls) -> WalletType:
         ...
@@ -29,9 +30,7 @@ class WalletProtocol(Protocol):
     def id(self) -> uint32:
         ...
 
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T]) -> None:
         ...
 
     async def select_coins(

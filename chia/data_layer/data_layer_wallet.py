@@ -107,7 +107,8 @@ class Mirror:
 @final
 class DataLayerWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("DataLayerWallet", None)
+        # TODO Create DataLayer coin data model if necessary
+        _protocol_check: ClassVar[WalletProtocol[Any]] = cast("DataLayerWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -814,9 +815,7 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Any]) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)

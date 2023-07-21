@@ -468,4 +468,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol = VCWallet()  # pragma: no cover
+    _dummy: WalletProtocol[VerifiedCredential] = VCWallet()  # pragma: no cover

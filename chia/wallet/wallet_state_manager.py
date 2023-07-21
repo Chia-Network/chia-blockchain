@@ -108,7 +108,7 @@ from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 
-TWalletType = TypeVar("TWalletType", bound=WalletProtocol)
+TWalletType = TypeVar("TWalletType", bound=WalletProtocol[Any])
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_node import WalletNode
@@ -141,7 +141,7 @@ class WalletStateManager:
     db_wrapper: DBWrapper2
 
     main_wallet: Wallet
-    wallets: Dict[uint32, WalletProtocol]
+    wallets: Dict[uint32, WalletProtocol[Any]]
     private_key: PrivateKey
 
     trade_manager: TradeManager
@@ -233,7 +233,7 @@ class WalletStateManager:
             AssetType.CAT: CATWallet,
         }
 
-        wallet: Optional[WalletProtocol] = None
+        wallet: Optional[WalletProtocol[Any]] = None
         for wallet_info in await self.get_all_wallet_info_entries():
             wallet_type = WalletType(wallet_info.type)
             if wallet_type == WalletType.STANDARD_WALLET:
@@ -1902,7 +1902,7 @@ class WalletStateManager:
         result = await self.coin_store.get_coin_records(**kwargs)
         return [await self.get_coin_record_by_wallet_record(record) for record in result.records]
 
-    async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol]:
+    async def get_wallet_for_coin(self, coin_id: bytes32) -> Optional[WalletProtocol[Any]]:
         coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
             return None
@@ -1955,7 +1955,7 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries(wallet_type)
 
-    async def get_wallet_for_asset_id(self, asset_id: str) -> Optional[WalletProtocol]:
+    async def get_wallet_for_asset_id(self, asset_id: str) -> Optional[WalletProtocol[Any]]:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.CAT:
                 assert isinstance(wallet, CATWallet)
@@ -1972,7 +1972,7 @@ class WalletStateManager:
                     return wallet
         return None
 
-    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> Optional[WalletProtocol]:
+    async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo) -> Optional[WalletProtocol[Any]]:
         for wallet in self.wallets.values():
             match_function = getattr(wallet, "match_puzzle_info", None)
             if match_function is not None and callable(match_function):
@@ -1989,7 +1989,7 @@ class WalletStateManager:
                 name,
             )
 
-    async def add_new_wallet(self, wallet: WalletProtocol) -> None:
+    async def add_new_wallet(self, wallet: WalletProtocol[Any]) -> None:
         self.wallets[wallet.id()] = wallet
         await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")

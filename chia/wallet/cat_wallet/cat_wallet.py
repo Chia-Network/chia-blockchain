@@ -26,9 +26,8 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.streamable import Streamable
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
+from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -72,7 +71,7 @@ QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 class CATWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("CATWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[CATCoinData]] = cast("CATWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -359,7 +358,7 @@ class CATWallet:
         )
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[CATCoinData]
     ) -> None:
         # TODO Use coin_data instead of calling peer API
         """Notification from wallet state manager that wallet has been received."""
