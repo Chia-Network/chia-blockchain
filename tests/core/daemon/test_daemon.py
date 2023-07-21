@@ -323,7 +323,7 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
 
 
 @pytest.fixture(scope="function")
-async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daemon):
+async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daemon, bt):
     keychain = Keychain()
 
     # populate the keychain with some test keys
@@ -335,7 +335,7 @@ async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daem
         daemon.self_hostname,
         daemon.daemon_port,
         50 * 1000 * 1000,
-        daemon.ssl_context,
+        bt.get_daemon_ssl_context(),
         heartbeat=daemon.heartbeat,
     )
     return client
