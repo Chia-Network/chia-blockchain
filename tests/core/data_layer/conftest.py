@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import pathlib
-import random
 import sys
 import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
@@ -52,11 +51,6 @@ def chia_data_fixture(chia_root: ChiaRoot, chia_daemon: None, scripts_path: path
 def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32], Awaitable[Example]]:
     # https://github.com/pytest-dev/pytest/issues/8763
     return request.param  # type: ignore[no-any-return]
-
-
-@pytest.fixture(name="database_uri")
-def database_uri_fixture() -> str:
-    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
 
 
 @pytest.fixture(name="tree_id", scope="function")
