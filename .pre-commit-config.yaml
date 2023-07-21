@@ -14,11 +14,13 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies: [click~=7.1]
--   repo: https://github.com/asottile/pyupgrade
-    rev: v3.9.0
+-   repo: local
     hooks:
     -   id: pyupgrade
-        args: ['--py38-plus', '--keep-runtime-typing']
+        name: pyupgrade
+        entry: ./activated.py pyupgrade --py38-plus --keep-runtime-typing
+        language: system
+        types: [python]
 -   repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:

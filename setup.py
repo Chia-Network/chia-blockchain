@@ -56,6 +56,7 @@ dev_dependencies = [
     "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
+    "pyupgrade",
     "twine",
     "isort",
     "flake8",
