@@ -402,8 +402,8 @@ async def two_wallet_nodes(request, _two_wallet_nodes):
     wallet_node_2, _ = wallets[1]
     key_seed_1 = std_hash(bytes(request.node.nodeid + "1", "utf8"))
     key_seed_2 = std_hash(bytes(request.node.nodeid + "2", "utf8"))
-    key_1 = await wallet_node_1.ensure_keychain_proxy().add_private_key(bytes_to_mnemonic(key_seed_1))
-    key_2 = await wallet_node_2.ensure_keychain_proxy().add_private_key(bytes_to_mnemonic(key_seed_2))
+    key_1 = await (await wallet_node_1.ensure_keychain_proxy()).add_private_key(bytes_to_mnemonic(key_seed_1))
+    key_2 = await (await wallet_node_2.ensure_keychain_proxy()).add_private_key(bytes_to_mnemonic(key_seed_2))
     wallet_node_1._close()
     wallet_node_2._close()
     await wallet_node_1._await_closed(shutting_down=False)
