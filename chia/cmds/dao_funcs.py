@@ -134,7 +134,7 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_client: WalletRpcCli
         return None
 
     for asset_id, balance in balances.items():
-        if asset_id == "null":
+        if asset_id == "xch":
             mojos = get_mojo_per_unit(WalletType.STANDARD_WALLET)
             print(f"XCH: {balance / mojos}")
         else:

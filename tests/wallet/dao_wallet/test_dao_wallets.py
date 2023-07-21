@@ -1217,8 +1217,8 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
     )
 
     balances = await api_1.dao_get_treasury_balance({"wallet_id": dao_wallet_1_id})
-    assert balances["balances"][None] == xch_funding_amt
-    assert balances["balances"][cat_id] == cat_funding_amt
+    assert balances["balances"]["xch"] == xch_funding_amt
+    assert balances["balances"][cat_id.hex()] == cat_funding_amt
 
     # Send some cats to wallet_1
     await api_0.cat_spend(
@@ -1337,7 +1337,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
         20,
         api_0.dao_get_treasury_balance,
         [{"wallet_id": dao_wallet_0_id}],
-        lambda x: x["balances"][None],
+        lambda x: x["balances"]["xch"],
         xch_funding_amt - 1000,
     )
 
@@ -1345,7 +1345,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
         20,
         api_1.dao_get_treasury_balance,
         [{"wallet_id": dao_wallet_1_id}],
-        lambda x: x["balances"][None],
+        lambda x: x["balances"]["xch"],
         xch_funding_amt - 1000,
     )
 
@@ -1463,7 +1463,7 @@ async def test_dao_rpc_client(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["null"], xch_funds)
+        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["xch"], xch_funds)
 
         # send cats to wallet 1
         await client_0.cat_spend(
@@ -1935,7 +1935,7 @@ async def test_dao_cat_exits(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["null"], xch_funds)
+        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["xch"], xch_funds)
 
         # send cats to lockup
         lockup_0 = await client_0.dao_send_to_lockup(dao_id_0, cat_amt)

@@ -730,7 +730,7 @@ class WalletStateManager:
 
         funding_puzzle_check = match_funding_puzzle(uncurried, solution)
         if funding_puzzle_check:
-            return await self.get_dao_wallet_from_coinspend_hint(coin_spend)
+            return await self.get_dao_wallet_from_coinspend_hint(coin_spend, coin_state)
 
         # Check if the coin is a CAT
         cat_curried_args = match_cat_puzzle(uncurried)
@@ -1198,13 +1198,13 @@ class WalletStateManager:
                         return WalletIdentifier.create(wallet)
         return None
 
-    async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend) -> Optional[WalletIdentifier]:
-        hint_list = compute_coin_hints(coin_spend)
-        if hint_list:
+    async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend, coin_state: CoinState) -> Optional[WalletIdentifier]:
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        if hinted_coin:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:
                     assert isinstance(wallet, DAOWallet)
-                    if wallet.dao_info.treasury_id in hint_list:
+                    if wallet.dao_info.treasury_id == hinted_coin.hint:
                         return WalletIdentifier.create(wallet)
         return None
 
