@@ -1,6 +1,7 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
+import asyncio
 import datetime
 import multiprocessing
 import os
@@ -49,10 +50,12 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
+from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
@@ -383,13 +386,40 @@ async def simulator_and_wallet() -> AsyncIterator[
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes(request):
+@pytest.fixture(scope="session")
+def event_loop():
+    # This fixture allows us to use an event loop for async tests
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def _two_wallet_nodes(request):
     params = {}
     if request and request.param_index > 0:
         params = request.param
     async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
         yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes(request, _two_wallet_nodes):
+    _1, wallets, _2 = _two_wallet_nodes
+    wallet_node_1, _ = wallets[0]
+    wallet_node_2, _ = wallets[1]
+    key_seed_1 = std_hash(bytes(request.node.nodeid + "1", "utf8"))
+    key_seed_2 = std_hash(bytes(request.node.nodeid + "2", "utf8"))
+    key_1 = await wallet_node_1._keychain_proxy.add_private_key(bytes_to_mnemonic(key_seed_1))
+    key_2 = await wallet_node_2._keychain_proxy.add_private_key(bytes_to_mnemonic(key_seed_2))
+    wallet_node_1._close()
+    wallet_node_2._close()
+    await wallet_node_1._await_closed(shutting_down=False)
+    await wallet_node_2._await_closed(shutting_down=False)
+    await wallet_node_1._start_with_fingerprint(key_1.get_g1().get_fingerprint())
+    await wallet_node_2._start_with_fingerprint(key_2.get_g1().get_fingerprint())
+
+    yield _1, wallets, _2
 
 
 @pytest_asyncio.fixture(scope="function")
