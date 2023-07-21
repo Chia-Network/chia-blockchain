@@ -716,6 +716,7 @@ async def test_get_keys_for_plotting_client(daemon_client_with_config_and_keys):
     assert len(response["data"]["keys"]) == 1
     assert str(test_key_data.fingerprint) in response["data"]["keys"]
     assert str(test_key_data_2.fingerprint) not in response["data"]["keys"]
+    await client.close()
 
 
 @pytest.mark.asyncio
