@@ -322,8 +322,7 @@ class CrawlStore:
     # Crawler -> DNS.
     async def load_reliable_peers_to_db(self) -> None:
         peers = []
-        for peer_id in self.host_to_reliability:
-            reliability = self.host_to_reliability[peer_id]
+        for peer_id, reliability in self.host_to_reliability.items():
             if reliability.is_reliable():
                 peers.append(peer_id)
         self.reliable_peers = len(peers)

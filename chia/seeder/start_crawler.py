@@ -31,6 +31,7 @@ def create_full_node_crawler_service(
     connect_to_daemon: bool = True,
 ) -> Service[Crawler, CrawlerAPI]:
     service_config = config[SERVICE_NAME]
+    crawler_config = service_config["crawler"]
 
     crawler = Crawler(
         service_config,
@@ -42,8 +43,8 @@ def create_full_node_crawler_service(
     network_id = service_config["selected_network"]
 
     rpc_info: Optional[RpcInfo] = None
-    if service_config.get("start_rpc_server", True):
-        rpc_info = (CrawlerRpcApi, service_config.get("rpc_port", 8561))
+    if crawler_config.get("start_rpc_server", True):
+        rpc_info = (CrawlerRpcApi, crawler_config.get("rpc_port", 8561))
 
     return Service(
         root_path=root_path,

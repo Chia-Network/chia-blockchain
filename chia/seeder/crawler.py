@@ -13,7 +13,6 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondPeers
@@ -38,11 +37,8 @@ class Crawler:
     constants: ConsensusConstants
     print_status: bool = True
     state_changed_callback: Optional[StateChangedProtocol] = None
-    sync_store: Any = field(init=False)
-    coin_store: CoinStore = field(init=False)
     _server: Optional[ChiaServer] = None
     crawl_task: Optional[asyncio.Task[None]] = None
-    connection: Optional[aiosqlite.Connection] = None
     crawl_store: Optional[CrawlStore] = None
     log: logging.Logger = log
     _shut_down: bool = False
@@ -52,7 +48,7 @@ class Crawler:
     minimum_version_count: int = 0
     peers_retrieved: List[RespondPeers] = field(default_factory=list)
     host_to_version: Dict[str, str] = field(default_factory=dict)
-    versions: Dict[str, int] = field(init=False)
+    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(lambda: 0))
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
@@ -75,7 +71,6 @@ class Crawler:
         self.bootstrap_peers = self.config["bootstrap_peers"]
         self.minimum_height = self.config["minimum_height"]
         self.other_peers_port = self.config["other_peers_port"]
-        self.versions = defaultdict(lambda: 0)
         self.minimum_version_count: int = self.config.get("minimum_version_count", 100)
         if self.minimum_version_count < 1:
             self.log.warning(
@@ -140,8 +135,7 @@ class Crawler:
         self.server.config["peer_connect_timeout"] = crawler_peer_timeout
 
         # Connect to the DB
-        self.connection: aiosqlite.Connection = await aiosqlite.connect(self.db_path)
-        self.crawl_store: CrawlStore = await CrawlStore.create(self.connection)
+        self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
         # Bootstrap the initial peers
         await self.load_bootstrap_peers()
         self.crawl_task = asyncio.create_task(self.crawl())
@@ -233,8 +227,7 @@ class Crawler:
                                 tls_version="unknown",
                             )
                             new_peer_reliability = PeerReliability(response_peer.host)
-                            if self.crawl_store is not None:
-                                self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
+                            self.crawl_store.maybe_add_peer(new_peer, new_peer_reliability)
                         await self.crawl_store.update_best_timestamp(
                             response_peer.host,
                             self.best_timestamp_per_peer[response_peer.host],
@@ -278,6 +271,7 @@ class Crawler:
 
                 await self.save_to_db()
                 await self.print_summary(t_start, total_nodes, tried_nodes)
+                await asyncio.sleep(15)  # 15 seconds between db updates
                 self._state_changed("crawl_batch_completed")
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
@@ -290,12 +284,12 @@ class Crawler:
             try:
                 await self.crawl_store.load_to_db()
                 await self.crawl_store.load_reliable_peers_to_db()
+                return
             except Exception as e:
                 self.log.error(f"Exception while saving to DB: {e}.")
                 self.log.error("Waiting 5 seconds before retry...")
                 await asyncio.sleep(5)
                 continue
-            break
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
@@ -312,6 +306,11 @@ class Crawler:
                 tls_version = "unknown"
             if peer_info is None:
                 return
+            # validate peer ip address:
+            try:
+                ipaddress.ip_address(peer_info.host)
+            except ValueError:
+                raise ValueError(f"Invalid peer ip address: {peer_info.host}")
             if request.height >= self.minimum_height:
                 if self.crawl_store is not None:
                     await self.crawl_store.peer_connected_hostname(peer_info.host, True, tls_version)
@@ -332,9 +331,9 @@ class Crawler:
             except asyncio.TimeoutError:
                 self.log.error("Crawl task did not exit in time, killing task.")
                 self.crawl_task.cancel()
-        if self.connection is not None:
+        if self.crawl_store is not None:
             self.log.info("Closing connection to DB.")
-            await self.connection.close()
+            await self.crawl_store.crawl_db.close()
 
     async def print_summary(self, t_start: float, total_nodes: int, tried_nodes: Set[str]) -> None:
         assert self.crawl_store is not None  # this is only ever called from the crawl task

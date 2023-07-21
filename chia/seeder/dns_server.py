@@ -4,9 +4,10 @@ import asyncio
 import logging
 import signal
 import traceback
+from asyncio import AbstractEventLoop
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
@@ -51,10 +52,19 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
 
     callback: DnsCallback
     transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
-    data_queue: asyncio.Queue[tuple[DNSRecord, tuple[str, int]]] = asyncio.Queue()
+    data_queue: asyncio.Queue[tuple[DNSRecord, tuple[str, int]]] = field(default_factory=asyncio.Queue)
+    queue_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
 
-    def __post_init__(self) -> None:
-        asyncio.ensure_future(self.respond())  # This starts the dns respond loop.
+    def start(self) -> None:
+        self.queue_task = asyncio.create_task(self.respond())  # This starts the dns respond loop.
+
+    async def stop(self) -> None:
+        if self.queue_task is not None:
+            self.queue_task.cancel()
+            try:
+                await self.queue_task
+            except asyncio.CancelledError:  # we dont care
+                pass
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
@@ -65,16 +75,22 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
-        asyncio.ensure_future(self.handler(dns_request, addr))
+        asyncio.create_task(self.handler(dns_request, addr))
 
     async def respond(self) -> None:
+        max_size = 512
         log.info("UDP DNS responder started.")
         while self.transport is None:  # we wait for the transport to be set.
             await asyncio.sleep(0.1)
         while not self.transport.is_closing():
             try:
                 reply, caller = await self.data_queue.get()
-                self.transport.sendto(reply.pack(), caller)
+                reply_packed = reply.pack()
+                if len(reply_packed) > max_size:
+                    log.info(f"DNS response to {caller} is too large, truncating.")
+                    reply_packed = reply.truncate().pack()
+                self.transport.sendto(reply_packed, caller)
+                log.info(f"Sent UDP DNS response to {caller}, of size {len(reply_packed)}.")
             except Exception as e:
                 log.error(f"Exception while responding to UDP DNS request: {e}. Traceback: {traceback.format_exc()}.")
         log.info("UDP DNS responder stopped.")
@@ -92,20 +108,26 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
     """
 
     callback: DnsCallback
-    transport: asyncio.Transport = field(init=False)
+    transport: Optional[asyncio.Transport] = field(init=False, default=None)
     peer_info: str = field(init=False, default="")
     expected_length: int = 0
-    buffer: bytearray = field(init=False, default=bytearray(2))
+    buffer: bytearray = field(init=False, default_factory=lambda: bytearray(2))
     futures: List[asyncio.Future[None]] = field(init=False, default_factory=list)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        """
+        This is called whenever we get a new connection.
+        """
         # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
         self.transport = transport  # type: ignore[assignment]
-        peer_info = self.transport.get_extra_info("peername")
+        peer_info = transport.get_extra_info("peername")
         self.peer_info = f"{peer_info[0]}:{peer_info[1]}"
         log.debug(f"TCP connection established with {self.peer_info}.")
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
+        """
+        This is called whenever a connection is lost, or closed.
+        """
         if exc is not None:
             log.debug(f"TCP DNS connection lost with {self.peer_info}. Exception: {exc}.")
         else:
@@ -129,7 +151,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
         This is called whenever the buffer is written to, and it loops through the buffer, grouping them into messages
         and then dns records.
         """
-        while not len(self.buffer) == 0:
+        while not len(self.buffer) == 0 and self.transport is not None:
             if not self.expected_length:
                 # Length field received (This is the first part of the message)
                 self.expected_length = int.from_bytes(self.buffer, byteorder="big")
@@ -145,7 +167,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
                     self.transport.close()
                     return
-                self.futures.append(asyncio.ensure_future(self.handle_and_respond(dns_request)))
+                self.futures.append(asyncio.create_task(self.handle_and_respond(dns_request)))
 
         self.buffer = bytearray(2 if self.expected_length == 0 else self.expected_length)  # Reset the buffer if empty.
 
@@ -157,24 +179,30 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
         if len(self.futures) > 0:  # Successful requests
             if self.expected_length != 0:  # Incomplete requests
                 log.warning(
-                    f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}"
+                    f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
+                    f"closing connection after dns replies are sent."
                 )
-            asyncio.ensure_future(self.wait_for_futures())
+            asyncio.create_task(self.wait_for_futures())
             return True  # Keep connection open, until the futures are done.
-        log.warning(f"Received early EOF from {self.peer_info}")
+        log.warning(f"Received early EOF from {self.peer_info}, closing connection.")
         return False
 
     async def wait_for_futures(self) -> None:
         """
         Waits for all the futures to complete, and then closes the connection.
         """
-        await asyncio.gather(*self.futures)
-        self.transport.close()
+        try:
+            await asyncio.wait_for(asyncio.gather(*self.futures), timeout=10)
+        except asyncio.TimeoutError:
+            log.warning(f"Timed out waiting for DNS replies to be sent to {self.peer_info}.")
+        if self.transport is not None:
+            self.transport.close()
 
     async def handle_and_respond(self, data: DNSRecord) -> None:
         r_data = await get_dns_reply(self.callback, data)  # process the request, returning a DNSRecord response.
         try:
-            if not self.transport.is_closing():  # If the client closed the connection, we don't want to send anything.
+            # If the client closed the connection, we don't want to send anything.
+            if self.transport is not None and not self.transport.is_closing():
                 self.transport.write(dns_response_to_tcp(r_data))  # send data back to the client
             log.debug(f"Sent DNS response for {data.q.qname}, to {self.peer_info}.")
         except Exception as e:
@@ -228,14 +256,15 @@ async def get_dns_reply(callback: DnsCallback, dns_request: DNSRecord) -> DNSRec
 class DNSServer:
     config: Dict[str, Any]
     root_path: Path
-    lock: asyncio.Lock = asyncio.Lock()
-    shutdown_event: asyncio.Event = asyncio.Event()
-    db_connection: aiosqlite.Connection = field(init=False)
-    crawl_store: CrawlStore = field(init=False)
-    reliable_task: asyncio.Task[None] = field(init=False)
-    udp_transport: asyncio.DatagramTransport = field(init=False)
-    udp_protocol: UDPDNSServerProtocol = field(init=False)
-    tcp_server: asyncio.Server = field(init=False)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
+    crawl_store: Optional[CrawlStore] = field(init=False, default=None)
+    reliable_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
+    udp_transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
+    udp_protocol: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
+    # TODO: After 3.10 is dropped change to asyncio.Server
+    tcp_server: Optional[asyncio.base_events.Server] = field(init=False, default=None)
+    # these are all set in __post_init__
     dns_port: int = field(init=False)
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
@@ -280,16 +309,21 @@ class DNSServer:
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
         log.info("Starting DNS server.")
-        await self.setup_signal_handlers()
-        self.db_connection = await aiosqlite.connect(self.db_path, timeout=60)
-        self.crawl_store = CrawlStore(self.db_connection)
         # Get a reference to the event loop as we plan to use low-level APIs.
         loop = asyncio.get_running_loop()
+        await self.setup_signal_handlers(loop)
+
+        self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path))
 
         # One protocol instance will be created to serve all UDP client requests.
         self.udp_transport, self.udp_protocol = await loop.create_datagram_endpoint(
             lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
         )
+        # start loop
+        self.udp_protocol.start()
+        # in case the port is 0 we need both protocols on the same port.
+        self.dns_port = self.udp_transport.get_extra_info("sockname")[1]  # get the actual port we are listening on
+
         # one protocol instance will be created to serve all TCP client requests.
         self.tcp_server = await loop.create_server(
             lambda: TCPDNSServerProtocol(self.dns_response), "::0", self.dns_port
@@ -300,40 +334,45 @@ class DNSServer:
         try:
             yield
         finally:  # catches any errors and properly shuts down the server
-            if not self.shutdown_event.is_set():
-                await self.stop()
-                log.info("DNS server stopped.")
+            await self.stop()
+            log.info("DNS server stopped.")
 
-    async def setup_signal_handlers(self) -> None:
-        loop = asyncio.get_running_loop()
+    async def setup_signal_handlers(self, loop: AbstractEventLoop) -> None:
         try:
             loop.add_signal_handler(signal.SIGINT, self._accept_signal)
             loop.add_signal_handler(signal.SIGTERM, self._accept_signal)
         except NotImplementedError:
             log.info("signal handlers unsupported on this platform")
 
-    def _accept_signal(self) -> None:
+    def _accept_signal(self) -> None:  # pragma: no cover
         asyncio.create_task(self.stop())
 
     async def stop(self) -> None:
         log.info("Stopping DNS server...")
-        self.udp_transport.close()  # stop accepting new requests
-        self.tcp_server.close()  # stop accepting new requests
-        self.reliable_task.cancel()  # cancel the peer update task
-        await self.db_connection.close()
-        await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish
+        if self.udp_transport is not None:
+            self.udp_transport.close()  # stop accepting udp new requests
+        if self.udp_protocol is not None:
+            await self.udp_protocol.stop()  # stop responding to udp requests
+        if self.tcp_server is not None:
+            self.tcp_server.close()  # stop accepting new tcp requests
+            await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish
+        if self.reliable_task is not None:
+            self.reliable_task.cancel()  # cancel the peer update task
+        if self.crawl_store is not None:
+            await self.crawl_store.crawl_db.close()
         self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
         sleep_interval = 0
-        while not self.shutdown_event.is_set():
-            new_reliable_peers = []
+        while not self.shutdown_event.is_set() and self.crawl_store is not None:
             try:
                 new_reliable_peers = await self.crawl_store.get_good_peers()
             except Exception as e:
-                log.error(f"Error loading reliable peers from database: {e}. TracebacK: {traceback.format_exc()}.")
+                log.error(f"Error loading reliable peers from database: {e}. Traceback: {traceback.format_exc()}.")
+                continue
             if len(new_reliable_peers) == 0:
-                await asyncio.sleep(60)  # sleep for 1 minute, because the crawler has not yet started
+                log.info("No reliable peers found in database, waiting for db to be populated.")
+                await asyncio.sleep(2)  # sleep for 2 seconds, because the db has not been populated yet.
                 continue
             async with self.lock:
                 self.reliable_peers_v4 = []
@@ -341,20 +380,15 @@ class DNSServer:
                 self.pointer_v4 = 0
                 self.pointer_v6 = 0
                 for peer in new_reliable_peers:
-                    ipv4_peer = None
                     try:
-                        ipv4_peer = IPv4Address(peer)
+                        validated_peer = ip_address(peer)
+                        if validated_peer.version == 4:
+                            self.reliable_peers_v4.append(validated_peer)
+                        elif validated_peer.version == 6:
+                            self.reliable_peers_v6.append(validated_peer)
                     except ValueError:
-                        pass
-                    if ipv4_peer is not None:
-                        self.reliable_peers_v4.append(ipv4_peer)
-                    else:
-                        try:
-                            ipv6_peer = IPv6Address(peer)
-                        except ValueError:
-                            log.error(f"Invalid peer: {peer}")
-                            continue
-                        self.reliable_peers_v6.append(ipv6_peer)
+                        log.error(f"Invalid peer: {peer}")
+                        continue
                 log.info(
                     f"Number of reliable peers discovered in dns server:"
                     f" IPv4 count - {len(self.reliable_peers_v4)}"
@@ -406,7 +440,8 @@ class DNSServer:
             return reply
 
         ttl: int = self.ttl
-        ips: List[RD] = []
+        # we add these to the list as it will allow us to respond to ns and soa requests
+        ips: List[RD] = [self.soa_record] + self.ns_records
         ipv4_count = 0
         ipv6_count = 0
         if question_type is QTYPE.A:
@@ -430,13 +465,15 @@ class DNSServer:
             self.domain: ips,
         }
 
+        valid_domain = False
         for domain_name, domain_responses in records.items():
             if domain_name == qname_str:  # if the dns name is the same as the requested name
+                valid_domain = True
                 for response in domain_responses:
                     rqt: int = getattr(QTYPE, response.__class__.__name__)
-                    if question_type == rqt or (question_type == QTYPE.ANY and (rqt == QTYPE.A or rqt == QTYPE.AAAA)):
+                    if question_type == rqt or question_type == QTYPE.ANY:
                         reply.add_answer(RR(rname=qname, rtype=rqt, rclass=1, ttl=ttl, rdata=response))
-        if len(reply.rr) == 0:  # if we didn't find any records to return
+        if not valid_domain and len(reply.rr) == 0:  # if we didn't find any records to return
             reply.header.rcode = RCODE.NXDOMAIN
         # always put nameservers and the SOA records
         for nameserver in self.ns_records:
@@ -445,16 +482,18 @@ class DNSServer:
         return reply
 
 
-async def run_dns_server(dns_server: DNSServer) -> None:
+async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
     async with dns_server.run():
         await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 
 
 def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSServer:
-    return DNSServer(config, root_path)
+    service_config = config[SERVICE_NAME]
+
+    return DNSServer(service_config, root_path)
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     freeze_support()
     root_path = DEFAULT_ROOT_PATH
     # TODO: refactor to avoid the double load
@@ -462,7 +501,8 @@ def main() -> None:
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    dns_server = create_dns_server_service(service_config, root_path)
+
+    dns_server = create_dns_server_service(config, root_path)
     asyncio.run(run_dns_server(dns_server))
 
 
