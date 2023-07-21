@@ -386,14 +386,6 @@ async def simulator_and_wallet() -> AsyncIterator[
         yield _
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    # This fixture allows us to use an event loop for async tests
-    loop = asyncio.get_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest_asyncio.fixture(scope="session")
 async def _two_wallet_nodes(request):
     params = {}
@@ -410,8 +402,8 @@ async def two_wallet_nodes(request, _two_wallet_nodes):
     wallet_node_2, _ = wallets[1]
     key_seed_1 = std_hash(bytes(request.node.nodeid + "1", "utf8"))
     key_seed_2 = std_hash(bytes(request.node.nodeid + "2", "utf8"))
-    key_1 = await wallet_node_1._keychain_proxy.add_private_key(bytes_to_mnemonic(key_seed_1))
-    key_2 = await wallet_node_2._keychain_proxy.add_private_key(bytes_to_mnemonic(key_seed_2))
+    key_1 = await wallet_node_1.ensure_keychain_proxy().add_private_key(bytes_to_mnemonic(key_seed_1))
+    key_2 = await wallet_node_2.ensure_keychain_proxy().add_private_key(bytes_to_mnemonic(key_seed_2))
     wallet_node_1._close()
     wallet_node_2._close()
     await wallet_node_1._await_closed(shutting_down=False)
