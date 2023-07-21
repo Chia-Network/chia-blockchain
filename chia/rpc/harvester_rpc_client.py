@@ -43,3 +43,12 @@ class HarvesterRpcClient(RpcClient):
         # TODO: casting due to lack of type checked deserialization
         result = cast(bool, response["success"])
         return result
+
+    async def get_harvester_config(self) -> Dict[str, Any]:
+        return await self.fetch("get_harvester_config", {})
+
+    async def update_harvester_config(self, config: Dict[str, Any]) -> bool:
+        response = await self.fetch("update_harvester_config", config)
+        # TODO: casting due to lack of type checked deserialization
+        result = cast(bool, response["success"])
+        return result

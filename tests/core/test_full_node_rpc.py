@@ -397,7 +397,7 @@ class TestRpc:
 
             # Do another one but without sending the slot
             await full_node_api_1.full_node.add_block(blocks[-1])
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
             selected_eos = blocks[-1].finished_sub_slots[-1]
             await full_node_api_1.full_node.add_block(blocks[-1])
 

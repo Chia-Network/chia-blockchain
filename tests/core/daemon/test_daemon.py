@@ -11,6 +11,7 @@ import pkg_resources
 import pytest
 from aiohttp.web_ws import WebSocketResponse
 
+from chia.daemon.client import connect_to_daemon
 from chia.daemon.keychain_server import (
     DeleteLabelRequest,
     GetKeyRequest,
@@ -30,6 +31,7 @@ from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
+from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
 
@@ -55,6 +57,14 @@ class WalletAddressCase:
     request: Dict[str, Any]
     response: Dict[str, Any]
     pubkeys_only: bool = field(default=False)
+    marks: Marks = ()
+
+
+@dataclass
+class KeysForPlotCase:
+    id: str
+    request: Dict[str, Any]
+    response: Dict[str, Any]
     marks: Marks = ()
 
 
@@ -101,6 +111,11 @@ class Daemon:
 
     async def get_wallet_addresses(self, request: Dict[str, Any]) -> Dict[str, Any]:
         return await WebSocketServer.get_wallet_addresses(
+            cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
+        )
+
+    async def get_keys_for_plotting(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.get_keys_for_plotting(
             cast(WebSocketServer, self), websocket=WebSocketResponse(), request=request
         )
 
@@ -305,6 +320,25 @@ def mock_daemon_with_config_and_keys(get_keychain_for_function, root_path_popula
 
     # Mock daemon server with net_config set for mainnet
     return Daemon(services={}, connections={}, net_config=config)
+
+
+@pytest.fixture(scope="function")
+async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daemon):
+    keychain = Keychain()
+
+    # populate the keychain with some test keys
+    keychain.add_private_key(test_key_data.mnemonic_str())
+    keychain.add_private_key(test_key_data_2.mnemonic_str())
+
+    daemon = get_daemon
+    client = await connect_to_daemon(
+        daemon.self_hostname,
+        daemon.daemon_port,
+        50 * 1000 * 1000,
+        daemon.ssl_context,
+        heartbeat=daemon.heartbeat,
+    )
+    return client
 
 
 @pytest.mark.asyncio
@@ -597,6 +631,91 @@ async def test_get_wallet_addresses(
         monkeypatch.setattr(Keychain, "get_keys", get_keys_no_secrets)
 
     assert case.response == await daemon.get_wallet_addresses(case.request)
+
+
+@datacases(
+    KeysForPlotCase(
+        id="no params",
+        # When not specifying exact fingerprints, `get_keys_for_plotting` returns
+        # all farmer_pk/pool_pk data for available fingerprints
+        request={},
+        response={
+            "success": True,
+            "keys": {
+                test_key_data.fingerprint: {
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data.private_key).get_g1()).hex(),
+                },
+                test_key_data_2.fingerprint: {
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data_2.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data_2.private_key).get_g1()).hex(),
+                },
+            },
+        },
+    ),
+    KeysForPlotCase(
+        id="list of fingerprints",
+        request={"fingerprints": [test_key_data.fingerprint]},
+        response={
+            "success": True,
+            "keys": {
+                test_key_data.fingerprint: {
+                    "farmer_public_key": bytes(master_sk_to_farmer_sk(test_key_data.private_key).get_g1()).hex(),
+                    "pool_public_key": bytes(master_sk_to_pool_sk(test_key_data.private_key).get_g1()).hex(),
+                },
+            },
+        },
+    ),
+    KeysForPlotCase(
+        id="invalid fingerprint",
+        request={"fingerprints": [999999]},
+        response={
+            "success": False,
+            "error": "key(s) not found for fingerprint(s) {999999}",
+        },
+    ),
+)
+@pytest.mark.asyncio
+async def test_get_keys_for_plotting(
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: KeysForPlotCase,
+):
+    daemon = mock_daemon_with_config_and_keys
+    assert case.response == await daemon.get_keys_for_plotting(case.request)
+
+
+@datacases(
+    KeysForPlotCase(
+        id="invalid request format",
+        request={"fingerprints": test_key_data.fingerprint},
+        response={},
+    ),
+)
+@pytest.mark.asyncio
+async def test_get_keys_for_plotting_error(
+    mock_daemon_with_config_and_keys,
+    monkeypatch,
+    case: KeysForPlotCase,
+):
+    daemon = mock_daemon_with_config_and_keys
+    with pytest.raises(ValueError, match="fingerprints must be a list of integer"):
+        await daemon.get_keys_for_plotting(case.request)
+
+
+@pytest.mark.asyncio
+async def test_get_keys_for_plotting_client(daemon_client_with_config_and_keys):
+    client = await daemon_client_with_config_and_keys
+    response = await client.get_keys_for_plotting()
+    assert response["data"]["success"] is True
+    assert len(response["data"]["keys"]) == 2
+    assert str(test_key_data.fingerprint) in response["data"]["keys"]
+    assert str(test_key_data_2.fingerprint) in response["data"]["keys"]
+    response = await client.get_keys_for_plotting([test_key_data.fingerprint])
+    assert response["data"]["success"] is True
+    assert len(response["data"]["keys"]) == 1
+    assert str(test_key_data.fingerprint) in response["data"]["keys"]
+    assert str(test_key_data_2.fingerprint) not in response["data"]["keys"]
 
 
 @pytest.mark.asyncio
@@ -1103,6 +1222,12 @@ async def test_bad_json(daemon_connection_and_temp_keychain: Tuple[aiohttp.Clien
         response={
             "success": True,
             "plotters": {
+                "bladebit": {
+                    "can_install": True,
+                    "cuda_support": False,
+                    "display_name": "BladeBit Plotter",
+                    "installed": False,
+                },
                 "chiapos": {"display_name": "Chia Proof of Space", "installed": True, "version": chiapos_version},
                 "madmax": {"can_install": True, "display_name": "madMAx Plotter", "installed": False},
             },

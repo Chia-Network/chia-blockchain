@@ -5,6 +5,7 @@ import pytest
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.sender import ExpectedResponse, Sender
 from chia.plot_sync.util import Constants
+from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType
@@ -14,7 +15,7 @@ from tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
 
 
 def test_default_values(bt: BlockTools) -> None:
-    sender = Sender(bt.plot_manager)
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     assert sender._plot_manager == bt.plot_manager
     assert sender._connection is None
     assert sender._sync_id == uint64(0)
@@ -24,11 +25,12 @@ def test_default_values(bt: BlockTools) -> None:
     assert not sender._stop_requested
     assert sender._task is None
     assert sender._response is None
+    assert sender._harvesting_mode == HarvestingMode.CPU
 
 
 def test_set_connection_values(bt: BlockTools) -> None:
     farmer_connection = get_dummy_connection(NodeType.FARMER)
-    sender = Sender(bt.plot_manager)
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     # Test invalid NodeType values
     for connection_type in NodeType:
         if connection_type != NodeType.FARMER:
@@ -45,7 +47,7 @@ def test_set_connection_values(bt: BlockTools) -> None:
 
 @pytest.mark.asyncio
 async def test_start_stop_send_task(bt: BlockTools) -> None:
-    sender = Sender(bt.plot_manager)
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
     # Make sure starting/restarting works
     for _ in range(2):
         assert sender._task is None
@@ -62,7 +64,7 @@ async def test_start_stop_send_task(bt: BlockTools) -> None:
 
 
 def test_set_response(bt: BlockTools) -> None:
-    sender = Sender(bt.plot_manager)
+    sender = Sender(bt.plot_manager, HarvestingMode.CPU)
 
     def new_expected_response(sync_id: int, message_id: int, message_type: ProtocolMessageTypes) -> ExpectedResponse:
         return ExpectedResponse(message_type, plot_sync_identifier(uint64(sync_id), uint64(message_id)))

@@ -18,6 +18,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
+from blspy import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -36,13 +37,18 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, passphrase_requirements, supports_os_passphrase_storage
+from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
-from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import (
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_unhardened,
+)
 
 io_pool_exc = ThreadPoolExecutor()
 
@@ -114,6 +120,27 @@ async def ping() -> Dict[str, Any]:
 class Command(Protocol):
     async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         ...
+
+
+def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
+    all_keys = Keychain().get_keys(include_secrets=True)
+    missing_fingerprints = set()
+
+    # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
+    if fingerprints is None:
+        keys = all_keys
+    else:
+        if not isinstance(fingerprints, list):
+            raise ValueError("fingerprints must be a list of integer")
+        keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
+        keys = []
+        for fingerprint in fingerprints:
+            f = uint32(fingerprint)
+            if f not in keys_by_fingerprint:
+                missing_fingerprints.add(f)
+            else:
+                keys.append(keys_by_fingerprint[f])
+    return keys, missing_fingerprints
 
 
 class WebSocketServer:
@@ -394,6 +421,7 @@ class WebSocketServer:
             "get_plotters": self.get_plotters,
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
+            "get_keys_for_plotting": self.get_keys_for_plotting,
         }
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -567,27 +595,14 @@ class WebSocketServer:
         return response
 
     async def get_wallet_addresses(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        all_keys = Keychain().get_keys(include_secrets=True)
         fingerprints = request.get("fingerprints", None)
+        keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
+        if len(missing_fingerprints) > 0:
+            return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
+
         index = request.get("index", 0)
         count = request.get("count", 1)
         non_observer_derivation = request.get("non_observer_derivation", False)
-
-        # if fingerprints is None, we want all keys, otherwise we want the keys that match the fingerprints
-        if fingerprints is None:
-            keys = all_keys
-        else:
-            keys_by_fingerprint = {key.fingerprint: key for key in all_keys}
-            keys = []
-            missing_fingerprints = set()
-            for fingerprint in fingerprints:
-                if fingerprint not in keys_by_fingerprint:
-                    missing_fingerprints.add(fingerprint)
-                else:
-                    keys.append(keys_by_fingerprint[fingerprint])
-
-            if len(keys) != len(fingerprints):
-                return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
 
         selected = self.net_config["selected_network"]
         prefix = self.net_config["network_overrides"]["config"][selected]["address_prefix"]
@@ -616,6 +631,27 @@ class WebSocketServer:
             wallet_addresses_by_fingerprint[key.fingerprint] = address_entries
 
         response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
+        return response
+
+    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        fingerprints = request.get("fingerprints", None)
+        keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
+        if len(missing_fingerprints) > 0:
+            return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
+
+        keys_for_plot: Dict[uint32, Any] = {}
+        for key in keys:
+            sk = key.private_key
+            farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
+            pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
+            keys_for_plot[key.fingerprint] = {
+                "farmer_public_key": bytes(farmer_public_key).hex(),
+                "pool_public_key": bytes(pool_public_key).hex(),
+            }
+        response: Dict[str, Any] = {
+            "success": True,
+            "keys": keys_for_plot,
+        }
         return response
 
     async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
@@ -795,28 +831,52 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         plot_type = request["plot_type"]
-        assert plot_type == "ramplot" or plot_type == "diskplot"
+        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+            raise ValueError(f"Unknown plot_type: {plot_type}")
 
         command_args: List[str] = []
 
-        if plot_type == "ramplot":
-            w = request.get("w", False)  # Warm start
-            m = request.get("m", False)  # Disable NUMA
-            no_cpu_affinity = request.get("no_cpu_affinity", False)
-
-            if w is True:
-                command_args.append("--warmstart")
-            if m is True:
-                command_args.append("--nonuma")
-            if no_cpu_affinity is True:
-                command_args.append("--no-cpu-affinity")
-
-            return command_args
-
-        # if plot_type == "diskplot"
+        # Common options among diskplot, ramplot, cudaplot
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
         no_cpu_affinity = request.get("no_cpu_affinity", False)
+        compress = request.get("compress", None)  # Compression level
+
+        if w is True:
+            command_args.append("--warmstart")
+        if m is True:
+            command_args.append("--nonuma")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+        if compress is not None and str(compress).isdigit():
+            command_args.append("--compress")
+            command_args.append(str(compress))
+
+        # ramplot don't accept any more options
+        if plot_type == "ramplot":
+            return command_args
+
+        # Options only applicable for cudaplot
+        if plot_type == "cudaplot":
+            device_index = request.get("device", None)
+            no_direct_downloads = request.get("no_direct_downloads", False)
+            t1 = request.get("t", None)  # Temp directory
+            t2 = request.get("t2", None)  # Temp2 directory
+
+            if device_index is not None and str(device_index).isdigit():
+                command_args.append("--device")
+                command_args.append(str(device_index))
+            if no_direct_downloads:
+                command_args.append("--no-direct-downloads")
+            if t1 is not None:
+                command_args.append("-t")
+                command_args.append(t1)
+            if t2 is not None:
+                command_args.append("-2")
+                command_args.append(t2)
+            return command_args
+
+        # if plot_type == "diskplot"
         # memo = request["memo"]
         t1 = request["t"]  # Temp directory
         t2 = request.get("t2")  # Temp2 directory
@@ -831,44 +891,37 @@ class WebSocketServer:
         no_t1_direct = request.get("no_t1_direct", False)
         no_t2_direct = request.get("no_t2_direct", False)
 
-        if w is True:
-            command_args.append("--warmstart")
-        if m is True:
-            command_args.append("--nonuma")
-        if no_cpu_affinity is True:
-            command_args.append("--no-cpu-affinity")
-
         command_args.append("-t")
         command_args.append(t1)
-        if t2:
+        if t2 is not None:
             command_args.append("-2")
             command_args.append(t2)
-        if u:
+        if u is not None:
             command_args.append("-u")
             command_args.append(str(u))
-        if cache:
+        if cache is not None:
             command_args.append("--cache")
             command_args.append(str(cache))
-        if f1_threads:
+        if f1_threads is not None:
             command_args.append("--f1-threads")
             command_args.append(str(f1_threads))
-        if fp_threads:
+        if fp_threads is not None:
             command_args.append("--fp-threads")
             command_args.append(str(fp_threads))
-        if c_threads:
+        if c_threads is not None:
             command_args.append("--c-threads")
             command_args.append(str(c_threads))
-        if p2_threads:
+        if p2_threads is not None:
             command_args.append("--p2-threads")
             command_args.append(str(p2_threads))
-        if p3_threads:
+        if p3_threads is not None:
             command_args.append("--p3-threads")
             command_args.append(str(p3_threads))
-        if alternate:
+        if alternate is not None:
             command_args.append("--alternate")
-        if no_t1_direct:
+        if no_t1_direct is not None:
             command_args.append("--no-t1-direct")
-        if no_t2_direct:
+        if no_t2_direct is not None:
             command_args.append("--no-t2-direct")
 
         return command_args
@@ -907,7 +960,7 @@ class WebSocketServer:
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type == "diskplot" or plot_type == "ramplot"
+            assert plot_type == "diskplot" or plot_type == "ramplot" or plot_type == "cudaplot"
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))

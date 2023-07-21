@@ -52,6 +52,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
+    _validate_and_add_block_multi_error_or_pass,
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
@@ -214,9 +215,7 @@ class TestBlockHeaderValidation:
                     new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 log.warning(f"Number of slots: {len(block.finished_sub_slots)}")
-                block_bad_3 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
-                )
+                block_bad_3 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_3])
 
                 header_block_bad_3 = get_block_header(block_bad_3, [], [])
                 _, error = validate_finished_header_block(
@@ -246,9 +245,7 @@ class TestBlockHeaderValidation:
                     "reward_chain.challenge_chain_sub_slot_hash",
                     new_finished_ss_4.challenge_chain.get_hash(),
                 )
-                block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
-                )
+                block_bad_4 = recursive_replace(block, "finished_sub_slots", [new_finished_ss_4])
 
                 header_block_bad_4 = get_block_header(block_bad_4, [], [])
                 _, error = validate_finished_header_block(
@@ -776,12 +773,13 @@ class TestBlockHeaderValidation:
         blocks_base = default_400_blocks[: bt.constants.EPOCH_BLOCKS]
         assert len(blocks_base) == bt.constants.EPOCH_BLOCKS
         blocks_1 = bt.get_consecutive_blocks(1, block_list_input=blocks_base, force_overflow=True)
-        blocks_2 = bt.get_consecutive_blocks(1, skip_slots=3, block_list_input=blocks_base, force_overflow=True)
+        blocks_2 = bt.get_consecutive_blocks(1, skip_slots=5, block_list_input=blocks_base, force_overflow=True)
         for block in blocks_base:
             await _validate_and_add_block(empty_blockchain, block, skip_prevalidation=True)
         await _validate_and_add_block(
             empty_blockchain, blocks_1[-1], expected_result=AddBlockResult.NEW_PEAK, skip_prevalidation=True
         )
+        assert blocks_1[-1].header_hash != blocks_2[-1].header_hash
         await _validate_and_add_block(
             empty_blockchain, blocks_2[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN, skip_prevalidation=True
         )
@@ -1372,6 +1370,8 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_pool_target_contract(self, empty_blockchain, bt):
+        if bt.constants.SOFT_FORK3_HEIGHT == 0:
+            pytest.skip("Skipped temporarily until adding more pool plots.")
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
@@ -2010,7 +2010,19 @@ class TestBodyValidation:
                 assert c is not None and c.spent
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("opcode", [ConditionOpcode.AGG_SIG_ME, ConditionOpcode.AGG_SIG_UNSAFE])
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.AGG_SIG_ME,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ],
+    )
     @pytest.mark.parametrize(
         "with_garbage,expected",
         [
@@ -2024,6 +2036,20 @@ class TestBodyValidation:
         # apply strict rules.
         if consensus_mode == Mode.HARD_FORK_2_0 and with_garbage:
             expected = (AddBlockResult.NEW_PEAK, None, 2)
+
+        # before the 2.0 hard fork, these conditions do not exist
+        # but WalletTool still lets us create them, and aggregate them into the
+        # block signature. When the pre-hard fork node sees them, the conditions
+        # are ignored, but the aggregate signature is corrupt.
+        if consensus_mode != Mode.HARD_FORK_2_0 and opcode in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ]:
+            expected = (AddBlockResult.INVALID_BLOCK, Err.BAD_AGGREGATE_SIGNATURE, None)
 
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -3646,3 +3672,61 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     for block in chain_b[40:]:
         await _validate_and_add_block(b, block)
+
+
+@pytest.mark.parametrize("unique_plots_window", [1, 2])
+@pytest.mark.parametrize("bt_respects_soft_fork3", [True, False])
+@pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
+@pytest.mark.asyncio
+async def test_soft_fork3_activation(
+    consensus_mode, blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
+):
+    # We don't run Mode.SOFT_FORK3, since this is already parametrized by this test.
+    # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
+    # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipped test")
+    with TempKeyring() as keychain:
+        bt = await create_block_tools_async(
+            constants=blockchain_constants.replace(
+                SOFT_FORK3_HEIGHT=(0 if bt_respects_soft_fork3 else 10000),
+                UNIQUE_PLOTS_WINDOW=unique_plots_window,
+            ),
+            keychain=keychain,
+        )
+        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=soft_fork3_height)
+        b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
+        blocks = bt.get_consecutive_blocks(25)
+        for height, block in enumerate(blocks):
+            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.INVALID_POSPACE])
+            peak = b.get_peak()
+            assert peak is not None
+            if peak.height != height:
+                break
+
+        peak = b.get_peak()
+        assert peak is not None
+
+        # We expect to add all blocks here (25 blocks), either because `unique_plots_window`=1 means we're not
+        # checking any extra plot filter, or `unique_plots_window`=True means `BlockTools` produced blocks
+        # that respect CHIP-13.
+        if bt_respects_soft_fork3 or unique_plots_window == 1:
+            assert peak.height == 24
+        else:
+            # Here we have `bt_respects_soft_fork3`=False, which means the produced blocks by `BlockTools` will not
+            # respect the CHIP-13 condition. We expect not adding blocks at some point after the soft fork 3
+            # activation height (`soft_fork3_height`).
+            if soft_fork3_height == 0:
+                # We're not adding all blocks, since at some point `BlockTools` will break the CHIP-13 condition with
+                # very high likelyhood.
+                assert peak.height < 24
+            elif soft_fork3_height == 10:
+                # We're not adding all blocks, but we've added all of them until the soft fork 3 activated (height 10)
+                assert peak.height < 24 and peak.height >= 9
+            else:
+                # Soft fork 3 will activate in the future (height 100), so we're adding all blocks.
+                assert peak.height == 24
+
+        await db_wrapper.close()
+        b.shut_down()
+        db_path.unlink()
