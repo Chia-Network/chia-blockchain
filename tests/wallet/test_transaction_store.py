@@ -443,11 +443,13 @@ async def test_delete_unconfirmed() -> None:
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True)
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, wallet_id=2)
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
+        tr5 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2, type=uint32(TransactionType.COINBASE_REWARD.value))
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
         await store.add_transaction_record(tr3)
         await store.add_transaction_record(tr4)
+        await store.add_transaction_record(tr5)
 
         assert cmp(await store.get_all_transactions(), [tr1, tr2, tr3, tr4])
         await store.delete_unconfirmed_transactions(1)
