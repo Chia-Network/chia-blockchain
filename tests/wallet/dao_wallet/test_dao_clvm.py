@@ -6,8 +6,6 @@ import pytest
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
-
-# from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -16,6 +14,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.singleton import create_singleton_puzzle_hash
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -49,6 +48,9 @@ DAO_UPDATE_MOD_HASH: bytes32 = DAO_UPDATE_MOD.get_tree_hash()
 
 
 def test_finished_state() -> None:
+    """
+    Once a proposal has closed, it becomes a 'beacon' singleton which announces its proposal ID. This is referred to as the finished state and is used to confirm that a proposal has closed in order to release voting CATs from the lockup puzzle.
+    """
     proposal_id: Program = Program.to("proposal_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
@@ -70,6 +72,12 @@ def test_finished_state() -> None:
 
 
 def test_proposal() -> None:
+    """
+    This test covers the three paths for closing a proposal:
+    - Close a passed proposal
+    - Close a failed proposal
+    - Self-destruct a broken proposal
+    """
     proposal_pass_percentage: uint64 = uint64(5100)
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
@@ -331,6 +339,12 @@ def test_proposal() -> None:
 
 
 def test_proposal_timer() -> None:
+    """
+    The timer puzzle is created at the same time as a proposal, and enforces a relative time condition on proposals
+    The closing time is passed in via the timer solution and confirmed via announcement from the proposal.
+    It creates/asserts announcements to pair it with the finishing spend of a proposal.
+    The timer puzzle only has one spend path so there is only one test case for this puzzle.
+    """
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
@@ -356,29 +370,73 @@ def test_proposal_timer() -> None:
         CAT_TAIL_HASH,
         treasury_id,
     )
+
     proposal_timer_full: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         proposal_curry_one.get_tree_hash(),
         singleton_struct,
 
     )
 
+    timelock = int_to_bytes(101)
+    parent_parent_id = Program.to("parent_parent").get_tree_hash()
+    parent_amount = 2000
     solution: Program = Program.to(
         [
-            140,
-            180,
-            Program.to(1).get_tree_hash(),
-            Program.to("parent").get_tree_hash(),
-            23,
-            200,
-            Program.to("parent_parent").get_tree_hash(),
+            140, #  yes votes
+            180, #  total votes
+            Program.to(1).get_tree_hash(), #  proposal innerpuz
+            timelock, # timelock
+            parent_parent_id, #  parent parent id
+            parent_amount, # parent amount
         ]
     )
-    conds: Program = proposal_timer_full.run(solution)
-    assert len(conds.as_python()) == 4
+    # run the timer puzzle. 
+    conds: Program = conditions_dict_for_solution(proposal_timer_full, solution, INFINITE_COST)
+    assert len(conds) == 4
+
+    # Validate the output conditions
+    # Check the timelock is present
+    assert conds[ConditionOpcode.ASSERT_HEIGHT_RELATIVE][0].vars[0] == timelock
+    # Check the proposal id is announced by the timer puz
+    assert conds[ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT][0].vars[0] == singleton_id
+    # Check the proposal puz announces the timelock
+    expected_proposal_puzhash: Program = create_singleton_puzzle_hash(
+        proposal_curry_one.curry(
+            proposal_curry_one.get_tree_hash(),
+            singleton_id,
+            Program.to(1).get_tree_hash(),
+            140,
+            180
+        ).get_tree_hash(),
+        singleton_id
+    )
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(expected_proposal_puzhash + timelock)
+    # Check the parent is a proposal
+    expected_parent_puzhash: Program = create_singleton_puzzle_hash(
+        proposal_curry_one.curry(
+            proposal_curry_one.get_tree_hash(),
+            singleton_id,
+            Program.to(1).get_tree_hash(),
+            0,
+            0,
+        ).get_tree_hash(),
+        singleton_id
+    )
+    parent_id = std_hash(parent_parent_id + expected_parent_puzhash + int_to_bytes(parent_amount))
+    assert conds[ConditionOpcode.ASSERT_MY_PARENT_ID][0].vars[0] == parent_id
 
 
 def test_validator() -> None:
-    # This test covers proposal_validator and spend_p2_singleton
+    """
+    The proposal validator is run by the treasury when a passing proposal is closed.
+    Its main purpose is to check that the proposal's vote amounts adehere to the DAO rules contained in the treasury (which are passed in from the treasury as Truth values).
+    It creates a puzzle announcement of the proposal ID, that the proposal itself asserts.
+    It also spends the value held in the proposal to the excess payout puzhash.
+
+    The test cases covered are:
+    - Executing a spend proposal in which the validator executes the spend of a 'spend_p2_singleton` coin. This is just a proposal that spends some the treasury
+    - Executing an update proposal that changes the DAO rules.
+    """
     # Setup the treasury
     treasury_id: Program = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
@@ -499,6 +557,12 @@ def test_validator() -> None:
 
 
 def test_merge_p2_singleton() -> None:
+    """
+    The treasury funds are held by p2_singleton_via_delegated puzzles. Because a DAO can have a large number of these coins, it's possible to merge them together without requiring a treasury spend.
+    There are two cases tested:
+    - For the merge coins that do not create the single output coin, and
+    - For the coin that does create the output.
+    """
     # Setup a singleton struct
     singleton_inner: Program = Program.to(1)
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
@@ -541,6 +605,11 @@ def test_merge_p2_singleton() -> None:
 
 
 def test_treasury() -> None:
+    """
+    The treasury has two spend paths:
+    - Proposal Path: when a proposal is being closed the treasury spend runs the validator and the actual proposed code (if passed)
+    - Oracle Path: The treasury can make announcements about itself that are used to close invalid proposals
+    """
     # Setup the treasury
     treasury_id: Program = Program.to("treasury_id").get_tree_hash()
     treasury_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
@@ -641,6 +710,10 @@ def test_treasury() -> None:
 
 
 def test_lockup() -> None:
+    """
+    The lockup puzzle tracks the voting records of DAO CATs. When a proposal is voted on the proposal ID is added to a list against which future votes are checked.
+    This test checks the addition of new votes to the lockup, and that you can't re-vote on a proposal twice.
+    """
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
 
     INNERPUZ = Program.to(1)
@@ -758,7 +831,10 @@ def test_lockup() -> None:
     assert conds.at("rrrrfrf").as_atom() == child_lockup
 
 
-def test_proposal_innerpuz() -> None:
+def test_proposal_lifecycle() -> None:
+    """
+    This test covers the whole lifecycle of a proposal and treasury. It's main function is to check that the announcement pairs between treasury and proposal are accurate. It covers the spend proposal and update proposal types.
+    """
     proposal_pass_percentage: uint64 = uint64(5100)
     attendance_required: uint64 = uint64(1000)
     proposal_timelock = 40
