@@ -87,10 +87,10 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
                 reply, caller = await self.data_queue.get()
                 reply_packed = reply.pack()
                 if len(reply_packed) > max_size:
-                    log.info(f"DNS response to {caller} is too large, truncating.")
+                    log.debug(f"DNS response to {caller} is too large, truncating.")
                     reply_packed = reply.truncate().pack()
                 self.transport.sendto(reply_packed, caller)
-                log.info(f"Sent UDP DNS response to {caller}, of size {len(reply_packed)}.")
+                log.debug(f"Sent UDP DNS response to {caller}, of size {len(reply_packed)}.")
             except Exception as e:
                 log.error(f"Exception while responding to UDP DNS request: {e}. Traceback: {traceback.format_exc()}.")
         log.info("UDP DNS responder stopped.")
@@ -184,7 +184,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 )
             asyncio.create_task(self.wait_for_futures())
             return True  # Keep connection open, until the futures are done.
-        log.warning(f"Received early EOF from {self.peer_info}, closing connection.")
+        log.info(f"Received early EOF from {self.peer_info}, closing connection.")
         return False
 
     async def wait_for_futures(self) -> None:
@@ -342,7 +342,7 @@ class DNSServer:
             loop.add_signal_handler(signal.SIGINT, self._accept_signal)
             loop.add_signal_handler(signal.SIGTERM, self._accept_signal)
         except NotImplementedError:
-            log.info("signal handlers unsupported on this platform")
+            log.warning("signal handlers unsupported on this platform")
 
     def _accept_signal(self) -> None:  # pragma: no cover
         asyncio.create_task(self.stop())

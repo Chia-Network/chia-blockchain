@@ -126,7 +126,7 @@ class Crawler:
             if not connected:
                 await self.crawl_store.peer_failed_to_connect(peer)
         except Exception as e:
-            self.log.info(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
+            self.log.warning(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
             await self.crawl_store.peer_failed_to_connect(peer)
 
     async def _start(self) -> None:
@@ -143,7 +143,7 @@ class Crawler:
     async def load_bootstrap_peers(self) -> None:
         assert self.crawl_store is not None
         try:
-            self.log.info("Bootstrapping initial peers...")
+            self.log.warning("Bootstrapping initial peers...")
             t_start = time.time()
             for peer in self.bootstrap_peers:
                 new_peer = PeerRecord(
@@ -168,7 +168,7 @@ class Crawler:
             for host, version in self.host_to_version.items():
                 self.versions[version] += 1
 
-            self.log.info(f"Bootstrapped initial peers in {time.time() - t_start} seconds")
+            self.log.warning(f"Bootstrapped initial peers in {time.time() - t_start} seconds")
         except Exception as e:
             self.log.error(f"Error bootstrapping initial peers: {e}")
 
@@ -341,19 +341,19 @@ class Crawler:
             return
         total_records = self.crawl_store.get_total_records()
         ipv6_count = self.crawl_store.get_ipv6_peers()
-        self.log.info("***")
-        self.log.info("Finished batch:")
-        self.log.info(f"Total IPs stored in DB: {total_records}.")
-        self.log.info(f"Total IPV6 addresses stored in DB: {ipv6_count}")
-        self.log.info(f"Total connections attempted since crawler started: {total_nodes}.")
-        self.log.info(f"Total unique nodes attempted since crawler started: {len(tried_nodes)}.")
+        self.log.warning("***")
+        self.log.warning("Finished batch:")
+        self.log.warning(f"Total IPs stored in DB: {total_records}.")
+        self.log.warning(f"Total IPV6 addresses stored in DB: {ipv6_count}")
+        self.log.warning(f"Total connections attempted since crawler started: {total_nodes}.")
+        self.log.warning(f"Total unique nodes attempted since crawler started: {len(tried_nodes)}.")
         t_now = time.time()
         t_delta = int(t_now - t_start)
         if t_delta > 0:
-            self.log.info(f"Avg connections per second: {total_nodes // t_delta}.")
+            self.log.warning(f"Avg connections per second: {total_nodes // t_delta}.")
         # Periodically print detailed stats.
         reliable_peers = self.crawl_store.get_reliable_peers()
-        self.log.info(f"High quality reachable nodes, used by DNS introducer in replies: {reliable_peers}")
+        self.log.warning(f"High quality reachable nodes, used by DNS introducer in replies: {reliable_peers}")
         banned_peers = self.crawl_store.get_banned_peers()
         ignored_peers = self.crawl_store.get_ignored_peers()
         available_peers = len(self.host_to_version)
@@ -366,11 +366,11 @@ class Crawler:
                 ipv6_addresses_count += 1
             except ipaddress.AddressValueError:
                 continue
-        self.log.info(
+        self.log.warning(
             "IPv4 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
             f"{addresses_count - ipv6_addresses_count}."
         )
-        self.log.info(
+        self.log.warning(
             "IPv6 addresses gossiped with timestamp in the last 5 days with respond_peers messages: "
             f"{ipv6_addresses_count}."
         )
@@ -381,16 +381,16 @@ class Crawler:
                 ipv6_available_peers += 1
             except ipaddress.AddressValueError:
                 continue
-        self.log.info(f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}.")
-        self.log.info(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
-        self.log.info("Version distribution among reachable in the last 5 days (at least 100 nodes):")
+        self.log.warning(f"Total IPv4 nodes reachable in the last 5 days: {available_peers - ipv6_available_peers}.")
+        self.log.warning(f"Total IPv6 nodes reachable in the last 5 days: {ipv6_available_peers}.")
+        self.log.warning("Version distribution among reachable in the last 5 days (at least 100 nodes):")
         for version, count in sorted(self.versions.items(), key=lambda kv: kv[1], reverse=True):
             if count >= self.minimum_version_count:
-                self.log.info(f"Version: {version} - Count: {count}")
-        self.log.info(f"Banned addresses in the DB: {banned_peers}")
-        self.log.info(f"Temporary ignored addresses in the DB: {ignored_peers}")
-        self.log.info(
+                self.log.warning(f"Version: {version} - Count: {count}")
+        self.log.warning(f"Banned addresses in the DB: {banned_peers}")
+        self.log.warning(f"Temporary ignored addresses in the DB: {ignored_peers}")
+        self.log.warning(
             "Peers to crawl from in the next batch (total IPs - ignored - banned): "
             f"{total_records - banned_peers - ignored_peers}"
         )
-        self.log.info("***")
+        self.log.warning("***")
