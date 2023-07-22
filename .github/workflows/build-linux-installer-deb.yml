@@ -103,7 +103,6 @@ jobs:
         cd "$GITHUB_WORKSPACE/bladebit"
         gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*-ubuntu-x86-64.tar.gz'
         ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-        rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
         cd "$OLDPWD"
 
@@ -117,7 +116,6 @@ jobs:
         cd "$GITHUB_WORKSPACE/bladebit"
         gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*ubuntu-x86-64.tar.gz'
         ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-        rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
         cd "$OLDPWD"
 
