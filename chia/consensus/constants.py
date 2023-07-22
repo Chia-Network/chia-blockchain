@@ -78,6 +78,9 @@ class ConsensusConstants:
     PLOT_FILTER_64_HEIGHT: uint32
     PLOT_FILTER_32_HEIGHT: uint32
 
+    # number of consecutive plot ids required to be distinct
+    UNIQUE_PLOTS_WINDOW: uint8
+
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 

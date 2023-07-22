@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, List
 
 import pytest
+from chia_rs import ALLOW_BACKREFS
 from clvm import SExp
 from clvm.serialize import sexp_from_stream
 from clvm_tools import binutils
@@ -16,7 +17,7 @@ from chia.full_node.bundle_tools import (
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
     simple_solution_generator,
-    spend_bundle_to_serialized_coin_spend_entry_list,
+    simple_solution_generator_backrefs,
 )
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
@@ -167,12 +168,13 @@ class TestCompression:
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
 
-    def test_spend_byndle_coin_spend(self) -> None:
-        for i in range(0, 10):
-            sb: SpendBundle = make_spend_bundle(i)
-            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()  # pylint: disable=E1101
-            cs2 = spend_bundle_to_serialized_coin_spend_entry_list(sb)
-            assert cs1 == cs2
+        # test with backrefs (2.0 hard-fork)
+        s = simple_solution_generator_backrefs(sb)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, ALLOW_BACKREFS)
+        assert Program.from_bytes(bytes(spend_info.puzzle)) == Program.from_bytes(
+            bytes(sb.coin_spends[0].puzzle_reveal)
+        )
+        assert Program.from_bytes(bytes(spend_info.solution)) == Program.from_bytes(bytes(sb.coin_spends[0].solution))
 
 
 class TestDecompression:

@@ -53,7 +53,6 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.7'
           - major_dot_minor: '3.8'
           - major_dot_minor: '3.9'
           - major_dot_minor: '3.10'
@@ -65,10 +64,6 @@ jobs:
               python manage-mypy.py build-mypy-ini
               mypy
         exclude:
-          - os:
-              matrix: macos
-            python:
-              major_dot_minor: '3.7'
           - os:
               matrix: macos
             arch:

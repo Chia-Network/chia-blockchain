@@ -100,9 +100,10 @@ def get_keychain():
 class Mode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    SOFT_FORK3 = 2
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0])
+@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3])
 def consensus_mode(request):
     return request.param
 
@@ -111,6 +112,8 @@ def consensus_mode(request):
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == Mode.PLAIN:
         return test_constants
+    if consensus_mode == Mode.SOFT_FORK3:
+        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
     if consensus_mode == Mode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
@@ -175,26 +178,38 @@ saved_blocks_version = "rc5"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks(bt):
+def default_400_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
+    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}{version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
-def default_1000_blocks(bt):
+def default_1000_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
+    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}{version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
-def pre_genesis_empty_slots_1000_blocks(bt):
+def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         1000,
-        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
+        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}{version}.db",
         bt,
         seed=b"empty_slots",
         empty_sub_slots=1,
@@ -202,33 +217,47 @@ def pre_genesis_empty_slots_1000_blocks(bt):
 
 
 @pytest.fixture(scope="session")
-def default_1500_blocks(bt):
+def default_1500_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
+    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}{version}.db", bt, seed=b"1500")
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks(bt):
+def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
+
+    if consensus_mode == Mode.SOFT_FORK3:
+        pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt):
+def default_20000_blocks(bt, consensus_mode):
+    if consensus_mode == Mode.SOFT_FORK3:
+        pytest.skip("Test cache not available")
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
 
 
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, default_1500_blocks):
+def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         758,
-        f"test_blocks_long_reorg_{saved_blocks_version}.db",
+        f"test_blocks_long_reorg_{saved_blocks_version}{version}.db",
         bt,
         block_list_input=default_1500_blocks[:320],
         seed=b"reorg_blocks",
@@ -237,12 +266,16 @@ def test_long_reorg_blocks(bt, default_1500_blocks):
 
 
 @pytest.fixture(scope="session")
-def default_2000_blocks_compact(bt):
+def default_2000_blocks_compact(bt, consensus_mode):
+    version = ""
+    if consensus_mode == Mode.SOFT_FORK3:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         2000,
-        f"test_blocks_2000_compact_{saved_blocks_version}.db",
+        f"test_blocks_2000_compact_{saved_blocks_version}{version}.db",
         bt,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
@@ -253,9 +286,11 @@ def default_2000_blocks_compact(bt):
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks_compact(bt):
+def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
+    if consensus_mode == Mode.SOFT_FORK3:
+        pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,
         f"test_blocks_10000_compact_{saved_blocks_version}.db",
@@ -326,8 +361,17 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
+async def wallet_nodes(blockchain_constants, consensus_mode):
+    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
+    # mode `PLAIN` and `SOFT_FORK3`.
+    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK3):
+        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
+    constants = blockchain_constants
+    async_gen = setup_simulators_and_wallets(
+        2,
+        1,
+        {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK3_HEIGHT": constants.SOFT_FORK3_HEIGHT},
+    )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -354,8 +398,14 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets_services():
-    async for _ in setup_simulators_and_wallets_service(2, 0, {}):
+async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
+    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
+    # mode `PLAIN` and `SOFT_FORK3`.
+    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK3):
+        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
+    async for _ in setup_simulators_and_wallets_service(
+        2, 0, {"SOFT_FORK3_HEIGHT": blockchain_constants.SOFT_FORK3_HEIGHT}
+    ):
         yield _
 
 
@@ -592,6 +642,25 @@ async def two_nodes_one_block():
 
     async for _ in async_gen:
         yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester_simulator_wallet(
+    tmp_path: Path,
+) -> AsyncIterator[
+    Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Service[FullNode, FullNodeSimulator],
+        Service[WalletNode, WalletNodeAPI],
+        BlockTools,
+    ]
+]:
+    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, {}):
+        nodes, wallets, bt = sim_and_wallet
+        async for farmer_harvester in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+            harvester_services, farmer_service, _ = farmer_harvester
+            yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
 
 
 FarmerOneHarvester = Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
@@ -860,6 +929,12 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
     root_path: Path = tmp_chia_root
     create_default_chia_config(root_path)
     return root_path
+
+
+@pytest.fixture(scope="function")
+def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        return config
 
 
 @pytest.fixture(scope="function")

@@ -120,6 +120,16 @@ async def _validate_and_add_block_multi_error(
     raise AssertionError("Did not return an error")
 
 
+async def _validate_and_add_block_multi_error_or_pass(
+    blockchain: Blockchain, block: FullBlock, expected_errors: List[Err], skip_prevalidation: bool = False
+) -> None:
+    # Checks that the blockchain returns one of the expected errors, also allows block to be added.
+    try:
+        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
+    except AssertionError as e:
+        assert e.args[0] in expected_errors
+
+
 async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,

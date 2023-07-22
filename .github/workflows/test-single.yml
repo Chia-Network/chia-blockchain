@@ -59,15 +59,6 @@ jobs:
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-            exclude_from:
-              limited: True
-              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -105,10 +96,6 @@ jobs:
           - os:
               matrix: macos
             python:
-              matrix: '3.7'
-          - os:
-              matrix: macos
-            python:
               matrix: '3.8'
           - os:
               matrix: windows
@@ -126,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.30.0
 
     steps:
       - name: Configure git
@@ -195,6 +182,7 @@ jobs:
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
+
 
       - name: Checkout test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
