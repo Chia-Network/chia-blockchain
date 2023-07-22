@@ -11,6 +11,7 @@ from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -83,6 +84,7 @@ async def get_treasury_id(args: Dict[str, Any], wallet_client: WalletRpcClient, 
     res = await wallet_client.dao_get_treasury_id(wallet_id=wallet_id)
     treasury_id = res["treasury_id"]
     print(f"Treasury ID: {treasury_id}")
+
 
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
@@ -243,7 +245,7 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_client: WalletRpcClient,
         fee=final_fee,
         reuse_puzhash=reuse_puzhash,
     )
-    spend_bundle = res["spend_bundle"]
+    spend_bundle = SpendBundle.from_json_dict(res["spend_bundle"])
     if res["success"]:
         print(f"Submitted spend bundle with name: {spend_bundle.name()}")
     else:
