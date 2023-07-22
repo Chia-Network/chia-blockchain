@@ -136,7 +136,7 @@ jobs:
           mkdir "$GITHUB_WORKSPACE/bladebit"
           gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*${{ matrix.os.bladebit-suffix }}'
           tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit*"
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - name: Get latest prerelease bladebit plotter
         if: env.PRE_RELEASE == 'true'
@@ -147,7 +147,7 @@ jobs:
           mkdir "$GITHUB_WORKSPACE/bladebit"
           gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*${{ matrix.os.bladebit-suffix }}'
           tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit*"
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
         with:
