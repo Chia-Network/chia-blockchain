@@ -147,8 +147,7 @@ jobs:
         mkdir $GITHUB_WORKSPACE\\bladebit
         cd $GITHUB_WORKSPACE\\bladebit
         gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*windows-x86-64.zip'
-        unzip *.zip
-        rm *.zip
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
         cd $OLDPWD
 
     - name: Get latest prerelease bladebit plotter
@@ -161,8 +160,7 @@ jobs:
         mkdir $GITHUB_WORKSPACE\\bladebit
         cd $GITHUB_WORKSPACE\\bladebit
         gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*windows-x86-64.zip'
-        unzip *.zip
-        rm *.zip
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
         cd $OLDPWD
 
     - name: Run install script
