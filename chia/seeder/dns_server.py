@@ -313,7 +313,7 @@ class DNSServer:
         loop = asyncio.get_running_loop()
         await self.setup_signal_handlers(loop)
 
-        self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path))
+        self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path, timeout=120))
 
         # One protocol instance will be created to serve all UDP client requests.
         self.udp_transport, self.udp_protocol = await loop.create_datagram_endpoint(
