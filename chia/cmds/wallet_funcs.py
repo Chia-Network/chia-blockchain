@@ -1175,7 +1175,9 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
         print(f"{indent}{license_uri}")
 
 
-async def list_nfts(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, num: int, start_index: int) -> None:
+async def list_nfts(
+    wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, num: int, start_index: int
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.list_nfts(wallet_id, num, start_index)
