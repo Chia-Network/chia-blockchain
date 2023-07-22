@@ -132,22 +132,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*${{ matrix.os.bladebit-suffix }}'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+          cd "$GITHUB_WORKSPACE/bladebit"
+          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == false) | .tag_name' | while read tag; do
+              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
+              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
+          done
+          tar -xzf *.tar.gz
+          rm *.tar.gz
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
 
       - name: Get latest prerelease bladebit plotter
         if: env.PRE_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*${{ matrix.os.bladebit-suffix }}'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+          cd "$GITHUB_WORKSPACE/bladebit"
+          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == true) | .tag_name' | while read tag; do
+              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
+              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
+          done
+          tar -xzf *.tar.gz
+          rm *.tar.gz
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
 
       - uses: ./.github/actions/install
         with:
