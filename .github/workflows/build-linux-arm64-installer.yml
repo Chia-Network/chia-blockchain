@@ -102,9 +102,10 @@ jobs:
         mkdir "$GITHUB_WORKSPACE/bladebit"
         cd "$GITHUB_WORKSPACE/bladebit"
         gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*-ubuntu-arm64.tar.gz'
-        tar -xz *.tar.gz
+        tar -xzf *.tar.gz
+        rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
-        cd $OLDPWD
+        cd "$OLDPWD"
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
@@ -115,9 +116,10 @@ jobs:
         mkdir "$GITHUB_WORKSPACE/bladebit"
         cd "$GITHUB_WORKSPACE/bladebit"
         gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*ubuntu-arm64.tar.gz'
-        tar -xz *.tar.gz
+        tar -xzf *.tar.gz
+        rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
-        cd $OLDPWD
+        cd "$OLDPWD"
 
     - uses: ./.github/actions/install
       with:

@@ -104,7 +104,7 @@ jobs:
         tar -xzf *.tar.gz
         rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
-        cd $OLDPWD
+        cd "$OLDPWD"
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
@@ -118,7 +118,7 @@ jobs:
         tar -xzf *.tar.gz
         rm *.tar.gz
         ls bladebit* | xargs -I{} chmod +x {}
-        cd $OLDPWD
+        cd "$OLDPWD"
 
     - uses: ./.github/actions/install
       with:
