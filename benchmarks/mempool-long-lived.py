@@ -102,7 +102,29 @@ async def run_mempool_benchmark() -> None:
         npc_result = NPCResult(
             None,
             SpendBundleConditions(
-                [Spend(most_recent_coin_id, bytes32(b" " * 32), None, 0, None, None, None, None, [], [], 0)],
+                [
+                    Spend(
+                        most_recent_coin_id,
+                        bytes32(b" " * 32),
+                        bytes32(b" " * 32),
+                        123,
+                        None,
+                        0,
+                        None,
+                        None,
+                        None,
+                        None,
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        0,
+                    )
+                ],
                 0,
                 0,
                 0,

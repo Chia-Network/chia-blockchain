@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import functools
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, Union
@@ -73,9 +74,31 @@ def sql_trace_callback(req: str, file: TextIO, name: Optional[str] = None) -> No
     file.write(line)
 
 
+def get_host_parameter_limit() -> int:
+    # NOTE: This does not account for dynamically adjusted limits since it makes a
+    #       separate db and connection.  If aiosqlite adds support we should use it.
+    if sys.version_info >= (3, 11):
+        connection = sqlite3.connect(":memory:")
+
+        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
+        host_parameter_limit = connection.getlimit(limit_number)
+    else:
+        # guessing based on defaults, seems you can't query
+
+        # https://www.sqlite.org/changes.html#version_3_32_0
+        # Increase the default upper bound on the number of parameters from 999 to 32766.
+        if sqlite3.sqlite_version_info >= (3, 32, 0):
+            host_parameter_limit = 32766
+        else:
+            host_parameter_limit = 999
+    return host_parameter_limit
+
+
 @final
 class DBWrapper2:
     db_version: int
+    host_parameter_limit: int
     _lock: asyncio.Lock
     _read_connections: asyncio.Queue[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
@@ -107,6 +130,7 @@ class DBWrapper2:
         self._current_writer = None
         self._savepoint_name = 0
         self._log_file = log_file
+        self.host_parameter_limit = get_host_parameter_limit()
 
     @classmethod
     async def create(
@@ -125,6 +149,7 @@ class DBWrapper2:
         if log_path is None:
             log_file = None
         else:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
             log_file = log_path.open("a", encoding="utf-8")
         write_connection = await _create_connection(database=database, uri=uri, log_file=log_file, name="writer")
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()

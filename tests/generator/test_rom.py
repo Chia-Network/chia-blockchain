@@ -6,6 +6,7 @@ from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -122,7 +123,7 @@ class TestROM:
         print(r)
 
         npc_result = get_name_puzzle_conditions(
-            gen, max_cost=MAX_COST, mempool_mode=False, height=uint32(softfork_height)
+            gen, max_cost=MAX_COST, mempool_mode=False, height=uint32(softfork_height), constants=DEFAULT_CONSTANTS
         )
         assert npc_result.error is None
         assert npc_result.cost == EXPECTED_COST + ConditionCost.CREATE_COIN.value + (
@@ -132,7 +133,9 @@ class TestROM:
 
         spend = Spend(
             coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
+            parent_id=bytes32.fromhex("0000000000000000000000000000000000000000000000000000000000000000"),
             puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
+            coin_amount=50000,
             height_relative=None,
             seconds_relative=None,
             before_height_relative=None,
@@ -141,6 +144,12 @@ class TestROM:
             birth_seconds=None,
             create_coin=[(bytes([0] * 31 + [1]), 500, None)],
             agg_sig_me=[],
+            agg_sig_parent=[],
+            agg_sig_puzzle=[],
+            agg_sig_amount=[],
+            agg_sig_puzzle_amount=[],
+            agg_sig_parent_amount=[],
+            agg_sig_parent_puzzle=[],
             flags=ELIGIBLE_FOR_DEDUP,
         )
 

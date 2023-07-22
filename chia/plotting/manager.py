@@ -9,11 +9,18 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from chiapos import DiskProver
+from chiapos import DiskProver, decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
+from chia.plotting.util import (
+    HarvestingMode,
+    PlotInfo,
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+)
 from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
@@ -38,6 +45,7 @@ class PlotManager:
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
+    max_compression_level_allowed: int
 
     def __init__(
         self,
@@ -55,7 +63,11 @@ class PlotManager:
         self.no_key_filenames = set()
         self.farmer_public_keys = []
         self.pool_public_keys = []
-        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
+        # Since `compression_level` property was added to Cache structure,
+        # previous cache file formats needs to be reset
+        # When user downgrades harvester, it looks 'plot_manager.dat` while
+        # latest harvester reads/writes 'plot_manager_v2.dat`
+        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager_v2.dat")
         self.match_str = match_str
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
@@ -66,12 +78,47 @@ class PlotManager:
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback
         self._initial = True
+        self.max_compression_level_allowed = 0
 
     def __enter__(self):
         self._lock.acquire()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
+
+    def configure_decompressor(
+        self,
+        context_count: int,
+        thread_count: int,
+        disable_cpu_affinity: bool,
+        max_compression_level_allowed: int,
+        use_gpu_harvesting: bool,
+        gpu_index: int,
+        enforce_gpu_index: bool,
+    ) -> HarvestingMode:
+        if max_compression_level_allowed > 7:
+            log.error(
+                "Currently only compression levels up to 7 are allowed, "
+                f"while {max_compression_level_allowed} was specified."
+                "Setting max_compression_level_allowed to 7."
+            )
+            max_compression_level_allowed = 7
+        is_using_gpu = decompressor_context_queue.init(
+            context_count,
+            thread_count,
+            disable_cpu_affinity,
+            max_compression_level_allowed,
+            use_gpu_harvesting,
+            gpu_index,
+            enforce_gpu_index,
+        )
+        if not is_using_gpu and use_gpu_harvesting:
+            log.error(
+                "GPU harvesting failed initialization. "
+                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
+            )
+        self.max_compression_level_allowed = max_compression_level_allowed
+        return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
         with self:
@@ -280,10 +327,20 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                    level = prover.get_compression_level()
+                    if level == 0:
+                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                            log.warning(
+                                f"Not farming plot {file_path}. "
+                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
+                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
+                                "We assume the file is being copied."
+                            )
+                            return None
+                    elif level > self.max_compression_level_allowed:
                         log.warning(
-                            f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
-                            f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
+                            f"Not farming plot {file_path}. Plot compression level: {level}, "
+                            f"max compression level allowed: {self.max_compression_level_allowed}."
                         )
                         return None
 
