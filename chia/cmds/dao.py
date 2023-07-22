@@ -206,6 +206,7 @@ def dao_create_cmd(
 # ----------------------------------------------------------------------------------------
 # TREASURY INFO
 
+
 @dao_cmd.command("get-id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
 @click.option(
     "-wp",
@@ -229,7 +230,6 @@ def dao_get_id_cmd(
         "wallet_id": wallet_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_id))
-
 
 
 @dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)

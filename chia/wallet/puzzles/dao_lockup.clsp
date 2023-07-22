@@ -164,63 +164,63 @@
       unused_votes
     )
     (if removal_ids
-      (c
-        (list
-          ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
-          (sha256
-            (calculate_singleton_puzzle_hash
-              (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
-              (calculate_finished_state
+        (c
+          (list
+            ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
+            (sha256
+              (calculate_singleton_puzzle_hash
                 (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
-                DAO_FINISHED_STATE_MOD_HASH
+                (calculate_finished_state
+                  (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
+                  DAO_FINISHED_STATE_MOD_HASH
+                )
               )
+              0
             )
-            0
           )
-        )
-        (for_every_removal_id
-          SINGLETON_MOD_HASH
-          SINGLETON_LAUNCHER_PUZHASH
-          SELF_HASH
-          DAO_FINISHED_STATE_MOD_HASH
-          CAT_MOD_HASH
-          CAT_TAIL_HASH
-          ACTIVE_VOTES
-          INNERPUZ
-          (r removal_ids)
-          my_amount
-          (c (f removal_ids) unused_votes)
-        )
-      )
-      (list
-        (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
-        (list
-          CREATE_COIN  ; recreate self with the finished proposal ID removed
-          (calculate_lockup_puzzlehash
+          (for_every_removal_id
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
             SELF_HASH
-            (remove_list_one_entries_from_list_two unused_votes ACTIVE_VOTES)
-            (sha256tree INNERPUZ)
+            DAO_FINISHED_STATE_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            ACTIVE_VOTES
+            INNERPUZ
+            (r removal_ids)
+            my_amount
+            (c (f removal_ids) unused_votes)
           )
-          my_amount
         )
-      )
+        (list
+          (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
+          (list
+            CREATE_COIN  ; recreate self with the finished proposal ID removed
+            (calculate_lockup_puzzlehash
+              SELF_HASH
+              (remove_list_one_entries_from_list_two unused_votes ACTIVE_VOTES)
+              (sha256tree INNERPUZ)
+            )
+            my_amount
+          )
+        )
     )
   )
 
   (defun remove_list_one_entries_from_list_two (list_one list_two)
     (if list_one
-      (remove_item_from_list (f list_one) (remove_list_one_entries_from_list_two (r list_one) list_two))
-      list_two
+        (remove_item_from_list (f list_one) (remove_list_one_entries_from_list_two (r list_one) list_two))
+        list_two
     )
   )
 
   (defun remove_item_from_list (item list_one)
     (if list_one
-      (if (= (f list_one) item)
-        (r list_one)  ; assuming there are no duplicates
-        (c (f list_one) (remove_item_from_list item (r list_one)))
-      )
-      ()  ; item was never in list_one, return list_two entirely
+        (if (= (f list_one) item)
+            (r list_one)  ; assuming there are no duplicates
+            (c (f list_one) (remove_item_from_list item (r list_one)))
+        )
+        ()  ; item was never in list_one, return list_two entirely
     )
   )
 

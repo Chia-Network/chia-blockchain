@@ -72,7 +72,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings, ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.singleton import create_singleton_puzzle, SINGLETON_LAUNCHER_PUZZLE_HASH
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, create_singleton_puzzle
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -2590,7 +2590,13 @@ class WalletRpcApi:
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert tx is not None
-        proposal_id = [coin.name() for coin in tx.removals if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH][0]
+        assert isinstance(tx.removals, List)
+        for coin in tx.removals:
+            if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
+                proposal_id = coin.name()
+                break
+        else:
+            raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
             "tx_id": tx.name.hex(),

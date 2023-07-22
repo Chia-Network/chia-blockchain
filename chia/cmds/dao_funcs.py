@@ -84,6 +84,7 @@ async def get_treasury_id(args: Dict[str, Any], wallet_client: WalletRpcClient, 
     treasury_id = res["treasury_id"]
     print(f"Treasury ID: {treasury_id}")
 
+
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]
@@ -147,7 +148,6 @@ async def list_proposals(args: Dict[str, Any], wallet_client: WalletRpcClient, f
 
     res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
     proposals = res["proposals"]
-    lockup_time = res["proposal_timelock"]
     soft_close_length = res["soft_close_length"]
     print("############################")
     for prop in proposals:

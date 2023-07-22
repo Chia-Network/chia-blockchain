@@ -6,7 +6,6 @@ import time
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G1Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -764,7 +763,6 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     # Finally create a broken proposal and force close
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
-    proposal_amount_3 = 5000
     xch_proposal_inner = Program.to(["x"])
     proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, dao_cat_0_bal, fee=uint64(1000))
     proposal_sb = proposal_tx.spend_bundle
@@ -971,7 +969,9 @@ async def test_dao_proposal_partial_vote(
     )
 
     vote_amount = dao_cat_0_bal - 10
-    proposal_tx = await dao_wallet_0.generate_new_proposal(mint_proposal_inner, vote_amount=vote_amount, fee=uint64(1000))
+    proposal_tx = await dao_wallet_0.generate_new_proposal(
+        mint_proposal_inner, vote_amount=vote_amount, fee=uint64(1000)
+    )
     proposal_sb = proposal_tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
     await full_node_api.process_spend_bundles(bundles=[proposal_sb])
@@ -1062,7 +1062,7 @@ async def test_dao_proposal_partial_vote(
 )
 @pytest.mark.asyncio
 async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 2 #  use 2 here so the test doesn't become flaky if things get slow
+    num_blocks = 2  # use 2 here so the test doesn't become flaky if things get slow
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1543,7 +1543,9 @@ async def test_dao_rpc_client(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
+        close = await client_0.dao_close_proposal(
+            wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee
+        )
         assert close["success"]
 
         for i in range(1, num_blocks):
@@ -1820,7 +1822,6 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-
     await time_out_assert(20, int, total_votes * 2, dao_wallet_1.dao_info.proposals_list[0].amount_voted)
     await time_out_assert(20, int, total_votes * 2, dao_wallet_2.dao_info.proposals_list[0].amount_voted)
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance(prop.proposal_id)
@@ -1837,7 +1838,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
 async def test_dao_cat_exits(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    num_blocks = 3 #  We're using the rpc client, so use 3 blocks to ensure we stay synced
+    num_blocks = 3  # We're using the rpc client, so use 3 blocks to ensure we stay synced
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
@@ -1981,7 +1982,9 @@ async def test_dao_cat_exits(
         assert state["state"]["closable"]
 
         # close the proposal
-        close = await client_0.dao_close_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee)
+        close = await client_0.dao_close_proposal(
+            wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee
+        )
         assert close["success"]
 
         for i in range(1, num_blocks):
