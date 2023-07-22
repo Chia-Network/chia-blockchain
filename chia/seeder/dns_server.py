@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiosqlite
-from dnslib import AAAA, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
+from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
 from chia.seeder.crawl_store import CrawlStore
 from chia.util.chia_logging import initialize_service_logging
@@ -78,17 +78,22 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         asyncio.create_task(self.handler(dns_request, addr))
 
     async def respond(self) -> None:
-        max_size = 512
         log.info("UDP DNS responder started.")
         while self.transport is None:  # we wait for the transport to be set.
             await asyncio.sleep(0.1)
         while not self.transport.is_closing():
             try:
+                edns_max_size = 0
                 reply, caller = await self.data_queue.get()
+                if len(reply.ar) > 0 and reply.ar[0].rtype == QTYPE.OPT:
+                    edns_max_size = reply.ar[0].edns_len
+
                 reply_packed = reply.pack()
-                if len(reply_packed) > max_size:
+
+                if len(reply_packed) > max(512, edns_max_size):  # 512 is the default max size for DNS:
                     log.debug(f"DNS response to {caller} is too large, truncating.")
                     reply_packed = reply.truncate().pack()
+
                 self.transport.sendto(reply_packed, caller)
                 log.debug(f"Sent UDP DNS response to {caller}, of size {len(reply_packed)}.")
             except Exception as e:
@@ -430,6 +435,11 @@ class DNSServer:
         dns_question: DNSQuestion = request.q  # this is the question / request
         question_type: int = dns_question.qtype  # the type of the record being requested
         qname = dns_question.qname  # the name being queried / requested
+        # ADD EDNS0 to response if supported
+        if len(request.ar) > 0 and request.ar[0].rtype == QTYPE.OPT:  # OPT Means EDNS
+            udp_len = min(4096, request.ar[0].edns_len)
+            edns_reply = EDNS0(udp_len=udp_len)
+            reply.add_ar(edns_reply)
         # DNS labels are mixed case with DNS resolvers that implement the use of bit 0x20 to improve
         # transaction identity. See https://datatracker.ietf.org/doc/html/draft-vixie-dnsext-dns0x20-00
         qname_str = str(qname).lower()

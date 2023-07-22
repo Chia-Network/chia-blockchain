@@ -203,13 +203,8 @@ async def test_dns_queries(seeder_service: DNSServer, use_tcp: bool, request_typ
 
     # now we query for each type of record a lot of times and make sure we get the right number of responses
     for i in range(150):
-        query = dns.message.make_query(domain, request_type)  # this needs to generate a new id every time.
-        if use_tcp:
-            std_query_response = await make_dns_query(use_tcp, port, query)
-        else:
-            std_query_response, used_tcp = await dns.asyncquery.udp_with_fallback(
-                q=query, where="::1", timeout=timeout * 2, port=port
-            )
+        query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+        std_query_response = await make_dns_query(use_tcp, port, query)
         assert std_query_response.rcode() == dns.rcode.NOERROR
         assert_standard_results(std_query_response.answer, request_type, num_ns)
 
@@ -220,6 +215,10 @@ async def test_dns_queries(seeder_service: DNSServer, use_tcp: bool, request_typ
                 assert len(record_list.items) == num_ns
             else:
                 assert len(record_list.items) == 1  # soa
+    # Validate EDNS
+    e_query = dns.message.make_query(domain, dns.rdatatype.ANY, use_edns=False)
+    with pytest.raises(dns.query.BadResponse):  # response is truncated without EDNS
+        await make_dns_query(False, port, e_query)
 
 
 @pytest.mark.asyncio
@@ -261,12 +260,7 @@ async def test_db_processing(seeder_service: DNSServer) -> None:
 
     # now we check all the combinations once (not a stupid amount of times)
     for use_tcp, request_type in all_test_combinations:
-        query = dns.message.make_query(domain, request_type)  # this needs to generate a new id every time.
-        if use_tcp:
-            std_query_response = await make_dns_query(use_tcp, port, query)
-        else:
-            std_query_response, used_tcp = await dns.asyncquery.udp_with_fallback(
-                q=query, where="::1", timeout=timeout * 2, port=port
-            )
+        query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+        std_query_response = await make_dns_query(use_tcp, port, query)
         assert std_query_response.rcode() == dns.rcode.NOERROR
         assert_standard_results(std_query_response.answer, request_type, num_ns)
