@@ -2,7 +2,7 @@
 
 set -o errexit
 
-USAGE_TEXT="\
+USAGE_TEXT="\\
 Usage: $0 <bladebit|madmax> [-v VERSION | -h]
 
   -v VERSION    Specify the version of plotter to install
@@ -14,17 +14,25 @@ usage() {
 }
 
 get_bladebit_filename() {
-  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
-  OS="$2" # "ubuntu", "centos", "macos"
-  ARCH="$3" # "x86-64", "arm64"
+  BLADEBIT_VER="$1"
+  OS="$2"
+  ARCH="$3"
 
   echo "bladebit-${BLADEBIT_VER}-${OS}-${ARCH}.tar.gz"
 }
 
+get_bladebit_cuda_filename() {
+  BLADEBIT_VER="$1"
+  OS="$2"
+  ARCH="$3"
+
+  echo "bladebit-cuda-${BLADEBIT_VER}-${OS}-${ARCH}.tar.gz"
+}
+
 get_bladebit_url() {
-  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
-  OS="$2" # "ubuntu", "centos", "macos"
-  ARCH="$3" # "x86-64", "arm64"
+  BLADEBIT_VER="$1"
+  OS="$2"
+  ARCH="$3"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
   BLADEBIT_FILENAME="$(get_bladebit_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
@@ -32,11 +40,22 @@ get_bladebit_url() {
   echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_FILENAME}"
 }
 
+get_bladebit_cuda_url() {
+  BLADEBIT_VER="$1"
+  OS="$2"
+  ARCH="$3"
+
+  GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
+  BLADEBIT_CUDA_FILENAME="$(get_bladebit_cuda_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
+
+  echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_CUDA_FILENAME}"
+}
+
 get_madmax_filename() {
-  KSIZE="$1" # "k34" or other
-  MADMAX_VER="$2" # e.g. 0.0.2
-  OS="$3" # "macos", others
-  ARCH="$4" # "arm64", "x86-64"
+  KSIZE="$1"
+  MADMAX_VER="$2"
+  OS="$3"
+  ARCH="$4"
 
   CHIA_PLOT="chia_plot"
   if [ "$KSIZE" = "k34" ]; then
@@ -58,17 +77,16 @@ get_madmax_filename() {
 }
 
 get_madmax_url() {
-  KSIZE="$1" # "k34" or other
-  MADMAX_VER="$2" # e.g. 0.0.2
-  OS="$3" # "macos", others
-  ARCH="$4" # "intel", "m1", "arm64", "x86-64"
+  KSIZE="$1"
+  MADMAX_VER="$2"
+  OS="$3"
+  ARCH="$4"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
   MADMAX_FILENAME="$(get_madmax_filename "${KSIZE}" "${MADMAX_VER}" "${OS}" "${ARCH}")"
 
   echo "${GITHUB_BASE_URL}/${MADMAX_VER}/${MADMAX_FILENAME}"
 }
-
 
 if [ "$1" = "-h" ] || [ -z "$1" ]; then
   usage
@@ -84,7 +102,6 @@ shift 1
 while getopts v:h flag
 do
   case "${flag}" in
-    # version
     v) VERSION="$OPTARG";;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
@@ -113,11 +130,9 @@ fi
 OS=""
 ARCH="x86-64"
 if [ "$(uname)" = "Linux" ]; then
-  # Debian / Ubuntu
   if command -v apt-get >/dev/null; then
     echo "Detected Debian/Ubuntu like OS"
     OS="ubuntu"
-  # RedHut / CentOS / Rocky / AMLinux
   elif type yum >/dev/null 2>&1; then
     echo "Detected RedHut like OS"
     OS="centos"
@@ -125,12 +140,11 @@ if [ "$(uname)" = "Linux" ]; then
     echo "ERROR: Unknown Linux distro"
     exit 1
   fi
-# MacOS
 elif [ "$(uname)" = "Darwin" ]; then
   echo "Detected MacOS"
   OS="macos"
 else
-    echo "ERROR: $(uname) is not supported"
+  echo "ERROR: $(uname) is not supported"
   exit 1
 fi
 
@@ -153,16 +167,29 @@ if [ "$PLOTTER" = "bladebit" ]; then
 
   URL="$(get_bladebit_url "${VERSION}" "${OS}" "${ARCH}")"
   echo "Fetching binary from: ${URL}"
-  if ! wget -q "${URL}"; then
-    echo "ERROR: Download failed. Maybe specified version of the binary does not exist."
-    exit 1
+  if wget -q "${URL}"; then
+    echo "Successfully downloaded: ${URL}"
+    bladebit_filename="$(get_bladebit_filename "${VERSION}" "${OS}" "${ARCH}")"
+    tar zxf "${bladebit_filename}"
+    chmod 755 ./bladebit
+    rm -f "${bladebit_filename}"
+    echo "Successfully installed bladebit to $(pwd)/bladebit"
+  else
+    echo "WARNING: Could not download BladeBit. Maybe specified version of the binary does not exist."
   fi
-  echo "Successfully downloaded: ${URL}"
-  bladebit_filename="$(get_bladebit_filename "${VERSION}" "${OS}" "${ARCH}")"
-  tar zxf "${bladebit_filename}"
-  chmod 755 ./bladebit
-  rm -f "${bladebit_filename}"
-  echo "Successfully installed bladebit to $(pwd)/bladebit"
+
+  URL="$(get_bladebit_cuda_url "${VERSION}" "${OS}" "${ARCH}")"
+  echo "Fetching CUDA binary from: ${URL}"
+  if wget -q "${URL}"; then
+    echo "Successfully downloaded CUDA: ${URL}"
+    bladebit_cuda_filename="$(get_bladebit_cuda_filename "${VERSION}" "${OS}" "${ARCH}")"
+    tar zxf "${bladebit_cuda_filename}"
+    chmod 755 ./bladebit_cuda
+    rm -f "${bladebit_cuda_filename}"
+    echo "Successfully installed bladebit_cuda to $(pwd)/bladebit_cuda"
+  else
+    echo "WARNING: Could not download BladeBit CUDA. Maybe specified version of the CUDA binary does not exist."
+  fi
 elif [ "$PLOTTER" = "madmax" ]; then
   if [ -z "$VERSION" ]; then
     VERSION="$DEFAULT_MADMAX_VERSION"
