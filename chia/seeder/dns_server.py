@@ -332,7 +332,7 @@ class DNSServer:
 
         # one protocol instance will be created to serve all TCP client requests.
         self.tcp_server = await loop.create_server(
-            lambda: TCPDNSServerProtocol(self.dns_response), "::0", self.dns_port
+            lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.dns_port
         )
 
         self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
