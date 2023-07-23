@@ -169,7 +169,7 @@ def test_missing_messages() -> None:
         "RespondCompactProofOfTime",
     }
 
-    shared_msgs = {"Handshake", "Capability"}
+    shared_msgs = {"Handshake", "Capability", "Error"}
 
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then

@@ -20,8 +20,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.chunks import chunks
 from chia.util.ints import uint32, uint64
+from chia.util.misc import to_batches
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -29,12 +29,12 @@ NUM_PEERS = 5
 
 @contextmanager
 def enable_profiler(profile: bool, name: str) -> Iterator[None]:
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
-
     if not profile:
         yield
         return
+
+    if sys.version_info < (3, 8):
+        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         yield
@@ -144,12 +144,12 @@ async def run_mempool_benchmark() -> None:
 
         bundles = []
         print("     large spend bundles")
-        for coins in chunks(unspent, 200):
-            print(f"{len(coins)} coins")
+        for batch in to_batches(unspent, 200):
+            print(f"{len(batch.entries)} coins")
             tx = SpendBundle.aggregate(
                 [
                     wt.generate_signed_transaction(uint64(c.amount // 2), wt.get_new_puzzlehash(), c, fee=peer + idx)
-                    for c in coins
+                    for c in batch.entries
                 ]
             )
             bundles.append(tx)

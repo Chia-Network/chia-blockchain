@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 class Crawler:
     sync_store: Any
     coin_store: CoinStore
-    connection: aiosqlite.Connection
+    connection: Optional[aiosqlite.Connection]
     config: Dict
     _server: Optional[ChiaServer]
     crawl_store: Optional[CrawlStore]
@@ -63,6 +63,7 @@ class Crawler:
         self.initialized = False
         self.root_path = root_path
         self.config = config
+        self.connection = None
         self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
@@ -372,4 +373,5 @@ class Crawler:
         self._shut_down = True
 
     async def _await_closed(self):
-        await self.connection.close()
+        if self.connection is not None:
+            await self.connection.close()

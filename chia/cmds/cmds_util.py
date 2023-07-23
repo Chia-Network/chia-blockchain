@@ -4,7 +4,7 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiohttp import ClientConnectorError
 
@@ -20,6 +20,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint16
 from chia.util.keychain import KeyData
 from chia.wallet.transaction_record import TransactionRecord
@@ -41,7 +42,6 @@ node_config_section_names: Dict[Type[RpcClient], str] = {
     DataLayerRpcClient: "data_layer",
     SimulatorFullNodeRpcClient: "full_node",
 }
-
 
 _T_RpcClient = TypeVar("_T_RpcClient", bound=RpcClient)
 
@@ -79,7 +79,7 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     consume_errors: bool = True,
-) -> AsyncIterator[Tuple[Optional[_T_RpcClient], Dict[str, Any]]]:
+) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
@@ -100,12 +100,11 @@ async def get_any_service_client(
     try:
         # check if we can connect to node
         connected = await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
-        if connected:
-            yield node_client, config
-        else:
-            yield None, config
+        if not connected:
+            raise CliRpcConnectionError
+        yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors:
+        if not consume_errors or isinstance(e, CliRpcConnectionError):
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
@@ -207,18 +206,14 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
     return selected_fingerprint
 
 
-async def execute_with_wallet(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    extra_params: Dict[str, Any],
-    function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
-) -> None:
-    async with get_any_service_client(WalletRpcClient, wallet_rpc_port) as (wallet_client, _):
-        if wallet_client is None:
-            return
-
-        new_fp = await get_wallet(DEFAULT_ROOT_PATH, wallet_client, fingerprint)
+@asynccontextmanager
+async def get_wallet_client(
+    wallet_rpc_port: Optional[int] = None,
+    fingerprint: Optional[int] = None,
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+    async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
+        new_fp = await get_wallet(root_path, wallet_client, fingerprint)
         if new_fp is None:
-            return
-
-        await function(extra_params, wallet_client, new_fp)
+            raise CliRpcConnectionError  # this is caught by the main cli function
+        yield wallet_client, new_fp, config

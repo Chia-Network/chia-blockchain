@@ -36,6 +36,7 @@ from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -136,7 +137,9 @@ Setup = Tuple[FullNodeSimulator, WalletNode, bytes32, int, WalletRpcClient]
 
 @pytest_asyncio.fixture(scope="function")
 async def setup(
-    one_wallet_and_one_simulator_services: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools],
+    one_wallet_and_one_simulator_services: Tuple[
+        List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
+    ],
     trusted: bool,
     self_hostname: str,
 ) -> AsyncIterator[Setup]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -29,10 +30,15 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    log: logging.Logger
     harvester: Harvester
 
     def __init__(self, harvester: Harvester):
+        self.log = logging.getLogger(__name__)
         self.harvester = harvester
+
+    def ready(self) -> bool:
+        return True
 
     @api_request(peer_required=True)
     async def harvester_handshake(
@@ -205,7 +211,7 @@ class HarvesterAPI:
                 # This is being executed at the beginning of the slot
                 total += 1
                 if passes_plot_filter(
-                    self.harvester.constants,
+                    new_challenge.filter_prefix_bits,
                     try_plot_info.prover.get_id(),
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
@@ -214,6 +220,7 @@ class HarvesterAPI:
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
             self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
+        time_taken = time.time() - start
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
@@ -233,6 +240,7 @@ class HarvesterAPI:
                 await peer.send_message(msg)
 
         now = uint64(int(time.time()))
+
         farming_info = FarmingInfo(
             new_challenge.challenge_hash,
             new_challenge.sp_hash,
@@ -240,13 +248,14 @@ class HarvesterAPI:
             uint32(passed),
             uint32(total_proofs_found),
             uint32(total),
+            uint64(time_taken * 1_000_000),  # nano seconds,
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)
-        found_time = time.time() - start
+
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
-            f" Found {total_proofs_found} proofs. Time: {found_time:.5f} s. "
+            f" Found {total_proofs_found} proofs. Time: {time_taken:.5f} s. "
             f"Total {self.harvester.plot_manager.plot_count()} plots"
         )
         self.harvester.state_changed(
@@ -256,7 +265,7 @@ class HarvesterAPI:
                 "total_plots": self.harvester.plot_manager.plot_count(),
                 "found_proofs": total_proofs_found,
                 "eligible_plots": len(awaitables),
-                "time": found_time,
+                "time": time_taken,
             },
         )
 
@@ -313,6 +322,7 @@ class HarvesterAPI:
     async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
+
         for plot in plots:
             plots_response.append(
                 Plot(
@@ -324,9 +334,9 @@ class HarvesterAPI:
                     plot["plot_public_key"],
                     plot["file_size"],
                     plot["time_modified"],
+                    plot["compression_level"],
                 )
             )
-
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 

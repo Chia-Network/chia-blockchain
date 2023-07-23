@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -128,6 +129,7 @@ class FullNodeRpcApi:
                     "difficulty": 0,
                     "sub_slot_iters": 0,
                     "space": 0,
+                    "average_block_time": 0,
                     "mempool_size": 0,
                     "mempool_cost": 0,
                     "mempool_min_fees": {
@@ -166,17 +168,49 @@ class FullNodeRpcApi:
         else:
             sync_progress_height = uint32(0)
 
+        average_block_time = uint32(0)
+        space = {"space": uint128(0)}
+
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             # Average over the last day
-            header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
-            assert header_hash is not None
-            older_block_hex = header_hash.hex()
+            older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, peak.height - 4608)))
+            assert older_header_hash is not None
+            older_block_hex = older_header_hash.hex()
             space = await self.get_network_space(
                 {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
-        else:
-            space = {"space": uint128(0)}
+
+            try:
+                newer_block: Optional[BlockRecord] = (
+                    await self.get_block_record({"header_hash": peak.header_hash.hex()})
+                )["block_record"]
+                while newer_block is not None and newer_block.height > 0 and not newer_block.is_transaction_block:
+                    newer_block = (await self.get_block_record({"header_hash": newer_block.prev_hash.hex()}))[
+                        "block_record"
+                    ]
+            except ValueError:
+                newer_block = None
+
+            if newer_block is not None:
+                older_header_hash = self.service.blockchain.height_to_hash(uint32(max(1, newer_block.height - 4608)))
+                try:
+                    older_block: Optional[BlockRecord] = (
+                        (await self.get_block_record({"header_hash": older_header_hash.hex()}))["block_record"]
+                        if older_header_hash is not None
+                        else None
+                    )
+                    while older_block is not None and older_block.height > 0 and not older_block.is_transaction_block:
+                        older_block = (await self.get_block_record({"header_hash": older_block.prev_hash.hex()}))[
+                            "block_record"
+                        ]
+                except ValueError:
+                    older_block = None
+
+                if older_block is not None and newer_block.timestamp is not None and older_block.timestamp is not None:
+                    average_block_time = uint32(
+                        (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
+                    )
 
         if self.service.mempool_manager is not None:
             mempool_size = self.service.mempool_manager.mempool.size()
@@ -212,6 +246,7 @@ class FullNodeRpcApi:
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
                 "space": space["space"],
+                "average_block_time": average_block_time,
                 "mempool_size": mempool_size,
                 "mempool_cost": mempool_cost,
                 "mempool_fees": mempool_fees,
@@ -694,7 +729,7 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        spend_info = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
+        spend_info = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin, 0)
         return {"coin_solution": CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)}
 
     async def get_additions_and_removals(self, request: Dict[str, Any]) -> EndpointResult:
@@ -706,7 +741,7 @@ class FullNodeRpcApi:
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        async with self.service._blockchain_lock_low_priority:
+        async with self.service.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
             if self.service.blockchain.height_to_hash(block.height) != header_hash:
                 raise ValueError(f"Block at {header_hash.hex()} is no longer in the blockchain (it's in a fork)")
             additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block.height)

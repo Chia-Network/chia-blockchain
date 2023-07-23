@@ -41,9 +41,9 @@ from chia.types.weight_proof import (
     WeightProof,
 )
 from chia.util.block_cache import BlockCache
-from chia.util.chunks import chunks
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.misc import to_batches
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
@@ -580,7 +580,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
-        if _validate_sub_epoch_segments(self.constants, rng, wp_segment_bytes, summary_bytes) is None:
+        if _validate_sub_epoch_segments(self.constants, rng, wp_segment_bytes, summary_bytes, peak_height) is None:
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
         success, _ = validate_recent_blocks(self.constants, wp_recent_chain_bytes, summary_bytes)
@@ -933,6 +933,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
+    height: uint32,
     validate_from: int = 0,
 ) -> Optional[List[Tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     summaries = summaries_from_bytes(summaries_bytes)
@@ -965,7 +966,15 @@ def _validate_sub_epoch_segments(
 
         for idx, segment in enumerate(segments):
             valid_segment, ip_iters, slot_iters, slots, vdf_list = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
+                constants,
+                segment,
+                curr_ssi,
+                prev_ssi,
+                curr_difficulty,
+                prev_ses,
+                idx == 0,
+                sampled_seg_index == idx,
+                height,
             )
             vdfs_to_validate.extend(vdf_list)
             if not valid_segment:
@@ -988,6 +997,7 @@ def _validate_segment(
     ses: Optional[SubEpochSummary],
     first_segment_in_se: bool,
     sampled: bool,
+    height: uint32,
 ) -> Tuple[bool, int, int, int, List[Tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
@@ -995,7 +1005,9 @@ def _validate_segment(
     for idx, sub_slot_data in enumerate(segment.sub_slots):
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
-            required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
+            required_iters = __validate_pospace(
+                constants, segment, idx, curr_difficulty, ses, first_segment_in_se, height
+            )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
             assert sub_slot_data.signage_point_index is not None
@@ -1305,6 +1317,7 @@ def _validate_pospace_recent_chain(
         constants,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
+        height=block.height,
     )
     if q_str is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
@@ -1326,6 +1339,7 @@ def __validate_pospace(
     curr_diff: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
+    height: uint32,
 ) -> Optional[uint64]:
     if first_in_sub_epoch and segment.sub_epoch_n == 0 and idx == 0:
         cc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -1353,6 +1367,7 @@ def __validate_pospace(
         constants,
         challenge,
         cc_sp_hash,
+        height=height,
     )
     if q_str is None:
         log.error("could not verify proof of space")
@@ -1664,17 +1679,18 @@ async def validate_weight_proof_inner(
     )
 
     if not skip_segment_validation:
-        vdfs_to_validate = _validate_sub_epoch_segments(constants, rng, wp_segment_bytes, summary_bytes, validate_from)
+        vdfs_to_validate = _validate_sub_epoch_segments(
+            constants, rng, wp_segment_bytes, summary_bytes, peak_height, validate_from
+        )
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
         if vdfs_to_validate is None:
             return False, []
 
-        vdf_chunks = chunks(vdfs_to_validate, num_processes)
         vdf_tasks = []
-        for chunk in vdf_chunks:
+        for batch in to_batches(vdfs_to_validate, num_processes):
             byte_chunks = []
-            for vdf_proof, classgroup, vdf_info in chunk:
+            for vdf_proof, classgroup, vdf_info in batch.entries:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
             vdf_task = asyncio.get_running_loop().run_in_executor(
                 executor,

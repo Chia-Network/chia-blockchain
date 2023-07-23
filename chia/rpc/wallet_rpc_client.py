@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -188,8 +188,8 @@ class WalletRpcClient(RpcClient):
         memos: Optional[List[str]] = None,
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
-        exclude_amounts: Optional[List[uint64]] = None,
-        exclude_coin_ids: Optional[List[str]] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
         reuse_puzhash: Optional[bool] = None,
     ) -> TransactionRecord:
@@ -201,8 +201,8 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "min_coin_amount": min_coin_amount,
                 "max_coin_amount": max_coin_amount,
-                "exclude_coin_amounts": exclude_amounts,
-                "exclude_coin_ids": exclude_coin_ids,
+                "excluded_coin_amounts": excluded_amounts,
+                "excluded_coin_ids": excluded_coin_ids,
                 "puzzle_decorator": puzzle_decorator_override,
                 "reuse_puzhash": reuse_puzhash,
             }
@@ -215,8 +215,8 @@ class WalletRpcClient(RpcClient):
                 "memos": memos,
                 "min_coin_amount": min_coin_amount,
                 "max_coin_amount": max_coin_amount,
-                "exclude_coin_amounts": exclude_amounts,
-                "exclude_coin_ids": exclude_coin_ids,
+                "excluded_coin_amounts": excluded_amounts,
+                "excluded_coin_ids": excluded_coin_ids,
                 "puzzle_decorator": puzzle_decorator_override,
                 "reuse_puzhash": reuse_puzhash,
             }
@@ -281,8 +281,8 @@ class WalletRpcClient(RpcClient):
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
-        exclude_coins: Optional[List[Coin]] = None,
-        exclude_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[List[Coin]] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
         wallet_id: Optional[int] = None,
     ) -> List[TransactionRecord]:
         # Converts bytes to hex for puzzle hashes
@@ -297,7 +297,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "min_coin_amount": min_coin_amount,
             "max_coin_amount": max_coin_amount,
-            "exclude_coin_amounts": exclude_amounts,
+            "excluded_coin_amounts": excluded_amounts,
         }
 
         if coin_announcements is not None and len(coin_announcements) > 0:
@@ -324,9 +324,9 @@ class WalletRpcClient(RpcClient):
             coins_json = [c.to_json_dict() for c in coins]
             request["coins"] = coins_json
 
-        if exclude_coins is not None and len(exclude_coins) > 0:
-            exclude_coins_json = [exclude_coin.to_json_dict() for exclude_coin in exclude_coins]
-            request["exclude_coins"] = exclude_coins_json
+        if excluded_coins is not None and len(excluded_coins) > 0:
+            excluded_coins_json = [excluded_coin.to_json_dict() for excluded_coin in excluded_coins]
+            request["excluded_coins"] = excluded_coins_json
 
         if wallet_id:
             request["wallet_id"] = wallet_id
@@ -342,7 +342,8 @@ class WalletRpcClient(RpcClient):
         coin_announcements: Optional[List[Announcement]] = None,
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
-        exclude_coins: Optional[List[Coin]] = None,
+        excluded_coins: Optional[List[Coin]] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
         wallet_id: Optional[int] = None,
     ) -> TransactionRecord:
         txs: List[TransactionRecord] = await self.create_signed_transactions(
@@ -352,7 +353,8 @@ class WalletRpcClient(RpcClient):
             coin_announcements=coin_announcements,
             puzzle_announcements=puzzle_announcements,
             min_coin_amount=min_coin_amount,
-            exclude_coins=exclude_coins,
+            excluded_coins=excluded_coins,
+            excluded_amounts=excluded_amounts,
             wallet_id=wallet_id,
         )
         if len(txs) == 0:
@@ -392,7 +394,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
         excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[List[str]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
     ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
@@ -731,8 +733,8 @@ class WalletRpcClient(RpcClient):
         memos: Optional[List[str]] = None,
         min_coin_amount: uint64 = uint64(0),
         max_coin_amount: uint64 = uint64(0),
-        exclude_amounts: Optional[List[uint64]] = None,
-        exclude_coin_ids: Optional[List[str]] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
         additions: Optional[List[Dict[str, Any]]] = None,
         removals: Optional[List[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -744,8 +746,8 @@ class WalletRpcClient(RpcClient):
             "memos": memos if memos else [],
             "min_coin_amount": min_coin_amount,
             "max_coin_amount": max_coin_amount,
-            "exclude_coin_amounts": exclude_amounts,
-            "exclude_coin_ids": exclude_coin_ids,
+            "excluded_coin_amounts": excluded_amounts,
+            "excluded_coin_ids": excluded_coin_ids,
             "reuse_puzhash": reuse_puzhash,
         }
         if amount is not None and inner_address is not None:
@@ -873,7 +875,7 @@ class WalletRpcClient(RpcClient):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
     # NFT wallet
-    async def create_new_nft_wallet(self, did_id, name=None):
+    async def create_new_nft_wallet(self, did_id, name=None) -> dict[str, Any]:
         request: Dict[str, Any] = {
             "wallet_type": "nft_wallet",
             "did_id": did_id,
@@ -984,7 +986,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_count_nfts", request)
         return response
 
-    async def list_nfts(self, wallet_id):
+    async def list_nfts(self, wallet_id) -> dict[str, Any]:
         request: Dict[str, Any] = {"wallet_id": wallet_id, "num": 100_000}
         response = await self.fetch("nft_get_nfts", request)
         return response
@@ -1007,7 +1009,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_set_nft_did", request)
         return response
 
-    async def get_nft_wallet_did(self, wallet_id):
+    async def get_nft_wallet_did(self, wallet_id) -> dict[str, Optional[str]]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response

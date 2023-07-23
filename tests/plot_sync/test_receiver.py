@@ -10,9 +10,11 @@ from typing import Any, Callable, List, Tuple, Type, Union
 import pytest
 from blspy import G1Element
 
+from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, expected_plot_size
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver, Sync
 from chia.plot_sync.util import ErrorCodes, State
+from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
@@ -41,6 +43,9 @@ def assert_default_values(receiver: Receiver) -> None:
     assert receiver.invalid() == []
     assert receiver.keys_missing() == []
     assert receiver.duplicates() == []
+    assert receiver.total_plot_size() == 0
+    assert receiver.total_effective_plot_size() == float(0)
+    assert receiver.harvesting_mode() is None
 
 
 async def dummy_callback(_: bytes32, __: Delta) -> None:
@@ -125,7 +130,7 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
 
 
 @pytest.mark.asyncio
-async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
+async def run_plot_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
     # For the the list types invoke the trigger function in batches
@@ -174,16 +179,28 @@ def plot_sync_setup() -> Tuple[Receiver, List[SyncStepData]]:
             plot_public_key=G1Element(),
             file_size=uint64(random.randint(0, 100)),
             time_modified=uint64(0),
+            compression_level=uint8(0),
         )
         for x in path_list
     ]
 
     # Manually add the plots we want to remove in tests
     receiver._plots = {plot_info.filename: plot_info for plot_info in plot_info_list[0:10]}
-    receiver._total_plot_size = sum(plot.file_size for plot in receiver._plots.values())
+    receiver._total_plot_size = sum(plot.file_size for plot in receiver.plots().values())
+    receiver._total_effective_plot_size = sum(
+        UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values()
+    )
 
     sync_steps: List[SyncStepData] = [
-        SyncStepData(State.idle, receiver.sync_started, PlotSyncStart, False, uint64(0), uint32(len(plot_info_list))),
+        SyncStepData(
+            State.idle,
+            receiver.sync_started,
+            PlotSyncStart,
+            False,
+            uint64(0),
+            uint32(len(plot_info_list)),
+            uint8(HarvestingMode.CPU),
+        ),
         SyncStepData(State.loaded, receiver.process_loaded, PlotSyncPlotList, plot_info_list[10:20], True),
         SyncStepData(State.removed, receiver.process_removed, PlotSyncPathList, path_list[0:10], True),
         SyncStepData(State.invalid, receiver.process_invalid, PlotSyncPathList, path_list[20:30], True),
@@ -201,7 +218,7 @@ def test_default_values() -> None:
 
 @pytest.mark.asyncio
 async def test_reset() -> None:
-    receiver, sync_steps = plot_sync_setup()
+    receiver, plot_sync_steps = plot_sync_setup()
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done
@@ -235,7 +252,7 @@ async def test_reset() -> None:
 @pytest.mark.parametrize("counts_only", [True, False])
 @pytest.mark.asyncio
 async def test_to_dict(counts_only: bool) -> None:
-    receiver, sync_steps = plot_sync_setup()
+    receiver, plot_sync_steps = plot_sync_setup()
     plot_sync_dict_1 = receiver.to_dict(counts_only)
 
     assert get_list_or_len(plot_sync_dict_1["plots"], not counts_only) == 10
@@ -243,6 +260,9 @@ async def test_to_dict(counts_only: bool) -> None:
     assert get_list_or_len(plot_sync_dict_1["no_key_filenames"], not counts_only) == 0
     assert get_list_or_len(plot_sync_dict_1["duplicates"], not counts_only) == 0
     assert plot_sync_dict_1["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    assert plot_sync_dict_1["total_effective_plot_size"] == int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values())
+    )
     assert plot_sync_dict_1["syncing"] is None
     assert plot_sync_dict_1["last_sync_time"] is None
     assert plot_sync_dict_1["connection"] == {
@@ -250,6 +270,7 @@ async def test_to_dict(counts_only: bool) -> None:
         "host": receiver.connection().peer_info.host,
         "port": receiver.connection().peer_info.port,
     }
+    assert plot_sync_dict_1["harvesting_mode"] is None
 
     # We should get equal dicts
     assert plot_sync_dict_1 == receiver.to_dict(counts_only)
@@ -257,14 +278,14 @@ async def test_to_dict(counts_only: bool) -> None:
     assert plot_sync_dict_1 != receiver.to_dict(not counts_only)
 
     expected_plot_files_processed: int = 0
-    expected_plot_files_total: int = sync_steps[State.idle].args[2]
+    expected_plot_files_total: int = plot_sync_steps[State.idle].args[2]
 
     # Walk through all states from idle to done and run them with the test data and validate the sync progress
     for state in State:
-        await run_sync_step(receiver, sync_steps[state])
+        await run_plot_sync_step(receiver, plot_sync_steps[state])
 
         if state != State.idle and state != State.removed and state != State.done:
-            expected_plot_files_processed += len(sync_steps[state].args[0])
+            expected_plot_files_processed += len(plot_sync_steps[state].args[0])
 
         sync_data = receiver.to_dict()["syncing"]
         if state == State.done:
@@ -278,16 +299,24 @@ async def test_to_dict(counts_only: bool) -> None:
         assert sync_data == expected_sync_data
 
     plot_sync_dict_3 = receiver.to_dict(counts_only)
-    assert get_list_or_len(sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
+    assert get_list_or_len(plot_sync_steps[State.loaded].args[0], counts_only) == plot_sync_dict_3["plots"]
     assert (
-        get_list_or_len(sync_steps[State.invalid].args[0], counts_only) == plot_sync_dict_3["failed_to_open_filenames"]
+        get_list_or_len(plot_sync_steps[State.invalid].args[0], counts_only)
+        == plot_sync_dict_3["failed_to_open_filenames"]
     )
-    assert get_list_or_len(sync_steps[State.keys_missing].args[0], counts_only) == plot_sync_dict_3["no_key_filenames"]
-    assert get_list_or_len(sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
+    assert (
+        get_list_or_len(plot_sync_steps[State.keys_missing].args[0], counts_only)
+        == plot_sync_dict_3["no_key_filenames"]
+    )
+    assert get_list_or_len(plot_sync_steps[State.duplicates].args[0], counts_only) == plot_sync_dict_3["duplicates"]
 
     assert plot_sync_dict_3["total_plot_size"] == sum(plot.file_size for plot in receiver.plots().values())
+    assert plot_sync_dict_3["total_effective_plot_size"] == int(
+        sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(expected_plot_size(plot.size)) for plot in receiver.plots().values())
+    )
     assert plot_sync_dict_3["last_sync_time"] > 0
     assert plot_sync_dict_3["syncing"] is None
+    assert plot_sync_steps[State.idle].args[3] == plot_sync_dict_3["harvesting_mode"]
 
     # Trigger a repeated plot sync
     await receiver.sync_started(
@@ -296,6 +325,7 @@ async def test_to_dict(counts_only: bool) -> None:
             False,
             receiver.last_sync().sync_id,
             uint32(1),
+            uint8(HarvestingMode.CPU),
         )
     )
     assert receiver.to_dict()["syncing"] == {
@@ -326,7 +356,7 @@ async def test_sync_flow() -> None:
 
     # Walk through all states from idle to done and run them with the test data
     for state in State:
-        await run_sync_step(receiver, sync_steps[state])
+        await run_plot_sync_step(receiver, sync_steps[state])
 
     for plot_info in sync_steps[State.loaded].args[0]:
         assert plot_info.filename in receiver.plots()
@@ -358,13 +388,13 @@ async def test_invalid_ids() -> None:
             receiver._last_sync.sync_id = uint64(1)
             # Test "sync_started last doesn't match"
             invalid_last_sync_id_param = PlotSyncStart(
-                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0)
+                plot_sync_identifier(uint64(0), uint64(0)), False, uint64(2), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_last_sync_id_param)
             assert_error_response(receiver, ErrorCodes.invalid_last_sync_id)
             # Test "last_sync_id == new_sync_id"
             invalid_sync_id_match_param = PlotSyncStart(
-                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0)
+                plot_sync_identifier(uint64(1), uint64(0)), False, uint64(1), uint32(0), uint8(HarvestingMode.CPU)
             )
             await current_step.function(invalid_sync_id_match_param)
             assert_error_response(receiver, ErrorCodes.sync_ids_match)

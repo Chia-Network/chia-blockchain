@@ -33,7 +33,7 @@ def create_full_node_service(
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode]:
+) -> Service[FullNode, FullNodeAPI]:
     service_config = config[SERVICE_NAME]
 
     full_node = FullNode(
@@ -67,16 +67,32 @@ def create_full_node_service(
     )
 
 
+def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
+    if network_id != "testnet10":
+        return
+    # activate softforks immediately on testnet
+    # these numbers are supposed to match initial-config.yaml
+    if "SOFT_FORK2_HEIGHT" not in overrides:
+        overrides["SOFT_FORK2_HEIGHT"] = 0
+    if "SOFT_FORK3_HEIGHT" not in overrides:
+        overrides["SOFT_FORK3_HEIGHT"] = 0
+    if "HARD_FORK_HEIGHT" not in overrides:
+        overrides["HARD_FORK_HEIGHT"] = 2997292
+    if "PLOT_FILTER_128_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
+    if "PLOT_FILTER_64_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_64_HEIGHT"] = 8010796
+    if "PLOT_FILTER_32_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_32_HEIGHT"] = 13056556
+
+
 async def async_main(service_config: Dict[str, Any]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config[SERVICE_NAME] = service_config
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
-    if network_id == "testnet10":
-        # activate softforks immediately on testnet
-        if "SOFT_FORK2_HEIGHT" not in overrides:
-            overrides["SOFT_FORK2_HEIGHT"] = 0
+    update_testnet_overrides(network_id, overrides)
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)

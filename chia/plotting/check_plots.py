@@ -55,8 +55,8 @@ def check_plots(
         refresh_callback=plot_refresh_callback,
     )
 
-    context_count = config["harvester"].get("parallel_decompressers_count", 5)
-    thread_count = config["harvester"].get("decompresser_thread_count", 0)
+    context_count = config["harvester"].get("parallel_decompressor_count", 5)
+    thread_count = config["harvester"].get("decompressor_thread_count", 0)
     if thread_count == 0:
         thread_count = multiprocessing.cpu_count() // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
@@ -65,7 +65,7 @@ def check_plots(
     gpu_index = config["harvester"].get("gpu_index", 0)
     enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
 
-    plot_manager.configure_decompresser(
+    plot_manager.configure_decompressor(
         context_count,
         thread_count,
         disable_cpu_affinity,
@@ -218,6 +218,8 @@ def check_plots(
                 except Exception as e:
                     log.error(f"{type(e)}: {e} error in getting challenge qualities for plot {plot_path}")
                     caught_exception = True
+                if caught_exception is True:
+                    break
 
             if total_proofs > 0 and caught_exception is False:
                 log.info(
@@ -233,14 +235,13 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for batch in more_itertools.chunked(plot_manager.plots.items(), context_count):
-                futures = []
-                for plot_path, plot_info in batch:
-                    futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
+            futures = []
+            for plot_path, plot_info in plot_manager.plots.items():
+                futures.append(executor.submit(process_plot, plot_path, plot_info, num_start, num_end))
 
-                for future in concurrent.futures.as_completed(futures):
-                    _ = future.result()
+            for future in concurrent.futures.as_completed(futures):
+                _ = future.result()
 
     log.info("")
     log.info("")
