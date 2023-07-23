@@ -14,19 +14,26 @@ from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint32, uint64
 
-timeout = 0.25
-all_test_combinations = [  # (use_tcp, request_type), so udp + tcp for every request type we support.
-    (True, dns.rdatatype.A),
-    (True, dns.rdatatype.AAAA),
-    (True, dns.rdatatype.ANY),
-    (True, dns.rdatatype.NS),
-    (True, dns.rdatatype.SOA),
-    (False, dns.rdatatype.A),
-    (False, dns.rdatatype.AAAA),
-    (False, dns.rdatatype.ANY),
-    (False, dns.rdatatype.NS),
-    (False, dns.rdatatype.SOA),
-]
+timeout = 0.5
+
+
+def generate_test_combs() -> List[Tuple[bool, str, dns.rdatatype.RdataType]]:
+    """
+    Generates all the combinations of tests we want to run.
+    """
+    output = []
+    use_tcp = [True, False]
+    target_address = ["::1", "127.0.0.1"]
+    request_types = [dns.rdatatype.A, dns.rdatatype.AAAA, dns.rdatatype.ANY, dns.rdatatype.NS, dns.rdatatype.SOA]
+    # (use_tcp, target-addr, request_type), so udp + tcp, ipv6 +4 for every request type we support.
+    for addr in target_address:
+        for tcp in use_tcp:
+            for req in request_types:
+                output.append((tcp, addr, req))
+    return output
+
+
+all_test_combinations = generate_test_combs()
 
 
 @dataclass(frozen=True)
@@ -42,14 +49,14 @@ class FakeDnsPacket:
 
 
 async def make_dns_query(
-    use_tcp: bool, port: int, dns_message: dns.message.Message, d_timeout: float = timeout
+    use_tcp: bool, target_address: str, port: int, dns_message: dns.message.Message, d_timeout: float = timeout
 ) -> dns.message.Message:
     """
     Makes a DNS query for the given domain name using the given protocol type.
     """
     if use_tcp:
-        return await dns.asyncquery.tcp(q=dns_message, where="::1", timeout=d_timeout, port=port)
-    return await dns.asyncquery.udp(q=dns_message, where="::1", timeout=d_timeout, port=port)
+        return await dns.asyncquery.tcp(q=dns_message, where=target_address, timeout=d_timeout, port=port)
+    return await dns.asyncquery.udp(q=dns_message, where=target_address, timeout=d_timeout, port=port)
 
 
 def get_addresses(num_subnets: int = 10) -> Tuple[List[IPv4Address], List[IPv6Address]]:
@@ -100,9 +107,9 @@ def assert_standard_results(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("use_tcp, request_type", all_test_combinations)
+@pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_error_conditions(
-    seeder_service: DNSServer, use_tcp: bool, request_type: dns.rdatatype.RdataType
+    seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
 ) -> None:
     """
     We check having no peers, an invalid packet, an early EOF, and a packet then an EOF halfway through (tcp only).
@@ -114,7 +121,7 @@ async def test_error_conditions(
 
     # No peers
     no_peers = dns.message.make_query(domain, request_type)
-    no_peers_response = await make_dns_query(use_tcp, port, no_peers)
+    no_peers_response = await make_dns_query(use_tcp, target_address, port, no_peers)
     assert no_peers_response.rcode() == dns.rcode.NOERROR
 
     if request_type == dns.rdatatype.A or request_type == dns.rdatatype.AAAA:
@@ -145,7 +152,7 @@ async def test_error_conditions(
     # Invalid packet (this is kinda a pain)
     invalid_packet = cast(dns.message.Message, FakeDnsPacket(dns.message.make_query(domain, request_type)))
     with pytest.raises(EOFError if use_tcp else dns.exception.Timeout):  # UDP will time out, TCP will EOF
-        await make_dns_query(use_tcp, port, invalid_packet)
+        await make_dns_query(use_tcp, target_address, port, invalid_packet)
 
     # early EOF packet
     if use_tcp:
@@ -175,22 +182,24 @@ async def test_error_conditions(
 
     # Record does not exist
     record_does_not_exist = dns.message.make_query("doesnotexist." + domain, request_type)
-    record_does_not_exist_response = await make_dns_query(use_tcp, port, record_does_not_exist)
+    record_does_not_exist_response = await make_dns_query(use_tcp, target_address, port, record_does_not_exist)
     assert record_does_not_exist_response.rcode() == dns.rcode.NXDOMAIN
     assert len(record_does_not_exist_response.answer) == 0
     assert len(record_does_not_exist_response.authority) == num_ns + 1  # ns + soa
 
     # Record outside domain
     record_outside_domain = dns.message.make_query("chia.net", request_type)
-    record_outside_domain_response = await make_dns_query(use_tcp, port, record_outside_domain)
+    record_outside_domain_response = await make_dns_query(use_tcp, target_address, port, record_outside_domain)
     assert record_outside_domain_response.rcode() == dns.rcode.REFUSED
     assert len(record_outside_domain_response.answer) == 0
     assert len(record_outside_domain_response.authority) == 0
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("use_tcp, request_type", all_test_combinations)
-async def test_dns_queries(seeder_service: DNSServer, use_tcp: bool, request_type: dns.rdatatype.RdataType) -> None:
+@pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
+async def test_dns_queries(
+    seeder_service: DNSServer, use_tcp: bool, target_address: str, request_type: dns.rdatatype.RdataType
+) -> None:
     """
     We add 5000 peers directly, then try every kind of query many times over both the TCP and UDP protocols.
     """
@@ -204,7 +213,7 @@ async def test_dns_queries(seeder_service: DNSServer, use_tcp: bool, request_typ
     # now we query for each type of record a lot of times and make sure we get the right number of responses
     for i in range(150):
         query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
-        std_query_response = await make_dns_query(use_tcp, port, query)
+        std_query_response = await make_dns_query(use_tcp, target_address, port, query)
         assert std_query_response.rcode() == dns.rcode.NOERROR
         assert_standard_results(std_query_response.answer, request_type, num_ns)
 
@@ -218,7 +227,7 @@ async def test_dns_queries(seeder_service: DNSServer, use_tcp: bool, request_typ
     # Validate EDNS
     e_query = dns.message.make_query(domain, dns.rdatatype.ANY, use_edns=False)
     with pytest.raises(dns.query.BadResponse):  # response is truncated without EDNS
-        await make_dns_query(False, port, e_query)
+        await make_dns_query(False, target_address, port, e_query)
 
 
 @pytest.mark.asyncio
@@ -259,8 +268,8 @@ async def test_db_processing(seeder_service: DNSServer) -> None:
     await time_out_assert(30, lambda: seeder_service.reliable_peers_v4 != [])
 
     # now we check all the combinations once (not a stupid amount of times)
-    for use_tcp, request_type in all_test_combinations:
+    for use_tcp, target_address, request_type in all_test_combinations:
         query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
-        std_query_response = await make_dns_query(use_tcp, port, query)
+        std_query_response = await make_dns_query(use_tcp, target_address, port, query)
         assert std_query_response.rcode() == dns.rcode.NOERROR
         assert_standard_results(std_query_response.answer, request_type, num_ns)

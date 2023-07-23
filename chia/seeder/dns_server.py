@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
+import sys
 import traceback
 from asyncio import AbstractEventLoop
 from contextlib import asynccontextmanager
@@ -65,6 +66,8 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
                 await self.queue_task
             except asyncio.CancelledError:  # we dont care
                 pass
+        if self.transport is not None:
+            self.transport.close()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         # we use the #ignore because transport is a subclass of BaseTransport, but we need the real type.
@@ -266,8 +269,10 @@ class DNSServer:
     crawl_store: Optional[CrawlStore] = field(init=False, default=None)
     reliable_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
     shutdown_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
-    udp_transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
-    udp_protocol: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
+    udp_transport_ipv4: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
+    udp_protocol_ipv4: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
+    udp_transport_ipv6: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
+    udp_protocol_ipv6: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
     # TODO: After 3.10 is dropped change to asyncio.Server
     tcp_server: Optional[asyncio.base_events.Server] = field(init=False, default=None)
     # these are all set in __post_init__
@@ -319,23 +324,31 @@ class DNSServer:
         loop = asyncio.get_running_loop()
         await self.setup_signal_handlers(loop)
 
+        # Set up the crawl store and the peer update task.
         self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path, timeout=120))
+        self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
 
-        # One protocol instance will be created to serve all UDP client requests.
-        self.udp_transport, self.udp_protocol = await loop.create_datagram_endpoint(
+        # One protocol instance will be created for each udp transport, so that we can accept ipv4 and ipv6
+        self.udp_transport_ipv6, self.udp_protocol_ipv6 = await loop.create_datagram_endpoint(
             lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
         )
-        # start loop
-        self.udp_protocol.start()
-        # in case the port is 0 we need both protocols on the same port.
-        self.dns_port = self.udp_transport.get_extra_info("sockname")[1]  # get the actual port we are listening on
+        self.udp_protocol_ipv6.start()  # start ipv6 udp transmit task
 
-        # one protocol instance will be created to serve all TCP client requests.
+        # in case the port is 0 we need all protocols on the same port.
+        self.dns_port = self.udp_transport_ipv6.get_extra_info("sockname")[1]  # get the actual port we are listening to
+
+        if sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
+            # Windows does not support dual stack sockets, so we need to create a new socket for ipv4.
+            self.udp_transport_ipv4, self.udp_protocol_ipv4 = await loop.create_datagram_endpoint(
+                lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("0.0.0.0", self.dns_port)
+            )
+            self.udp_protocol_ipv4.start()  # start ipv4 udp transmit task
+
+        # One tcp server will handle both ipv4 and ipv6 on both linux and windows.
         self.tcp_server = await loop.create_server(
             lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.dns_port
         )
 
-        self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
         log.info("DNS server started.")
         try:
             yield
@@ -356,17 +369,17 @@ class DNSServer:
 
     async def stop(self) -> None:
         log.info("Stopping DNS server...")
-        if self.udp_transport is not None:
-            self.udp_transport.close()  # stop accepting udp new requests
-        if self.udp_protocol is not None:
-            await self.udp_protocol.stop()  # stop responding to udp requests
-        if self.tcp_server is not None:
-            self.tcp_server.close()  # stop accepting new tcp requests
-            await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish
         if self.reliable_task is not None:
             self.reliable_task.cancel()  # cancel the peer update task
         if self.crawl_store is not None:
             await self.crawl_store.crawl_db.close()
+        if self.udp_protocol_ipv6 is not None:
+            await self.udp_protocol_ipv6.stop()  # stop responding to and accepting udp requests (ipv6) & ipv4 if linux.
+        if self.udp_protocol_ipv4 is not None:
+            await self.udp_protocol_ipv4.stop()  # stop responding to and accepting udp requests (ipv4) if windows.
+        if self.tcp_server is not None:
+            self.tcp_server.close()  # stop accepting new tcp requests (ipv4 and ipv6)
+            await self.tcp_server.wait_closed()  # wait for existing TCP requests to finish (ipv4 and ipv6)
         self.shutdown_event.set()
 
     async def periodically_get_reliable_peers(self) -> None:
