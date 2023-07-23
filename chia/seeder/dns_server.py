@@ -265,6 +265,7 @@ class DNSServer:
     shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
     crawl_store: Optional[CrawlStore] = field(init=False, default=None)
     reliable_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
+    shutdown_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
     udp_transport: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
     udp_protocol: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
     # TODO: After 3.10 is dropped change to asyncio.Server
@@ -350,7 +351,8 @@ class DNSServer:
             log.warning("signal handlers unsupported on this platform")
 
     def _accept_signal(self) -> None:  # pragma: no cover
-        asyncio.create_task(self.stop())
+        if self.shutdown_task is None:  # otherwise we are already shutting down, so we ignore the signal
+            self.shutdown_task = asyncio.create_task(self.stop())
 
     async def stop(self) -> None:
         log.info("Stopping DNS server...")
