@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -11,6 +11,40 @@ Usage: $0 <bladebit|madmax> [-v VERSION | -h]
 
 usage() {
   echo "$USAGE_TEXT"
+}
+
+# Check for necessary tools
+if ! command -v wget &>/dev/null; then
+  echo "ERROR: wget could not be found. Please install wget and try again."
+  exit 1
+fi
+
+if ! command -v tar &>/dev/null; then
+  echo "ERROR: tar could not be found. Please install tar and try again."
+  exit 1
+fi
+
+# Function to download, extract, set permissions, and clean up
+handle_binary() {
+  URL="$1"
+  ARTIFACT=$(basename "$URL")
+  FILENAME="$2"
+  BINARY_NAME="$3"
+
+  echo "Fetching binary from: ${URL}"
+  if wget -q "$URL"; then
+    echo "Successfully downloaded: ${ARTIFACT}"
+    if [[ "$FILENAME" == *.tar.gz ]]; then
+      tar zxf "$FILENAME"
+      rm -f "$FILENAME"
+    else
+      mv "$ARTIFACT" "$BINARY_NAME"
+    fi
+    chmod 755 ./"$BINARY_NAME"
+    echo -e "\nSuccessfully installed '${BINARY_NAME}' to:\n$PWD/${BINARY_NAME}\n"
+  else
+    echo -e "\nWARNING: Failed to download from ${URL}. Maybe specified version of the binary does not exist.\n"
+  fi
 }
 
 get_bladebit_filename() {
@@ -57,9 +91,9 @@ get_madmax_filename() {
   OS="$3"
   ARCH="$4"
 
-  CHIA_PLOT="chia_plot"
+  export CHIA_PLOT="chia_plot"
   if [ "$KSIZE" = "k34" ]; then
-    CHIA_PLOT="chia_plot_k34"
+    export CHIA_PLOT="chia_plot_k34"
   fi
   SUFFIX=""
   if [ "$OS" = "macos" ]; then
@@ -167,70 +201,39 @@ if [ ! -d "${VIRTUAL_ENV}/bin" ]; then
 fi
 cd "${VIRTUAL_ENV}/bin"
 
+# Handle BladeBit and BladeBit CUDA binaries
 if [ "$PLOTTER" = "bladebit" ]; then
   if [ "$VERSION" = "" ]; then
     VERSION="$DEFAULT_BLADEBIT_VERSION"
   fi
 
-  echo "Installing bladebit $VERSION"
+  echo -e "Installing bladebit $VERSION\n"
 
   # Regular bladebit binary
-  URL="$(get_bladebit_url "$VERSION" "$OS" "$ARCH")"
-  echo "Fetching binary from: ${URL}"
-  if wget -q "$URL"; then
-    echo "Successfully downloaded: ${URL}"
-    bladebit_filename="$(get_bladebit_filename "$VERSION" "$OS" "$ARCH")"
-    tar zxf "$bladebit_filename"
-    chmod 755 ./bladebit
-    rm -f "$bladebit_filename"
-    echo "Successfully installed bladebit to $PWD/bladebit"
-  else
-    echo "WARNING: Could not download BladeBit. Maybe specified version of the binary does not exist."
-  fi
-
+  url="$(get_bladebit_url "$VERSION" "$OS" "$ARCH")"
+  bladebit_filename="$(get_bladebit_filename "$VERSION" "$OS" "$ARCH")"
+  handle_binary "$url" "$bladebit_filename" "bladebit"
   # CUDA bladebit binary
-  URL="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
-  echo "Fetching CUDA binary from: ${URL}"
-  if wget -q "$URL"; then
-    echo "Successfully downloaded CUDA: ${URL}"
-    bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
-    tar zxf "$bladebit_cuda_filename"
-    chmod 755 ./bladebit_cuda
-    rm -f "$bladebit_cuda_filename"
-    echo "Successfully installed bladebit_cuda to $PWD/bladebit_cuda"
-  else
-    echo "WARNING: Could not download BladeBit CUDA. Maybe specified version of the CUDA binary does not exist."
-  fi
+  url="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
+  bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
+  handle_binary "$url" "$bladebit_cuda_filename" "bladebit_cuda"
+
+# Handle MadMax binaries
 elif [ "$PLOTTER" = "madmax" ]; then
   if [ "$VERSION" = "" ]; then
     VERSION="$DEFAULT_MADMAX_VERSION"
   fi
 
-  echo "Installing madmax $VERSION"
+  echo -e "Installing madmax $VERSION\n"
 
-  URL="$(get_madmax_url k32 "$VERSION" "$OS" "$ARCH")"
-  echo "Fetching binary from: ${URL}"
-  if ! wget -q "$URL"; then
-    echo "ERROR: Download failed. Maybe specified version of the binary does not exist."
-    exit 1
-  fi
-  echo "Successfully downloaded: ${URL}"
+  # k32 MadMax binary
+  url="$(get_madmax_url "k32" "$VERSION" "$OS" "$ARCH")"
   madmax_filename="$(get_madmax_filename "k32" "$VERSION" "$OS" "$ARCH")"
-  mv -f "$madmax_filename" chia_plot
-  chmod 755 chia_plot
-  echo "Successfully installed madmax to $PWD/chia_plot"
-
-  URL="$(get_madmax_url k34 "$VERSION" "$OS" "$ARCH")"
-  echo "Fetching binary from: ${URL}"
-  if ! wget -q "$URL"; then
-    echo "madmax for k34 for this version is not found"
-    exit 1
-  fi
-  echo "Successfully downloaded: ${URL}"
+  handle_binary "$url" "$madmax_filename" "chia_plot"
+  # k34 MadMax binary
+  url="$(get_madmax_url "k34" "$VERSION" "$OS" "$ARCH")"
   madmax_filename="$(get_madmax_filename "k34" "$VERSION" "$OS" "$ARCH")"
-  mv -f "$madmax_filename" chia_plot_k34
-  chmod 755 chia_plot_k34
-  echo "Successfully installed madmax for k34 to $PWD/chia_plot_k34"
+  handle_binary "$url" "$madmax_filename" "chia_plot_k34"
 else
   usage
 fi
