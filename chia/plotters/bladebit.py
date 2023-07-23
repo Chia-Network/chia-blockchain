@@ -189,26 +189,19 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     return info
 
 
-# @TODO Set valid progress logs
 progress_bladebit_cuda = {
-    "Finished F1 sort": 0.01,
-    "Finished forward propagating table 2": 0.06,
-    "Finished forward propagating table 3": 0.12,
-    "Finished forward propagating table 4": 0.2,
-    "Finished forward propagating table 5": 0.28,
-    "Finished forward propagating table 6": 0.36,
-    "Finished forward propagating table 7": 0.42,
-    "Finished prunning table 6": 0.43,
-    "Finished prunning table 5": 0.48,
-    "Finished prunning table 4": 0.51,
-    "Finished prunning table 3": 0.55,
-    "Finished prunning table 2": 0.58,
-    "Finished compressing tables 1 and 2": 0.66,
-    "Finished compressing tables 2 and 3": 0.73,
-    "Finished compressing tables 3 and 4": 0.79,
-    "Finished compressing tables 4 and 5": 0.85,
-    "Finished compressing tables 5 and 6": 0.92,
-    "Finished compressing tables 6 and 7": 0.98,
+    "Generating F1": 0.01,
+    "Finished F1 in ": 0.1,
+    "Table 2 completed in ": 0.2,
+    "Table 3 completed in ": 0.3,
+    "Table 4 completed in ": 0.4,
+    "Table 5 completed in ": 0.5,
+    "Table 6 completed in ": 0.6,
+    "Table 7 completed in ": 0.7,
+    "Completed Phase 1 in ": 0.8,
+    "Completed Phase 2 in ": 0.9,
+    "Completed Phase 3 in ": 0.95,
+    "Completed writing plot in ": 0.98,
 }
 
 progress_bladebit_ram = {
