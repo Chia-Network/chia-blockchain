@@ -10,43 +10,43 @@ Usage: $0 <bladebit|madmax> [-v VERSION | -h]
 "
 
 usage() {
-  echo "${USAGE_TEXT}"
+  echo "$USAGE_TEXT"
 }
 
 get_bladebit_filename() {
-  BLADEBIT_VER="$1"
-  OS="$2"
-  ARCH="$3"
+  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
+  OS="$2"           # "ubuntu", "centos", "macos"
+  ARCH="$3"         # "x86-64", "arm64"
 
   echo "bladebit-${BLADEBIT_VER}-${OS}-${ARCH}.tar.gz"
 }
 
 get_bladebit_cuda_filename() {
-  BLADEBIT_VER="$1"
-  OS="$2"
-  ARCH="$3"
+  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
+  OS="$2"           # "ubuntu", "centos", "macos"
+  ARCH="$3"         # "x86-64", "arm64"
 
   echo "bladebit-cuda-${BLADEBIT_VER}-${OS}-${ARCH}.tar.gz"
 }
 
 get_bladebit_url() {
-  BLADEBIT_VER="$1"
-  OS="$2"
-  ARCH="$3"
+  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
+  OS="$2"           # "ubuntu", "centos", "macos"
+  ARCH="$3"         # "x86-64", "arm64"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
-  BLADEBIT_FILENAME="$(get_bladebit_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
+  BLADEBIT_FILENAME="$(get_bladebit_filename "$BLADEBIT_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_FILENAME}"
 }
 
 get_bladebit_cuda_url() {
-  BLADEBIT_VER="$1"
-  OS="$2"
-  ARCH="$3"
+  BLADEBIT_VER="$1" # e.g. v2.0.0-beta1
+  OS="$2"           # "ubuntu", "centos", "macos"
+  ARCH="$3"         # "x86-64", "arm64"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
-  BLADEBIT_CUDA_FILENAME="$(get_bladebit_cuda_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
+  BLADEBIT_CUDA_FILENAME="$(get_bladebit_cuda_filename "$BLADEBIT_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_CUDA_FILENAME}"
 }
@@ -70,7 +70,7 @@ get_madmax_filename() {
     fi
     SUFFIX="${OS}-${ARCH}"
   else
-    SUFFIX="${ARCH}"
+    SUFFIX="$ARCH"
   fi
 
   echo "${CHIA_PLOT}-${MADMAX_VER}-${SUFFIX}"
@@ -83,12 +83,12 @@ get_madmax_url() {
   ARCH="$4"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
-  MADMAX_FILENAME="$(get_madmax_filename "${KSIZE}" "${MADMAX_VER}" "${OS}" "${ARCH}")"
+  MADMAX_FILENAME="$(get_madmax_filename "$KSIZE" "$MADMAX_VER" "$OS" "$ARCH")"
 
   echo "${GITHUB_BASE_URL}/${MADMAX_VER}/${MADMAX_FILENAME}"
 }
 
-if [ "$1" = "-h" ] || [ -z "$1" ]; then
+if [ "$1" = "-h" ] || [ "$1" = "" ]; then
   usage
   exit 0
 fi
@@ -99,24 +99,33 @@ VERSION=
 PLOTTER=$1
 shift 1
 
-while getopts v:h flag
-do
-  case "${flag}" in
-    v) VERSION="$OPTARG";;
-    h) usage; exit 0;;
-    *) echo; usage; exit 1;;
+while getopts v:h flag; do
+  case "$flag" in
+  v) VERSION="$OPTARG" ;;
+  h)
+    usage
+    exit 0
+    ;;
+  *)
+    echo
+    usage
+    exit 1
+    ;;
   esac
 done
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")"; pwd)
+SCRIPT_DIR=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
 
-if [ "${SCRIPT_DIR}" != "$(pwd)" ]; then
+if [ "$SCRIPT_DIR" != "$PWD" ]; then
   echo "ERROR: Please change working directory by the command below"
   echo "  cd ${SCRIPT_DIR}"
   exit 1
 fi
 
-if [ -z "$VIRTUAL_ENV" ]; then
+if [ "$VIRTUAL_ENV" = "" ]; then
   echo "This requires the chia python virtual environment."
   echo "Execute '. ./activate' before running."
   exit 1
@@ -159,67 +168,69 @@ fi
 cd "${VIRTUAL_ENV}/bin"
 
 if [ "$PLOTTER" = "bladebit" ]; then
-  if [ -z "$VERSION" ]; then
+  if [ "$VERSION" = "" ]; then
     VERSION="$DEFAULT_BLADEBIT_VERSION"
   fi
 
   echo "Installing bladebit $VERSION"
 
-  URL="$(get_bladebit_url "${VERSION}" "${OS}" "${ARCH}")"
+  # Regular bladebit binary
+  URL="$(get_bladebit_url "$VERSION" "$OS" "$ARCH")"
   echo "Fetching binary from: ${URL}"
-  if wget -q "${URL}"; then
+  if wget -q "$URL"; then
     echo "Successfully downloaded: ${URL}"
-    bladebit_filename="$(get_bladebit_filename "${VERSION}" "${OS}" "${ARCH}")"
-    tar zxf "${bladebit_filename}"
+    bladebit_filename="$(get_bladebit_filename "$VERSION" "$OS" "$ARCH")"
+    tar zxf "$bladebit_filename"
     chmod 755 ./bladebit
-    rm -f "${bladebit_filename}"
-    echo "Successfully installed bladebit to $(pwd)/bladebit"
+    rm -f "$bladebit_filename"
+    echo "Successfully installed bladebit to $PWD/bladebit"
   else
     echo "WARNING: Could not download BladeBit. Maybe specified version of the binary does not exist."
   fi
 
-  URL="$(get_bladebit_cuda_url "${VERSION}" "${OS}" "${ARCH}")"
+  # CUDA bladebit binary
+  URL="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
   echo "Fetching CUDA binary from: ${URL}"
-  if wget -q "${URL}"; then
+  if wget -q "$URL"; then
     echo "Successfully downloaded CUDA: ${URL}"
-    bladebit_cuda_filename="$(get_bladebit_cuda_filename "${VERSION}" "${OS}" "${ARCH}")"
-    tar zxf "${bladebit_cuda_filename}"
+    bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
+    tar zxf "$bladebit_cuda_filename"
     chmod 755 ./bladebit_cuda
-    rm -f "${bladebit_cuda_filename}"
-    echo "Successfully installed bladebit_cuda to $(pwd)/bladebit_cuda"
+    rm -f "$bladebit_cuda_filename"
+    echo "Successfully installed bladebit_cuda to $PWD/bladebit_cuda"
   else
     echo "WARNING: Could not download BladeBit CUDA. Maybe specified version of the CUDA binary does not exist."
   fi
 elif [ "$PLOTTER" = "madmax" ]; then
-  if [ -z "$VERSION" ]; then
+  if [ "$VERSION" = "" ]; then
     VERSION="$DEFAULT_MADMAX_VERSION"
   fi
 
   echo "Installing madmax $VERSION"
 
-  URL="$(get_madmax_url k32 "${VERSION}" "${OS}" "${ARCH}")"
+  URL="$(get_madmax_url k32 "$VERSION" "$OS" "$ARCH")"
   echo "Fetching binary from: ${URL}"
-  if ! wget -q "${URL}"; then
+  if ! wget -q "$URL"; then
     echo "ERROR: Download failed. Maybe specified version of the binary does not exist."
     exit 1
   fi
   echo "Successfully downloaded: ${URL}"
-  madmax_filename="$(get_madmax_filename "k32" "${VERSION}" "${OS}" "${ARCH}")"
-  mv -f "${madmax_filename}" chia_plot
+  madmax_filename="$(get_madmax_filename "k32" "$VERSION" "$OS" "$ARCH")"
+  mv -f "$madmax_filename" chia_plot
   chmod 755 chia_plot
-  echo "Successfully installed madmax to $(pwd)/chia_plot"
+  echo "Successfully installed madmax to $PWD/chia_plot"
 
-  URL="$(get_madmax_url k34 "${VERSION}" "${OS}" "${ARCH}")"
+  URL="$(get_madmax_url k34 "$VERSION" "$OS" "$ARCH")"
   echo "Fetching binary from: ${URL}"
-  if ! wget -q "${URL}"; then
+  if ! wget -q "$URL"; then
     echo "madmax for k34 for this version is not found"
     exit 1
   fi
   echo "Successfully downloaded: ${URL}"
-  madmax_filename="$(get_madmax_filename "k34" "${VERSION}" "${OS}" "${ARCH}")"
-  mv -f "${madmax_filename}" chia_plot_k34
+  madmax_filename="$(get_madmax_filename "k34" "$VERSION" "$OS" "$ARCH")"
+  mv -f "$madmax_filename" chia_plot_k34
   chmod 755 chia_plot_k34
-  echo "Successfully installed madmax for k34 to $(pwd)/chia_plot_k34"
+  echo "Successfully installed madmax for k34 to $PWD/chia_plot_k34"
 else
   usage
 fi
