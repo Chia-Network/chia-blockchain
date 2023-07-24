@@ -7,7 +7,6 @@ import cProfile
 import logging
 import os
 import shutil
-import sys
 import tempfile
 import time
 from contextlib import contextmanager
@@ -46,9 +45,6 @@ class ExitOnError(logging.Handler):
 
 @contextmanager
 def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
-
     if not profile:
         yield
         return
@@ -112,9 +108,6 @@ async def run_sync_test(
     node_profiler: bool,
     start_at_checkpoint: Optional[str],
 ) -> None:
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required, running with: {sys.version}")
-
     logger = logging.getLogger()
     logger.setLevel(logging.WARNING)
     handler = logging.FileHandler("test-full-sync.log")
@@ -129,9 +122,9 @@ async def run_sync_test(
     logger.addHandler(check_log)
 
     with tempfile.TemporaryDirectory() as root_dir:
-        root_path = Path(root_dir)
+        root_path = Path(root_dir, "root")
         if start_at_checkpoint is not None:
-            shutil.copytree(Path(start_at_checkpoint) / ".", root_path, dirs_exist_ok=True)
+            shutil.copytree(start_at_checkpoint, root_path)
 
         chia_init(root_path, should_check_keys=False, v1_db=(db_version == 1))
         config = load_config(root_path, "config.yaml")

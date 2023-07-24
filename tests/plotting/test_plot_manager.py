@@ -502,6 +502,7 @@ async def test_plot_info_caching(environment, bt):
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
         assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()
+        assert plot_manager.plots[path].prover.get_compression_level() == plot_info.prover.get_compression_level()
         assert plot_manager.plots[path].pool_public_key == plot_info.pool_public_key
         assert plot_manager.plots[path].pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash
         assert plot_manager.plots[path].plot_public_key == plot_info.plot_public_key

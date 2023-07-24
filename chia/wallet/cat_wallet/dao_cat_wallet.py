@@ -29,8 +29,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE_HASH,
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
-    get_innerpuz_from_lockup_puzzle,
     get_finished_state_inner_puzzle,
+    get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
 )
 from chia.wallet.derivation_record import DerivationRecord
@@ -283,7 +283,7 @@ class DAOCATWallet:
         amount: uint64,
         proposal_id: bytes32,
         is_yes_vote: bool,
-        proposal_puzzle: Program = None,
+        proposal_puzzle: Optional[Program] = None,
     ) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
@@ -802,7 +802,7 @@ class DAOCATWallet:
                 if conditions is not None:
                     synthetic_pk = synthetic_secret_key.get_g1()
                     for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                        conditions, spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                     ):
                         try:
                             assert bytes(synthetic_pk) == pk

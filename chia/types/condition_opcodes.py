@@ -10,6 +10,12 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # the conditions below require bls12-381 signatures
 
+    AGG_SIG_PARENT = bytes([43])
+    AGG_SIG_PUZZLE = bytes([44])
+    AGG_SIG_AMOUNT = bytes([45])
+    AGG_SIG_PUZZLE_AMOUNT = bytes([46])
+    AGG_SIG_PARENT_AMOUNT = bytes([47])
+    AGG_SIG_PARENT_PUZZLE = bytes([48])
     AGG_SIG_UNSAFE = bytes([49])
     AGG_SIG_ME = bytes([50])
 

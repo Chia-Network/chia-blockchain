@@ -54,6 +54,7 @@ class DAORules(Streamable):
     oracle_spend_delay: uint64
     proposal_minimum_amount: uint64
 
+
 class ProposalType(Enum):
     SPEND = "s"
     UPDATE = "u"

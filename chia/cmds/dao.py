@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 import click
 
-from chia.cmds.cmds_util import execute_with_wallet
 from chia.cmds.plotnft import validate_fee
 
 
@@ -50,8 +50,6 @@ def dao_add_cmd(
     filter_amount: int,
     name: Optional[str],
 ) -> None:
-    import asyncio
-
     from .dao_funcs import add_dao_wallet
 
     extra_params = {
@@ -59,7 +57,8 @@ def dao_add_cmd(
         "treasury_id": treasury_id,
         "filter_amount": filter_amount,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_dao_wallet))
+
+    asyncio.run(add_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -177,8 +176,6 @@ def dao_create_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import create_dao_wallet
 
     if proposal_minimum % 2 == 0:
@@ -200,11 +197,12 @@ def dao_create_cmd(
         "amount_of_cats": cat_amount,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_dao_wallet))
+    asyncio.run(create_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
 # TREASURY INFO
+
 
 @dao_cmd.command("get-id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
 @click.option(
@@ -221,15 +219,12 @@ def dao_get_id_cmd(
     fingerprint: int,
     wallet_id: int,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import get_treasury_id
 
     extra_params = {
         "wallet_id": wallet_id,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_id))
-
+    asyncio.run(get_treasury_id(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
@@ -280,8 +275,6 @@ def dao_add_funds_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import add_funds_to_treasury
 
     extra_params = {
@@ -291,7 +284,7 @@ def dao_add_funds_cmd(
         "amount": amount,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_funds_to_treasury))
+    asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("get-balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
@@ -309,14 +302,12 @@ def dao_get_balance_cmd(
     fingerprint: int,
     wallet_id: int,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import get_treasury_balance
 
     extra_params = {
         "wallet_id": wallet_id,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_treasury_balance))
+    asyncio.run(get_treasury_balance(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -345,8 +336,6 @@ def dao_list_proposals_cmd(
     wallet_id: int,
     include_closed: Optional[bool],
 ) -> None:
-    import asyncio
-
     from .dao_funcs import list_proposals
 
     if not include_closed:
@@ -356,7 +345,7 @@ def dao_list_proposals_cmd(
         "wallet_id": wallet_id,
         "include_closed": include_closed,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_proposals))
+    asyncio.run(list_proposals(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("show-proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
@@ -382,15 +371,13 @@ def dao_show_proposal_cmd(
     wallet_id: int,
     proposal_id: str,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import show_proposal
 
     extra_params = {
         "wallet_id": wallet_id,
         "proposal_id": proposal_id,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, show_proposal))
+    asyncio.run(show_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -452,8 +439,6 @@ def dao_vote_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import vote_on_proposal
 
     is_yes_vote = False if vote_no else True
@@ -466,7 +451,7 @@ def dao_vote_cmd(
         "is_yes_vote": is_yes_vote,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, vote_on_proposal))
+    asyncio.run(vote_on_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -521,8 +506,6 @@ def dao_close_proposal_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import close_proposal
 
     extra_params = {
@@ -532,7 +515,7 @@ def dao_close_proposal_cmd(
         "self_destruct": self_destruct,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, close_proposal))
+    asyncio.run(close_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -579,8 +562,6 @@ def dao_lockup_coins_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import lockup_coins
 
     extra_params = {
@@ -589,7 +570,7 @@ def dao_lockup_coins_cmd(
         "amount": amount,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, lockup_coins))
+    asyncio.run(lockup_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("release-coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
@@ -624,8 +605,6 @@ def dao_release_coins_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import release_coins
 
     extra_params = {
@@ -633,7 +612,7 @@ def dao_release_coins_cmd(
         "fee": fee,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, release_coins))
+    asyncio.run(release_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_cmd.command("exit-lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
@@ -668,8 +647,6 @@ def dao_exit_lockup_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import exit_lockup
 
     extra_params = {
@@ -677,7 +654,7 @@ def dao_exit_lockup_cmd(
         "fee": fee,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, exit_lockup))
+    asyncio.run(exit_lockup(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
@@ -766,8 +743,6 @@ def dao_create_spend_proposal_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import create_spend_proposal
 
     extra_params = {
@@ -780,7 +755,7 @@ def dao_create_spend_proposal_cmd(
         "from_json": from_json,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_spend_proposal))
+    asyncio.run(create_spend_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_proposal.command("update", short_help="Create a proposal to change the DAO rules", no_args_is_help=True)
@@ -877,8 +852,6 @@ def dao_create_update_proposal_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import create_update_proposal
 
     extra_params = {
@@ -893,7 +866,7 @@ def dao_create_update_proposal_cmd(
         "oracle_spend_delay": oracle_delay,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_update_proposal))
+    asyncio.run(create_update_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 @dao_proposal.command("mint", short_help="Create a proposal to mint new DAO CATs", no_args_is_help=True)
@@ -953,8 +926,6 @@ def dao_create_mint_proposal_cmd(
     fee: str,
     reuse: bool,
 ) -> None:
-    import asyncio
-
     from .dao_funcs import create_mint_proposal
 
     extra_params = {
@@ -965,7 +936,7 @@ def dao_create_mint_proposal_cmd(
         "vote_amount": vote_amount,
         "reuse_puzhash": True if reuse else None,
     }
-    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_mint_proposal))
+    asyncio.run(create_mint_proposal(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------

@@ -149,46 +149,46 @@
     )
     (if coin_id_list
         (if (> (f vote_amount_list) 0)
-          (c
-            (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
             (c
-              (list
-                ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
-                (sha256
-                  (wrap_in_cat_layer
-                    CAT_MOD_HASH
-                    CAT_TAIL_HASH
-                    (calculate_lockup_puzzlehash  ; because the message comes from
-                      LOCKUP_SELF_HASH
-                      (f previous_votes)
-                      (f lockup_innerpuzhashes)
+              (list CREATE_PUZZLE_ANNOUNCEMENT (f coin_id_list))
+              (c
+                (list
+                  ASSERT_PUZZLE_ANNOUNCEMENT  ; take the vote
+                  (sha256
+                    (wrap_in_cat_layer
+                      CAT_MOD_HASH
+                      CAT_TAIL_HASH
+                      (calculate_lockup_puzzlehash  ; because the message comes from
+                        LOCKUP_SELF_HASH
+                        (f previous_votes)
+                        (f lockup_innerpuzhashes)
+                      )
                     )
+                    (sha256tree (list SINGLETON_ID (f vote_amount_list) vote_info (f coin_id_list)))
                   )
-                  (sha256tree (list SINGLETON_ID (f vote_amount_list) vote_info (f coin_id_list)))
+                )
+                (loop_over_vote_coins
+                  SINGLETON_ID
+                  LOCKUP_SELF_HASH
+                  CAT_MOD_HASH
+                  CAT_TAIL_HASH
+                  TREASURY_ID
+                  SELF_HASH
+                  YES_VOTES
+                  TOTAL_VOTES
+                  PROPOSED_PUZ_HASH
+                  (r coin_id_list)
+                  (r vote_amount_list)
+                  (r previous_votes)
+                  (r lockup_innerpuzhashes)
+                  vote_info
+                  (+ (f vote_amount_list) sum)
+                  output
+                  my_amount
                 )
               )
-              (loop_over_vote_coins
-                SINGLETON_ID
-                LOCKUP_SELF_HASH
-                CAT_MOD_HASH
-                CAT_TAIL_HASH
-                TREASURY_ID
-                SELF_HASH
-                YES_VOTES
-                TOTAL_VOTES
-                PROPOSED_PUZ_HASH
-                (r coin_id_list)
-                (r vote_amount_list)
-                (r previous_votes)
-                (r lockup_innerpuzhashes)
-                vote_info
-                (+ (f vote_amount_list) sum)
-                output
-                my_amount
-              )
             )
-          )
-          (x)
+            (x)
         )
         (c
           (list
@@ -217,27 +217,27 @@
       ; assert self_destruct_time > proposal_timelock_length
       ; this is the code path for if we've not been accepted by the treasury for a long time, and we're "bad" for some reason
       (if (> self_destruct_time vote_coin_ids_or_proposal_timelock_length)
-        (list
-          (list CREATE_COIN (calculate_finished_state (c SINGLETON_MOD_HASH (c SINGLETON_ID LAUNCHER_PUZZLE_HASH)) DAO_FINISHED_STATE_MOD_HASH) ONE (list TREASURY_ID))
-          (list ASSERT_HEIGHT_RELATIVE self_destruct_time)
-          (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
-            (sha256
-              (calculate_treasury_puzzlehash
-                (c SINGLETON_MOD_HASH (c TREASURY_ID LAUNCHER_PUZZLE_HASH))
-                TREASURY_MOD_HASH
-                vote_amounts_or_proposal_validator_hash
-                vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
-                soft_close_length
-                lockup_innerpuzhashes_or_attendance_required
-                previous_votes_or_pass_margin
-                self_destruct_time
-                oracle_spend_delay
+          (list
+            (list CREATE_COIN (calculate_finished_state (c SINGLETON_MOD_HASH (c SINGLETON_ID LAUNCHER_PUZZLE_HASH)) DAO_FINISHED_STATE_MOD_HASH) ONE (list TREASURY_ID))
+            (list ASSERT_HEIGHT_RELATIVE self_destruct_time)
+            (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we have a matching treasury oracle spend
+              (sha256
+                (calculate_treasury_puzzlehash
+                  (c SINGLETON_MOD_HASH (c TREASURY_ID LAUNCHER_PUZZLE_HASH))
+                  TREASURY_MOD_HASH
+                  vote_amounts_or_proposal_validator_hash
+                  vote_coin_ids_or_proposal_timelock_length  ; check the veracity of these values by if the treasury uses them
+                  soft_close_length
+                  lockup_innerpuzhashes_or_attendance_required
+                  previous_votes_or_pass_margin
+                  self_destruct_time
+                  oracle_spend_delay
+                )
+                0  ; the arguments are secured implicitly in the puzzle of the treasury
               )
-              0  ; the arguments are secured implicitly in the puzzle of the treasury
             )
           )
-        )
-        (x)
+          (x)
       )
       ; We're not trying to self destruct
       ; Check whether we have a soft close to either try closing the proposal or adding votes
