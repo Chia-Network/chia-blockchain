@@ -47,7 +47,7 @@ class TimelordAPI:
                     elif unf_block.reward_chain_block.total_iters < first_block.reward_chain_block.total_iters:
                         first_block = unf_block
 
-            if unf_block.rc_prev != new_peak.reward_chain_block.get_hash():
+            if first_block is not None and first_block.rc_prev != new_peak.reward_chain_block.get_hash():
                 log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
                 return None
 
