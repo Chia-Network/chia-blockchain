@@ -285,6 +285,14 @@ class WalletStateManager:
             return master_sk_to_wallet_sk(self.private_key, record.index)
         return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
 
+    async def get_private_key_for_pubkey(self, pubkey: G1Element) -> PrivateKey:
+        record = await self.puzzle_store.record_for_pubkey(pubkey)
+        if record is None:
+            raise ValueError(f"No key for pubkey: {pubkey}")
+        if record.hardened:
+            return master_sk_to_wallet_sk(self.private_key, record.index)
+        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+
     def get_wallet(self, id: uint32, required_type: Type[TWalletType]) -> TWalletType:
         wallet = self.wallets[id]
         if not isinstance(wallet, required_type):
@@ -758,8 +766,6 @@ class WalletStateManager:
                 else:
                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
                 assert derivation_record is not None
-                if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
-                    await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(derivation_record.puzzle_hash)
                 amount = uint64(amount + coin.amount)
                 # Remove the clawback hint since it is unnecessary for the XCH coin
                 memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]

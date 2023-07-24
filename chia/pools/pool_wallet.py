@@ -473,19 +473,21 @@ class PoolWallet:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
             s = find_owner_sk([self.wallet_state_manager.private_key], pk)
             if s is None:
-                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+                return self.wallet_state_manager.get_private_key_for_pubkey(pk)
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
             if owner_sk is None:
-                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+                return self.wallet_state_manager.get_private_key_for_pubkey(pk)
             return owner_sk
 
         return await sign_coin_spends(
             [coin_spend],
             pk_to_sk,
+            self.wallet_state_manager.get_private_key,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            [],
         )
 
     async def generate_fee_transaction(
