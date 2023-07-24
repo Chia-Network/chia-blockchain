@@ -443,7 +443,7 @@ class Wallet:
         return await sign_coin_spends(
             coin_spends,
             self.wallet_state_manager.get_private_key_for_pubkey,
-            self.wallet_state_manager.get_private_key,
+            self.wallet_state_manager.get_private_key_optional,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
             [puzzle_hash_for_pk],

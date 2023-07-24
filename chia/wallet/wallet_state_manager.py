@@ -285,10 +285,18 @@ class WalletStateManager:
             return master_sk_to_wallet_sk(self.private_key, record.index)
         return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
 
-    async def get_private_key_for_pubkey(self, pubkey: G1Element) -> PrivateKey:
+    async def get_private_key_optional(self, puzzle_hash: bytes32) -> Optional[PrivateKey]:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            return None
+        if record.hardened:
+            return master_sk_to_wallet_sk(self.private_key, record.index)
+        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+
+    async def get_private_key_for_pubkey(self, pubkey: G1Element) -> Optional[PrivateKey]:
         record = await self.puzzle_store.record_for_pubkey(pubkey)
         if record is None:
-            raise ValueError(f"No key for pubkey: {pubkey}")
+            return None
         if record.hardened:
             return master_sk_to_wallet_sk(self.private_key, record.index)
         return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
