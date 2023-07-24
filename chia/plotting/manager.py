@@ -13,7 +13,14 @@ from chiapos import DiskProver, decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
+from chia.plotting.util import (
+    HarvestingMode,
+    PlotInfo,
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+)
 from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
@@ -56,7 +63,11 @@ class PlotManager:
         self.no_key_filenames = set()
         self.farmer_public_keys = []
         self.pool_public_keys = []
-        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
+        # Since `compression_level` property was added to Cache structure,
+        # previous cache file formats needs to be reset
+        # When user downgrades harvester, it looks 'plot_manager.dat` while
+        # latest harvester reads/writes 'plot_manager_v2.dat`
+        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager_v2.dat")
         self.match_str = match_str
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
@@ -84,7 +95,7 @@ class PlotManager:
         use_gpu_harvesting: bool,
         gpu_index: int,
         enforce_gpu_index: bool,
-    ) -> None:
+    ) -> HarvestingMode:
         if max_compression_level_allowed > 7:
             log.error(
                 "Currently only compression levels up to 7 are allowed, "
@@ -107,6 +118,7 @@ class PlotManager:
                 f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
             )
         self.max_compression_level_allowed = max_compression_level_allowed
+        return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
         with self:

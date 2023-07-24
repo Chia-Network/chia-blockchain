@@ -333,6 +333,7 @@ class HarvesterAPI:
                     plot["plot_public_key"],
                     plot["file_size"],
                     plot["time_modified"],
+                    plot["compression_level"],
                 )
             )
 

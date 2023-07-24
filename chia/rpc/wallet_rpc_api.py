@@ -1628,8 +1628,8 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
 
         ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s or old offers
-        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
@@ -1642,19 +1642,6 @@ class WalletRpcApi:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
         except zlib.error:
             decompressed_bytes = decoded_bytes
-        ###
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-        bundle = SpendBundle.from_bytes(decompressed_bytes)
-        for spend in bundle.coin_spends:
-            mod, _ = spend.puzzle_reveal.to_program().uncurry()
-            if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
-            ):
-                raise ValueError("CAT1s are no longer supported")
-        ###
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
         if bytes(OFFER_MOD_OLD) in decompressed_bytes:
             raise ValueError("Old offer format is no longer supported")
         ###
@@ -1803,10 +1790,7 @@ class WalletRpcApi:
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
-            if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), tx_config, fee=fee)
-            else:
-                await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
+            await wsm.trade_manager.cancel_pending_offers([bytes32(trade_id)], tx_config, fee=fee, secure=secure)
         return {}
 
     @tx_endpoint
@@ -1829,7 +1813,7 @@ class WalletRpcApi:
         if asset_id is not None and asset_id != "xch":
             key = bytes32.from_hexstr(asset_id)
         while True:
-            records: List[TradeRecord] = []
+            records: Dict[bytes32, TradeRecord] = {}
             trades = await trade_mgr.trade_store.get_trades_between(
                 start,
                 end,
@@ -1840,16 +1824,16 @@ class WalletRpcApi:
             )
             for trade in trades:
                 if cancel_all:
-                    records.append(trade)
+                    records[trade.trade_id] = trade
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
                     if key in offer.arbitrage():
-                        records.append(trade)
+                        records[trade.trade_id] = trade
                         continue
 
             async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offers(records, tx_config, batch_fee, secure)
+                await trade_mgr.cancel_pending_offers(list(records.keys()), tx_config, batch_fee, secure, records)
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
             if len(trades) < batch_size:

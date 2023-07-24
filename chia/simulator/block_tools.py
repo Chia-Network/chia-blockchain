@@ -80,10 +80,12 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
+    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
@@ -123,7 +125,11 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
+
+GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
+    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
+)
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -146,6 +152,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MAX_FUTURE_TIME": 3600 * 24 * 10,
         "MAX_FUTURE_TIME2": 3600 * 24 * 10,  # After the Fork
         "MEMPOOL_BLOCK_BUFFER": 6,
+        "UNIQUE_PLOTS_WINDOW": 2,
     }
 )
 
@@ -541,6 +548,29 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
+    # Verifies if the given plot passed any of the previous `UNIQUE_PLOTS_WINDOW` plot filters.
+    def plot_id_passed_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
+        curr_sp_hash = cc_sp_hash
+        sp_count = 1
+        for block in reversed(blocks):
+            if sp_count >= self.constants.UNIQUE_PLOTS_WINDOW:
+                return False
+
+            challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
+            if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                # Edge case of first sp (start of slot), where sp_iters == 0
+                cc_sp_hash = challenge
+            else:
+                cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            prefix_bits = calculate_prefix_bits(self.constants, block.height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
+                return True
+            if curr_sp_hash != cc_sp_hash:
+                sp_count += 1
+                curr_sp_hash = cc_sp_hash
+
+        return False
+
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -699,6 +729,10 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -997,7 +1031,10 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
@@ -1798,6 +1835,15 @@ def compute_cost_test(
                 elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
                     arg = cond.rest().first().as_int()
                     condition_cost += arg * 10000
+                elif hard_fork and condition in [
+                    ConditionOpcode.AGG_SIG_PARENT,
+                    ConditionOpcode.AGG_SIG_PUZZLE,
+                    ConditionOpcode.AGG_SIG_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+                ]:
+                    condition_cost += ConditionCost.AGG_SIG.value
         return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
