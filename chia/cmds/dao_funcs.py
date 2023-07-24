@@ -3,12 +3,11 @@ from __future__ import annotations
 import asyncio
 import time
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -155,7 +154,6 @@ async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
         res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
         proposals = res["proposals"]
-        lockup_time = res["proposal_timelock"]
         soft_close_length = res["soft_close_length"]
         print("############################")
         for prop in proposals:
