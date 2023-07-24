@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Function to download, extract, set permissions, and clean up
-function Handle-Binary {
+function Get-Binary {
     param(
         [string]$Url,
         [string]$Filename,
@@ -88,7 +88,7 @@ try {
 
         $URL = get_bladebit_url -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         $bladebitFilename = get_bladebit_filename -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Handle-Binary -Url $URL -Filename $bladebitFilename -BinaryName "bladebit"
+        Get-Binary -Url $URL -Filename $bladebitFilename -BinaryName "bladebit"
     }
     elseif("${plotter}" -eq "madmax") {
         if (-not($VERSION)) {
@@ -99,11 +99,11 @@ try {
 
         $URL = get_madmax_url -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         $madmaxFilename = get_madmax_filename -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Handle-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k32.exe"
+        Get-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k32.exe"
 
         $URL = get_madmax_url -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         $madmaxFilename = get_madmax_filename -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Handle-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k34.exe"
+        Get-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k34.exe"
     }
     else {
         Write-Output "Only 'bladebit' and 'madmax' are supported"
