@@ -16,33 +16,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Function to download, extract, set permissions, and clean up
-function Get-Binary {
-    param(
-        [string]$Url,
-        [string]$Filename,
-        [string]$BinaryName,
-        [string]$NewBinaryName
-    )
+$DEFAULT_BLADEBIT_VERSION = "v2.0.1"
+$DEFAULT_MADMAX_VERSION = "0.0.2"
+$VERSION = $v
+$OS = "windows"
+$ARCH = "x86-64"
 
-    Write-Output "Fetching binary from: ${Url}"
-    try {
-        Invoke-WebRequest -Uri "$Url" -OutFile "$Filename"
-        Write-Output "Successfully downloaded: $Url"
-        if ($Filename -like "*.zip") {
-            Expand-Archive -Path "$Filename" -DestinationPath ".\$BinaryName"
-            Write-Output "Successfully extracted ${BinaryName} to $(Get-Location)\${BinaryName}"
-        }
-        elseif ($NewBinaryName) {
-            Rename-Item -Path "$Filename" -NewName "$NewBinaryName"
-            Write-Output "Successfully renamed ${BinaryName} to ${NewBinaryName}"
-        }
-        else {
-            Write-Output "Successfully installed ${BinaryName} to $(Get-Location)\${BinaryName}"
-        }
-    } catch {
-        Write-Output "WARNING: Failed to download from ${Url}. Maybe specified version of the binary does not exist."
-    }
+if (("$plotter" -ne "bladebit") -And ("$plotter" -ne "madmax"))
+{
+    Write-Output "Plotter must be 'bladebit' or 'madmax'"
+    Exit 1
 }
 
 # Check for necessary tools
@@ -56,56 +39,204 @@ if (!(Get-Command Expand-Archive -errorAction SilentlyContinue)) {
     Exit 1
 }
 
-if ($null -eq (Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue)) {
+if ($null -eq (Get-ChildItem env:VIRTUAL_ENV -ErrorAction SilentlyContinue))
+{
     Write-Output "This script requires that the Chia Python virtual environment is activated."
-    Write-Output "Execute '.\\venv\\Scripts\\Activate.ps1' before running."
+    Write-Output "Execute '.\venv\Scripts\Activate.ps1' before running."
     Exit 1
 }
 
-$venv_bin = "${env:VIRTUAL_ENV}\\Scripts"
-if (-not (Test-Path -Path "$venv_bin" -PathType Container)) {
+$venv_bin = "${env:VIRTUAL_ENV}\Scripts"
+if (-not (Test-Path -Path "$venv_bin" -PathType Container))
+{
     Write-Output "ERROR: venv folder does not exists: '${venv_bin}'"
     Exit 1
 }
 
-$DEFAULT_BLADEBIT_VERSION = "v2.0.0"
-$DEFAULT_MADMAX_VERSION = "0.0.2"
-$VERSION = $v
-$OS = "windows"
-$ARCH = "x86-64"
+function Get-BladebitFilename()
+{
+    param(
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    "bladebit-${ver}-${os}-${arch}.zip"
+}
+
+function Get-BladebitCudaFilename()
+{
+    param(
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    "bladebit-cuda-${ver}-${os}-${arch}.zip"
+}
+
+
+function Get-BladebitUrl()
+{
+    param(
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/bladebit/releases/download"
+    $filename = Get-BladebitFilename -ver $ver -os $os -arch $arch
+
+    "${GITHUB_BASE_URL}/${ver}/${filename}"
+}
+
+function Get-BladebitCudaUrl()
+{
+    param(
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/bladebit/releases/download"
+    $filename = Get-BladebitCudaFilename -ver $ver -os $os -arch $arch
+
+    "${GITHUB_BASE_URL}/${ver}/${filename}"
+}
+
+function Get-MadmaxFilename()
+{
+    param(
+        [string]$ksize,
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    $chia_plot = "chia_plot"
+    if ("${ksize}" -eq "k34")
+    {
+        $chia_plot = "chia_plot_k34"
+    }
+    $suffix = ""
+    if ("${os}" -eq "macos")
+    {
+        $suffix = "-${os}-${arch}"
+    }
+    elseif("${os}" -eq "windows")
+    {
+        $suffix = ".exe"
+    }
+    else
+    {
+        $suffix = "-${arch}"
+    }
+
+    "${chia_plot}-${ver}${suffix}"
+}
+
+function Get-MadmaxUrl()
+{
+    param(
+        [string]$ksize,
+        [string]$ver,
+        [string]$os,
+        [string]$arch
+    )
+
+    $GITHUB_BASE_URL = "https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
+    $madmax_filename = Get-MadmaxFilename -ksize $ksize -ver $ver -os $os -arch $arch
+
+    "${GITHUB_BASE_URL}/${ver}/${madmax_filename}"
+}
+
+# Function to download, extract, set permissions, and clean up
+function Get-Binary()
+{
+    param(
+        [string]$url,
+        [string]$dest_dir,
+        [string]$new_filename
+    )
+
+    $filename = [System.IO.Path]::GetFileName($url)
+    $download_path = Join-Path -Path $PWD -ChildPath $filename
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $download_path
+    } catch {
+        Write-Warning "Failed to download from ${url}. Maybe specified version of the binary does not exist."
+        return
+    }
+
+    $extension = [System.IO.Path]::GetExtension($download_path)
+    if ($extension -eq '.zip') {
+        Expand-Archive -Path $download_path -DestinationPath $dest_dir -Force
+        Remove-Item -Path $download_path
+    } else {
+        Move-Item -Path $download_path -Destination (Join-Path -Path $dest_dir -ChildPath $filename) -Force
+    }
+
+    # Check if new_filename parameter is provided
+    if ($new_filename) {
+        # Construct the full paths to the old and new files
+        $old_file_path = Join-Path -Path $dest_dir -ChildPath $filename
+        $new_file_path = Join-Path -Path $dest_dir -ChildPath $new_filename
+        # If the new file already exists, delete it
+        if (Test-Path $new_file_path) {
+            Remove-Item -Path $new_file_path
+        }
+        # Rename the old file to the new filename
+        Rename-Item -Path $old_file_path -NewName $new_file_path
+    }
+
+    Write-Host "Successfully installed $filename to $dest_dir"
+}
 
 Push-Location
 try {
     Set-Location "${venv_bin}"
     $ErrorActionPreference = "SilentlyContinue"
 
-    if ("${plotter}" -eq "bladebit") {
-        if (-not($VERSION)) {
+    if ("${plotter}" -eq "bladebit")
+    {
+        if (-not($VERSION))
+        {
             $VERSION = $DEFAULT_BLADEBIT_VERSION
         }
 
         Write-Output "Installing bladebit ${VERSION}"
 
-        $URL = get_bladebit_url -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        $bladebitFilename = get_bladebit_filename -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Get-Binary -Url $URL -Filename $bladebitFilename -BinaryName "bladebit"
+        $url = Get-BladebitUrl -ver $version -os $os -arch $arch
+        $bladebitFilename = Get-BladebitFilename -ver $version -os $os -arch $arch
+        $dest_dir = $PWD
+        Get-Binary -url $url -dest_dir $dest_dir
+
+        $url = Get-BladebitCudaUrl -ver $version -os $os -arch $arch
+        $bladebitCudaFilename = Get-BladebitCudaFilename -ver $version -os $os -arch $arch
+        $dest_dir = $PWD
+        Get-Binary -url $url -dest_dir $dest_dir
     }
-    elseif("${plotter}" -eq "madmax") {
-        if (-not($VERSION)) {
+    elseif("${plotter}" -eq "madmax")
+    {
+        if (-not($VERSION))
+        {
             $VERSION = $DEFAULT_MADMAX_VERSION
         }
 
         Write-Output "Installing madmax ${VERSION}"
 
-        $URL = get_madmax_url -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        $madmaxFilename = get_madmax_filename -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Get-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k32.exe"
+        $url = Get-MadmaxUrl -ksize "k32" -ver $version -os $os -arch $arch
+        $madmaxFilename = Get-MadmaxFilename -ksize "k32" -ver $version -os $os -arch $arch
+        $dest_dir = $PWD
+        Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k32.exe"
 
-        $URL = get_madmax_url -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        $madmaxFilename = get_madmax_filename -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
-        Get-Binary -Url $URL -Filename $madmaxFilename -BinaryName "chia_plot" -NewBinaryName "chia_plot_k34.exe"
+        $url = Get-MadmaxUrl -ksize "k34" -ver $version -os $os -arch $arch
+        $madmaxFilename = Get-MadmaxFilename -ksize "k34" -ver $version -os $os -arch $arch
+        $dest_dir = $PWD
+        Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k34.exe"
     }
-    else {
+    else
+    {
         Write-Output "Only 'bladebit' and 'madmax' are supported"
     }
 }

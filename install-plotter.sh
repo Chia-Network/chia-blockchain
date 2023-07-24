@@ -179,6 +179,11 @@ if [ "$(uname)" = "Linux" ]; then
   elif type yum >/dev/null 2>&1; then
     echo "Detected RedHut like OS"
     OS="centos"
+  elif [ -f /etc/os-release ]; then
+    OS=$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')
+    if [ "$OS" == "arch" ]; then
+      OS="ubuntu"
+    fi
   else
     echo "ERROR: Unknown Linux distro"
     exit 1
