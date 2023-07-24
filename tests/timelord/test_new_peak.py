@@ -63,9 +63,8 @@ async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> Non
     return None
 
 
-
 @pytest.mark.asyncio
-async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> None:
+async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_blocks) -> None:
     b1, db_wrapper1, db_path1 = await create_blockchain(bt.constants, 2)
     b2, db_wrapper2, db_path2 = await create_blockchain(bt.constants, 2)
 
@@ -119,22 +118,18 @@ async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> Non
         rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
     timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
-            block.reward_chain_block,
-            difficulty,
-            sub_slot_iters,
-            block.foliage,
-            ses,
-            rc_prev,
-        )
+        block.reward_chain_block,
+        difficulty,
+        sub_slot_iters,
+        block.foliage,
+        ses,
+        rc_prev,
+    )
 
     timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
-
     await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b2, bt.constants))
     assert timelord_api.timelord.new_peak.reward_chain_block.height == peak.height
-
-
-
 
     await db_wrapper1.close()
     await db_wrapper2.close()
@@ -144,7 +139,6 @@ async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> Non
     db_path2.unlink()
 
     return None
-
 
 
 def get_recent_reward_challenges(
