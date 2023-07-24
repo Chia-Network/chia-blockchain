@@ -60,7 +60,6 @@ async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> Non
     db_path1.unlink()
     db_path2.unlink()
 
-
     return None
 
 
@@ -99,6 +98,7 @@ async def test_timelord_new_peak_basic(bt, timelord, default_1000_blocks) -> Non
 #     await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b1, bt.constants))
 #     assert timelord_api.timelord.new_peak.reward_chain_block.height == blocks_1[-1].height
 #     return None
+
 
 def get_recent_reward_challenges(
     blockchain: BlockchainInterface, constants: ConsensusConstants
