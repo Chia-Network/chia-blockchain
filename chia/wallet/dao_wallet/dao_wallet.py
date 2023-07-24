@@ -14,7 +14,6 @@ from clvm.casts import int_from_bytes
 
 import chia.wallet.singleton
 from chia.full_node.full_node_api import FullNodeAPI
-
 from chia.protocols.wallet_protocol import CoinState, RequestBlockHeader, RespondBlockHeader
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -30,7 +29,6 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, SpendableCAT, construct_ca
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
 from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo, ProposalType
@@ -47,8 +45,8 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_asset_id_from_puzzle,
     get_curry_vals_from_proposal_puzzle,
     get_dao_rules_from_update_proposal,
-    get_finished_state_puzzle,
     get_finished_state_inner_puzzle,
+    get_finished_state_puzzle,
     get_innerpuz_from_lockup_puzzle,
     get_new_puzzle_from_proposal_solution,
     get_new_puzzle_from_treasury_solution,
@@ -64,12 +62,10 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_rules_from_puzzle,
     get_update_proposal_puzzle,
     uncurry_proposal,
-    uncurry_proposal_validator,
     uncurry_treasury,
 )
-
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.singleton import (  # get_singleton_id_from_puzzle,
+from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
     get_most_recent_singleton_coin_from_coin_spend,
     get_singleton_id_from_puzzle,
@@ -197,7 +193,9 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
-        dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
+        dao_info = dataclasses.replace(
+            self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id
+        )
         await self.save_info(dao_info)
 
         return self
@@ -256,7 +254,9 @@ class DAOWallet(WalletProtocol):
             self.wallet_state_manager, self.standard_wallet, cat_tail.hex()
         )
         dao_cat_wallet_id = new_dao_cat_wallet.wallet_info.id
-        dao_info = dataclasses.replace(self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id)
+        dao_info = dataclasses.replace(
+            self.dao_info, cat_wallet_id=cat_wallet.id(), dao_cat_wallet_id=dao_cat_wallet_id
+        )
         await self.save_info(dao_info)
 
         # add treasury id to interested puzzle hashes. This is hinted in funding coins so we can track them
@@ -302,6 +302,9 @@ class DAOWallet(WalletProtocol):
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        raise NotImplementedError("puzzle_hash_for_pk is not available in DAO wallets")
 
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
@@ -461,7 +464,8 @@ class DAOWallet(WalletProtocol):
     async def clear_finished_proposals_from_memory(self) -> None:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         new_list = [
-            prop_info for prop_info in self.dao_info.proposals_list
+            prop_info
+            for prop_info in self.dao_info.proposals_list
             if not prop_info.closed
             or prop_info.closed is None
             or any(prop_info.proposal_id in lci.active_votes for lci in dao_cat_wallet.dao_cat_info.locked_coins)
@@ -864,10 +868,12 @@ class DAOWallet(WalletProtocol):
     ) -> Program:
         if len(recipient_puzhashes) != len(amounts) != len(asset_types):
             raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
-        conditions = {None: []}
+        conditions: Dict[Optional[bytes32], Any] = {None: []}
         for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
             conditions.setdefault(asset_type, []).append([51, recipient_puzhash, amount])
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(conditions.pop(None, [])), list(conditions.values()))
+        puzzle = get_spend_p2_singleton_puzzle(
+            self.dao_info.treasury_id, Program.to(conditions.pop(None, [])), list(conditions.values())
+        )
         return puzzle
 
     async def generate_update_proposal_innerpuz(
@@ -913,7 +919,7 @@ class DAOWallet(WalletProtocol):
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
         push: bool = True,
-    ) -> SpendBundle:
+    ) -> Union[SpendBundle, TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(uint64(fee + dao_rules.proposal_minimum_amount))
         if coins is None:
@@ -1668,6 +1674,7 @@ class DAOWallet(WalletProtocol):
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
 
         if push:
+            assert isinstance(finished_puz, Program)
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -1802,7 +1809,7 @@ class DAOWallet(WalletProtocol):
         return f"Profile {max_num + 1}"
 
     def require_derivation_paths(self) -> bool:
-        return True
+        return False
 
     def get_cat_wallet_id(self) -> uint32:
         return self.dao_info.cat_wallet_id
@@ -1861,6 +1868,7 @@ class DAOWallet(WalletProtocol):
             raise ValueError("get_most_recent_singleton_coin_from_coin_spend failed")
 
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
+        assert isinstance(current_innerpuz, Program)
         assert current_coin.puzzle_hash == curry_singleton(singleton_id, current_innerpuz).get_tree_hash()
         # check if our parent puzzle was the finished state
         if puzzle.uncurry()[0] == DAO_FINISHED_STATE:

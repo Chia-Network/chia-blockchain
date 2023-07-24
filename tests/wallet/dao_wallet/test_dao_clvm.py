@@ -194,7 +194,6 @@ def test_proposal() -> None:
         acs_ph,
         current_yes_votes,
         current_total_votes,
-
     )
     vote_amount = 10
     vote_type = 1  # yes vote
@@ -289,7 +288,6 @@ def test_proposal() -> None:
         acs_ph,
         20,  # failing number of yes votes
         current_total_votes,
-
     )
     solution = Program.to(
         [
@@ -374,7 +372,6 @@ def test_proposal_timer() -> None:
     proposal_timer_full: Program = DAO_PROPOSAL_TIMER_MOD.curry(
         proposal_curry_one.get_tree_hash(),
         singleton_struct,
-
     )
 
     timelock = int_to_bytes(101)
@@ -382,15 +379,15 @@ def test_proposal_timer() -> None:
     parent_amount = 2000
     solution: Program = Program.to(
         [
-            140, #  yes votes
-            180, #  total votes
-            Program.to(1).get_tree_hash(), #  proposal innerpuz
-            timelock, # timelock
-            parent_parent_id, #  parent parent id
-            parent_amount, # parent amount
+            140,  # yes votes
+            180,  # total votes
+            Program.to(1).get_tree_hash(),  # proposal innerpuz
+            timelock,
+            parent_parent_id,
+            parent_amount,
         ]
     )
-    # run the timer puzzle. 
+    # run the timer puzzle.
     conds: Program = conditions_dict_for_solution(proposal_timer_full, solution, INFINITE_COST)
     assert len(conds) == 4
 
@@ -402,15 +399,13 @@ def test_proposal_timer() -> None:
     # Check the proposal puz announces the timelock
     expected_proposal_puzhash: Program = create_singleton_puzzle_hash(
         proposal_curry_one.curry(
-            proposal_curry_one.get_tree_hash(),
-            singleton_id,
-            Program.to(1).get_tree_hash(),
-            140,
-            180
+            proposal_curry_one.get_tree_hash(), singleton_id, Program.to(1).get_tree_hash(), 140, 180
         ).get_tree_hash(),
-        singleton_id
+        singleton_id,
     )
-    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(expected_proposal_puzhash + timelock)
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(
+        expected_proposal_puzhash + timelock
+    )
     # Check the parent is a proposal
     expected_parent_puzhash: Program = create_singleton_puzzle_hash(
         proposal_curry_one.curry(
@@ -420,7 +415,7 @@ def test_proposal_timer() -> None:
             0,
             0,
         ).get_tree_hash(),
-        singleton_id
+        singleton_id,
     )
     parent_id = std_hash(parent_parent_id + expected_parent_puzhash + int_to_bytes(parent_amount))
     assert conds[ConditionOpcode.ASSERT_MY_PARENT_ID][0].vars[0] == parent_id

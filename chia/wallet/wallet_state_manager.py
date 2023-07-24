@@ -1198,7 +1198,9 @@ class WalletStateManager:
                         return WalletIdentifier.create(wallet)
         return None
 
-    async def get_dao_wallet_from_coinspend_hint(self, coin_spend: CoinSpend, coin_state: CoinState) -> Optional[WalletIdentifier]:
+    async def get_dao_wallet_from_coinspend_hint(
+        self, coin_spend: CoinSpend, coin_state: CoinState
+    ) -> Optional[WalletIdentifier]:
         hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
         if hinted_coin:
             for wallet in self.wallets.values():

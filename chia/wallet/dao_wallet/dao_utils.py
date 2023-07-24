@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterator, List, Optional, Tuple
 from itertools import chain
+from typing import Iterator, List, Optional, Tuple
+
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
@@ -247,11 +247,7 @@ def add_proposal_to_active_list(
         CAT_MOD_HASH,
         CAT_TAIL_HASH,
     ) = c_a.as_iter()
-    (
-        SELF_HASH,
-        ACTIVE_VOTES,
-        INNERPUZ
-    ) = curried_args.as_iter()
+    (SELF_HASH, ACTIVE_VOTES, INNERPUZ) = curried_args.as_iter()
     new_active_votes = Program.to(proposal_id).cons(ACTIVE_VOTES)  # (c proposal_id ACTIVE_VOTES)
     if inner_puzzle is None:
         inner_puzzle = INNERPUZ
@@ -465,6 +461,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
 
     if solution.at("rrrrrrf") == Program.to(0):
         c_a, curried_args = uncurry_proposal(puzzle_reveal)
+        assert isinstance(curried_args, Program)
         (
             DAO_PROPOSAL_TIMER_MOD_HASH,
             SINGLETON_MOD_HASH,
@@ -476,6 +473,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
             cat_tail_hash,
             treasury_id,
         ) = curried_args.as_iter()
+        assert isinstance(c_a, Program)
         (
             curry_one,
             proposal_id,
@@ -585,7 +583,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
     return list(curried_args.as_iter())
 
 
-def uncurry_proposal(proposal_puzzle: Program) -> Optional[Tuple[Program, Program]]:
+def uncurry_proposal(proposal_puzzle: Program) -> Tuple[Program, Program]:
     try:
         mod, curried_args = proposal_puzzle.uncurry()
     except ValueError as e:
@@ -601,7 +599,7 @@ def uncurry_proposal(proposal_puzzle: Program) -> Optional[Tuple[Program, Progra
     return curried_args, c_a
 
 
-def uncurry_lockup(lockup_puzzle: Program) -> Program:
+def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
     try:
         mod, curried_args = lockup_puzzle.uncurry()
     except ValueError as e:
@@ -618,7 +616,7 @@ def uncurry_lockup(lockup_puzzle: Program) -> Program:
 
 
 # This is the proposed puzzle
-def get_proposal_args(puzzle: Program) -> Tuple[str, Program]:
+def get_proposal_args(puzzle: Program) -> Tuple[ProposalType, Program]:
     try:
         mod, curried_args = puzzle.uncurry()
     except ValueError as e:
