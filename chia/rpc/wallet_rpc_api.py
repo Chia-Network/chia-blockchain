@@ -1419,7 +1419,7 @@ class WalletRpcApi:
         """
 
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
-        selected_wallet: Optional[WalletProtocol] = None
+        selected_wallet: Optional[WalletProtocol[Any]] = None
         is_hex = request.get("is_hex", False)
         if isinstance(is_hex, str):
             is_hex = bool(is_hex)
