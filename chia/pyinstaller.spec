@@ -109,7 +109,6 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit_cuda"):
             "bladebit"
         )
     ])
-    
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
