@@ -38,7 +38,7 @@ class TimelordAPI:
                 return None
             self.timelord.max_allowed_inactivity_time = 60
 
-            # if there is a heavier unfinished block which does not point to this peak skip
+            # if there is a heavier unfinished block skip
             first_block = None
             for unf_block in self.timelord.unfinished_blocks:
                 if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
