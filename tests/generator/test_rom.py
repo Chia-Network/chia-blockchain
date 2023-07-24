@@ -14,14 +14,16 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
 from chia.util.ints import uint32
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
+from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
 MAX_COST = int(1e15)
 COST_PER_BYTE = int(12000)
 
 
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
+GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
+    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
+)
 
 
 GENERATOR_CODE = """
