@@ -189,7 +189,7 @@ function Get-Binary()
         Rename-Item -Path $old_file_path -NewName $new_file_path
     }
 
-    Write-Host "Successfully installed $filename to $dest_dir"
+    Write-Output "Successfully installed $filename to $dest_dir"
 }
 
 Push-Location
@@ -207,12 +207,10 @@ try {
         Write-Output "Installing bladebit ${VERSION}"
 
         $url = Get-BladebitUrl -ver $version -os $os -arch $arch
-        $bladebitFilename = Get-BladebitFilename -ver $version -os $os -arch $arch
         $dest_dir = $PWD
         Get-Binary -url $url -dest_dir $dest_dir
 
         $url = Get-BladebitCudaUrl -ver $version -os $os -arch $arch
-        $bladebitCudaFilename = Get-BladebitCudaFilename -ver $version -os $os -arch $arch
         $dest_dir = $PWD
         Get-Binary -url $url -dest_dir $dest_dir
     }
@@ -226,12 +224,10 @@ try {
         Write-Output "Installing madmax ${VERSION}"
 
         $url = Get-MadmaxUrl -ksize "k32" -ver $version -os $os -arch $arch
-        $madmaxFilename = Get-MadmaxFilename -ksize "k32" -ver $version -os $os -arch $arch
         $dest_dir = $PWD
         Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k32.exe"
 
         $url = Get-MadmaxUrl -ksize "k34" -ver $version -os $os -arch $arch
-        $madmaxFilename = Get-MadmaxFilename -ksize "k34" -ver $version -os $os -arch $arch
         $dest_dir = $PWD
         Get-Binary -url $url -dest_dir $dest_dir -new_filename "chia_plot_k34.exe"
     }
