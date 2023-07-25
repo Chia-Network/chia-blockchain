@@ -932,7 +932,7 @@ class TestCATWallet:
             ).get_tree_hash(),
             cat_amount_0,
         )
-        eve_spend = await wallet_node_0.wallet_state_manager.main_wallet.sign_transaction(
+        eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
             [
                 CoinSpend(
                     cat_coin,

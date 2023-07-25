@@ -568,7 +568,7 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        signed_spend_bundle = await self.standard_wallet.sign_transaction([outgoing_coin_spend])
+        signed_spend_bundle = await self.wallet_state_manager.sign_transaction([outgoing_coin_spend])
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
         assert signed_spend_bundle is not None

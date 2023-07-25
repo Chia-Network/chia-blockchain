@@ -74,7 +74,9 @@ from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVers
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
+    puzzle_hash_for_synthetic_public_key,
 )
+from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -801,7 +803,7 @@ class WalletStateManager:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
         if len(coin_spends) == 0:
             return []
-        spend_bundle: SpendBundle = await self.main_wallet.sign_transaction(coin_spends)
+        spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee, Announcement(coin_spends[0].coin.name(), message)
@@ -2076,3 +2078,13 @@ class WalletStateManager:
             vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
 
         return vc_wallet
+
+    async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
+        return await sign_coin_spends(
+            coin_spends,
+            self.get_private_key_for_pubkey,
+            self.get_synthetic_private_key_for_puzzle_hash,
+            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.constants.MAX_BLOCK_COST_CLVM,
+            [puzzle_hash_for_synthetic_public_key],
+        )

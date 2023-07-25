@@ -1074,7 +1074,7 @@ class DataLayerWallet:
         return uint128(0)
 
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        return await self.standard_wallet.sign_transaction([coin_spend])
+        return await self.wallet_state_manager.sign_transaction([coin_spend])
 
     def get_name(self) -> str:
         return self.wallet_info.name

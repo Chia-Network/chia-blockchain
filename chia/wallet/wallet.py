@@ -28,7 +28,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
-    puzzle_hash_for_synthetic_public_key,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -39,7 +38,6 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
@@ -440,16 +438,6 @@ class Wallet:
         self.log.debug(f"Spends is {spends}")
         return spends
 
-    async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
-        return await sign_coin_spends(
-            coin_spends,
-            self.wallet_state_manager.get_private_key_for_pubkey,
-            self.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            [puzzle_hash_for_synthetic_public_key],
-        )
-
     async def sign_message(
         self, message: str, puzzle_hash: bytes32, is_hex: bool = False
     ) -> Tuple[G1Element, G2Element]:
@@ -517,7 +505,7 @@ class Wallet:
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
-        spend_bundle: SpendBundle = await self.sign_transaction(transaction)
+        spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(transaction)
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
