@@ -47,8 +47,6 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
-from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -470,27 +468,6 @@ class PoolWallet:
     async def get_pool_wallet_index(self) -> uint32:
         return (await self._get_owner_key_cache())[1]
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        async def pk_to_sk(pk: G1Element) -> PrivateKey:
-            s = find_owner_sk([self.wallet_state_manager.private_key], pk)
-            if s is None:
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)
-            else:
-                # Note that pool_wallet_index may be from another wallet than self.wallet_id
-                owner_sk, pool_wallet_index = s
-            if owner_sk is None:
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)
-            return owner_sk
-
-        return await sign_coin_spends(
-            [coin_spend],
-            pk_to_sk,
-            self.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            [puzzle_hash_for_synthetic_public_key],
-        )
-
     async def generate_fee_transaction(
         self,
         fee: uint64,
@@ -591,7 +568,7 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        signed_spend_bundle = await self.sign(outgoing_coin_spend)
+        signed_spend_bundle = await self.standard_wallet.sign_transaction([outgoing_coin_spend])
         assert signed_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert signed_spend_bundle.removals()[0].name() == singleton.name()
         assert signed_spend_bundle is not None
