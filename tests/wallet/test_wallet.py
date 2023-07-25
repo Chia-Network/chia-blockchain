@@ -777,7 +777,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
-        normal_puzhash = await wallet.get_new_puzzlehash()
+        normal_puzhash = bytes32(b"\00" * 32)
         # Transfer to normal wallet
         tx = await wallet.generate_signed_transaction(
             uint64(500),
@@ -827,7 +827,7 @@ class TestWalletSimulator:
         assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
         new_config = wallet_node.config.copy()
         new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
-        new_config["database_path"] = "wallet/db/blockchain_wallet_v2_test_CHALLENGE_KEY.sqlite"
+        # new_config["database_path"] = "wallet/db/blockchain_wallet_v2_test_CHALLENGE_KEY.sqlite"
         wallet_node_2.config = new_config
         wallet_node_2.root_path = wallet_node.root_path
         wallet_node_2.local_keychain = wallet_node.local_keychain
@@ -838,8 +838,6 @@ class TestWalletSimulator:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
         after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
-        # transactions should be the same
-        assert len(after_txs) == len(before_txs)
         # Check clawback
         clawback_tx = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id)
         assert clawback_tx is not None
@@ -849,6 +847,8 @@ class TestWalletSimulator:
         )
         assert len(outgoing_clawback_txs) == 1
         assert outgoing_clawback_txs[0].confirmed
+        # transactions should be the same
+        assert len(after_txs) == len(before_txs)
         # Check unspent coins
         assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 7
 
