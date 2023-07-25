@@ -64,7 +64,10 @@ repos:
         entry: ./activated.py isort .
         language: system
         pass_filenames: false
--   repo: https://github.com/pycqa/flake8
-    rev: 5.0.4
+-   repo: local
     hooks:
-    - id: flake8
+    -   id: flake8
+        name: Flake8
+        entry: ./activated.py flake8
+        language: system
+        types: [python]
