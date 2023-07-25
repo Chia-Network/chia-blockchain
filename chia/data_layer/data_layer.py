@@ -307,8 +307,6 @@ class DataLayer:
         async with self.data_store.transaction():
             try:
                 root = await self.data_store.get_tree_root(tree_id=tree_id)
-            except asyncio.CancelledError:
-                raise
             except Exception:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -427,8 +425,6 @@ class DataLayer:
                         f"Root hash saved: {singleton_record.root}."
                     )
                     break
-            except asyncio.CancelledError:
-                raise
             except aiohttp.client_exceptions.ClientConnectorError:
                 self.log.warning(f"Server {url} unavailable for {tree_id}.")
             except Exception as e:
@@ -583,8 +579,6 @@ class DataLayer:
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
-                except asyncio.CancelledError:
-                    raise
                 except Exception as e:
                     self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
@@ -594,10 +588,7 @@ class DataLayer:
             while time.monotonic() < delay_until:
                 if self._shut_down:
                     break
-                try:
-                    await asyncio.sleep(0.1)
-                except asyncio.CancelledError:
-                    raise
+                await asyncio.sleep(0.1)
 
         while not self._shut_down:
             async with self.subscription_lock:
@@ -610,8 +601,6 @@ class DataLayer:
                 if local_id not in subscription_tree_ids:
                     try:
                         await self.subscribe(local_id, [])
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
@@ -623,14 +612,10 @@ class DataLayer:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
-            try:
-                await asyncio.sleep(manage_data_interval)
-            except asyncio.CancelledError:
-                raise
+
+            await asyncio.sleep(manage_data_interval)
 
     async def build_offer_changelist(
         self,
