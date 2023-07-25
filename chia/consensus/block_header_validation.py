@@ -505,15 +505,16 @@ def validate_unfinished_header_block(
 
         while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
             prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
-            if passes_plot_filter(
-                prefix_bits,
-                plot_id,
-                curr_optional_block_record.pos_ss_cc_challenge_hash,
-                curr_optional_block_record.cc_sp_hash,
-            ):
-                return None, ValidationError(Err.INVALID_POSPACE)
 
             if curr_optional_block_record.cc_sp_hash != curr_sp:
+                if passes_plot_filter(
+                    prefix_bits,
+                    plot_id,
+                    curr_optional_block_record.pos_ss_cc_challenge_hash,
+                    curr_optional_block_record.cc_sp_hash,
+                ):
+                    return None, ValidationError(Err.INVALID_POSPACE, f"Chip-13 Block Failed: {height}")
+
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash
             if sp_count < constants.UNIQUE_PLOTS_WINDOW:

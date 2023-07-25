@@ -1040,7 +1040,7 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
     )
 
     FEE = uint64(2000000000000)
-    txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=FEE)
+    txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=FEE, secure=True)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -1158,7 +1158,7 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     )
 
     FEE = uint64(2000000000000)
-    txs = await trade_manager_maker.cancel_pending_offers([trade_make], fee=FEE, secure=True)
+    txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=FEE, secure=True)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
