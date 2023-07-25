@@ -13,8 +13,6 @@ from tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, cli
 from tests.cmds.testing_classes import hash_to_height, height_hash
 from tests.util.test_full_block_utils import get_foliage, get_reward_chain_block, get_transactions_info, vdf_proof
 
-BASE_LIST = ["show"]
-
 
 @dataclass
 class ShowFullNodeRpcClient(TestFullNodeRpcClient):
@@ -90,13 +88,14 @@ def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
     test_rpc_clients.full_node_rpc_client = RPC_CLIENT_TO_USE
     # get output with all options
     command_args = [
+        "show",
         "-s",
         "-f",
         "--block-header-hash-by-height",
         "10",
         "-b0x000000000000000000000000000000000000000000000000000000000000000b",
     ]
-    success, output = run_cli_command(capsys, root_dir, BASE_LIST + command_args)
+    success, output = run_cli_command(capsys, root_dir, command_args)
     assert success
     # these are various things that should be in the output
     assert_list = [

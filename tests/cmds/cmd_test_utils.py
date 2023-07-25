@@ -120,6 +120,7 @@ class TestSimulatorFullNodeRpcClient(TestRpcClient):
 class TestRpcClients:
     """
     Because this data is in a class, it can be modified by the tests even after the generator is created and imported.
+    This is important, as we need an easy way to modify the monkey-patched functions.
     """
 
     farmer_rpc_client: TestFarmerRpcClient = TestFarmerRpcClient()
@@ -144,7 +145,12 @@ class TestRpcClients:
 
 
 def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients, default_root: Path) -> None:
-    # custom generators designed for testing
+    """
+    Create and monkey patch custom generators designed for testing.
+    These are monkey patched into the chia.cmds.cmds_util module.
+    Each generator below replaces the original function with a new one that returns a custom client, given by the class.
+    The clients given can be changed by changing the variables in the class above, after running this function.
+    """
 
     @asynccontextmanager
     async def test_get_any_service_client(
@@ -182,12 +188,16 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
             assert fingerprint is not None
             yield wallet_client, fingerprint, config
 
-    # override the functions
+    # Monkey patches the functions into the module, the classes returned by these functions can be changed in the class.
+    # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
     chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
 
 
-def run_cli_command(capsys: Any, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:
+def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:
+    """
+    This is just an easy way to run the chia CLI with the given command list.
+    """
     argv_temp = sys.argv
     try:
         sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
