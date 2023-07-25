@@ -28,6 +28,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_secret_key,
     puzzle_for_pk,
     puzzle_hash_for_pk,
+    puzzle_hash_for_synthetic_public_key,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -443,10 +444,10 @@ class Wallet:
         return await sign_coin_spends(
             coin_spends,
             self.wallet_state_manager.get_private_key_for_pubkey,
-            self.wallet_state_manager.get_private_key_optional,
+            self.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            [puzzle_hash_for_pk],
+            [puzzle_hash_for_synthetic_public_key],
         )
 
     async def sign_message(

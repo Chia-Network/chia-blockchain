@@ -71,6 +71,10 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+)
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -285,13 +289,16 @@ class WalletStateManager:
             return master_sk_to_wallet_sk(self.private_key, record.index)
         return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
 
-    async def get_private_key_optional(self, puzzle_hash: bytes32) -> Optional[PrivateKey]:
+    async def get_synthetic_private_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[PrivateKey]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             return None
         if record.hardened:
-            return master_sk_to_wallet_sk(self.private_key, record.index)
-        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+            base_key = master_sk_to_wallet_sk(self.private_key, record.index)
+        else:
+            base_key = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+
+        return calculate_synthetic_secret_key(base_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
     async def get_private_key_for_pubkey(self, pubkey: G1Element) -> Optional[PrivateKey]:
         record = await self.puzzle_store.record_for_pubkey(pubkey)
