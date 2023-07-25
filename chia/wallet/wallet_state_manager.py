@@ -1419,6 +1419,7 @@ class WalletStateManager:
                                 fee = 0
 
                                 to_puzzle_hash = None
+                                coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                 # Find coin that doesn't belong to us
                                 amount = 0
                                 for coin in additions:
@@ -1428,6 +1429,15 @@ class WalletStateManager:
                                     if derivation_record is None:  # not change
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
+                                        if coin_spend is not None:
+                                            # Check if this is a Clawback coin
+                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
+                                            solution: Program = coin_spend.solution.to_program()
+                                            uncurried = uncurry_puzzle(puzzle)
+                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                            if clawback_metadata is not None:
+                                                # Add the Clawback coin as the interested coin for the sender
+                                                await self.add_interested_coin_ids([coin.name()])
                                     elif wallet_identifier.type == WalletType.CAT:
                                         # We subscribe to change for CATs since they didn't hint previously
                                         await self.add_interested_coin_ids([coin.name()])
@@ -1746,8 +1756,10 @@ class WalletStateManager:
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
+        # Check if it is a Clawback claim
+        clawback_claim = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or not coin_confirmed_transaction and not change:
+        if coinbase or clawback_claim or not coin_confirmed_transaction and not change:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),
