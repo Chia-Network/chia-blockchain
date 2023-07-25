@@ -198,6 +198,7 @@ def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) ->
     """
     This is just an easy way to run the chia CLI with the given command list.
     """
+    # we don't use the real capsys object because its only accessible in a private part of the pytest module
     argv_temp = sys.argv
     try:
         sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
@@ -207,7 +208,7 @@ def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) ->
         except SystemExit as e:
             if e.code != 0:
                 exited_cleanly = False
-        output = capsys.readouterr()
+        output = capsys.readouterr()  # type: ignore[attr-defined]
     finally:  # always reset sys.argv
         sys.argv = argv_temp
     if not exited_cleanly:  # so we can look at what went wrong
