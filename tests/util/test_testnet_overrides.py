@@ -10,7 +10,7 @@ def test_testnet10() -> None:
     update_testnet_overrides("testnet10", overrides)
     assert overrides == {
         "SOFT_FORK2_HEIGHT": 0,
-        "SOFT_FORK3_HEIGHT": 0,
+        "SOFT_FORK3_HEIGHT": 2960728,
         "HARD_FORK_HEIGHT": 2997292,
         "PLOT_FILTER_128_HEIGHT": 3061804,
         "PLOT_FILTER_64_HEIGHT": 8010796,

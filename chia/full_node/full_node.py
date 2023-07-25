@@ -434,15 +434,12 @@ class FullNode:
             self.add_transaction_semaphore.release()
 
     async def _handle_transactions(self) -> None:
-        try:
-            while not self._shut_down:
-                # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
-                # However, doing them one at a time would be slow, because they get sent to other processes.
-                await self.add_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = await self.transaction_queue.pop()
-                asyncio.create_task(self._handle_one_transaction(item))
-        except asyncio.CancelledError:
-            raise
+        while not self._shut_down:
+            # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
+            # However, doing them one at a time would be slow, because they get sent to other processes.
+            await self.add_transaction_semaphore.acquire()
+            item: TransactionQueueEntry = await self.transaction_queue.pop()
+            asyncio.create_task(self._handle_one_transaction(item))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -1358,6 +1355,7 @@ class FullNode:
             difficulty,
             sub_slot_iters,
             request.index_from_challenge,
+            uint32(0) if peak is None else peak.height,
         )
         msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
         await self.server.send_to_all([msg], NodeType.FARMER)
@@ -1427,6 +1425,8 @@ class FullNode:
             sub_slots[1],
             fork_block,
             self.blockchain,
+            sub_slot_iters,
+            difficulty,
         )
 
         if fns_peak_result.new_signage_points is not None and peer is not None:
@@ -2110,6 +2110,8 @@ class FullNode:
                 end_of_slot_bundle,
                 self.blockchain,
                 peak,
+                next_sub_slot_iters,
+                next_difficulty,
                 await self.blockchain.get_full_peak(),
             )
             # It may be an empty list, even if it's not None. Not None means added successfully
@@ -2144,6 +2146,7 @@ class FullNode:
                     next_difficulty,
                     next_sub_slot_iters,
                     uint8(0),
+                    uint32(0) if peak is None else peak.height,
                 )
                 msg = make_msg(ProtocolMessageTypes.new_signage_point, broadcast_farmer)
                 await self.server.send_to_all([msg], NodeType.FARMER)

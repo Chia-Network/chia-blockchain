@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import zlib
 from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
@@ -72,10 +73,10 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
-from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
-from chia.wallet.util.transaction_type import CLAWBACK_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -903,7 +904,7 @@ class WalletRpcApi:
             try:
                 tx = (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
                 tx_list.append(tx)
-                if tx["type"] not in CLAWBACK_TRANSACTION_TYPES:
+                if tx["type"] not in CLAWBACK_INCOMING_TRANSACTION_TYPES:
                     continue
                 coin: Coin = tr.additions[0]
                 record: Optional[WalletCoinRecord] = await self.service.wallet_state_manager.coin_store.get_coin_record(
@@ -1435,10 +1436,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"], is_hex)
-            latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
-            latest_coin_id = None
-            if len(latest_coin) > 0:
-                latest_coin_id = latest_coin.pop().name()
+            latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1458,7 +1456,6 @@ class WalletRpcApi:
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
 
-        assert latest_coin_id is not None
         return {
             "success": True,
             "pubkey": str(pubkey),
@@ -1678,14 +1675,12 @@ class WalletRpcApi:
 
     async def get_offer_summary(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
-        offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
 
         ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
         from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
         hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
@@ -1694,16 +1689,14 @@ class WalletRpcApi:
         decoded_bytes = bytes(decoded)
         try:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
+        except zlib.error:
             decompressed_bytes = decoded_bytes
-        bundle = SpendBundle.from_bytes(decompressed_bytes)
-        for spend in bundle.coin_spends:
-            mod, _ = spend.puzzle_reveal.to_program().uncurry()
-            if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
-            ):
-                raise ValueError("CAT1s are no longer supported")
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
         ###
+
+        offer = Offer.from_bech32(offer_hex)
+        offered, requested, infos = offer.summary()
 
         if request.get("advanced", False):
             return {
@@ -1718,6 +1711,26 @@ class WalletRpcApi:
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
         peer = self.service.get_full_node_peer()
         return {
@@ -1727,6 +1740,26 @@ class WalletRpcApi:
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
+
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")  # pragma: no cover
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except zlib.error:
+            decompressed_bytes = decoded_bytes
+        if bytes(OFFER_MOD_OLD) in decompressed_bytes:
+            raise ValueError("Old offer format is no longer supported")
+        ###
+
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
@@ -1810,10 +1843,7 @@ class WalletRpcApi:
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
         async with self.service.wallet_state_manager.lock:
-            if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
-            else:
-                await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
+            await wsm.trade_manager.cancel_pending_offers([bytes32(trade_id)], fee=fee, secure=secure)
         return {}
 
     async def cancel_offers(self, request: Dict) -> EndpointResult:
@@ -1835,7 +1865,7 @@ class WalletRpcApi:
         if asset_id is not None and asset_id != "xch":
             key = bytes32.from_hexstr(asset_id)
         while True:
-            records: List[TradeRecord] = []
+            records: Dict[bytes32, TradeRecord] = {}
             trades = await trade_mgr.trade_store.get_trades_between(
                 start,
                 end,
@@ -1846,16 +1876,16 @@ class WalletRpcApi:
             )
             for trade in trades:
                 if cancel_all:
-                    records.append(trade)
+                    records[trade.trade_id] = trade
                     continue
                 if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
-                    if key in offer.driver_dict:
-                        records.append(trade)
+                    if key in offer.arbitrage():
+                        records[trade.trade_id] = trade
                         continue
 
             async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+                await trade_mgr.cancel_pending_offers(list(records.keys()), batch_fee, secure, records)
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
             if len(trades) < batch_size:
@@ -1981,27 +2011,25 @@ class WalletRpcApi:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
 
-        hint_list = compute_coin_hints(coin_spend)
-        derivation_record = None
+        hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
-        is_invalid = len(hint_list) == 0
-        for hint in hint_list:
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    bytes32(hint)
-                )
-            )
-            if derivation_record is not None:
-                is_invalid = False
+        hint: Optional[bytes32] = None
+        for hinted_coin in hinted_coins.values():
+            if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
+                hint = hinted_coin.hint
                 break
-            is_invalid = True
-        if is_invalid:
+        if hint is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
             )
+        else:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+            )
+
         launcher_id = singleton_struct.rest().first().as_python()
         if derivation_record is None:
             return {"success": False, "error": f"This DID {launcher_id.hex()} is not belong to the connected wallet"}
@@ -2126,11 +2154,10 @@ class WalletRpcApi:
                     await self.service.wallet_state_manager.update_wallet_puzzle_hashes(did_wallet.wallet_info.id)
 
             try:
-                coins = await did_wallet.select_coins(uint64(1))
-                coin = coins.pop()
+                coin = await did_wallet.get_coin()
                 if coin.name() == coin_state.coin.name():
                     return {"success": True, "latest_coin_id": coin.name().hex()}
-            except ValueError:
+            except RuntimeError:
                 # We don't have any coin for this wallet, add the coin
                 pass
 
@@ -2170,10 +2197,9 @@ class WalletRpcApi:
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             try:
-                coins = await wallet.select_coins(uint64(1))
-                coin = coins.pop()
+                coin = await wallet.get_coin()
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
-            except ValueError:
+            except RuntimeError:
                 return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
 
     async def did_get_recovery_list(self, request) -> EndpointResult:
@@ -2502,7 +2528,6 @@ class WalletRpcApi:
                 nft_dict[wallet_id] = [nft_coin_info]
             nft_ids.append(nft_coin_info.nft_id)
         first = True
-        nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
@@ -2530,8 +2555,8 @@ class WalletRpcApi:
 
             for tx in refined_tx_list:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await nft_wallet.update_coin_status(coin, True)
+            for id in coin_ids:
+                await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
             return {
@@ -2584,7 +2609,6 @@ class WalletRpcApi:
             else:
                 nft_dict[wallet_id] = [nft_coin_info]
         first = True
-        nft_wallet = None
         for wallet_id, nft_list in nft_dict.items():
             nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
             if not first:
@@ -2611,8 +2635,8 @@ class WalletRpcApi:
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
             for tx in refined_tx_list:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await nft_wallet.update_coin_status(coin, True)
+            for id in coin_ids:
+                await nft_wallet.update_coin_status(id, True)
             for wallet_id in nft_dict.keys():
                 self.service.wallet_state_manager.state_changed("nft_coin_did_set", wallet_id)
             return {
@@ -2975,7 +2999,8 @@ class WalletRpcApi:
         pool_reward_amount = 0
         farmer_reward_amount = 0
         fee_amount = 0
-        last_height_farmed = 0
+        blocks_won = uint32(0)
+        last_height_farmed = uint32(0)
         for record in tx_records:
             if record.wallet_id not in self.service.wallet_state_manager.wallets:
                 continue
@@ -2988,15 +3013,20 @@ class WalletRpcApi:
             # .get_farming_rewards() above queries for only confirmed records.  This
             # could be hinted by making TransactionRecord generic but streamable can't
             # handle that presently.  Existing code would have raised an exception
-            # anyways if this were to fail and we already have an assert below.
+            # anyway if this were to fail and we already have an assert below.
             assert height is not None
             if record.type == TransactionType.FEE_REWARD:
-                fee_amount += record.amount - calculate_base_farmer_reward(height)
-                farmer_reward_amount += calculate_base_farmer_reward(height)
+                base_farmer_reward = calculate_base_farmer_reward(height)
+                fee_amount += record.amount - base_farmer_reward
+                farmer_reward_amount += base_farmer_reward
+                blocks_won += 1
             if height > last_height_farmed:
                 last_height_farmed = height
             amount += record.amount
 
+        last_time_farmed = uint32(
+            await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
+        )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
         return {
             "farmed_amount": amount,
@@ -3004,6 +3034,8 @@ class WalletRpcApi:
             "farmer_reward_amount": farmer_reward_amount,
             "fee_amount": fee_amount,
             "last_height_farmed": last_height_farmed,
+            "last_time_farmed": last_time_farmed,
+            "blocks_won": blocks_won,
         }
 
     async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:

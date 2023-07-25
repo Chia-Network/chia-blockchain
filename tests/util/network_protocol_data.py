@@ -13,6 +13,7 @@ from chia.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from chia.protocols.shared_protocol import Error
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -38,7 +39,13 @@ from chia.types.peer_info import TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import RecentChainData, SubEpochChallengeSegment, SubEpochData, SubSlotData, WeightProof
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.errors import Err
+from chia.util.ints import int16, uint8, uint16, uint32, uint64, uint128
+
+# SHARED PROTOCOL
+error_without_data = Error(int16(Err.UNKNOWN.value), "Unknown", None)
+error_with_data = Error(int16(Err.UNKNOWN.value), "Unknown", bytes(b"extra data"))
+
 
 ### FARMER PROTOCOL
 new_signage_point = farmer_protocol.NewSignagePoint(
@@ -48,6 +55,7 @@ new_signage_point = farmer_protocol.NewSignagePoint(
     uint64(2329045448547720842),
     uint64(8265724497259558930),
     uint8(194),
+    uint32(1),
 )
 
 proof_of_space = ProofOfSpace(
@@ -117,6 +125,7 @@ farming_info = farmer_protocol.FarmingInfo(
     uint32(1390832181),
     uint32(908923578),
     uint32(2259819406),
+    uint64(3942498),
 )
 
 signed_values = farmer_protocol.SignedValues(
@@ -698,6 +707,7 @@ new_signage_point_harvester = harvester_protocol.NewSignagePointHarvester(
     uint8(148),
     bytes32(bytes.fromhex("b78c9fca155e9742df835cbe84bb7e518bee70d78b6be6e39996c0a02e0cfe4c")),
     [pool_difficulty],
+    uint8(9),
 )
 
 new_proof_of_space = harvester_protocol.NewProofOfSpace(
@@ -749,6 +759,7 @@ plot = harvester_protocol.Plot(
     ),
     uint64(3368414292564311420),
     uint64(2573238947935295522),
+    uint8(0),
 )
 
 request_plots = harvester_protocol.RequestPlots()

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import compute_merkle_set_root
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -44,6 +44,7 @@ from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
     simple_solution_generator,
+    simple_solution_generator_backrefs,
 )
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
@@ -76,12 +77,15 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     calculate_pos_challenge,
+    calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
+    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import (
     ChallengeChainSubSlot,
@@ -121,7 +125,11 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia.wallet.puzzles.rom_bootstrap_generator import GENERATOR_MOD
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
+
+GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
+    "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
+)
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -140,10 +148,11 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "MAX_FUTURE_TIME": 3600
-        * 24
-        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+        "MAX_FUTURE_TIME": 3600 * 24 * 10,
+        "MAX_FUTURE_TIME2": 3600 * 24 * 10,  # After the Fork
         "MEMPOOL_BLOCK_BUFFER": 6,
+        "UNIQUE_PLOTS_WINDOW": 2,
     }
 )
 
@@ -241,6 +250,7 @@ class BlockTools:
             config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         self._config = override_config(self._config, config_overrides)
+
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -538,6 +548,29 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
+    # Verifies if the given plot passed any of the previous `UNIQUE_PLOTS_WINDOW` plot filters.
+    def plot_id_passed_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
+        curr_sp_hash = cc_sp_hash
+        sp_count = 1
+        for block in reversed(blocks):
+            if sp_count >= self.constants.UNIQUE_PLOTS_WINDOW:
+                return False
+
+            challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
+            if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                # Edge case of first sp (start of slot), where sp_iters == 0
+                cc_sp_hash = challenge
+            else:
+                cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+            prefix_bits = calculate_prefix_bits(self.constants, block.height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
+                return True
+            if curr_sp_hash != cc_sp_hash:
+                sp_count += 1
+                curr_sp_hash = cc_sp_hash
+
+        return False
+
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -626,6 +659,7 @@ class BlockTools:
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_block.ip_sub_slot_total_iters(constants)
         sub_slots_finished = 0
+        # this variable is true whenever there is a pending sub-epoch or epoch that needs to be added in the next block.
         pending_ses: bool = False
 
         # Start at the last block in block list
@@ -682,6 +716,7 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
 
@@ -694,6 +729,10 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -717,14 +756,20 @@ class BlockTools:
 
                         block_generator: Optional[BlockGenerator]
                         if transaction_data is not None:
-                            if type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -774,8 +819,6 @@ class BlockTools:
                         else:
                             if guarantee_transaction_block:
                                 continue
-                        if pending_ses:
-                            pending_ses = False
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
                             compressor_arg = detect_potential_template_generator(
@@ -849,9 +892,10 @@ class BlockTools:
                     sub_slot_iters,
                     True,
                 )
-            if pending_ses:
-                sub_epoch_summary: Optional[SubEpochSummary] = None
-            else:
+            # generate sub_epoch_summary, and if the last block was the last block of the sub-epoch or epoch
+            # include the hash in the next sub-slot
+            sub_epoch_summary: Optional[SubEpochSummary] = None
+            if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
                     BlockCache(blocks, height_to_hash=height_to_hash),
@@ -859,16 +903,16 @@ class BlockTools:
                     block_list[-1],
                     False,
                 )
+            if sub_epoch_summary is not None:  # the previous block is the last block of the sub-epoch or epoch
                 pending_ses = True
-
-            ses_hash: Optional[bytes32]
-            if sub_epoch_summary is not None:
-                ses_hash = sub_epoch_summary.get_hash()
+                ses_hash: Optional[bytes32] = sub_epoch_summary.get_hash()
+                # if the last block is the last block of the epoch, we set the new sub-slot iters and difficulty
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                self.log.info(f"Sub epoch summary: {sub_epoch_summary}")
-            else:
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
+            else:  # the previous block is not the last block of the sub-epoch or epoch
+                pending_ses = False
                 ses_hash = None
                 new_sub_slot_iters = None
                 new_difficulty = None
@@ -944,11 +988,12 @@ class BlockTools:
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
-            # Handle overflows: No overflows on new epoch
-            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
+            # Handle overflows: No overflows on new epoch or sub-epoch
+            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and not pending_ses:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
                     constants.NUM_SPS_SUB_SLOT,
@@ -979,13 +1024,17 @@ class BlockTools:
                         seed,
                         difficulty,
                         sub_slot_iters,
+                        curr.height,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-
+                        plot_id = get_plot_id(proof_of_space)
+                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
+                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
+                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
@@ -998,14 +1047,20 @@ class BlockTools:
                             else:
                                 pool_target = PoolTarget(self.pool_ph, uint32(0))
                         if transaction_data is not None:
-                            if previous_generator is not None and type(previous_generator) is CompressorArg:
-                                block_generator = best_solution_generator_from_template(
-                                    previous_generator, transaction_data
-                                )
+                            if start_height >= constants.HARD_FORK_HEIGHT:
+                                block_generator = simple_solution_generator_backrefs(transaction_data)
+                                previous_generator = None
                             else:
-                                block_generator = simple_solution_generator(transaction_data)
-                                if type(previous_generator) is list:
-                                    block_generator = BlockGenerator(block_generator.program, [], previous_generator)
+                                if previous_generator is not None and type(previous_generator) is CompressorArg:
+                                    block_generator = best_solution_generator_from_template(
+                                        previous_generator, transaction_data
+                                    )
+                                else:
+                                    block_generator = simple_solution_generator(transaction_data)
+                                    if type(previous_generator) is list:
+                                        block_generator = BlockGenerator(
+                                            block_generator.program, [], previous_generator
+                                        )
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1056,8 +1111,6 @@ class BlockTools:
                             last_timestamp = full_block.foliage_transaction_block.timestamp
                         elif guarantee_transaction_block:
                             continue
-                        if pending_ses:
-                            pending_ses = False
 
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
@@ -1089,8 +1142,7 @@ class BlockTools:
             if num_blocks < prev_num_of_blocks:
                 num_empty_slots_added += 1
 
-            if new_sub_slot_iters is not None:
-                assert new_difficulty is not None
+            if new_sub_slot_iters is not None and new_difficulty is not None:  # new epoch
                 sub_slot_iters = new_sub_slot_iters
                 difficulty = new_difficulty
 
@@ -1130,6 +1182,7 @@ class BlockTools:
                     assert signage_point.cc_vdf is not None
                     cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                # we're creating the genesis block, its height is always 0
                 qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                     constants,
                     cc_challenge,
@@ -1137,6 +1190,7 @@ class BlockTools:
                     seed,
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
+                    uint32(0),
                 )
 
                 # Try each of the proofs of space
@@ -1283,6 +1337,7 @@ class BlockTools:
         seed: bytes,
         difficulty: uint64,
         sub_slot_iters: uint64,
+        height: uint32,
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
@@ -1292,7 +1347,8 @@ class BlockTools:
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
-            if passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
+            prefix_bits = calculate_prefix_bits(constants, height)
+            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
@@ -1549,7 +1605,7 @@ def load_block_list(
             challenge = full_block.reward_chain_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
         quality_str = verify_and_get_quality_string(
-            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash
+            full_block.reward_chain_block.proof_of_space, constants, challenge, sp_hash, height=full_block.height
         )
         assert quality_str is not None
         required_iters: uint64 = calculate_iterations_quality(
@@ -1725,10 +1781,40 @@ def get_full_block_and_block_record(
     return full_block, block_record, block_time_residual
 
 
-def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Optional[uint16], uint64]:
+# these are the costs of unknown conditions, as defined chia_rs here:
+# https://github.com/Chia-Network/chia_rs/pull/181
+def compute_cost_table() -> List[int]:
+    A = 17
+    B = 16
+    s = []
+    NUM = 100
+    DEN = 1
+    MAX = 1 << 59
+    for i in range(256):
+        v = str(NUM // DEN)
+        v1 = v[:3] + ("0" * (len(v) - 3))
+        s.append(int(v1))
+        NUM *= A
+        DEN *= B
+        assert NUM < 1 << 64
+        assert DEN < 1 << 64
+        if NUM > MAX:
+            NUM >>= 5
+            DEN >>= 5
+    return s
+
+
+CONDITION_COSTS = compute_cost_table()
+
+
+def compute_cost_test(
+    generator: BlockGenerator, cost_per_byte: int, hard_fork: bool = False
+) -> Tuple[Optional[uint16], uint64]:
     try:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-        clvm_cost, result = GENERATOR_MOD.run_mempool_with_cost(INFINITE_COST, generator.program, block_program_args)
+        clvm_cost, result = GENERATOR_MOD._run(
+            INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, generator.program, block_program_args
+        )
         size_cost = len(bytes(generator.program)) * cost_per_byte
         condition_cost = 0
 
@@ -1742,6 +1828,22 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int) -> Tuple[Op
                     condition_cost += ConditionCost.AGG_SIG.value
                 elif condition == ConditionOpcode.CREATE_COIN:
                     condition_cost += ConditionCost.CREATE_COIN.value
+                # after the 2.0 hard fork, two byte conditions (with no leading 0)
+                # have costs. Account for that.
+                elif hard_fork and len(condition) == 2 and condition[0] != 0:
+                    condition_cost += CONDITION_COSTS[condition[1]]
+                elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
+                    arg = cond.rest().first().as_int()
+                    condition_cost += arg * 10000
+                elif hard_fork and condition in [
+                    ConditionOpcode.AGG_SIG_PARENT,
+                    ConditionOpcode.AGG_SIG_PUZZLE,
+                    ConditionOpcode.AGG_SIG_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+                    ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+                ]:
+                    condition_cost += ConditionCost.AGG_SIG.value
         return None, uint64(clvm_cost + size_cost + condition_cost)
     except Exception:
         return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
@@ -1839,7 +1941,9 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            err, cost = compute_cost_test(block_generator, constants.COST_PER_BYTE)
+            err, cost = compute_cost_test(
+                block_generator, constants.COST_PER_BYTE, hard_fork=height >= constants.HARD_FORK_HEIGHT
+            )
             assert err is None
 
             removal_amount = 0

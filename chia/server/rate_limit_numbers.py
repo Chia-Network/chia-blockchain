@@ -179,6 +179,7 @@ rate_limits = {
             ProtocolMessageTypes.respond_puzzle_solution: RLSettings(5000, 1024 * 1024),
             ProtocolMessageTypes.reject_puzzle_solution: RLSettings(5000, 100),
             ProtocolMessageTypes.none_response: RLSettings(500, 100),
+            ProtocolMessageTypes.error: RLSettings(50000, 100),
         },
         "rate_limits_other": {  # These will have a lower cap since they don't scale with high TPS (NON_TX_FREQ)
             ProtocolMessageTypes.request_header_blocks: RLSettings(5000, 100),

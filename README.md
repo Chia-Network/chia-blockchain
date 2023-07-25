@@ -22,7 +22,7 @@ Chia is a modern cryptocurrency built from scratch, designed to be efficient, de
 Please check out the [Chia website](https://www.chia.net/), the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki), and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
 information on this project.
 
-Python 3.7+ is required. Make sure your default python version is >=3.7
+Python 3.8.1+ is required. Make sure your default python version is >=3.8.1
 by typing `python3`.
 
 If you are behind a NAT, it can be difficult for peers outside your subnet to

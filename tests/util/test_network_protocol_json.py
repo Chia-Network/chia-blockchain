@@ -218,3 +218,7 @@ def test_protocol_json() -> None:
         type(respond_compact_proof_of_time).from_json_dict(respond_compact_proof_of_time_json)
         == respond_compact_proof_of_time
     )
+    assert str(error_without_data_json) == str(error_without_data.to_json_dict())
+    assert type(error_without_data).from_json_dict(error_without_data_json) == error_without_data
+    assert str(error_with_data_json) == str(error_with_data.to_json_dict())
+    assert type(error_with_data).from_json_dict(error_with_data_json) == error_with_data
