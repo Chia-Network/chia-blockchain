@@ -738,26 +738,53 @@ class DataStore:
     async def get_terminal_node_for_seed(
         self, tree_id: bytes32, seed: bytes32, root_hash: Optional[bytes32] = None
     ) -> Optional[bytes32]:
-        path = int.from_bytes(seed, byteorder="big")
-        async with self.db_wrapper.reader():
+        path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id)
                 root_hash = root.node_hash
             if root_hash is None:
                 return None
-            node_hash = root_hash
-            while True:
-                node = await self.get_node(node_hash)
-                assert node is not None
-                if isinstance(node, TerminalNode):
-                    break
-                if path % 2 == 0:
-                    node_hash = node.left_hash
-                else:
-                    node_hash = node.right_hash
-                path = path // 2
 
-            return node_hash
+            async with reader.execute(
+                """
+                WITH RECURSIVE
+                    random_leaf(hash, node_type, left, right, depth, side) AS (
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            1 AS depth,
+                            SUBSTR(:path, 1, 1) as side
+                        FROM node
+                        WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            random_leaf.depth + 1 AS depth,
+                            SUBSTR(:path, random_leaf.depth + 1, 1) as side
+                        FROM node, random_leaf
+                        WHERE (
+                            (random_leaf.side == "0" AND node.hash == random_leaf.left)
+                            OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
+                        )
+                    )
+                SELECT hash AS hash FROM random_leaf
+                WHERE node_type == :node_type
+                LIMIT 1
+                """,
+                {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    # No cover since this is an error state that should be unreachable given the code
+                    # above has already verified that there is a non-empty tree.
+                    raise Exception("No terminal node found for seed")  # pragma: no cover
+                return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
         side_seed = bytes(seed)[0]
