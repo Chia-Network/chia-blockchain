@@ -12,6 +12,7 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.blockchain import create_blockchain
@@ -105,20 +106,26 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
     )
 
     if block.reward_chain_block.signage_point_index == 0:
-        res = block.full_node_store.get_sub_slot(block.reward_chain_block.pos_ss_cc_challenge_hash)
-        if res is None:
-            if block.reward_chain_block.pos_ss_cc_challenge_hash == bt.constants.GENESIS_CHALLENGE:
-                rc_prev = bt.constants.GENESIS_CHALLENGE
-            else:
-                assert False
+        # find first in slot and find slot challenge
+        blk = b1.block_record(blocks_1[-1].header_hash)
+        while blk.first_in_sub_slot is False:
+            blk = b1.block_record(blocks_1[-1].prev_header_hash)
+        full_blk = await b1.get_full_peak()
+        sub_slot = None
+        for index, (s, _, _) in enumerate( full_blk.finished_sub_slots):
+            if s is not None and s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
+                sub_slot = s
+        if sub_slot is None:
+            assert block.reward_chain_block.pos_ss_cc_challenge_hash == bt.constants.GENESIS_CHALLENGE
+            rc_prev = bt.constants.GENESIS_CHALLENGE
         else:
-            rc_prev = res[0].reward_chain.get_hash()
+            rc_prev = sub_slot.reward_chain.get_hash()
     else:
         assert block.reward_chain_block.reward_chain_sp_vdf is not None
         rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
     timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
-        block.reward_chain_block,
+        block.reward_chain_block.get_unfinished(),
         difficulty,
         sub_slot_iters,
         block.foliage,
@@ -129,7 +136,7 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
     timelord_api.new_unfinished_block_timelord(timelord_unf_block)
 
     await timelord_api.new_peak_timelord(timelord_peak_from_block(blocks_2[-1], b2, bt.constants))
-    assert timelord_api.timelord.new_peak.reward_chain_block.height == peak.height
+    assert timelord_api.timelord.last_state.get_height() == peak.reward_chain_block.height
 
     await db_wrapper1.close()
     await db_wrapper2.close()
@@ -139,6 +146,7 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
     db_path2.unlink()
 
     return None
+
 
 
 def get_recent_reward_challenges(
