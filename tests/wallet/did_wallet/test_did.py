@@ -18,7 +18,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.config import load_config
 from chia.util.ints import uint16, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
@@ -1230,27 +1229,28 @@ class TestDIDWallet:
     async def test_did_resync(self, self_hostname, two_wallet_nodes, trusted) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        full_node_server = full_node_api.full_node.server
+        wallet_node_1, wallet_server_1 = wallets[0]
+        wallet_node_2, wallet_server_2 = wallets[1]
+        wallet = wallet_node_1.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         fee = uint64(0)
-        api_0 = WalletRpcApi(wallet_node)
+        wallet_api_1 = WalletRpcApi(wallet_node_1)
+        wallet_api_2 = WalletRpcApi(wallet_node_2)
         ph = await wallet.get_new_puzzlehash()
         if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
+            wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+            wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
-            wallet_node.config["trusted_peers"] = {}
+            wallet_node_1.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet_node_1.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager,
+                wallet_node_1.wallet_state_manager,
                 wallet,
                 uint64(101),
                 [bytes(ph)],
@@ -1259,7 +1259,7 @@ class TestDIDWallet:
                 fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
         spend_bundle = spend_bundle_list[0].spend_bundle
@@ -1270,45 +1270,57 @@ class TestDIDWallet:
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
         await did_wallet_1.transfer_did(new_puzhash, fee, True)
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         await full_node_api.farm_blocks_to_wallet(1, wallet2)
         # Check if the DID wallet is created in the wallet2
-
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
-        await time_out_assert(30, get_wallet_num, 1, wallet_node.wallet_state_manager)
+        await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
+        did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[2]
+        assert did_wallet_2 is not None
+        did_info = did_wallet_2.did_info
+        # set flag to reset wallet sync data on start
+        await wallet_api_1.set_wallet_resync_on_startup({"enable": True})
+        fingerprint_1 = wallet_node_1.logged_in_fingerprint
+        assert wallet_node_1._wallet_state_manager
+        await wallet_api_2.set_wallet_resync_on_startup({"enable": True})
+        fingerprint_2 = wallet_node_2.logged_in_fingerprint
+        assert wallet_node_2._wallet_state_manager
+        # 2 reward coins
+        assert len(await wallet_node_1._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+        before_txs = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(1)
+        # Delete tx records
+        await wallet_node_1.wallet_state_manager.tx_store.rollback_to_block(0)
+        wallet_node_1._close()
+        await wallet_node_1._await_closed()
         wallet_node_2._close()
         await wallet_node_2._await_closed()
-        # set flag to reset wallet sync data on start
-        await api_0.set_wallet_resync_on_startup({"enable": True})
-        fingerprint = wallet_node.logged_in_fingerprint
-        assert wallet_node._wallet_state_manager
-        # 2 reward coins
-        assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
-        before_txs = await wallet_node.wallet_state_manager.tx_store.get_transaction_count_for_wallet(1)
-        # Delete tx records
-        await wallet_node.wallet_state_manager.tx_store.rollback_to_block(0)
-        wallet_node._close()
-        await wallet_node._await_closed()
-        config = load_config(wallet_node.root_path, "config.yaml")
-        # check that flag was set in config file
-        assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
-        new_config = wallet_node.config.copy()
-        new_config["reset_sync_for_fingerprint"] = config["wallet"]["reset_sync_for_fingerprint"]
-        new_config["database_path"] = "wallet/db/blockchain_wallet_v2_test_CHALLENGE_KEY.sqlite"
-        wallet_node_2.config = new_config
-        wallet_node_2.root_path = wallet_node.root_path
-        wallet_node_2.local_keychain = wallet_node.local_keychain
-        # use second node to start the same wallet, reusing config and db
-        await wallet_node_2._start_with_fingerprint(fingerprint)
+        new_config_1 = wallet_node_1.config.copy()
+        new_config_1["reset_sync_for_fingerprint"] = fingerprint_1
+        new_config_1["database_path"] = "wallet/db/blockchain_wallet_v2_test_1_CHALLENGE_KEY.sqlite"
+        new_config_2 = wallet_node_2.config.copy()
+        new_config_2["reset_sync_for_fingerprint"] = fingerprint_2
+        new_config_2["database_path"] = "wallet/db/blockchain_wallet_v2_test_2_CHALLENGE_KEY.sqlite"
+        wallet_node_1.config = new_config_1
+        wallet_node_2.config = new_config_2
+        # Start resync
+        await wallet_node_1._start_with_fingerprint(fingerprint_1)
+        assert wallet_node_1._wallet_state_manager
+        await wallet_node_2._start_with_fingerprint(fingerprint_2)
         assert wallet_node_2._wallet_state_manager
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
-        await time_out_assert(30, get_wallet_num, 1, wallet_node_2.wallet_state_manager)
+        await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
+        await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
+        did_wallet_2 = wallet_node_2.wallet_state_manager.wallets[1]
+        assert did_wallet_2 is not None
+        assert did_info == did_wallet_2.did_info
         after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(1)
         # transactions should be the same
         assert after_txs == before_txs
