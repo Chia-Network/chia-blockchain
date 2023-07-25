@@ -1677,8 +1677,8 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
 
         ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s or old offers
-        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+        # There's also temp code in test_wallet_rpc.py
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
@@ -1691,19 +1691,6 @@ class WalletRpcApi:
             decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
         except zlib.error:
             decompressed_bytes = decoded_bytes
-        ###
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-        bundle = SpendBundle.from_bytes(decompressed_bytes)
-        for spend in bundle.coin_spends:
-            mod, _ = spend.puzzle_reveal.to_program().uncurry()
-            if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
-            ):
-                raise ValueError("CAT1s are no longer supported")
-        ###
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
         if bytes(OFFER_MOD_OLD) in decompressed_bytes:
             raise ValueError("Old offer format is no longer supported")
         ###
