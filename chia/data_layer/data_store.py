@@ -329,6 +329,7 @@ class DataStore:
                         SELECT *
                         FROM ancestors
                         WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                        LIMIT 1
                         """,
                         {"hash": hash, "generation": generation, "tree_id": tree_id},
                     ) as cursor:
