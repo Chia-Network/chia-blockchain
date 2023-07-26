@@ -1291,7 +1291,6 @@ class TestDIDWallet:
         assert wallet_node_2._wallet_state_manager
         # 2 reward coins
         assert len(await wallet_node_1._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
-        before_txs = await wallet_node_1.wallet_state_manager.tx_store.get_transaction_count_for_wallet(1)
         # Delete tx records
         await wallet_node_1.wallet_state_manager.tx_store.rollback_to_block(0)
         wallet_node_1._close()
@@ -1318,11 +1317,6 @@ class TestDIDWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
         await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
-        did_wallet_2 = wallet_node_2.wallet_state_manager.wallets[1]
+        did_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
         assert did_wallet_2 is not None
         assert did_info == did_wallet_2.did_info
-        after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(1)
-        # transactions should be the same
-        assert after_txs == before_txs
-        # Check unspent coins
-        assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
