@@ -724,7 +724,6 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        plot_id = get_plot_id(proof_of_space)
                         additions = None
                         removals = None
                         if transaction_data_included:
