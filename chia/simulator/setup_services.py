@@ -419,7 +419,7 @@ async def setup_timelord(
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
     config: Dict[str, Any],
-    root_path: Optional[Path] = None,
+    root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
     service_config = config["timelord"]

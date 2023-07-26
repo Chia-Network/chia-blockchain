@@ -12,7 +12,6 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.blockchain import create_blockchain
@@ -112,7 +111,7 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
             blk = b1.block_record(blocks_1[-1].prev_header_hash)
         full_blk = await b1.get_full_peak()
         sub_slot = None
-        for index, (s, _, _) in enumerate( full_blk.finished_sub_slots):
+        for index, (s, _, _) in enumerate(full_blk.finished_sub_slots):
             if s is not None and s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
                 sub_slot = s
         if sub_slot is None:
@@ -146,7 +145,6 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
     db_path2.unlink()
 
     return None
-
 
 
 def get_recent_reward_challenges(
