@@ -883,7 +883,10 @@ class DAOWallet(WalletProtocol):
     ) -> Program:
         if not new_proposal_validator:
             assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
-            new_proposal_validator = get_proposal_validator(self.dao_info.current_treasury_innerpuz)
+            new_proposal_validator = get_proposal_validator(
+                self.dao_info.current_treasury_innerpuz,
+                new_dao_rules.proposal_minimum_amount
+            )
         return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
 
     async def generate_mint_proposal_innerpuz(
@@ -1479,7 +1482,11 @@ class DAOWallet(WalletProtocol):
             elif proposal_type == ProposalType.UPDATE:
                 (
                     _,
-                    PROPOSAL_VALIDATOR,
+                    _,
+                    _,
+                    _,
+                    PROPOSAL_MINIMUM_AMOUNT,
+                    _,
                     PROPOSAL_LENGTH,
                     PROPOSAL_SOFTCLOSE_LENGTH,
                     ATTENDANCE_REQUIRED,
