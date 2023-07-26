@@ -1388,7 +1388,10 @@ class DAOWallet(WalletProtocol):
                                 )
                             else:
                                 cat_spend_bundle = cat_spend_bundle.aggregate(
-                                    [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats([new_spendable_cat])]
+                                    [
+                                        cat_spend_bundle,
+                                        unsigned_spend_bundle_for_spendable_cats(CAT_MOD, [new_spendable_cat]),
+                                    ]
                                 )
 
                 for condition_statement in CONDITIONS.as_iter():
