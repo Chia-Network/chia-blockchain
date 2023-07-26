@@ -56,7 +56,7 @@ async def call_rpc_service_endpoint(
 async def call_daemon_command(command: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     from chia.daemon.client import connect_to_daemon_and_validate
 
-    daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config)
+    daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config, quiet=quiet)
 
     if daemon is None:
         raise Exception("Failed to connect to chia daemon")
@@ -99,24 +99,38 @@ def endpoints_cmd(service: str) -> None:
 
 
 @rpc_cmd.command("status", help="Print the status of all available RPC services")
-def status_cmd() -> None:
+@click.option('--json-output', 'json_output', is_flag=True, help='Output status as JSON')
+def status_cmd(json_output: bool) -> None:
+    import json
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
     def print_row(c0: str, c1: str) -> None:
         c0 = "{0:<12}".format(f"{c0}")
         c1 = "{0:<9}".format(f"{c1}")
-        print(f"{c0} | {c1}")
+        print(f"│ {c0} │ {c1} │")
 
-    print_row("SERVICE", "STATUS")
-    print_row("------------", "---------")
+    status_data = {}
     for service in services:
         status = "ACTIVE"
         try:
-            if not get_routes(service, config)["success"]:
+            if not get_routes(service, config, quiet=True)["success"]:
                 raise Exception()
         except Exception:
             status = "INACTIVE"
-        print_row(service, status)
+        status_data[service] = status
+
+    if json_output:
+        # If --json-output option is used, print the status data as JSON
+        print(json.dumps(status_data, indent=4))
+    else:
+        print("╭──────────────┬───────────╮")
+        print_row("SERVICE", "STATUS")
+        print("├──────────────┼───────────┤")
+        for service, status in status_data.items():
+            print_row(service, status)
+            if service != services[-1]:   # Don't print the separator after the last service
+                print("├──────────────┼───────────┤")
+        print("╰──────────────┴───────────╯")
 
 
 def create_commands() -> None:
