@@ -138,8 +138,7 @@ jobs:
               echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
               gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
           done
-          tar -xzf *.tar.gz
-          rm *.tar.gz
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 
@@ -154,8 +153,7 @@ jobs:
               echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
               gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
           done
-          tar -xzf *.tar.gz
-          rm *.tar.gz
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 
