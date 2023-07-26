@@ -115,7 +115,7 @@ async def test_sign_coin_spends() -> None:
             ph_to_sk,
             additional_data,
             1000000000,
-            [derive_ph],
+            [lambda _: bytes32([1] * 32), derive_ph],
         )
     ).aggregated_signature
 
@@ -221,9 +221,10 @@ async def test_wsm_sign_transaction() -> None:
                     )
                 ]
             )
-            assert signature == AugSchemeMPL.aggregate(
+            signature2: G2Element = (await wsm.sign_transaction([spend_u])).aggregated_signature
+            assert signature2 == AugSchemeMPL.aggregate(
                 [
-                    AugSchemeMPL.sign(sk1_h, msg1),
-                    AugSchemeMPL.sign(sk2_h, msg2 + coin.name() + additional_data),
+                    AugSchemeMPL.sign(sk1_u, msg1),
+                    AugSchemeMPL.sign(sk2_u, msg2 + coin.name() + additional_data),
                 ]
             )
