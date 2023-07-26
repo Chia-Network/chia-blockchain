@@ -19,7 +19,7 @@ from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 NULL_SIGNATURE = G2Element()
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
-CAT_MOD = load_clvm_maybe_recompile("cat_v2.clsp", package_or_requirement="chia.wallet.puzzles")
+CAT_MOD = load_clvm_maybe_recompile("cat_v2.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles")
 CAT_MOD_HASH = CAT_MOD.get_tree_hash()
 
 

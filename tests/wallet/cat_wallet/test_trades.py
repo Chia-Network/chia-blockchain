@@ -534,7 +534,8 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
-        await trade_manager_maker.cancel_pending_offer(trade_make.trade_id)
+        # Cancelling the trade and trying an ID that doesn't exist just in case
+        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id, bytes32([0] * 32)], secure=False)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
         # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.
@@ -556,7 +557,7 @@ class TestCATTrades:
 
         fee = uint64(2_000_000_000_000)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=fee)
+        txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=fee, secure=True)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -594,7 +595,7 @@ class TestCATTrades:
         ):
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
+        txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=uint64(0), secure=True)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 
@@ -641,7 +642,7 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
+        txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=uint64(0), secure=True)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
 

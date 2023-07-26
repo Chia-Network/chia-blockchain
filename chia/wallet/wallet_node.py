@@ -291,6 +291,7 @@ class WalletNode:
             "key_val_store",
             "trade_records",
             "pool_state_transitions",
+            "singletons",
             "singleton_records",
             "mirrors",
             "launchers",

@@ -14,17 +14,18 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
-from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
 SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clsp")
-POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile("pool_waitingroom_innerpuz.clsp")
-POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clsp")
+POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile(
+    "pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles"
+)
+POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
 P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
 POOL_OUTER_MOD = SINGLETON_MOD
 
@@ -281,6 +282,14 @@ def create_absorb_spend(
         CoinSpend(reward_coin, p2_singleton_puzzle, p2_singleton_solution),
     ]
     return coin_spends
+
+
+def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
+    additions: List[Coin] = compute_additions(coin_sol)
+    for coin in additions:
+        if coin.amount % 2 == 1:
+            return coin
+    return None
 
 
 def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
