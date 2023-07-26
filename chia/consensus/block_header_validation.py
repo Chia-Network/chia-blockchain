@@ -24,9 +24,6 @@ from chia.consensus.pot_iterations import (
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import (
-    calculate_prefix_bits,
-    get_plot_id,
-    passes_plot_filter,
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
