@@ -80,7 +80,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
-    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
