@@ -1617,7 +1617,7 @@ class WalletRpcApi:
                 )
         if hold_lock:
             async with self.service.wallet_state_manager.lock:
-                txs: List[TransactionRecord] = await wallet.generate_signed_transactions(
+                txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                     amounts,
                     puzzle_hashes,
                     fee,
@@ -1633,7 +1633,7 @@ class WalletRpcApi:
                 for tx in txs:
                     await wallet.standard_wallet.push_transaction(tx)
         else:
-            txs = await wallet.generate_signed_transactions(
+            txs = await wallet.generate_signed_transaction(
                 amounts,
                 puzzle_hashes,
                 fee,
@@ -3460,7 +3460,7 @@ class WalletRpcApi:
             else:
                 assert isinstance(wallet, CATWallet)
 
-                txs = await wallet.generate_signed_transactions(
+                txs = await wallet.generate_signed_transaction(
                     [amount_0] + [output.amount for output in additional_outputs],
                     [bytes32(puzzle_hash_0)] + [output.puzzle_hash for output in additional_outputs],
                     fee,

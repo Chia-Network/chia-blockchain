@@ -1600,7 +1600,7 @@ class DAOWallet(WalletProtocol):
             # generate_signed_transaction has a different type signature in Wallet and CATWallet
             # CATWallet uses a List of amounts and a List of puzhashes as the first two arguments
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
-            tx_records: List[TransactionRecord] = await cat_wallet.generate_signed_transactions(
+            tx_records: List[TransactionRecord] = await cat_wallet.generate_signed_transaction(
                 [amount],
                 [p2_singleton_puzhash],
                 fee=fee,

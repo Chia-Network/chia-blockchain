@@ -212,7 +212,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert list(coins)[0].coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
-    cat_txs = await cat_wallet_0.generate_signed_transactions([cat_amt], [ph_1])
+    cat_txs = await cat_wallet_0.generate_signed_transaction([cat_amt], [ph_1])
     await wallet.wallet_state_manager.add_pending_transaction(cat_txs[0])
     sb = cat_txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
@@ -500,7 +500,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     assert cat_wallet_1
     assert dao_cat_wallet_1
 
-    cat_tx = await cat_wallet_0.generate_signed_transactions([100000], [ph_1])
+    cat_tx = await cat_wallet_0.generate_signed_transaction([100000], [ph_1])
     cat_sb = cat_tx[0].spend_bundle
     await wallet.wallet_state_manager.add_pending_transaction(cat_tx[0])
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
@@ -956,7 +956,7 @@ async def test_dao_proposal_partial_vote(
     assert cat_wallet_1
     assert dao_cat_wallet_1
 
-    cat_tx = await cat_wallet_0.generate_signed_transactions([100000], [ph_1])
+    cat_tx = await cat_wallet_0.generate_signed_transaction([100000], [ph_1])
     cat_sb = cat_tx[0].spend_bundle
     await wallet.wallet_state_manager.add_pending_transaction(cat_tx[0])
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
@@ -1059,7 +1059,7 @@ async def test_dao_proposal_partial_vote(
     # Can we spend the newly minted CATs?
     old_balance = await cat_wallet_0.get_spendable_balance()
     ph_0 = await cat_wallet_0.get_new_inner_hash()
-    cat_tx = await cat_wallet_1.generate_signed_transactions([balance + new_mint_amount], [ph_0])
+    cat_tx = await cat_wallet_1.generate_signed_transaction([balance + new_mint_amount], [ph_0])
     cat_sb = cat_tx[0].spend_bundle
     await wallet_1.wallet_state_manager.add_pending_transaction(cat_tx[0])
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
@@ -1740,7 +1740,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-    cat_tx = await cat_wallet_0.generate_signed_transactions([100000, 100000], [ph_1, ph_2])
+    cat_tx = await cat_wallet_0.generate_signed_transaction([100000, 100000], [ph_1, ph_2])
     cat_sb = cat_tx[0].spend_bundle
     await wallet.wallet_state_manager.add_pending_transaction(cat_tx[0])
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
@@ -2194,7 +2194,7 @@ async def test_dao_reorgs(self_hostname: str, three_wallet_nodes: SimulatorsAndW
     assert cat_wallet_1
     assert dao_cat_wallet_1
 
-    cat_tx = await cat_wallet_0.generate_signed_transactions([100000], [ph_1])
+    cat_tx = await cat_wallet_0.generate_signed_transaction([100000], [ph_1])
     cat_sb = cat_tx[0].spend_bundle
     await wallet.wallet_state_manager.add_pending_transaction(cat_tx[0])
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_sb.name())
