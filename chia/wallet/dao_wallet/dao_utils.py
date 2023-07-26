@@ -35,7 +35,9 @@ SPEND_P2_SINGLETON_MOD: Program = load_clvm("dao_spend_p2_singleton_v2.clsp")
 SPEND_P2_SINGLETON_MOD_HASH: bytes32 = SPEND_P2_SINGLETON_MOD.get_tree_hash()
 DAO_FINISHED_STATE: Program = load_clvm("dao_finished_state.clsp")
 DAO_FINISHED_STATE_HASH: bytes32 = DAO_FINISHED_STATE.get_tree_hash()
-DAO_CAT_TAIL: Program = load_clvm("genesis_by_coin_id_or_singleton.clsp")
+DAO_CAT_TAIL: Program = load_clvm(
+    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+)
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
 DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
 P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")

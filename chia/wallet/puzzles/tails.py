@@ -36,7 +36,7 @@ DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile(
     "delegated_tail.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
 )
 GENESIS_BY_ID_OR_SINGLETON_MOD = load_clvm_maybe_recompile(
-    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.puzzles"
+    "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
 )
 
 
