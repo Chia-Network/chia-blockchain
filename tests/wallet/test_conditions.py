@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Tuple, Type, Union
 
 import pytest
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
+    AssertAnnouncement,
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
     Condition,
+    CreateAnnouncement,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
     UnknownCondition,
     parse_conditions_non_consensus,
 )
@@ -26,7 +34,7 @@ class ConditionSerializations:
         return prog
 
 
-HASH: bytes = bytes(32)
+HASH: bytes32 = bytes32([0] * 32)
 PK: bytes = b"\xc0" + bytes(47)
 AMT: int = 0
 MSG: bytes = bytes(1)
@@ -88,3 +96,29 @@ def test_unknown_condition() -> None:
     assert parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0] == UnknownCondition(
         Program.to(-10), [Program.to(HASH), Program.to(AMT)]
     )
+
+
+@pytest.mark.parametrize(
+    "drivers",
+    [
+        (CreateCoinAnnouncement, AssertCoinAnnouncement),
+        (CreatePuzzleAnnouncement, AssertPuzzleAnnouncement),
+        (CreateAnnouncement, AssertAnnouncement),
+    ],
+)
+def test_announcement_inversions(
+    drivers: Union[
+        Tuple[Type[CreateCoinAnnouncement], Type[AssertCoinAnnouncement]],
+        Tuple[Type[CreatePuzzleAnnouncement], Type[AssertPuzzleAnnouncement]],
+        Tuple[Type[CreateAnnouncement], Type[AssertAnnouncement]],
+    ]
+) -> None:
+    create_driver, assert_driver = drivers
+    if create_driver == CreateAnnouncement and assert_driver == AssertAnnouncement:
+        create_instance = create_driver(MSG, True, HASH)  # type: ignore[call-arg, arg-type]
+        assert_instance = assert_driver(True, None, HASH, MSG)  # type: ignore[call-arg, arg-type]
+    else:
+        create_instance = create_driver(MSG, HASH)  # type: ignore[arg-type]
+        assert_instance = assert_driver(None, HASH, MSG)  # type: ignore[arg-type]
+    assert create_instance.corresponding_assertion() == assert_instance
+    assert assert_instance.corresponding_creation() == create_instance
