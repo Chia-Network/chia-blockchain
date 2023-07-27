@@ -80,7 +80,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
-    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -728,10 +727,6 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -1030,10 +1025,6 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK3_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
