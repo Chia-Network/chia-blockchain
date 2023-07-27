@@ -123,11 +123,13 @@ class TestRpcClients:
     This is important, as we need an easy way to modify the monkey-patched functions.
     """
 
-    farmer_rpc_client: TestFarmerRpcClient = TestFarmerRpcClient()
-    wallet_rpc_client: TestWalletRpcClient = TestWalletRpcClient()
-    full_node_rpc_client: TestFullNodeRpcClient = TestFullNodeRpcClient()
-    data_layer_rpc_client: TestDataLayerRpcClient = TestDataLayerRpcClient()
-    simulator_full_node_rpc_client: TestSimulatorFullNodeRpcClient = TestSimulatorFullNodeRpcClient()
+    farmer_rpc_client: TestFarmerRpcClient = field(default_factory=TestFarmerRpcClient)
+    wallet_rpc_client: TestWalletRpcClient = field(default_factory=TestWalletRpcClient)
+    full_node_rpc_client: TestFullNodeRpcClient = field(default_factory=TestFullNodeRpcClient)
+    data_layer_rpc_client: TestDataLayerRpcClient = field(default_factory=TestDataLayerRpcClient)
+    simulator_full_node_rpc_client: TestSimulatorFullNodeRpcClient = field(
+        default_factory=TestSimulatorFullNodeRpcClient
+    )
 
     def get_client(self, client_type: Type[_T_RpcClient]) -> _T_RpcClient:
         if client_type == FarmerRpcClient:
