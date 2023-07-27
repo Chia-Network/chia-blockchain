@@ -33,7 +33,7 @@ jobs:
       matrix:
         python-version: [3.9]
         os:
-          - runs-on: macos-10.14
+          - runs-on: macos-11
             name: intel
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
@@ -64,6 +64,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MACOSX_DEPLOYMENT_TARGET: 11
 
       - name: Test for secrets access
         id: check_secrets
@@ -138,8 +139,7 @@ jobs:
               echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
               gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
           done
-          tar -xzf *.tar.gz
-          rm *.tar.gz
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 
@@ -154,8 +154,7 @@ jobs:
               echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
               gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
           done
-          tar -xzf *.tar.gz
-          rm *.tar.gz
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 

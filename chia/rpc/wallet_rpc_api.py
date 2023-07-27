@@ -1067,13 +1067,23 @@ class WalletRpcApi:
                 coins[coin_record.coin] = coin_record.parsed_metadata()
                 if len(coins) >= batch_size:
                     tx_id_list.extend(
-                        (await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee, tx_config))
+                        (
+                            await self.service.wallet_state_manager.spend_clawback_coins(
+                                coins, tx_fee, tx_config, request.get("force", False)
+                            )
+                        )
                     )
                     coins = {}
             except Exception as e:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
-            tx_id_list.extend((await self.service.wallet_state_manager.spend_clawback_coins(coins, tx_fee, tx_config)))
+            tx_id_list.extend(
+                (
+                    await self.service.wallet_state_manager.spend_clawback_coins(
+                        coins, tx_fee, tx_config, request.get("force", False)
+                    )
+                )
+            )
         return {
             "success": True,
             "transaction_ids": [tx.hex() for tx in tx_id_list],
