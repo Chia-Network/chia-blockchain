@@ -1493,7 +1493,12 @@ class WalletStateManager:
                             if record.coin_type == CoinType.CLAWBACK:
                                 await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
                                 if len(confirmed_tx_records) == 1 and record.metadata is not None:
-                                    # Cannot find outgoing tx, trying to recover it
+                                    # For a spent Clawback coin we expect to update two TXs.
+                                    # If it only has one TXs to update,
+                                    # then it means the outgoing Clawback transaction is missing.
+                                    # This because of peers returned an unspent coin state during the resync.
+                                    # We need to add the outgoing TX.
+                                    # TODO Fix the outgoing TX missing issue for other coin types
                                     created_timestamp = await self.wallet_node.get_timestamp_for_height(
                                         uint32(coin_state.spent_height)
                                     )
