@@ -33,7 +33,7 @@ jobs:
       matrix:
         python-version: [3.9]
         os:
-          - runs-on: macos-10.14
+          - runs-on: macos-11
             name: intel
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
@@ -64,6 +64,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MACOSX_DEPLOYMENT_TARGET: 11
 
       - name: Test for secrets access
         id: check_secrets
