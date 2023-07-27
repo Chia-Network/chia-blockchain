@@ -61,8 +61,7 @@ async def sign_coin_spends(
                     if secret_key is not None and secret_key.get_g1() == pk:
                         break
                 else:
-                    e_msg = f"no secret key for {pk}"
-                    raise ValueError(e_msg)
+                    raise ValueError(f"no secret key for {pk}")
             signature = AugSchemeMPL.sign(secret_key, msg)
             assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)
