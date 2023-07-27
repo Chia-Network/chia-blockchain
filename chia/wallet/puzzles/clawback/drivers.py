@@ -4,9 +4,9 @@ import logging
 from typing import Any, List, Optional, Set, Union
 
 from blspy import G2Element
-from chia_rs.chia_rs import CoinState
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -201,6 +201,7 @@ async def add_clawback_outgoing_tx(
     metadata: ClawbackMetadata,
 ) -> None:
     # Create Clawback outgoing transaction
+    assert coin_state.spent_height is not None
     clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
     clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
     if await puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
