@@ -720,7 +720,7 @@ class CreateAnnouncement(Condition):
         else:
             coin_not_puzzle = False
             condition = CreatePuzzleAnnouncement.from_program(program, **kwargs)
-            assert isinstance(condition, CreateCoinAnnouncement)
+            assert isinstance(condition, CreatePuzzleAnnouncement)
             origin_id = condition.puzzle_hash
         return cls(
             condition.msg,
