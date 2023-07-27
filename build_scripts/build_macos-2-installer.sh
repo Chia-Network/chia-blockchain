@@ -65,7 +65,7 @@ else
 	export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
 echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11"
-electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
+electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11"
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
