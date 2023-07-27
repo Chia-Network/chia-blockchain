@@ -10,6 +10,7 @@ from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
     Condition,
+    UnknownCondition,
     parse_conditions_non_consensus,
 )
 
@@ -76,7 +77,14 @@ def test_completeness() -> None:
 )
 def test_condition_serialization(serializations: ConditionSerializations, abstractions: bool) -> None:
     condition_driver: Condition = parse_conditions_non_consensus([serializations.program], abstractions=abstractions)[0]
+    assert not isinstance(condition_driver, UnknownCondition)
     as_program: Program = condition_driver.to_program()
     assert as_program.at("f").atom == serializations.opcode
     assert as_program == serializations.program
     assert condition_driver == condition_driver.__class__.from_json_dict(condition_driver.to_json_dict())
+
+
+def test_unknown_condition() -> None:
+    assert parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0] == UnknownCondition(
+        Program.to(-10), [Program.to(HASH), Program.to(AMT)]
+    )
