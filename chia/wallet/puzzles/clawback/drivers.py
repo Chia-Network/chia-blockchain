@@ -3,22 +3,33 @@ from __future__ import annotations
 import logging
 from typing import Any, List, Optional, Set, Union
 
+from blspy import G2Element
+from chia_rs.chia_rs import CoinState
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_for_solution
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.misc import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.merkle_tree import MerkleTree
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import RemarkDataType
+from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
+from chia.wallet.wallet_transaction_store import WalletTransactionStore
 
 P2_1_OF_N = load_clvm_maybe_recompile("p2_1_of_n.clsp")
 P2_CURRIED_PUZZLE_MOD = load_clvm_maybe_recompile("p2_puzzle_hash.clsp")
@@ -179,3 +190,38 @@ def generate_clawback_spend_bundle(
         time_lock, metadata.sender_puzzle_hash, metadata.recipient_puzzle_hash, inner_puzzle, inner_solution
     )
     return CoinSpend(coin, puzzle, solution)
+
+
+async def add_clawback_outgoing_tx(
+    created_timestamp: uint64,
+    puzzle_store: WalletPuzzleStore,
+    tx_store: WalletTransactionStore,
+    coin_state: CoinState,
+    peer: WSChiaConnection,
+    metadata: ClawbackMetadata,
+) -> None:
+    # Create Clawback outgoing transaction
+    clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+    clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
+    if await puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
+        tx_record = TransactionRecord(
+            confirmed_at_height=uint32(coin_state.spent_height),
+            created_at_time=created_timestamp,
+            to_puzzle_hash=metadata.sender_puzzle_hash
+            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+            else metadata.recipient_puzzle_hash,
+            amount=uint64(coin_state.coin.amount),
+            fee_amount=uint64(0),
+            confirmed=True,
+            sent=uint32(0),
+            spend_bundle=clawback_spend_bundle,
+            additions=clawback_spend_bundle.additions(),
+            removals=clawback_spend_bundle.removals(),
+            wallet_id=uint32(1),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_CLAWBACK),
+            name=clawback_spend_bundle.name(),
+            memos=list(compute_memos(clawback_spend_bundle).items()),
+        )
+        await tx_store.add_transaction_record(tx_record)
