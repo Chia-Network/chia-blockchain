@@ -659,6 +659,23 @@ class Remark(Condition):
         )
 
 
+@streamable
+@dataclass(frozen=True)
+class UnknownCondition(Condition):
+    opcode: Program
+    args: List[Program]
+
+    def to_program(self) -> Program:
+        prog: Program = self.opcode.cons(self.args)
+        return prog
+
+    @classmethod
+    def from_program(cls: Type[UnknownCondition], program: Program, **kwargs: Any) -> UnknownCondition:
+        return cls(
+            program.at("f"), [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()]
+        )
+
+
 # Abstractions
 @streamable
 @dataclass(frozen=True)
@@ -959,4 +976,11 @@ def parse_conditions_non_consensus(conditions: Iterable[Program], abstractions: 
     driver_dictionary: Dict[bytes, Type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
-    return [driver_dictionary[condition.at("f").atom].from_program(condition) for condition in conditions]
+    final_condition_list: List[Condition] = []
+    for condition in conditions:
+        try:
+            final_condition_list.append(driver_dictionary[condition.at("f").atom].from_program(condition))
+        except Exception:
+            final_condition_list.append(UnknownCondition.from_program(condition))
+
+    return final_condition_list
