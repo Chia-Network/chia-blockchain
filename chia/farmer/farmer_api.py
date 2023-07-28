@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -13,6 +13,7 @@ from chia.consensus.pot_iterations import calculate_iterations_quality, calculat
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.farmer_protocol import DeclareProofOfSpace, SignedValues
 from chia.protocols.harvester_protocol import (
     PlotSyncDone,
     PlotSyncPathList,
@@ -27,7 +28,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -412,8 +413,176 @@ class FarmerAPI:
 
     @api_request()
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures) -> None:
+        request = self._process_respond_signatures(response)
+        if request is None:
+            return None
+
+        message: Message | None = None
+        if isinstance(request, DeclareProofOfSpace):
+            self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
+            message = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
+        if isinstance(request, SignedValues):
+            message = make_msg(ProtocolMessageTypes.signed_values, request)
+        await self.farmer.server.send_to_all([message], NodeType.FULL_NODE)
+
+    """
+    FARMER PROTOCOL (FARMER <-> FULL NODE)
+    """
+
+    @api_request()
+    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
+        if new_signage_point.challenge_chain_sp not in self.farmer.sps:
+            self.farmer.sps[new_signage_point.challenge_chain_sp] = []
+        if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
+            self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
+            return
+
+        # Mark this SP as known, so we do not process it multiple times
+        self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
+
+        try:
+            pool_difficulties: List[PoolDifficulty] = []
+            for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
+                if pool_dict["pool_config"].pool_url == "":
+                    # Self pooling
+                    continue
+
+                if pool_dict["current_difficulty"] is None:
+                    self.farmer.log.warning(
+                        f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
+                        f"check communication with the pool, skipping this signage point, pool: "
+                        f"{pool_dict['pool_config'].pool_url} "
+                    )
+                    continue
+                pool_difficulties.append(
+                    PoolDifficulty(
+                        pool_dict["current_difficulty"],
+                        self.farmer.constants.POOL_SUB_SLOT_ITERS,
+                        p2_singleton_puzzle_hash,
+                    )
+                )
+            message = harvester_protocol.NewSignagePointHarvester(
+                new_signage_point.challenge_hash,
+                new_signage_point.difficulty,
+                new_signage_point.sub_slot_iters,
+                new_signage_point.signage_point_index,
+                new_signage_point.challenge_chain_sp,
+                pool_difficulties,
+                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
+            )
+
+            msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
+            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
+        except Exception as exception:
+            # Remove here, as we want to reprocess the SP should it be sent again
+            self.farmer.sps[new_signage_point.challenge_chain_sp].remove(new_signage_point)
+
+            raise exception
+        finally:
+            # Age out old 24h information for every signage point regardless
+            # of any failures.  Note that this still lets old data remain if
+            # the client isn't receiving signage points.
+            cutoff_24h = time.time() - (24 * 60 * 60)
+            for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
+                for key in ["points_found_24h", "points_acknowledged_24h"]:
+                    if key not in pool_dict:
+                        continue
+
+                    pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
+
+        now = uint64(int(time.time()))
+        self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
+        missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
+        self.farmer.state_changed(
+            "new_signage_point",
+            {"sp_hash": new_signage_point.challenge_chain_sp, "missing_signage_points": missing_signage_points},
+        )
+
+    @api_request()
+    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> Optional[Message]:
+        if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
+            self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
+            return None
+
+        (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
+            full_node_request.quality_string
+        ]
+        request = harvester_protocol.RequestSignatures(
+            plot_identifier,
+            challenge_hash,
+            sp_hash,
+            [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
+        )
+
+        response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
+        if response is None or not isinstance(response, harvester_protocol.RespondSignatures):
+            self.farmer.log.error(f"Invalid response from harvester {node_id} for request_signatures: {response}")
+            return None
+
+        # Use the same processing as for unsolicited respond signature requests
+        signed_values = self._process_respond_signatures(response)
+        if signed_values is None:
+            return None
+        assert isinstance(signed_values, SignedValues)
+
+        return make_msg(ProtocolMessageTypes.signed_values, signed_values)
+
+    @api_request(peer_required=True)
+    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection) -> None:
+        self.farmer.state_changed(
+            "new_farming_info",
+            {
+                "farming_info": {
+                    "challenge_hash": request.challenge_hash,
+                    "signage_point": request.sp_hash,
+                    "passed_filter": request.passed,
+                    "proofs": request.proofs,
+                    "total_plots": request.total_plots,
+                    "timestamp": request.timestamp,
+                    "node_id": peer.peer_node_id,
+                    "lookup_time": request.lookup_time,
+                }
+            },
+        )
+
+    @api_request(peer_required=True)
+    async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection) -> None:
+        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @api_request(peer_required=True)
+    async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_duplicates(message)
+
+    @api_request(peer_required=True)
+    async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
+
+    def _process_respond_signatures(
+        self, response: harvester_protocol.RespondSignatures
+    ) -> Optional[Union[DeclareProofOfSpace, SignedValues]]:
         """
-        There are two cases: receiving signatures for sps, or receiving signatures for the block.
+        Processing the responded signatures happens when receiving an unsolicited request for an SP or when receiving
+        the signature response for a block from a harvester.
         """
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
@@ -495,7 +664,7 @@ class FarmerAPI:
                         pool_target = None
                         pool_target_signature = None
 
-                    request = farmer_protocol.DeclareProofOfSpace(
+                    return farmer_protocol.DeclareProofOfSpace(
                         response.challenge_hash,
                         challenge_chain_sp,
                         signage_point_index,
@@ -507,11 +676,6 @@ class FarmerAPI:
                         pool_target,
                         pool_target_signature,
                     )
-                    self.farmer.state_changed("proof", {"proof": request, "passed_filter": True})
-                    msg = make_msg(ProtocolMessageTypes.declare_proof_of_space, request)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
-                    return None
-
         else:
             # This is a response with block signatures
             for sk in self.farmer.get_private_keys():
@@ -553,150 +717,10 @@ class FarmerAPI:
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_data_hash, foliage_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_transaction_block_hash, foliage_block_agg_sig)
 
-                    request_to_nodes = farmer_protocol.SignedValues(
+                    return farmer_protocol.SignedValues(
                         computed_quality_string,
                         foliage_agg_sig,
                         foliage_block_agg_sig,
                     )
 
-                    msg = make_msg(ProtocolMessageTypes.signed_values, request_to_nodes)
-                    await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
-
-    """
-    FARMER PROTOCOL (FARMER <-> FULL NODE)
-    """
-
-    @api_request()
-    async def new_signage_point(self, new_signage_point: farmer_protocol.NewSignagePoint) -> None:
-        try:
-            pool_difficulties: List[PoolDifficulty] = []
-            for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-                if pool_dict["pool_config"].pool_url == "":
-                    # Self pooling
-                    continue
-
-                if pool_dict["current_difficulty"] is None:
-                    self.farmer.log.warning(
-                        f"No pool specific difficulty has been set for {p2_singleton_puzzle_hash}, "
-                        f"check communication with the pool, skipping this signage point, pool: "
-                        f"{pool_dict['pool_config'].pool_url} "
-                    )
-                    continue
-                pool_difficulties.append(
-                    PoolDifficulty(
-                        pool_dict["current_difficulty"],
-                        self.farmer.constants.POOL_SUB_SLOT_ITERS,
-                        p2_singleton_puzzle_hash,
-                    )
-                )
-            message = harvester_protocol.NewSignagePointHarvester(
-                new_signage_point.challenge_hash,
-                new_signage_point.difficulty,
-                new_signage_point.sub_slot_iters,
-                new_signage_point.signage_point_index,
-                new_signage_point.challenge_chain_sp,
-                pool_difficulties,
-                uint8(calculate_prefix_bits(self.farmer.constants, new_signage_point.peak_height)),
-            )
-
-            msg = make_msg(ProtocolMessageTypes.new_signage_point_harvester, message)
-            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
-            if new_signage_point.challenge_chain_sp not in self.farmer.sps:
-                self.farmer.sps[new_signage_point.challenge_chain_sp] = []
-        finally:
-            # Age out old 24h information for every signage point regardless
-            # of any failures.  Note that this still lets old data remain if
-            # the client isn't receiving signage points.
-            cutoff_24h = time.time() - (24 * 60 * 60)
-            for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
-                for key in [
-                    "points_found_24h",
-                    "points_acknowledged_24h",
-                    "pool_errors_24h",
-                ]:
-                    if key not in pool_dict:
-                        continue
-
-                    pool_dict[key] = strip_old_entries(pairs=pool_dict[key], before=cutoff_24h)
-
-        if new_signage_point in self.farmer.sps[new_signage_point.challenge_chain_sp]:
-            self.farmer.log.debug(f"Duplicate signage point {new_signage_point.signage_point_index}")
-            return
-
-        now = uint64(int(time.time()))
-        self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
-        self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = now
-        missing_signage_points = self.farmer.check_missing_signage_points(now, new_signage_point)
-        self.farmer.state_changed(
-            "new_signage_point",
-            {"sp_hash": new_signage_point.challenge_chain_sp, "missing_signage_points": missing_signage_points},
-        )
-
-    @api_request()
-    async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues) -> None:
-        if full_node_request.quality_string not in self.farmer.quality_str_to_identifiers:
-            self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
-            return None
-
-        (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
-            full_node_request.quality_string
-        ]
-        request = harvester_protocol.RequestSignatures(
-            plot_identifier,
-            challenge_hash,
-            sp_hash,
-            [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
-        )
-
-        msg = make_msg(ProtocolMessageTypes.request_signatures, request)
-        await self.farmer.server.send_to_specific([msg], node_id)
-
-    @api_request(peer_required=True)
-    async def farming_info(self, request: farmer_protocol.FarmingInfo, peer: WSChiaConnection) -> None:
-        self.farmer.state_changed(
-            "new_farming_info",
-            {
-                "farming_info": {
-                    "challenge_hash": request.challenge_hash,
-                    "signage_point": request.sp_hash,
-                    "passed_filter": request.passed,
-                    "proofs": request.proofs,
-                    "total_plots": request.total_plots,
-                    "timestamp": request.timestamp,
-                    "node_id": peer.peer_node_id,
-                    "lookup_time": request.lookup_time,
-                }
-            },
-        )
-
-    @api_request(peer_required=True)
-    async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: WSChiaConnection) -> None:
-        self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
-
-    @api_request(peer_required=True)
-    async def plot_sync_start(self, message: PlotSyncStart, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_removed(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_invalid(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_duplicates(message)
-
-    @api_request(peer_required=True)
-    async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
-        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
+        return None
