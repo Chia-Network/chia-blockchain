@@ -1,16 +1,16 @@
 name: 📦🚀 Build Installer - Windows 10
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
     inputs:
       release_type:
         description: 'Tagged release testing scenario'
         required: false
         type: choice
         options:
-          - 9.9.9-b1
-          - 9.9.9-rc1
-          - 9.9.9
+        - 9.9.9-b1
+        - 9.9.9-rc1
+        - 9.9.9
   push:
     paths-ignore:
     - '**.md'
