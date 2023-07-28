@@ -93,9 +93,9 @@ def test_condition_serialization(serializations: ConditionSerializations, abstra
 
 
 def test_unknown_condition() -> None:
-    assert parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0] == UnknownCondition(
-        Program.to(-10), [Program.to(HASH), Program.to(AMT)]
-    )
+    unknown_condition: Condition = parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0]
+    assert unknown_condition == UnknownCondition(Program.to(-10), [Program.to(HASH), Program.to(AMT)])
+    assert unknown_condition == UnknownCondition.from_program(unknown_condition.to_program())
 
 
 @pytest.mark.parametrize(
@@ -115,9 +115,21 @@ def test_announcement_inversions(
 ) -> None:
     create_driver, assert_driver = drivers
     if create_driver == CreateAnnouncement and assert_driver == AssertAnnouncement:
+        with pytest.raises(ValueError, match="Must specify either"):
+            assert_driver(True)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="Cannot create"):
+            create_driver(MSG, True).corresponding_assertion()  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="Cannot create"):
+            assert_driver(True, MSG).corresponding_creation()  # type: ignore[arg-type]
         create_instance = create_driver(MSG, True, HASH)  # type: ignore[call-arg, arg-type]
         assert_instance = assert_driver(True, None, HASH, MSG)  # type: ignore[call-arg, arg-type]
     else:
+        with pytest.raises(ValueError, match="Must specify either"):
+            assert_driver()  # type: ignore[call-arg]
+        with pytest.raises(ValueError, match="Cannot create"):
+            create_driver(MSG).corresponding_assertion()  # type: ignore[call-arg]
+        with pytest.raises(ValueError, match="Cannot create"):
+            assert_driver(MSG).corresponding_creation()  # type: ignore[arg-type]
         create_instance = create_driver(MSG, HASH)  # type: ignore[arg-type]
         assert_instance = assert_driver(None, HASH, MSG)  # type: ignore[arg-type]
     assert create_instance.corresponding_assertion() == assert_instance

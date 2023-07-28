@@ -235,7 +235,7 @@ class AssertCoinAnnouncement(Condition):
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self.msg is None and (self.asserted_id is None or self.asserted_msg is None):
+        if self._msg is None and (self.asserted_id is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
@@ -296,7 +296,7 @@ class AssertPuzzleAnnouncement(Condition):
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self.msg is None and (self.asserted_ph is None or self.asserted_msg is None):
+        if self._msg is None and (self.asserted_ph is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
@@ -755,7 +755,7 @@ class AssertAnnouncement(Condition):
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self.msg is None and (self.asserted_origin_id is None or self.asserted_msg is None):
+        if self._msg is None and (self.asserted_origin_id is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
