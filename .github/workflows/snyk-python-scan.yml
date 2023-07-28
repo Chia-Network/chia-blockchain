@@ -38,7 +38,7 @@ jobs:
       run: |
         unset HAS_SNYK_SECRET
         if [ -n "$SNYK_TOKEN" ]; then HAS_SNYK_SECRET='true' ; fi
-        echo HAS_SNYK_SECRET=${HAS_SNYK_SECRET} >> $GITHUB_OUTPUT
+        echo HAS_SNYK_SECRET=${HAS_SNYK_SECRET} >> "$GITHUB_OUTPUT"
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
