@@ -2,12 +2,12 @@ name: 📦🚀 Build Installer - Linux RPM AMD64
 
 on:
   workflow_dispatch:
-  inputs:
-    release_type:
-      description: 'Tagged release testing scenario'
-      required: false
-      type: choice
-      options:
+    inputs:
+      release_type:
+        description: 'Tagged release testing scenario'
+        required: false
+        type: choice
+        options:
         - 9.9.9-b1
         - 9.9.9-rc1
         - 9.9.9
