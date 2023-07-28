@@ -871,15 +871,18 @@ class TestWalletSimulator:
         ] = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
-
         # Resync start
+        wallet_node_1.race_cache.clear()
+        wallet_node_1.race_cache_hashes.clear()
+        wallet_node_2.race_cache.clear()
+        wallet_node_2.race_cache_hashes.clear()
         wallet_node_1._close()
         await wallet_node_1._await_closed()
         wallet_node_2._close()
         await wallet_node_2._await_closed()
         wallet_node_1.config["database_path"] = "wallet/db/blockchain_wallet_v2_test1_CHALLENGE_KEY.sqlite"
         wallet_node_2.config["database_path"] = "wallet/db/blockchain_wallet_v2_test2_CHALLENGE_KEY.sqlite"
-
+        print("Resync")
         # use second node to start the same wallet, reusing config and db
         await wallet_node_1._start()
         assert wallet_node_1._wallet_state_manager

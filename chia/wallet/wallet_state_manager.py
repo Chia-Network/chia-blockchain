@@ -69,11 +69,7 @@ from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.clawback.drivers import (
-    add_clawback_outgoing_tx,
-    generate_clawback_spend_bundle,
-    match_clawback_puzzle,
-)
+from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_manager import TradeManager
@@ -1165,10 +1161,32 @@ class WalletStateManager:
                 self.log.debug("Resync clawback coin: %s", coin_state.coin.name().hex())
                 # Resync case
                 spent_height = uint32(coin_state.spent_height)
+                # Create Clawback outgoing transaction
                 created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.spent_height))
-                await add_clawback_outgoing_tx(
-                    created_timestamp, self.puzzle_store, self.tx_store, coin_state, peer, metadata
-                )
+                clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
+                if await self.puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
+                    tx_record = TransactionRecord(
+                        confirmed_at_height=uint32(coin_state.spent_height),
+                        created_at_time=created_timestamp,
+                        to_puzzle_hash=metadata.sender_puzzle_hash
+                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                        else metadata.recipient_puzzle_hash,
+                        amount=uint64(coin_state.coin.amount),
+                        fee_amount=uint64(0),
+                        confirmed=True,
+                        sent=uint32(0),
+                        spend_bundle=clawback_spend_bundle,
+                        additions=clawback_spend_bundle.additions(),
+                        removals=clawback_spend_bundle.removals(),
+                        wallet_id=uint32(1),
+                        sent_to=[],
+                        trade_id=None,
+                        type=uint32(TransactionType.OUTGOING_CLAWBACK),
+                        name=clawback_spend_bundle.name(),
+                        memos=list(compute_memos(clawback_spend_bundle).items()),
+                    )
+                    await self.tx_store.add_transaction_record(tx_record)
             coin_record = WalletCoinRecord(
                 coin_state.coin,
                 uint32(coin_state.created_height),
@@ -1257,6 +1275,7 @@ class WalletStateManager:
         for coin_name, coin_state in zip(coin_names, coin_states):
             if peer.closed:
                 raise ConnectionError("Connection closed")
+            print(f"{self.wallet_node.logged_in_fingerprint} {coin_state}")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.coin_id_to_record.get(coin_name)
             rollback_wallets = None
@@ -1404,10 +1423,10 @@ class WalletStateManager:
                                 )
                                 to_puzzle_hash = None
                                 coin_spend: Optional[CoinSpend] = None
+                                clawback_metadata: Optional[ClawbackMetadata] = None
                                 # Find coin that doesn't belong to us
                                 amount = 0
-                                for child_state in children:
-                                    coin: Coin = child_state.coin
+                                for coin in additions:
                                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                                         coin.puzzle_hash
                                     )
@@ -1415,13 +1434,14 @@ class WalletStateManager:
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
                                         if coin_spend is None:
+                                            # To prevent unnecessary fetch, we only fetch once,
+                                            # if there is a child coin that is not owned by the wallet.
                                             coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
-
-                                        # Check if this is a Clawback coin
-                                        puzzle: Program = coin_spend.puzzle_reveal.to_program()
-                                        solution: Program = coin_spend.solution.to_program()
-                                        uncurried = uncurry_puzzle(puzzle)
-                                        clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                            # Check if the parent coin is a Clawback coin
+                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
+                                            solution: Program = coin_spend.solution.to_program()
+                                            uncurried = uncurry_puzzle(puzzle)
+                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
                                         if clawback_metadata is not None and known_puzzle_hash:
                                             # Add the Clawback coin as the interested coin for the sender
                                             await self.add_interested_coin_ids([coin.name()])
@@ -1478,6 +1498,8 @@ class WalletStateManager:
                                     await self.tx_store.add_transaction_record(tx_record)
                         else:
                             await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
+                            if record.coin_type == CoinType.CLAWBACK:
+                                await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
                             confirmed_tx_records: List[TransactionRecord] = []
                             for tx_record in all_unconfirmed:
                                 if tx_record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
@@ -1488,25 +1510,9 @@ class WalletStateManager:
                                     for rem_coin in tx_record.removals:
                                         if rem_coin == coin_state.coin:
                                             confirmed_tx_records.append(tx_record)
+
                             for tx_record in confirmed_tx_records:
                                 await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
-                            if record.coin_type == CoinType.CLAWBACK:
-                                await self.interested_store.remove_interested_coin_id(coin_state.coin.name())
-                                if len(confirmed_tx_records) == 1 and record.metadata is not None:
-                                    # For a spent Clawback coin we expect to update two TXs.
-                                    # If it only has one TXs to update,
-                                    # then it means the outgoing Clawback transaction is missing.
-                                    # This because of peers returned an unspent coin state during the resync.
-                                    # We need to add the outgoing TX.
-                                    # TODO Fix the outgoing TX missing issue for other coin types
-                                    created_timestamp = await self.wallet_node.get_timestamp_for_height(
-                                        uint32(coin_state.spent_height)
-                                    )
-                                    metadata: ClawbackMetadata = ClawbackMetadata.from_bytes(record.metadata.blob)
-                                    await add_clawback_outgoing_tx(
-                                        created_timestamp, self.puzzle_store, self.tx_store, coin_state, peer, metadata
-                                    )
-
                         for unconfirmed_record in all_unconfirmed:
                             for rem_coin in unconfirmed_record.removals:
                                 if rem_coin == coin_state.coin:
