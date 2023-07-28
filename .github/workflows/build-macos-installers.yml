@@ -47,7 +47,7 @@ jobs:
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
             glue-name: "build-macos"
-            bladebit-suffix: macos-${{ matrix.os.name }}.tar.gz
+            bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
             name: m1
             file-suffix: "-arm64"
@@ -158,10 +158,10 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           ASSETS=$(gh release view "$LATEST_RELEASE" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
-            if ! echo "$ASSETS" | grep -q 'bladebit.*macos-${{ matrix.os.name }}'; then
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
               LATEST_RELEASE=v2.0.1
             fi
-          gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*-macos-${{ matrix.os.name }}.tar.gz'
+          gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
@@ -176,10 +176,10 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           ASSETS=$(gh release view "$LATEST_BETA" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
-            if ! echo "$ASSETS" | grep -q 'bladebit.*macos-${{ matrix.os.name }}'; then
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
               LATEST_BETA=v2.0.1
             fi
-          gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*-macos-${{ matrix.os.name }}.tar.gz'
+          gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
@@ -194,10 +194,10 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           ASSETS=$(gh release view "$LATEST_RC" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
-            if ! echo "$ASSETS" | grep -q 'bladebit.*macos-${{ matrix.os.name }}'; then
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
               LATEST_RC=v2.0.1
             fi
-          gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*-macos-${{ matrix.os.name }}.tar.gz'
+          gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
@@ -212,10 +212,10 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           ASSETS=$(gh release view "$LATEST_BLADEBIT" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
-            if ! echo "$ASSETS" | grep -q 'bladebit.*macos-${{ matrix.os.name }}'; then
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
               LATEST_BLADEBIT=v2.0.1
             fi
-          gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*-macos-${{ matrix.os.name }}.tar.gz'
+          gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
