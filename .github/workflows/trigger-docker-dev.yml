@@ -28,7 +28,7 @@ jobs:
           unset HAS_SECRET
 
           if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_SECRET='true' ; fi
-          echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
+          echo HAS_SECRET=${HAS_SECRET} >> "$GITHUB_OUTPUT"
         env:
           GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
