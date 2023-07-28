@@ -141,13 +141,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-          mkdir "$GITHUB_WORKSPACE"/madmax"
+          mkdir "$GITHUB_WORKSPACE"/madmax
           gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
           mv chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot
           gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
           mv chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
-          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot"
-          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34"
+          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot
+          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
       - name: Get latest bladebit plotter for Full Release
         if: "github.event.release && !github.event.release.prerelease"
@@ -156,8 +156,8 @@ jobs:
         shell: bash
         run: |
           LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-          mkdir "$GITHUB_WORKSPACE"/bladebit"
-          cd "$GITHUB_WORKSPACE"/bladebit"
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*-macos-x86-64.tar.gz'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
@@ -170,8 +170,8 @@ jobs:
         shell: bash
         run: |
           LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
-          mkdir "$GITHUB_WORKSPACE"/bladebit"
-          cd "$GITHUB_WORKSPACE"/bladebit"
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*-macos-x86-64.tar.gz'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
@@ -184,8 +184,8 @@ jobs:
         shell: bash
         run: |
           LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
-          mkdir "$GITHUB_WORKSPACE"/bladebit"
-          cd "$GITHUB_WORKSPACE"/bladebit"
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*-macos-x86-64.tar.gz'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
@@ -198,8 +198,8 @@ jobs:
         shell: bash
         run: |
           LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-(beta|rc)[0-9]+$")))) | first | .tag_name')
-          mkdir "$GITHUB_WORKSPACE"/bladebit"
-          cd "$GITHUB_WORKSPACE"/bladebit"
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*-macos-x86-64.tar.gz'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
