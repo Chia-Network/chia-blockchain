@@ -230,8 +230,8 @@ jobs:
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
         echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb" "s3://download.chia.net/dev/chia-blockchain_${CHIA_DEV_BUILD}_amd64.deb"
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_amd64.deb"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb" "s3://download.chia.net/dev/chia-blockchain_${CHIA_DEV_BUILD}_amd64.deb"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_amd64.deb"
 
     - name: Create Checksums
       if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
