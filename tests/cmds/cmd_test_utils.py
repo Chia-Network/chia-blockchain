@@ -6,6 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, cast
 
+from blspy import G2Element
+from chia_rs import Coin
+
 import chia.cmds.wallet_funcs
 from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
@@ -18,12 +21,18 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.testing_classes import create_test_block_record
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
+
+logType = Dict[str, Optional[List[Tuple[Any, ...]]]]
 
 
 @dataclass
@@ -46,7 +55,7 @@ class TestRpcClient:
             self.rpc_log[method_name] = []
         self.rpc_log[method_name].append(args)
 
-    def check_log(self, expected_calls: Dict[str, Optional[List[Tuple[Any, ...]]]]) -> None:
+    def check_log(self, expected_calls: logType) -> None:
         for k, v in expected_calls.items():
             assert k in self.rpc_log
             if v is not None:  # None means we don't care about the value used when calling the rpc.
@@ -63,6 +72,44 @@ class TestFarmerRpcClient(TestRpcClient):
 class TestWalletRpcClient(TestRpcClient):
     client_type: Type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
+
+    async def get_wallets(self) -> List[Dict[str, int]]:
+        # we cant start with zero because ints cant have a leading zero
+        if str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
+            w_type = WalletType.STANDARD_WALLET
+        elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
+            w_type = WalletType.CAT
+        elif str(self.fingerprint).startswith(str(WalletType.NFT.value + 1)):
+            w_type = WalletType.NFT
+        elif str(self.fingerprint).startswith(str(WalletType.DECENTRALIZED_ID.value + 1)):
+            w_type = WalletType.DECENTRALIZED_ID
+        elif str(self.fingerprint).startswith(str(WalletType.POOLING_WALLET.value + 1)):
+            w_type = WalletType.POOLING_WALLET
+        else:
+            raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
+        self.add_to_log("get_wallets", ())
+        return [{"id": 1, "type": w_type}]
+
+    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+        self.add_to_log("get_transaction", (wallet_id, transaction_id))
+        return TransactionRecord(
+            confirmed_at_height=uint32(1),
+            created_at_time=uint64(1234),
+            to_puzzle_hash=bytes32([1] * 32),
+            amount=uint64(12345678),
+            fee_amount=uint64(1234567),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=SpendBundle([], G2Element()),
+            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+            wallet_id=uint32(1),
+            sent_to=[("aaaaa", uint8(1), None)],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32([2] * 32),
+            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+        )
 
 
 @dataclass

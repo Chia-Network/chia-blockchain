@@ -101,6 +101,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=False,
     help="Only show clawback transactions",
 )
+@click.option("--testing", is_flag=True, default=False, hidden=True, help="Used by cli tests")
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -112,6 +113,7 @@ def get_transactions_cmd(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
+    testing: bool,
 ) -> None:  # pragma: no cover
     from .wallet_funcs import get_transactions
 
@@ -130,13 +132,14 @@ def get_transactions_cmd(
         )
     )
 
-    # The flush/close avoids output like below when piping through `head -n 1`
-    # which will close stdout.
-    #
-    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
-    # BrokenPipeError: [Errno 32] Broken pipe
-    sys.stdout.flush()
-    sys.stdout.close()
+    if not testing:
+        # The flush/close avoids output like below when piping through `head -n 1`
+        # which will close stdout.
+        #
+        # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+        # BrokenPipeError: [Errno 32] Broken pipe
+        sys.stdout.flush()
+        sys.stdout.close()
 
 
 @wallet_cmd.command("send", help="Send chia to another wallet")
