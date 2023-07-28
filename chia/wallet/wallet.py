@@ -194,7 +194,7 @@ class Wallet:
         fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
-        condition_list = []
+        condition_list: List[Any] = [condition.to_program() for condition in conditions]
         if len(primaries) > 0:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
@@ -212,7 +212,6 @@ class Wallet:
         if puzzle_announcements_to_assert:
             for announcement_hash in puzzle_announcements_to_assert:
                 condition_list.append(make_assert_puzzle_announcement(announcement_hash))
-        condition_list.extend([condition.to_program() for condition in conditions])
         return solution_for_conditions(condition_list)
 
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
