@@ -23,6 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -727,16 +728,9 @@ class NFTWallet:
             announcement_to_make = None
             chia_tx = None
 
-        innersol: Program = self.standard_wallet.make_solution(
-            primaries=payments,
-            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
-            coin_announcements_to_assert=coin_announcements_bytes,
-            puzzle_announcements_to_assert=puzzle_announcements_bytes,
-        )
-
+        extra_conditions: List[Condition] = []
         unft = UncurriedNFT.uncurry(*nft_coin.full_puzzle.uncurry())
         assert unft is not None
-        magic_condition = None
         if unft.supports_did:
             if new_owner is None:
                 # If no new owner was specified and we're sending this to ourselves, let's not reset the DID
@@ -747,13 +741,35 @@ class NFTWallet:
                 )
                 if derivation_record is not None:
                     new_owner = unft.owner_did
-            magic_condition = Program.to([-10, new_owner, trade_prices_list, new_did_inner_hash])
-        if metadata_update:
-            # We don't support update metadata while changing the ownership
-            magic_condition = Program.to([-24, NFT_METADATA_UPDATER, metadata_update])
-        if magic_condition:
-            # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-            innersol = Program.to([[], (1, magic_condition.cons(innersol.at("rfr"))), []])
+            extra_conditions.append(
+                UnknownCondition(
+                    opcode=Program.to(-10),
+                    args=[
+                        Program.to(new_owner),
+                        Program.to(trade_prices_list),
+                        Program.to(new_did_inner_hash),
+                    ],
+                )
+            )
+        if metadata_update is not None:
+            extra_conditions.append(
+                UnknownCondition(
+                    opcode=Program.to(-24),
+                    args=[
+                        NFT_METADATA_UPDATER,
+                        Program.to(metadata_update),
+                    ],
+                )
+            )
+
+        innersol: Program = self.standard_wallet.make_solution(
+            primaries=payments,
+            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
+            coin_announcements_to_assert=coin_announcements_bytes,
+            puzzle_announcements_to_assert=puzzle_announcements_bytes,
+            conditions=extra_conditions,
+        )
+
         if unft.supports_did:
             innersol = Program.to([innersol])
 

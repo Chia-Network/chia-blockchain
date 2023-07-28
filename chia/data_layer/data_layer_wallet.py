@@ -25,6 +25,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import UnknownCondition
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -543,11 +544,18 @@ class DataLayerWallet:
             puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_consume}
             if puzzle_announcements_to_consume is not None
             else None,
+            conditions=[
+                UnknownCondition(
+                    opcode=Program.to(-24),
+                    args=[
+                        ACS_MU,
+                        Program.to([[(root_hash, None), ACS_MU_PH], None]),
+                    ],
+                )
+            ]
+            if root_hash != singleton_record.root
+            else [],
         )
-        if root_hash != singleton_record.root:
-            magic_condition = Program.to([-24, ACS_MU, [[Program.to((root_hash, None)), ACS_MU_PH], None]])
-            # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-            inner_sol = Program.to([[], (1, magic_condition.cons(inner_sol.at("rfr"))), []])
         db_layer_sol = Program.to([inner_sol])
         full_sol = Program.to(
             [

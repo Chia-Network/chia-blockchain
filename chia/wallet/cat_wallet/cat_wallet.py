@@ -33,6 +33,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
+from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
@@ -717,7 +718,21 @@ class CATWallet:
         chia_tx = None
         first = True
         announcement: Announcement
+
         for coin in cat_coins:
+            extra_conditions: List[Condition] = []
+            if cat_discrepancy is not None:
+                extra_conditions.append(
+                    UnknownCondition(
+                        opcode=Program.to(51),
+                        args=[
+                            Program.to(None),
+                            Program.to(-113),
+                            tail_reveal,
+                            tail_solution,
+                        ],
+                    )
+                )
             if first:
                 first = False
                 announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
@@ -737,6 +752,7 @@ class CATWallet:
                             coin_announcements={announcement.message},
                             coin_announcements_to_assert=coin_announcements_bytes,
                             puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                            conditions=extra_conditions,
                         )
                     elif regular_chia_to_claim > fee:
                         chia_tx, _ = await self.create_tandem_xch_tx(
@@ -751,6 +767,7 @@ class CATWallet:
                             primaries=primaries,
                             coin_announcements={announcement.message},
                             coin_announcements_to_assert={announcement.name()},
+                            conditions=extra_conditions,
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
@@ -758,16 +775,12 @@ class CATWallet:
                         coin_announcements={announcement.message},
                         coin_announcements_to_assert=coin_announcements_bytes,
                         puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                        conditions=extra_conditions,
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
                     coin_announcements_to_assert={announcement.name()},
-                )
-            if cat_discrepancy is not None:
-                # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-                innersol = Program.to(
-                    [[], (1, Program.to([51, None, -113, tail_reveal, tail_solution]).cons(innersol.at("rfr"))), []]
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)

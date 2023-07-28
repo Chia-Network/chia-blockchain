@@ -20,6 +20,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import UnknownCondition
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
@@ -294,7 +295,7 @@ class VCWallet:
             puzzle_announcements=puzzle_announcements,
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
-            magic_conditions=[magic_condition],
+            conditions=[UnknownCondition.from_program(magic_condition)],
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
         spend_bundles = [await self.wallet_state_manager.sign_transaction([coin_spend])]
