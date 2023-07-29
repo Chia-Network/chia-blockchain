@@ -331,7 +331,7 @@ def recurse_jsonify(d: Any) -> Any:
         return d
     elif isinstance(d, int):
         return int(d)
-    elif d is None or type(d) == str:
+    elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()

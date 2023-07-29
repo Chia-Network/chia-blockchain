@@ -418,12 +418,12 @@ def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
         if is_type_SpecificOptional(type_in):
             return item is None or validate_item_type(get_args(type_in)[0], item)
         if is_type_Tuple(type_in):
-            assert type(item) == tuple
+            assert type(item) is tuple
             types = get_args(type_in)
             return all(validate_item_type(tuple_type, tuple_item) for tuple_type, tuple_item in zip(types, item))
         if is_type_List(type_in):
             list_type = get_args(type_in)[0]
-            assert type(item) == list
+            assert type(item) is list
             return all(validate_item_type(list_type, list_item) for list_item in item)
         return isinstance(item, type_in)
 
