@@ -22,6 +22,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import get_host_parameter_limit
+from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.conftest import Mode
@@ -56,6 +57,11 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, conse
             await store.add_full_block(block.header_hash, block, block_record)
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)
+            assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
+            assert GeneratorBlockInfo(
+                block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
+            ) == await store.get_block_info(block.header_hash)
+            assert block.transactions_generator == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
@@ -423,3 +429,10 @@ async def test_get_plot_filer_info(
                 block_record = block_records_dict[full_b.header_hash]
                 assert block_record.pos_ss_cc_challenge_hash == full_b.reward_chain_block.pos_ss_cc_challenge_hash
                 assert block_record.cc_sp_hash == expected_cc_sp
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="BlockStore does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await BlockStore.create(db_wrapper)
