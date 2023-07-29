@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from pathlib import Path
 from typing import Optional
 
 import pytest
@@ -407,3 +408,10 @@ class TestBlockHeightMap:
             assert height_map.get_ses(6) == gen_ses(6)
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(8)
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="BlockHeightMap does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
