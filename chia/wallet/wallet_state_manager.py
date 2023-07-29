@@ -1275,7 +1275,6 @@ class WalletStateManager:
         for coin_name, coin_state in zip(coin_names, coin_states):
             if peer.closed:
                 raise ConnectionError("Connection closed")
-            print(f"{self.wallet_node.logged_in_fingerprint} {coin_state}")
             self.log.debug("Add coin state: %s: %s", coin_name, coin_state)
             local_record = local_records.coin_id_to_record.get(coin_name)
             rollback_wallets = None

@@ -882,7 +882,7 @@ class TestWalletSimulator:
         await wallet_node_2._await_closed()
         wallet_node_1.config["database_path"] = "wallet/db/blockchain_wallet_v2_test1_CHALLENGE_KEY.sqlite"
         wallet_node_2.config["database_path"] = "wallet/db/blockchain_wallet_v2_test2_CHALLENGE_KEY.sqlite"
-        print("Resync")
+
         # use second node to start the same wallet, reusing config and db
         await wallet_node_1._start()
         assert wallet_node_1._wallet_state_manager
@@ -939,7 +939,7 @@ class TestWalletSimulator:
         assert outgoing_clawback_txs[1].confirmed
 
         # transactions should be the same
-        print(before_txs)
+
         assert (
             before_txs["sender"][TransactionType.OUTGOING_CLAWBACK]
             == after_txs["sender"][TransactionType.OUTGOING_CLAWBACK]
