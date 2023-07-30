@@ -1294,6 +1294,7 @@ class FullNode:
             and block.foliage.prev_block_hash != self.constants.GENESIS_CHALLENGE
             and block.reward_chain_block.proof_of_space.pool_public_key is not None
         ):
+            assert block.foliage.foliage_block_data.pool_signature is not None
             if not AugSchemeMPL.verify(
                 block.reward_chain_block.proof_of_space.pool_public_key,
                 bytes(block.foliage.foliage_block_data.pool_target),

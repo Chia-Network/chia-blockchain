@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
@@ -42,12 +42,12 @@ def get_pairings(
                 pk_parsed = G1Element.from_bytes(pks[i])
                 pk_bytes_to_g1[pks[i]] = pk_parsed
 
-            pairing = pk_parsed.pair(aug_hash)
+            pairing = aug_hash.pair(pk_parsed)
 
             h = std_hash(aug_msg)
             cache.put(h, pairing)
             pairings[i] = pairing
-    return pairings
+    return cast(List[GTElement], pairings)
 
 
 # Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.
