@@ -5,18 +5,17 @@
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-beta.json&query=%24.message&logo=chianetwork&logoColor=black&label=Latest%20Beta&labelColor=%23e9fbbc&color=%231e2b2es)
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-rc.json&query=%24.message&logo=chianetwork&logoColor=white&label=Latest%20RC&labelColor=%230d3349&color=%23474748s)
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data.json&query=%24.message&logo=chianetwork&label=Latest%20Release&labelColor=%231e2b2e&color=%230d3349s)
-#![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-beta.json&query=%24.message&logo=chianetwork&logoColor=%23e9fbbc&label=Latest%20Beta&labelColor=%23474748&color=%231e2b2e&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases)
 ![Coveralls](https://img.shields.io/coverallsCoverage/github/Chia-Network/chia-blockchain?logo=Coveralls&logoColor=red)
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Chia-Network/chia-blockchain?logo=GitHub)
 ![GitHub all releases](https://img.shields.io/github/downloads/Chia-Network/chia-blockchain/total?logo=GitHub)
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 ![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UChFkJ3OAUvnHZdiQISWdWPA?style=flat-square&logo=youtube&logoColor=%23ff0000&labelColor=%230f0f0f&color=%23272727)
-#[![YouTube](https://img.shields.io/badge/subscribers-8.78k-red?logo=youtube&style=flat)](https://www.youtube.com/@Chia-Network)
 [![Chia Discord](https://dcbadge.vercel.app/api/server/chia?style=flat&theme=full-presence)](https://discord.gg/chia)
 ![Twitter Follow](https://img.shields.io/twitter/follow/chia_project?style=flat-square&logo=x.org&logoColor=white&labelColor=black)
 ![Subreddit subscribers](https://img.shields.io/reddit/subreddit-subscribers/chia?style=flat-square&logo=reddit&labelColor=%230b1416&color=%23222222)
+<!-- #![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdownload.chia.net%2Flatest%2Fbadge-data-beta.json&query=%24.message&logo=chianetwork&logoColor=%23e9fbbc&label=Latest%20Beta&labelColor=%23474748&color=%231e2b2e&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases&link=https%3A%2F%2Fgithub.com%2FChia-Network%2Fchia-blockchain%2Freleases)>
 <!-- ![Discord Shield](https://discordapp.com/api/guilds/1034523881404370984/widget.png?style=shield>
-[![Discord](https://img.shields.io/discord/1034523881404370984.svg?label=Discord&logo=discord&colorB=1e2b2f)](https://discord.gg/chia) -->
+<!-- [![Discord](https://img.shields.io/discord/1034523881404370984.svg?label=Discord&logo=discord&colorB=1e2b2f)](https://discord.gg/chia) -->
 
 Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure. Here are some of the features and benefits:
 * [Proof of space and time](https://docs.google.com/document/d/1tmRIb7lgi4QfKkNaxuKOBHRmwbVlGL4f7EsBDr_5xZE/edit) based consensus which allows anyone to farm with commodity hardware
