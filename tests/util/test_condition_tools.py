@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin

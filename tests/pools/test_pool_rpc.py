@@ -13,7 +13,7 @@ import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode

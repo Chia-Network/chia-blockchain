@@ -4,7 +4,7 @@ import dataclasses
 from typing import Any, Dict, List
 
 import pytest
-from blspy import G2Element
+from chia_rs import G2Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

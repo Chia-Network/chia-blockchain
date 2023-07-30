@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

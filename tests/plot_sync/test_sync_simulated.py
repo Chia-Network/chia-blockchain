@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pytest
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI

@@ -5,8 +5,7 @@ import logging
 from typing import Callable, List, Optional, Tuple
 
 import pytest
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.constants import ConsensusConstants

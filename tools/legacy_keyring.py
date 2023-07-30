@@ -9,7 +9,7 @@ import sys
 from typing import Callable, List, Union, cast
 
 import click
-from blspy import G1Element
+from chia_rs import G1Element
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 

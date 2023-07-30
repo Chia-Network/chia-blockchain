@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from blspy import G2Element
-from chia_rs import Coin
+from chia_rs import Coin, G2Element
 
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program

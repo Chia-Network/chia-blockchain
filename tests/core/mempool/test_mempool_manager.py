@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import pytest
-from blspy import G1Element, G2Element
-from chia_rs import ELIGIBLE_FOR_DEDUP
+from chia_rs import ELIGIBLE_FOR_DEDUP, G1Element, G2Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.constants import ConsensusConstants

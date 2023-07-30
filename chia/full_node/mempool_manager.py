@@ -9,8 +9,7 @@ from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 
-from blspy import GTElement
-from chia_rs import ELIGIBLE_FOR_DEDUP
+from chia_rs import ELIGIBLE_FOR_DEDUP, GTElement
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol

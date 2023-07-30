@@ -6,8 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
-from blspy import AugSchemeMPL, G2Element
-from chia_rs import Coin
+from chia_rs import AugSchemeMPL, Coin, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
