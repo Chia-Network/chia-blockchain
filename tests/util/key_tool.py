@@ -31,9 +31,7 @@ class KeyTool(dict):
         conditions_dict = conditions_dict_for_solution(
             coin_spend.puzzle_reveal, coin_spend.solution, test_constants.MAX_BLOCK_COST_CLVM
         )
-        for public_key, message in pkm_pairs_for_conditions_dict(
-            conditions_dict, coin_spend.coin.name(), additional_data
-        ):
+        for public_key, message in pkm_pairs_for_conditions_dict(conditions_dict, coin_spend.coin, additional_data):
             signature = self.sign(public_key, message)
             signatures.append(signature)
         return AugSchemeMPL.aggregate(signatures)

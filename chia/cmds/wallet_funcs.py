@@ -694,31 +694,6 @@ async def take_offer(
             print("Please enter a valid offer file or hex blob")
             return
 
-        ###
-        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-        # There's also temp code in test_wallet_rpc.py and wallet_rpc_api.py
-        from chia.types.spend_bundle import SpendBundle
-        from chia.util.bech32m import bech32_decode, convertbits
-        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
-
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
-        if data is None:
-            raise ValueError("Invalid Offer")
-        decoded = convertbits(list(data), 5, 8, False)
-        decoded_bytes = bytes(decoded)
-        try:
-            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
-        except TypeError:
-            decompressed_bytes = decoded_bytes
-        bundle = SpendBundle.from_bytes(decompressed_bytes)
-        for spend in bundle.coin_spends:
-            mod, _ = spend.puzzle_reveal.to_program().uncurry()
-            if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
-            ):
-                raise ValueError("CAT1s are no longer supported")
-        ###
-
         offered, requested, _ = offer.summary()
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         network_xch = AddressType.XCH.hrp(config).upper()
@@ -1387,7 +1362,7 @@ async def sign_message(
 
 
 async def spend_clawback(
-    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str
+    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str, force: bool = False
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         tx_ids = []
@@ -1399,7 +1374,7 @@ async def spend_clawback(
         if fee < 0:
             print("Batch fee cannot be negative.")
             return
-        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]))
+        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]), force)
         print(str(response))
 
 

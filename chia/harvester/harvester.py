@@ -15,6 +15,13 @@ from chia.consensus.constants import ConsensusConstants
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
+    DEFAULT_DECOMPRESSOR_THREAD_COUNT,
+    DEFAULT_DISABLE_CPU_AFFINITY,
+    DEFAULT_ENFORCE_GPU_INDEX,
+    DEFAULT_GPU_INDEX,
+    DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED,
+    DEFAULT_PARALLEL_DECOMPRESSOR_COUNT,
+    DEFAULT_USE_GPU_HARVESTING,
     HarvestingMode,
     PlotRefreshEvents,
     PlotRefreshResult,
@@ -85,15 +92,17 @@ class Harvester:
         self.state_changed_callback: Optional[StateChangedProtocol] = None
         self.parallel_read: bool = config.get("parallel_read", True)
 
-        context_count = config.get("parallel_decompressor_count", 5)
-        thread_count = config.get("decompressor_thread_count", 0)
+        context_count = config.get("parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT)
+        thread_count = config.get("decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT)
         if thread_count == 0:
             thread_count = multiprocessing.cpu_count() // 2
-        disable_cpu_affinity = config.get("disable_cpu_affinity", False)
-        max_compression_level_allowed = config.get("max_compression_level_allowed", 7)
-        use_gpu_harvesting = config.get("use_gpu_harvesting", False)
-        gpu_index = config.get("gpu_index", 0)
-        enforce_gpu_index = config.get("enforce_gpu_index", False)
+        disable_cpu_affinity = config.get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY)
+        max_compression_level_allowed = config.get(
+            "max_compression_level_allowed", DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED
+        )
+        use_gpu_harvesting = config.get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING)
+        gpu_index = config.get("gpu_index", DEFAULT_GPU_INDEX)
+        enforce_gpu_index = config.get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX)
 
         try:
             self._mode = self.plot_manager.configure_decompressor(

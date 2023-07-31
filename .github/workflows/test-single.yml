@@ -113,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.30.0
 
     steps:
       - name: Configure git
@@ -183,6 +183,7 @@ jobs:
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
+
       - name: Checkout test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
         env:
@@ -201,6 +202,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          editable: false
           legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
@@ -211,11 +213,19 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Move chia/ so we test the installed code
+        run: |
+          mv chia/ notchia/
+
       - name: Test blockchain code with pytest
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
           pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+
+      - name: Move back to chia/ for coverage
+        run: |
+          mv notchia/ chia/
 
       - name: Process coverage data
         run: |

@@ -19,6 +19,7 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, get_plot_id, passes_plot_filter
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
@@ -60,6 +61,40 @@ async def validate_block_body(
         assert height == block.height
     prev_transaction_block_height: uint32 = uint32(0)
     prev_transaction_block_timestamp: uint64 = uint64(0)
+
+    # We repeat the ProofOfSpace check from block header validation here, because we want to fetch blocks
+    # from the database too (BlockStore). In `BlockHeaderValidation` we don't have access to the database,
+    # just the cache. This check makes sure we retrieve blocks from the database and perform the check with them,
+    # in case they were missing from the cache.
+    if height >= constants.SOFT_FORK3_HEIGHT:
+        curr_optional_block_record: Optional[BlockRecord] = await blocks.get_block_record_from_db(
+            block.prev_header_hash
+        )
+        plot_id = get_plot_id(block.reward_chain_block.proof_of_space)
+        if block.reward_chain_block.challenge_chain_sp_vdf is None:
+            # Edge case of first sp (start of slot), where sp_iters == 0
+            curr_sp: bytes32 = block.reward_chain_block.pos_ss_cc_challenge_hash
+        else:
+            curr_sp = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+        sp_count = 1
+
+        while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
+            prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
+
+            if curr_optional_block_record.cc_sp_hash != curr_sp:
+                if passes_plot_filter(
+                    prefix_bits,
+                    plot_id,
+                    curr_optional_block_record.pos_ss_cc_challenge_hash,
+                    curr_optional_block_record.cc_sp_hash,
+                ):
+                    log.error(f"Chip-13 Block Failed at height: {height}")
+                    return Err.INVALID_POSPACE, None
+
+                sp_count += 1
+                curr_sp = curr_optional_block_record.cc_sp_hash
+            if sp_count < constants.UNIQUE_PLOTS_WINDOW:
+                curr_optional_block_record = await blocks.get_block_record_from_db(curr_optional_block_record.prev_hash)
 
     # 1. For non transaction-blocs: foliage block, transaction filter, transactions info, and generator must
     # be empty. If it is a block but not a transaction block, there is no body to validate. Check that all fields are

@@ -198,13 +198,11 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
 
                 selected_fingerprint = fp
 
-            if selected_fingerprint is not None:
-                log_in_response = await wallet_client.log_in(selected_fingerprint)
+        if selected_fingerprint is not None:
+            log_in_response = await wallet_client.log_in(selected_fingerprint)
 
-                if log_in_response["success"] is False:
-                    raise CliRpcConnectionError(
-                        f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}"
-                    )
+            if log_in_response["success"] is False:
+                raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}")
     finally:
         # Closing the keychain proxy takes a moment, so we wait until after the login is complete
         if keychain_proxy is not None:

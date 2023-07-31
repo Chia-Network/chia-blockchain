@@ -47,6 +47,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derive_keys import find_owner_sk
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -473,19 +474,23 @@ class PoolWallet:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
             s = find_owner_sk([self.wallet_state_manager.private_key], pk)
             if s is None:
-                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+                # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
+                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
             if owner_sk is None:
-                return self.standard_wallet.secret_key_store.secret_key_for_public_key(pk)
+                # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
+                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
             return owner_sk
 
         return await sign_coin_spends(
             [coin_spend],
             pk_to_sk,
+            self.wallet_state_manager.get_synthetic_private_key_for_puzzle_hash,
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            [puzzle_hash_for_synthetic_public_key],
         )
 
     async def generate_fee_transaction(

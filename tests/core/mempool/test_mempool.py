@@ -6,7 +6,7 @@ import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
-from blspy import G1Element, G2Element
+from blspy import G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 
@@ -31,7 +31,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -42,10 +42,9 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.api_decorators import api_request
-from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
-from chia.util.errors import ConsensusError, Err
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
@@ -2563,192 +2562,6 @@ class TestMaliciousGenerators:
 @pytest.fixture(name="softfork", scope="function", params=[False, True])
 def softfork_fixture(request):
     return request.param
-
-
-class TestPkmPairs:
-    h1 = bytes32(b"a" * 32)
-    h2 = bytes32(b"b" * 32)
-    h3 = bytes32(b"c" * 32)
-    h4 = bytes32(b"d" * 32)
-    h5 = bytes32(b"e" * 32)
-    h6 = bytes32(b"f" * 32)
-
-    pk1 = G1Element.generator()
-    pk2 = G1Element.generator()
-
-    def test_empty_list(self):
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar")
-        assert pks == []
-        assert msgs == []
-
-    def test_no_agg_sigs(self):
-        # one create coin: h1 amount: 1 and not hint
-        spends = [
-            Spend(
-                self.h3,
-                self.h5,
-                self.h4,
-                123,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                [(self.h1, 1, b"")],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                0,
-            )
-        ]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar")
-        assert pks == []
-        assert msgs == []
-
-    def test_agg_sig_me(self):
-        spends = [
-            Spend(
-                self.h1,
-                self.h6,
-                self.h2,
-                123,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                [],
-                [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                0,
-            )
-        ]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar")
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
-        assert msgs == [b"msg1" + self.h1 + b"foobar", b"msg2" + self.h1 + b"foobar"]
-
-    def test_agg_sig_unsafe(self):
-        conds = SpendBundleConditions(
-            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
-        )
-        pks, msgs = pkm_pairs(conds, b"foobar")
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk1), bytes(self.pk2)]
-        assert msgs == [b"msg1", b"msg2"]
-
-    def test_agg_sig_mixed(self):
-        spends = [
-            Spend(
-                self.h1,
-                self.h5,
-                self.h2,
-                123,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                [],
-                [(bytes48(self.pk1), b"msg1")],
-                [],
-                [],
-                [],
-                [],
-                [],
-                [],
-                0,
-            )
-        ]
-        conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [(bytes48(self.pk2), b"msg2")], 0, 0, 0)
-        pks, msgs = pkm_pairs(conds, b"foobar")
-        assert [bytes(pk) for pk in pks] == [bytes(self.pk2), bytes(self.pk1)]
-        assert msgs == [b"msg2", b"msg1" + self.h1 + b"foobar"]
-
-    def test_agg_sig_unsafe_restriction(self) -> None:
-        conds = SpendBundleConditions(
-            [], 0, 0, 0, None, None, [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")], 0, 0, 0
-        )
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"sg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg2")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"g2")
-
-
-class TestPkmPairsForConditionDict:
-    h1 = bytes32(b"a" * 32)
-
-    pk1 = G1Element.generator()
-    pk2 = G1Element.generator()
-
-    def test_agg_sig_unsafe_restriction(self) -> None:
-        ASU = ConditionOpcode.AGG_SIG_UNSAFE
-
-        conds = {ASU: [ConditionWithArgs(ASU, [self.pk1, b"msg1"]), ConditionWithArgs(ASU, [self.pk2, b"msg2"])]}
-        tuples = pkm_pairs_for_conditions_dict(conds, self.h1, b"msg10")
-        assert tuples == [(bytes48(self.pk1), b"msg1"), (bytes48(self.pk2), b"msg2")]
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, self.h1, b"msg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, self.h1, b"sg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, self.h1, b"msg2")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs_for_conditions_dict(conds, self.h1, b"g2")
-
-
-class TestParseSexpCondition:
-    def test_basic(self) -> None:
-        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"foo", b"bar"]]))
-        assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"foo", b"bar"])]
-
-    def test_oversized_op(self) -> None:
-        with pytest.raises(ConsensusError):
-            parse_sexp_to_conditions(Program.to([[bytes([49, 49]), b"foo", b"bar"]]))
-
-    def test_empty_op(self) -> None:
-        with pytest.raises(ConsensusError):
-            parse_sexp_to_conditions(Program.to([[b"", b"foo", b"bar"]]))
-
-    def test_list_op(self) -> None:
-        with pytest.raises(ConsensusError):
-            parse_sexp_to_conditions(Program.to([[[bytes([49])], b"foo", b"bar"]]))
-
-    def test_list_arg(self) -> None:
-        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), [b"foo", b"bar"]]]))
-        assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [])]
-
-    def test_list_arg_truncate(self) -> None:
-        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"baz", [b"foo", b"bar"]]]))
-        assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"baz"])]
-
-    def test_arg_limit(self) -> None:
-        conds = parse_sexp_to_conditions(Program.to([[bytes([49]), b"1", b"2", b"3", b"4", b"5", b"6"]]))
-        assert conds == [ConditionWithArgs(ConditionOpcode.AGG_SIG_UNSAFE, [b"1", b"2", b"3", b"4"])]
 
 
 coins = make_test_coins()

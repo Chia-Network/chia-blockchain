@@ -271,7 +271,7 @@ While tests are still critical to confirm that the proper _values_ are created, 
 Our goal is to reach complete hinting coverage on all code with relatively strict mypy configuration.
 This provides a rigorous level of checking for basic errors such as accessible unavailable attributes, mixing different types of elements in lists, treating a list as if it is a dict, and so on.
 
-Note that as of Python 3.9 there were some broad changes implemented that allowed for hinting with the builting `list[int]` as opposed to `typing.List[int]`.
+Note that as of Python 3.9 there were some broad changes implemented that allowed for hinting with the builtin `list[int]` as opposed to `typing.List[int]`.
 Also, in new Python versions `Union[str, int]` can be written as `str | int`.
 While it is possible to some degree for us to use those forms despite running in older Python versions, we will not presently be using the newer forms.
 
