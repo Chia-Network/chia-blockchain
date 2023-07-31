@@ -132,5 +132,6 @@ def test_announcement_inversions(
             assert_driver(MSG).corresponding_creation()  # type: ignore[arg-type]
         create_instance = create_driver(MSG, HASH)  # type: ignore[arg-type]
         assert_instance = assert_driver(None, HASH, MSG)  # type: ignore[arg-type]
+    assert_instance.to_program()  # Verifying that even without a specific message, we can still calculate the condition
     assert create_instance.corresponding_assertion() == assert_instance
     assert assert_instance.corresponding_creation() == create_instance
