@@ -109,9 +109,9 @@ async def test_timelord_new_peak_heavier_unfinished(bt, timelord, default_1000_b
         blk = b1.block_record(blocks_1[-1].header_hash)
         while blk.first_in_sub_slot is False:
             blk = b1.block_record(blocks_1[-1].prev_header_hash)
-        full_blk = await b1.get_full_peak()
+        full_blk = await b1.get_full_block(blk.header_hash)
         sub_slot = None
-        for index, (s, _, _) in enumerate(full_blk.finished_sub_slots):
+        for s in full_blk.finished_sub_slots:
             if s is not None and s.challenge_chain.get_hash() == block.reward_chain_block.pos_ss_cc_challenge_hash:
                 sub_slot = s
         if sub_slot is None:
