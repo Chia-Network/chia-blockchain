@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Type, Union
+from typing import Any, List, Tuple, Type, Union
 
 import pytest
+from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -19,6 +20,7 @@ from chia.wallet.conditions import (
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
     UnknownCondition,
+    conditions_from_json_dicts,
     parse_conditions_non_consensus,
 )
 
@@ -27,6 +29,8 @@ from chia.wallet.conditions import (
 class ConditionSerializations:
     opcode: bytes
     program_args: Program
+    json_keys: List[str]
+    json_args: List[Any]
 
     @property
     def program(self) -> Program:
@@ -35,9 +39,12 @@ class ConditionSerializations:
 
 
 HASH: bytes32 = bytes32([0] * 32)
+HASH_HEX: str = HASH.hex()
 PK: bytes = b"\xc0" + bytes(47)
+PK_HEX: str = PK.hex()
 AMT: int = 0
 MSG: bytes = bytes(1)
+MSG_HEX: str = MSG.hex()
 
 
 def test_completeness() -> None:
@@ -48,43 +55,83 @@ def test_completeness() -> None:
 @pytest.mark.parametrize(
     "serializations",
     [
-        ConditionSerializations(ConditionOpcode.AGG_SIG_PARENT, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_PUZZLE, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_AMOUNT, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_PARENT_AMOUNT, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_PARENT_PUZZLE, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_UNSAFE, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.AGG_SIG_ME, Program.to([PK, MSG])),
-        ConditionSerializations(ConditionOpcode.CREATE_COIN, Program.to([HASH, AMT, [MSG]])),
-        ConditionSerializations(ConditionOpcode.RESERVE_FEE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, Program.to([MSG])),
-        ConditionSerializations(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, Program.to([MSG])),
-        ConditionSerializations(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_CONCURRENT_SPEND, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_CONCURRENT_PUZZLE, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_COIN_ID, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_PARENT_ID, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_PUZZLEHASH, Program.to([HASH])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_AMOUNT, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_BIRTH_SECONDS, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_EPHEMERAL, Program.to([])),
-        ConditionSerializations(ConditionOpcode.ASSERT_SECONDS_RELATIVE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE, Program.to([AMT])),
-        ConditionSerializations(ConditionOpcode.SOFTFORK, Program.to([AMT, [-10, HASH]])),
-        ConditionSerializations(ConditionOpcode.REMARK, Program.to([])),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_PARENT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_PUZZLE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_UNSAFE, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.AGG_SIG_ME, Program.to([PK, MSG]), ["pubkey", "msg"], [PK_HEX, MSG_HEX]
+        ),
+        ConditionSerializations(
+            ConditionOpcode.CREATE_COIN,
+            Program.to([HASH, AMT, [MSG]]),
+            ["puzzle_hash", "amount", "memos"],
+            [HASH_HEX, AMT, [MSG_HEX]],
+        ),
+        ConditionSerializations(ConditionOpcode.RESERVE_FEE, Program.to([AMT]), ["amount"], [AMT]),
+        ConditionSerializations(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, Program.to([MSG]), ["msg"], [MSG_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, Program.to([HASH]), ["msg"], [HASH_HEX]),
+        ConditionSerializations(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, Program.to([MSG]), ["msg"], [MSG_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, Program.to([HASH]), ["msg"], [HASH_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_CONCURRENT_SPEND, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
+        ConditionSerializations(
+            ConditionOpcode.ASSERT_CONCURRENT_PUZZLE, Program.to([HASH]), ["puzzle_hash"], [HASH_HEX]
+        ),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_COIN_ID, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_PARENT_ID, Program.to([HASH]), ["coin_id"], [HASH_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_PUZZLEHASH, Program.to([HASH]), ["puzzle_hash"], [HASH_HEX]),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_AMOUNT, Program.to([AMT]), ["amount"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_BIRTH_SECONDS, Program.to([AMT]), ["seconds"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT, Program.to([AMT]), ["height"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_EPHEMERAL, Program.to([]), [], []),
+        ConditionSerializations(ConditionOpcode.ASSERT_SECONDS_RELATIVE, Program.to([AMT]), ["seconds"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_SECONDS_ABSOLUTE, Program.to([AMT]), ["seconds"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_HEIGHT_RELATIVE, Program.to([AMT]), ["height"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, Program.to([AMT]), ["height"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE, Program.to([AMT]), ["seconds"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE, Program.to([AMT]), ["seconds"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE, Program.to([AMT]), ["height"], [AMT]),
+        ConditionSerializations(ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE, Program.to([AMT]), ["height"], [AMT]),
+        ConditionSerializations(
+            ConditionOpcode.SOFTFORK,
+            Program.to([AMT, [-10, HASH]]),
+            ["cost", "conditions"],
+            [AMT, ["81f6", "a0" + HASH_HEX]],
+        ),
+        ConditionSerializations(ConditionOpcode.REMARK, Program.to([]), ["rest"], ["80"]),
     ],
 )
 def test_condition_serialization(serializations: ConditionSerializations, abstractions: bool) -> None:
     condition_driver: Condition = parse_conditions_non_consensus([serializations.program], abstractions=abstractions)[0]
+    if not abstractions:
+        assert (
+            condition_driver
+            == conditions_from_json_dicts(
+                [
+                    {
+                        "opcode": int_from_bytes(serializations.opcode),
+                        "args": {key: args for key, args in zip(serializations.json_keys, serializations.json_args)},
+                    }
+                ]
+            )[0]
+        )
     assert not isinstance(condition_driver, UnknownCondition)
     as_program: Program = condition_driver.to_program()
     assert as_program.at("f").atom == serializations.opcode
@@ -94,6 +141,9 @@ def test_condition_serialization(serializations: ConditionSerializations, abstra
 
 def test_unknown_condition() -> None:
     unknown_condition: Condition = parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0]
+    assert unknown_condition == conditions_from_json_dicts([{"opcode": "81f6", "args": ["a0" + HASH_HEX, "80"]}])[0]
+    with pytest.raises(ValueError, match="Invalid condition opcode"):
+        conditions_from_json_dicts([{"opcode": bytes(32)}])
     assert unknown_condition == UnknownCondition(Program.to(-10), [Program.to(HASH), Program.to(AMT)])
     assert unknown_condition == UnknownCondition.from_program(unknown_condition.to_program())
 

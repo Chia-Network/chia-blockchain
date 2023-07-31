@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
 
 from blspy import G1Element
+from clvm.casts import int_to_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -230,21 +231,21 @@ class ReserveFee(Condition):
 @streamable
 @dataclass(frozen=True)
 class AssertCoinAnnouncement(Condition):
-    _msg: Optional[bytes32] = None
+    msg: Optional[bytes32] = None
     asserted_id: Optional[bytes32] = None
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self._msg is None and (self.asserted_id is None or self.asserted_msg is None):
+        if self.msg is None and (self.asserted_id is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
-    def msg(self) -> bytes32:
-        if self._msg is None:
+    def msg_calc(self) -> bytes32:
+        if self.msg is None:
             # Our __post_init__ assures us these are not None
             return std_hash(self.asserted_id + self.asserted_msg)  # type: ignore[operator]
         else:
-            return self._msg
+            return self.msg
 
     def corresponding_creation(self) -> CreateCoinAnnouncement:
         if self.asserted_msg is None:
@@ -253,7 +254,7 @@ class AssertCoinAnnouncement(Condition):
             return CreateCoinAnnouncement(self.asserted_msg, self.asserted_id)
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, self.msg])
+        condition: Program = Program.to([ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, self.msg_calc])
         return condition
 
     @classmethod
@@ -291,21 +292,21 @@ class CreateCoinAnnouncement(Condition):
 @streamable
 @dataclass(frozen=True)
 class AssertPuzzleAnnouncement(Condition):
-    _msg: Optional[bytes32] = None
+    msg: Optional[bytes32] = None
     asserted_ph: Optional[bytes32] = None
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self._msg is None and (self.asserted_ph is None or self.asserted_msg is None):
+        if self.msg is None and (self.asserted_ph is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
-    def msg(self) -> bytes32:
-        if self._msg is None:
+    def msg_calc(self) -> bytes32:
+        if self.msg is None:
             # Our __post_init__ assures us these are not None
             return std_hash(self.asserted_ph + self.asserted_msg)  # type: ignore[operator]
         else:
-            return self._msg
+            return self.msg
 
     def corresponding_creation(self) -> CreatePuzzleAnnouncement:
         if self.asserted_msg is None:
@@ -314,7 +315,7 @@ class AssertPuzzleAnnouncement(Condition):
             return CreatePuzzleAnnouncement(self.asserted_msg, self.asserted_ph)
 
     def to_program(self) -> Program:
-        condition: Program = Program.to([ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, self.msg])
+        condition: Program = Program.to([ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, self.msg_calc])
         return condition
 
     @classmethod
@@ -750,27 +751,27 @@ class CreateAnnouncement(Condition):
 @dataclass(frozen=True)
 class AssertAnnouncement(Condition):
     coin_not_puzzle: bool
-    _msg: Optional[bytes32] = None
+    msg: Optional[bytes32] = None
     asserted_origin_id: Optional[bytes32] = None
     asserted_msg: Optional[bytes] = None
 
     def __post_init__(self) -> None:
-        if self._msg is None and (self.asserted_origin_id is None or self.asserted_msg is None):
+        if self.msg is None and (self.asserted_origin_id is None or self.asserted_msg is None):
             raise ValueError("Must specify either the complete announcement message or both of its components")
 
     @property
-    def msg(self) -> bytes32:
-        if self._msg is None:
+    def msg_calc(self) -> bytes32:
+        if self.msg is None:
             # Our __post_init__ assures us these are not None
             return std_hash(self.asserted_origin_id + self.asserted_msg)  # type: ignore[operator]
         else:
-            return self._msg
+            return self.msg
 
     def to_program(self) -> Program:
         if self.coin_not_puzzle:
-            return AssertCoinAnnouncement(self.msg, self.asserted_origin_id, self.asserted_msg).to_program()
+            return AssertCoinAnnouncement(self.msg_calc, self.asserted_origin_id, self.asserted_msg).to_program()
         else:
-            return AssertPuzzleAnnouncement(self.msg, self.asserted_origin_id, self.asserted_msg).to_program()
+            return AssertPuzzleAnnouncement(self.msg_calc, self.asserted_origin_id, self.asserted_msg).to_program()
 
     def corresponding_creation(self) -> CreateAnnouncement:
         if self.asserted_msg is None:
@@ -794,7 +795,7 @@ class AssertAnnouncement(Condition):
             asserted_origin_id = condition.asserted_ph
         return cls(
             coin_not_puzzle,
-            condition.msg,
+            condition.msg_calc,
             asserted_origin_id,
             condition.asserted_msg,
         )
@@ -982,5 +983,28 @@ def parse_conditions_non_consensus(conditions: Iterable[Program], abstractions: 
             final_condition_list.append(driver_dictionary[condition.at("f").atom].from_program(condition))
         except Exception:
             final_condition_list.append(UnknownCondition.from_program(condition))
+
+    return final_condition_list
+
+
+def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Condition]:
+    final_condition_list: List[Condition] = []
+    for condition in conditions:
+        opcode_specified: Union[str, int] = condition["opcode"]
+        if isinstance(opcode_specified, str):
+            try:
+                opcode: bytes = ConditionOpcode[opcode_specified]
+            except KeyError:
+                final_condition_list.append(UnknownCondition.from_json_dict(condition))
+                continue
+        elif isinstance(opcode_specified, int):
+            opcode = int_to_bytes(opcode_specified)
+        else:
+            raise ValueError(f"Invalid condition opcode {opcode_specified}")
+
+        try:
+            final_condition_list.append(CONDITION_DRIVERS[opcode].from_json_dict(condition["args"]))
+        except Exception:
+            final_condition_list.append(UnknownCondition.from_json_dict(condition))
 
     return final_condition_list
