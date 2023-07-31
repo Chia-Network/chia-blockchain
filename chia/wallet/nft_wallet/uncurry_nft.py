@@ -11,8 +11,10 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clsp")
+NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
+    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 _T_UncurriedNFT = TypeVar("_T_UncurriedNFT", bound="UncurriedNFT")
 

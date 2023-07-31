@@ -145,9 +145,10 @@ jobs:
       run: |
         LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
         mkdir $GITHUB_WORKSPACE\\bladebit
-        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*windows-x86-64.zip' -O $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
-        unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
-        rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        cd $GITHUB_WORKSPACE\\bladebit
+        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*windows-x86-64.zip'
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+        cd $OLDPWD
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
@@ -157,9 +158,10 @@ jobs:
       run: |
         LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
         mkdir $GITHUB_WORKSPACE\\bladebit
-        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*windows-x86-64.zip' -O $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
-        unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
-        rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        cd $GITHUB_WORKSPACE\\bladebit
+        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*windows-x86-64.zip'
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+        cd $OLDPWD
 
     - name: Run install script
       env:

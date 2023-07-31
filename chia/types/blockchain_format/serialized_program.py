@@ -12,9 +12,9 @@ from chia.util.byte_types import hexstr_to_bytes
 
 
 def _serialize(node: object) -> bytes:
-    if type(node) == SerializedProgram:
+    if type(node) is SerializedProgram:
         return bytes(node)
-    if type(node) == Program:
+    if type(node) is Program:
         return bytes(node)
     else:
         ret: bytes = SExp.to(node).as_bin()

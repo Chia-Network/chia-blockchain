@@ -33,7 +33,7 @@ jobs:
       matrix:
         python-version: [3.9]
         os:
-          - runs-on: macos-10.14
+          - runs-on: macos-11
             name: intel
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
@@ -64,6 +64,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MACOSX_DEPLOYMENT_TARGET: 11
 
       - name: Test for secrets access
         id: check_secrets
@@ -132,22 +133,30 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*${{ matrix.os.bladebit-suffix }}'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+          cd "$GITHUB_WORKSPACE/bladebit"
+          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == false) | .tag_name' | while read tag; do
+              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
+              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
+          done
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
 
       - name: Get latest prerelease bladebit plotter
         if: env.PRE_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
           mkdir "$GITHUB_WORKSPACE/bladebit"
-          gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*${{ matrix.os.bladebit-suffix }}'
-          tar -xz -C $GITHUB_WORKSPACE/bladebit -f *${{ matrix.os.bladebit-suffix }}
-          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+          cd "$GITHUB_WORKSPACE/bladebit"
+          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == true) | .tag_name' | while read tag; do
+              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
+              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
+          done
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
 
       - uses: ./.github/actions/install
         with:
