@@ -94,7 +94,7 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
 def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
-            assert type(plot_info) == Plot
+            assert type(plot_info) is Plot
             assert plot_info.filename not in receiver.plots()
     elif expected_state == State.removed:
         for path in data:
@@ -113,7 +113,7 @@ def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]]
 def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
-            assert type(plot_info) == Plot
+            assert type(plot_info) is Plot
             assert plot_info.filename in receiver._current_sync.delta.valid.additions
     elif expected_state == State.removed:
         for path in data:
