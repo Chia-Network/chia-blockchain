@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, List
+from typing import Any, Callable, List
 
 import blspy
 from blspy import AugSchemeMPL
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -14,8 +15,10 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 async def sign_coin_spends(
     coin_spends: List[CoinSpend],
     secret_key_for_public_key_f: Any,  # Potentially awaitable function from G1Element => Optional[PrivateKey]
+    secret_key_for_puzzle_hash: Any,  # Potentially awaitable function from bytes32 => Optional[PrivateKey]
     additional_data: bytes,
     max_cost: int,
+    potential_derivation_functions: List[Callable[[blspy.G1Element], bytes32]],
 ) -> SpendBundle:
     """
     Sign_coin_spends runs the puzzle code with the given argument and searches the
@@ -49,10 +52,16 @@ async def sign_coin_spends(
                 secret_key = await secret_key_for_public_key_f(pk)
             else:
                 secret_key = secret_key_for_public_key_f(pk)
-            if secret_key is None:
-                e_msg = f"no secret key for {pk}"
-                raise ValueError(e_msg)
-            assert bytes(secret_key.get_g1()) == bytes(pk)
+            if secret_key is None or secret_key.get_g1() != pk:
+                for derive in potential_derivation_functions:
+                    if inspect.iscoroutinefunction(secret_key_for_puzzle_hash):
+                        secret_key = await secret_key_for_puzzle_hash(derive(pk))
+                    else:
+                        secret_key = secret_key_for_puzzle_hash(derive(pk))
+                    if secret_key is not None and secret_key.get_g1() == pk:
+                        break
+                else:
+                    raise ValueError(f"no secret key for {pk}")
             signature = AugSchemeMPL.sign(secret_key, msg)
             assert AugSchemeMPL.verify(pk, msg, signature)
             signatures.append(signature)

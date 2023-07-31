@@ -71,6 +71,12 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.clawback.drivers import generate_clawback_spend_bundle, match_clawback_puzzle
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+    calculate_synthetic_secret_key,
+    puzzle_hash_for_synthetic_public_key,
+)
+from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
@@ -281,6 +287,25 @@ class WalletStateManager:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if record.hardened:
+            return master_sk_to_wallet_sk(self.private_key, record.index)
+        return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+
+    async def get_synthetic_private_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[PrivateKey]:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            return None
+        if record.hardened:
+            base_key = master_sk_to_wallet_sk(self.private_key, record.index)
+        else:
+            base_key = master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
+
+        return calculate_synthetic_secret_key(base_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+
+    async def get_private_key_for_pubkey(self, pubkey: G1Element) -> Optional[PrivateKey]:
+        record = await self.puzzle_store.record_for_pubkey(pubkey)
+        if record is None:
+            return None
         if record.hardened:
             return master_sk_to_wallet_sk(self.private_key, record.index)
         return master_sk_to_wallet_sk_unhardened(self.private_key, record.index)
@@ -760,8 +785,6 @@ class WalletStateManager:
                 else:
                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(sender_puzhash)
                 assert derivation_record is not None
-                if self.main_wallet.secret_key_store.secret_key_for_public_key(derivation_record.pubkey) is None:
-                    await self.main_wallet.hack_populate_secret_key_for_puzzle_hash(derivation_record.puzzle_hash)
                 amount = uint64(amount + coin.amount)
                 # Remove the clawback hint since it is unnecessary for the XCH coin
                 memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
@@ -782,7 +805,7 @@ class WalletStateManager:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
         if len(coin_spends) == 0:
             return []
-        spend_bundle: SpendBundle = await self.main_wallet.sign_transaction(coin_spends)
+        spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee, Announcement(coin_spends[0].coin.name(), message)
@@ -2057,3 +2080,13 @@ class WalletStateManager:
             vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)
 
         return vc_wallet
+
+    async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
+        return await sign_coin_spends(
+            coin_spends,
+            self.get_private_key_for_pubkey,
+            self.get_synthetic_private_key_for_puzzle_hash,
+            self.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+            self.constants.MAX_BLOCK_COST_CLVM,
+            [puzzle_hash_for_synthetic_public_key],
+        )
