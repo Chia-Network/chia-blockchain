@@ -160,7 +160,7 @@ jobs:
           set -o pipefail
           diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout || coverage_status=$?
           # Transform diff-cover output into a markdown table
-          awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"} 
+          awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
               /.*\.py/ {
                 split($0,a,"(");
                 gsub(")","",a[2])
