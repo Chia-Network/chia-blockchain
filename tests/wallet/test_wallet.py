@@ -872,10 +872,6 @@ class TestWalletSimulator:
             1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
         # Resync start
-        wallet_node_1.race_cache.clear()
-        wallet_node_1.race_cache_hashes.clear()
-        wallet_node_2.race_cache.clear()
-        wallet_node_2.race_cache_hashes.clear()
         wallet_node_1._close()
         await wallet_node_1._await_closed()
         wallet_node_2._close()
@@ -885,10 +881,10 @@ class TestWalletSimulator:
 
         # use second node to start the same wallet, reusing config and db
         await wallet_node_1._start()
-        assert wallet_node_1._wallet_state_manager
+        assert wallet_node_1.wallet_state_manager is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_node_2._start()
-        assert wallet_node_2._wallet_state_manager
+        assert wallet_node_2.wallet_state_manager is not None
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
@@ -948,7 +944,7 @@ class TestWalletSimulator:
         assert before_txs["recipient"] == after_txs["recipient"]
 
         # Check unspent coins
-        assert len(await wallet_node_1._wallet_state_manager.coin_store.get_all_unspent_coins()) == 6
+        assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 6
 
     @pytest.mark.parametrize(
         "trusted",

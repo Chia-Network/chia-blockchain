@@ -1762,10 +1762,11 @@ class WalletStateManager:
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
-        # Check if it is a Clawback claim
-        clawback_claim = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
+        # If the coin is from a Clawback spent, we want to add the INCOMING_TX,
+        # no matter if there is another TX updated.
+        clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or clawback_claim or not coin_confirmed_transaction and not change:
+        if coinbase or clawback or not coin_confirmed_transaction and not change:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),

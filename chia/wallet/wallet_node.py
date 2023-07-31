@@ -457,6 +457,8 @@ class WalletNode:
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
+        self.race_cache = {}
+        self.race_cache_hashes = []
         self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
