@@ -158,7 +158,26 @@ jobs:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
           set -o pipefail
-          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout || coverage_status=$?
+          # Transform diff-cover output into a markdown table
+          awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"} 
+              /.*\.py/ { 
+                split($0,a,"(");
+                gsub(")","",a[2])
+                if (index(a[2], ":") == 0) { 
+                  print "| " a[1] " | " a[2] " | None |"
+                } else { 
+                  split(a[2],b,":"); 
+                  print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
+                } 
+              }' coverage-reports/diff-cover-stdout > coverage-reports/diff-cover-md-tablel
+          cat coverage-reports/diff-cover-md-table >> $GITHUB_STEP_SUMMARY
+          # Add comment to PR
+          if [[ $coverage_status != 0 ]]; then
+            PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
+            gh pr edit "$PR_NUM" --add-label "coverage-diff"
+            gh pr comment "$PR_NUM" -F coverage-reports/diff-cover-md-table
+          fi
 
       - name: Add diff coverage report to workflow summary
         if: always()
