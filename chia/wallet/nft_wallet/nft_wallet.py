@@ -1446,7 +1446,7 @@ class NFTWallet:
                     primaries=[], coin_announcements_to_assert={primary_announcement_hash}
                 )
             xch_spends.append(CoinSpend(xch_coin, puzzle, solution))
-        xch_spend = await self.standard_wallet.sign_transaction(xch_spends)
+        xch_spend = await self.wallet_state_manager.sign_transaction(xch_spends)
 
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
         did_p2_solution = self.standard_wallet.make_solution(
@@ -1682,7 +1682,7 @@ class NFTWallet:
                     primaries=[], coin_announcements_to_assert={primary_announcement_hash}
                 )
             xch_spends.append(CoinSpend(xch_coin, puzzle, solution))
-        xch_spend = await self.standard_wallet.sign_transaction(xch_spends)
+        xch_spend = await self.wallet_state_manager.sign_transaction(xch_spends)
 
         # Collect up all the coin spends and sign them
         list_of_coinspends = intermediate_coin_spends + launcher_spends

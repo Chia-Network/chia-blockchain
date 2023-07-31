@@ -38,8 +38,6 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-from chia.wallet.secret_key_store import SecretKeyStore
-from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
@@ -65,7 +63,6 @@ class Wallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
-    secret_key_store: SecretKeyStore
     cost_of_single_tx: Optional[int]
 
     @staticmethod
@@ -78,7 +75,6 @@ class Wallet:
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
-        self.secret_key_store = SecretKeyStore()
         self.cost_of_single_tx = None
         return self
 
@@ -183,29 +179,13 @@ class Wallet:
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
-    async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
-        secret_key = await self.wallet_state_manager.get_private_key(puzzle_hash)
-        # HACK
-        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-        self.secret_key_store.save_secret_key(synthetic_secret_key)
-        return secret_key.get_g1()
-
-    async def hack_populate_secret_keys_for_coin_spends(self, coin_spends: List[CoinSpend]) -> None:
-        """
-        This hack forces secret keys into the `_pk2sk` lookup. This should eventually be replaced
-        by a persistent DB table that can do this look-up directly.
-        """
-        for coin_spend in coin_spends:
-            await self.hack_populate_secret_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
-
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
-        public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return puzzle_for_pk(public_key)
+        secret_key = await self.wallet_state_manager.get_private_key(puzzle_hash)
+        return puzzle_for_pk(secret_key.get_g1())
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         puzzle = puzzle_for_pk(dr.pubkey)
-        await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
         return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
@@ -221,7 +201,6 @@ class Wallet:
 
     async def get_new_puzzlehash(self) -> bytes32:
         puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
-        await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
         return puzhash
 
     def make_solution(
@@ -396,8 +375,7 @@ class Wallet:
             # Only one coin creates outputs
             if origin_id in (None, coin.name()):
                 origin_id = coin.name()
-                public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
-                inner_puzzle = puzzle_for_pk(public_key)
+                inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
                     inner_puzzle, newpuzzlehash
                 )
@@ -448,11 +426,9 @@ class Wallet:
         for coin in coins:
             if coin.name() == origin_id:
                 continue
-            public_key = await self.hack_populate_secret_key_for_puzzle_hash(coin.puzzle_hash)
-            inner_puzzle = puzzle_for_pk(public_key)
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
-            solution = decorator_manager.solve(inner_puzzle, [], solution)
+            solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -461,14 +437,6 @@ class Wallet:
 
         self.log.debug(f"Spends is {spends}")
         return spends
-
-    async def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
-        return await sign_coin_spends(
-            coin_spends,
-            self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-        )
 
     async def sign_message(
         self, message: str, puzzle_hash: bytes32, is_hex: bool = False
@@ -537,13 +505,7 @@ class Wallet:
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
-        await self.hack_populate_secret_keys_for_coin_spends(transaction)
-        spend_bundle: SpendBundle = await sign_coin_spends(
-            transaction,
-            self.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-        )
+        spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(transaction)
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())

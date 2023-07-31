@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -186,8 +185,6 @@ async def insert_from_delta_file(
                 await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
             await data_store.received_correct_file(tree_id, server_info)
-        except asyncio.CancelledError:
-            raise
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)

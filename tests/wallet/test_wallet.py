@@ -1329,7 +1329,7 @@ class TestWalletSimulator:
             if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
-        stolen_sb = await wallet.sign_transaction([stolen_cs])
+        stolen_sb = await wallet_node.wallet_state_manager.sign_transaction([stolen_cs])
         now = uint64(int(time.time()))
         add_list = list(stolen_sb.additions())
         rem_list = list(stolen_sb.removals())

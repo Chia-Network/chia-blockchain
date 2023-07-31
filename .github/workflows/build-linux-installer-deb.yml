@@ -100,8 +100,11 @@ jobs:
       run: |
         LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p '*-ubuntu-x86-64.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
-        chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+        cd "$GITHUB_WORKSPACE/bladebit"
+        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*-ubuntu-x86-64.tar.gz'
+        ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+        ls bladebit* | xargs -I{} chmod +x {}
+        cd "$OLDPWD"
 
     - name: Get latest prerelease bladebit plotter
       if: env.PRE_RELEASE == 'true'
@@ -110,8 +113,11 @@ jobs:
       run: |
         LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p '*ubuntu-x86-64.tar.gz' -O - | tar -xz -C $GITHUB_WORKSPACE/bladebit
-        chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+        cd "$GITHUB_WORKSPACE/bladebit"
+        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*ubuntu-x86-64.tar.gz'
+        ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+        ls bladebit* | xargs -I{} chmod +x {}
+        cd "$OLDPWD"
 
     - uses: ./.github/actions/install
       with:

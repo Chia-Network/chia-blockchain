@@ -81,7 +81,7 @@ def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: Li
 
 
 def load_serialized_clvm(
-    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
+    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = True, recompile: bool = True
 ) -> SerializedProgram:
     """
     This function takes a .clsp file in the given package and compiles it to a
@@ -125,7 +125,7 @@ def load_serialized_clvm(
 def load_clvm(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = True,
 ) -> Program:
     return Program.from_bytes(
@@ -143,7 +143,7 @@ def load_clvm(
 def load_clvm_maybe_recompile(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> Program:
     return load_clvm(
@@ -157,7 +157,7 @@ def load_clvm_maybe_recompile(
 def load_serialized_clvm_maybe_recompile(
     clvm_filename,
     package_or_requirement=__name__,
-    include_standard_libraries: bool = False,
+    include_standard_libraries: bool = True,
     recompile: bool = recompile_requested,
 ) -> SerializedProgram:
     return load_serialized_clvm(

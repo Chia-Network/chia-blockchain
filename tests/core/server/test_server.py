@@ -9,7 +9,7 @@ from packaging.version import Version
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols.full_node_protocol import RequestTransaction
+from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Error, protocol_version
 from chia.protocols.wallet_protocol import RejectHeaderRequest
@@ -172,3 +172,31 @@ async def test_error_receive(
         await wallet_connection.outgoing_queue.put(message)
         await time_out_assert(10, error_log_found, True, full_node_connection)
         await time_out_assert(10, error_log_found, True, wallet_connection)
+
+
+@pytest.mark.asyncio
+async def test_call_api_of_specific(
+    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+    assert await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+
+    message = await server_1.call_api_of_specific(
+        FullNodeAPI.request_block, RequestBlock(uint32(42), False), server_2.node_id
+    )
+
+    assert message is not None
+    assert isinstance(message, RejectBlock)
+
+
+@pytest.mark.asyncio
+async def test_call_api_of_specific_for_missing_peer(
+    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
+) -> None:
+    _, _, server_1, server_2, _ = two_nodes
+
+    message = await server_1.call_api_of_specific(
+        FullNodeAPI.request_block, RequestBlock(uint32(42), False), server_2.node_id
+    )
+
+    assert message is None
