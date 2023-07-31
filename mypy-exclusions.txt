@@ -83,7 +83,6 @@ tests.clvm.test_chialisp_deserialization
 tests.clvm.test_program
 tests.clvm.test_puzzle_compression
 tests.clvm.test_puzzles
-tests.clvm.test_serialized_program
 tests.clvm.test_singletons
 tests.clvm.test_spend_sim
 tests.conftest

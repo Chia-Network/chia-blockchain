@@ -1,7 +1,6 @@
 {
     "augmented_condition": "d303eafa617bedf0bc05850dd014e10fbddf622187dc07891a2aacba9d8a93f6",
     "block_program_zero": "f0a38c8efe58895ae527c65c37f700a4238504691b83990e5dd91bd8b3c30eae",
-    "calculate_synthetic_public_key": "624c5d5704d0decadfc0503e71bbffb6cdfe45025bce7cf3e6864d1eafe8f65e",
     "cat_v2": "37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a",
     "chialisp_deserialisation": "94ec19077f9a34e0b11ad2456af0170f4cc03f11230ca42e3f82e6e644ac4f5d",
     "covenant_layer": "b982796850336aabf9ab17c3f21e299f0c633444117ab5e9ebeafadf1860d9fc",
@@ -43,13 +42,10 @@
     "pool_waitingroom_innerpuz": "a317541a765bf8375e1c6e7c13503d0d2cbf56cacad5182befe947e78e2c0307",
     "rom_bootstrap_generator": "161bade1f822dcd62ab712ebaf30f3922a301e48a639e4295c5685f8bece7bd9",
     "settlement_payments": "cfbfdeed5c4ca2de3d0bf520b9cb4bb7743a359bd2e6a188d19ce7dffc21d3e7",
-    "sha256tree_module": "eb4ead6576048c9d730b5ced00646c7fdd390649cfdf48a00de1590cdd8ee18f",
     "singleton_launcher": "eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
     "singleton_top_layer": "24e044101e57b3d8c908b8a38ad57848afd29d3eecc439dba45f4412df4954fd",
     "singleton_top_layer_v1_1": "7faa3253bfddd1e0decb0906b2dc6247bbc4cf608f58345d173adb63e8b47c9f",
     "standard_vc_backdoor_puzzle": "fbce76408ebaf9b3d0b8cd90cc68607755eeca67cd7432d5eea85f3f498cc002",
     "std_parent_morpher": "8c3f1dc2e46c0d7ec4c2cbd007e23c0368ff8f80c5bc0101647a5c27626ebce6",
-    "test_generator_deserialize": "52add794fc76e89512e4a063c383418bda084c8a78c74055abe80179e4a7832c",
-    "test_multiple_generator_input_arguments": "156dafbddc3e1d3bfe1f2a84e48e5e46b287b8358bf65c3c091c93e855fbfc5b",
     "viral_backdoor": "00848115554ea674131f89f311707a959ad3f4647482648f3fe91ba289131f51"
 }

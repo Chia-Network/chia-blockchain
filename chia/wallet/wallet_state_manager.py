@@ -731,7 +731,9 @@ class WalletStateManager:
         if len(clawback_coins) > 0:
             await self.spend_clawback_coins(clawback_coins, tx_fee)
 
-    async def spend_clawback_coins(self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64) -> List[bytes32]:
+    async def spend_clawback_coins(
+        self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64, force: bool = False
+    ) -> List[bytes32]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
@@ -744,7 +746,7 @@ class WalletStateManager:
                 # Get incoming tx
                 incoming_tx = await self.tx_store.get_transaction_record(coin.name())
                 assert incoming_tx is not None, f"Cannot find incoming tx for clawback coin {coin.name().hex()}"
-                if incoming_tx.sent > 0:
+                if incoming_tx.sent > 0 and not force:
                     self.log.error(
                         f"Clawback coin {coin.name().hex()} is already in a pending spend bundle. {incoming_tx}"
                     )

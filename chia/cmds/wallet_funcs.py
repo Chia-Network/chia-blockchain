@@ -1362,7 +1362,7 @@ async def sign_message(
 
 
 async def spend_clawback(
-    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str
+    *, wallet_rpc_port: Optional[int], fp: Optional[int], fee: Decimal, tx_ids_str: str, force: bool = False
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         tx_ids = []
@@ -1374,7 +1374,7 @@ async def spend_clawback(
         if fee < 0:
             print("Batch fee cannot be negative.")
             return
-        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]))
+        response = await wallet_client.spend_clawback_coins(tx_ids, int(fee * units["chia"]), force)
         print(str(response))
 
 

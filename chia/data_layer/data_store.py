@@ -329,6 +329,7 @@ class DataStore:
                         SELECT *
                         FROM ancestors
                         WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                        LIMIT 1
                         """,
                         {"hash": hash, "generation": generation, "tree_id": tree_id},
                     ) as cursor:
@@ -368,7 +369,7 @@ class DataStore:
     async def get_pending_root(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status",
+                "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 2",
                 {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
@@ -514,7 +515,12 @@ class DataStore:
             if generation is None:
                 generation = await self.get_tree_generation(tree_id=tree_id)
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation AND status == :status",
+                """
+                SELECT *
+                FROM root
+                WHERE tree_id == :tree_id AND generation == :generation AND status == :status
+                LIMIT 1
+                """,
                 {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
@@ -522,16 +528,12 @@ class DataStore:
             if row is None:
                 raise Exception(f"unable to find root for id, generation: {tree_id.hex()}, {generation}")
 
-            maybe_extra_result = await cursor.fetchone()
-            if maybe_extra_result is not None:
-                raise Exception(f"multiple roots found for id, generation: {tree_id.hex()}, {generation}")
-
         return Root.from_row(row=row)
 
     async def tree_id_exists(self, tree_id: bytes32) -> bool:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status",
+                "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status LIMIT 1",
                 {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
@@ -723,7 +725,10 @@ class DataStore:
 
     async def get_node_type(self, node_hash: bytes32) -> NodeType:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
+            cursor = await reader.execute(
+                "SELECT node_type FROM node WHERE hash == :hash LIMIT 1",
+                {"hash": node_hash},
+            )
             raw_node_type = await cursor.fetchone()
 
         if raw_node_type is None:
@@ -734,26 +739,53 @@ class DataStore:
     async def get_terminal_node_for_seed(
         self, tree_id: bytes32, seed: bytes32, root_hash: Optional[bytes32] = None
     ) -> Optional[bytes32]:
-        path = int.from_bytes(seed, byteorder="big")
-        async with self.db_wrapper.reader():
+        path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
+        async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id)
                 root_hash = root.node_hash
             if root_hash is None:
                 return None
-            node_hash = root_hash
-            while True:
-                node = await self.get_node(node_hash)
-                assert node is not None
-                if isinstance(node, TerminalNode):
-                    break
-                if path % 2 == 0:
-                    node_hash = node.left_hash
-                else:
-                    node_hash = node.right_hash
-                path = path // 2
 
-            return node_hash
+            async with reader.execute(
+                """
+                WITH RECURSIVE
+                    random_leaf(hash, node_type, left, right, depth, side) AS (
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            1 AS depth,
+                            SUBSTR(:path, 1, 1) as side
+                        FROM node
+                        WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT
+                            node.hash AS hash,
+                            node.node_type AS node_type,
+                            node.left AS left,
+                            node.right AS right,
+                            random_leaf.depth + 1 AS depth,
+                            SUBSTR(:path, random_leaf.depth + 1, 1) as side
+                        FROM node, random_leaf
+                        WHERE (
+                            (random_leaf.side == "0" AND node.hash == random_leaf.left)
+                            OR (random_leaf.side != "0" AND node.hash == random_leaf.right)
+                        )
+                    )
+                SELECT hash AS hash FROM random_leaf
+                WHERE node_type == :node_type
+                LIMIT 1
+                """,
+                {"root_hash": root_hash, "node_type": NodeType.TERMINAL, "path": path},
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row is None:
+                    # No cover since this is an error state that should be unreachable given the code
+                    # above has already verified that there is a non-empty tree.
+                    raise Exception("No terminal node found for seed")  # pragma: no cover
+                return bytes32(row["hash"])
 
     def get_side_for_seed(self, seed: bytes32) -> Side:
         side_seed = bytes(seed)[0]
@@ -1196,7 +1228,7 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
+            cursor = await reader.execute("SELECT * FROM node WHERE hash == :hash LIMIT 1", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:

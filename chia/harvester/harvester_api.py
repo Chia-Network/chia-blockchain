@@ -269,7 +269,7 @@ class HarvesterAPI:
             },
         )
 
-    @api_request()
+    @api_request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
