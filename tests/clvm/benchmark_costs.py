@@ -16,7 +16,7 @@ def cost_of_spend_bundle(spend_bundle: SpendBundle) -> int:
         program,
         INFINITE_COST,
         mempool_mode=True,
-        height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT,
+        height=DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT,
         constants=DEFAULT_CONSTANTS,
     )
     return npc_result.cost
