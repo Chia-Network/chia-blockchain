@@ -307,12 +307,16 @@ class FullNode:
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
 
+        # 0 turns off the soft limit and is the default value if the pragma is not used
+        soft_heap_limit = self.config.get("db_soft_heap_limit_bytes", 0)
+
         self._db_wrapper = await DBWrapper2.create(
             self.db_path,
             db_version=db_version,
             reader_count=4,
             log_path=sql_log_path,
             synchronous=db_sync,
+            soft_heap_limit=soft_heap_limit,
         )
 
         if self.db_wrapper.db_version != 2:

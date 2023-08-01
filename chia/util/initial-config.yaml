@@ -349,6 +349,11 @@ full_node:
   # configurable
   db_readers: 4
 
+  # set the sqlite soft heap limit to limit total memory usage of sqlite
+  # useful on lower RAM devices - 0 is the default and turns off the limit
+  # a good value for 4GB systems is around 1073741824 bytes
+  db_soft_heap_limit_bytes: 0
+
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v2_CHALLENGE.sqlite
   # peer_db_path is deprecated and has been replaced by peers_file_path

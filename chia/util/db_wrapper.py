@@ -145,6 +145,7 @@ class DBWrapper2:
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
+        soft_heap_limit: Optional[int] = None,
     ) -> DBWrapper2:
         if log_path is None:
             log_file = None
@@ -155,6 +156,9 @@ class DBWrapper2:
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
         if synchronous is not None:
             await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+        if soft_heap_limit is not None:
+            await (await write_connection.execute(f"pragma soft_heap_limit={soft_heap_limit}")).close()
 
         await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
 
