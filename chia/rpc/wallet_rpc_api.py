@@ -1398,8 +1398,7 @@ class WalletRpcApi:
             "signing_mode": SigningMode.CHIP_0002.value,
         }
 
-    @tx_endpoint
-    async def sign_message_by_id(self, request, tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
+    async def sign_message_by_id(self, request) -> EndpointResult:
         """
         Given a NFT/DID ID, sign the message by the P2 private key.
         :param request:
@@ -1945,8 +1944,7 @@ class WalletRpcApi:
             "hints": hints,
         }
 
-    @tx_endpoint
-    async def did_find_lost_did(self, request, tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
+    async def did_find_lost_did(self, request) -> EndpointResult:
         """
         Recover a missing or unspendable DID wallet by a coin id of the DID
         :param coin_id: It can be DID ID, launcher coin ID or any coin ID of the DID you want to find.
@@ -2150,8 +2148,7 @@ class WalletRpcApi:
             else:
                 return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
-    @tx_endpoint
-    async def did_get_did(self, request, tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
+    async def did_get_did(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
