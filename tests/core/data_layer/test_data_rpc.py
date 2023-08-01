@@ -1933,7 +1933,10 @@ async def test_clear_pending_roots(
             cleared_root = json.loads(stdout)
             stderr = await process.stderr.read()
             assert process.returncode == 0
-            assert stderr == b"", stdout
+            if sys.version_info >= (3, 10, 6):
+                assert stderr == b""
+            else:
+                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
             client = await DataLayerRpcClient.create(
                 self_hostname=self_hostname,
