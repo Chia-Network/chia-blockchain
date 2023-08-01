@@ -1933,7 +1933,7 @@ async def test_clear_pending_roots(
             cleared_root = json.loads(stdout)
             stderr = await process.stderr.read()
             assert process.returncode == 0
-            assert stderr == b""
+            assert stderr == b"", stdout
         elif layer == InterfaceLayer.client:
             client = await DataLayerRpcClient.create(
                 self_hostname=self_hostname,
