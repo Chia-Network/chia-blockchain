@@ -836,8 +836,7 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK
         )
-        assert wallet_node_1.wallet_state_manager is not None
-        assert wallet_node_2.wallet_state_manager is not None
+
         assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 6
         assert len(await wallet_node_2.wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
         before_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
@@ -881,10 +880,8 @@ class TestWalletSimulator:
 
         # use second node to start the same wallet, reusing config and db
         await wallet_node_1._start()
-        assert wallet_node_1.wallet_state_manager is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_node_2._start()
-        assert wallet_node_2.wallet_state_manager is not None
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
