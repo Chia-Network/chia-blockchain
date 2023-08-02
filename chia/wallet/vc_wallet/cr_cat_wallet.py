@@ -602,9 +602,6 @@ class CRCATWallet(CATWallet):
         else:
             vc_txs = []
 
-        for crcat, _, _, _ in inner_spends:
-            await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(crcat.inner_puzzle_hash)
-
         return (
             SpendBundle(
                 [
@@ -688,7 +685,7 @@ class CRCATWallet(CATWallet):
             add_authorizations_to_cr_cats=add_authorizations_to_cr_cats,
         )
 
-        signed_spend_bundle: SpendBundle = await self.wallet_state_manager.main_wallet.sign_transaction(
+        signed_spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(
             unsigned_spend_bundle.coin_spends
         )
 
