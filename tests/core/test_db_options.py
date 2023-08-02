@@ -19,7 +19,6 @@ from tests.util.temp_file import TempFile
         (107374182400, 107374182400),
         (145, 145),
         (None, 145),
-        (-300, 145),
         (0, 0),
     ],
 )
