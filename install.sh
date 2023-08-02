@@ -213,7 +213,7 @@ elif [ "$(uname)" = "Linux" ]; then
   elif [ "$UBUNTU_22" = "1" ]; then
     echo "Installing on Ubuntu 22.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.10-venv openssl
+    sudo apt-get install -y python3.11-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
