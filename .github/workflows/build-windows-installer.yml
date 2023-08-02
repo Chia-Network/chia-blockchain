@@ -2,6 +2,17 @@ name: 📦🚀 Build Installer - Windows 10
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Tagged release testing scenario'
+        required: false
+        type: choice
+        default: ''
+        options:
+        - ''
+        - 9.9.9-b1
+        - 9.9.9-rc1
+        - 9.9.9
   push:
     paths-ignore:
     - '**.md'
@@ -44,6 +55,18 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Check tag type
+      id: check_tag_type
+      shell: bash
+      run: |
+        REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
+        REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
+        if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
+          echo "TAG_TYPE=beta" >> "$GITHUB_OUTPUT"
+        elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
+          echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Set git urls to https instead of ssh
       run: |
         git config --global url."https://github.com/".insteadOf ssh://git@github.com/
@@ -52,7 +75,7 @@ jobs:
       id: npm-cache
       shell: bash
       run: |
-        echo "dir=$(npm config get cache)" >>$GITHUB_OUTPUT
+        echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
 
     - name: Cache npm
       uses: actions/cache@v3
@@ -66,7 +89,7 @@ jobs:
       id: pip-cache
       shell: bash
       run: |
-        echo "dir=$(pip cache dir)" >>$GITHUB_OUTPUT
+        echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
     - name: Cache pip
       uses: actions/cache@v3
@@ -95,13 +118,13 @@ jobs:
         unset HAS_GLUE_SECRET
 
         if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
-        echo "HAS_SIGNING_SECRET=${HAS_SIGNING_SECRET}" >>$GITHUB_OUTPUT
+        echo "HAS_SIGNING_SECRET=${HAS_SIGNING_SECRET}" >> "$GITHUB_OUTPUT"
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
 
         if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >>$GITHUB_OUTPUT
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
       env:
         SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
@@ -124,7 +147,7 @@ jobs:
         pip3 install setuptools_scm
         CHIA_INSTALLER_VERSION=$(python ./build_scripts/installer-version.py)
         echo "$CHIA_INSTALLER_VERSION"
-        echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >>$GITHUB_OUTPUT
+        echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >> "$GITHUB_OUTPUT"
         deactivate
 
     - name: Get latest madmax plotter
@@ -133,35 +156,61 @@ jobs:
       shell: bash
       run: |
         LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        mkdir $GITHUB_WORKSPACE\\madmax
-        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot.exe
-        gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-*.exe' -O $GITHUB_WORKSPACE\\madmax\\chia_plot_k34.exe
+        mkdir "$GITHUB_WORKSPACE"\\madmax
+        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot.exe
+        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot_k34.exe
 
-    - name: Get latest bladebit plotter
-      if: '!github.event.release.prerelease'
+    - name: Get latest bladebit plotter for Full Release
+      if: "github.event.release && !github.event.release.prerelease"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
       run: |
-        LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        mkdir $GITHUB_WORKSPACE\\bladebit
-        cd $GITHUB_WORKSPACE\\bladebit
-        gh release download -R Chia-Network/bladebit $LATEST_BLADEBIT -p 'bladebit*windows-x86-64.zip'
+        LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+        mkdir "$GITHUB_WORKSPACE\\bladebit"
+        cd "$GITHUB_WORKSPACE\\bladebit"
+        gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*windows-x86-64.zip'
         ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd $OLDPWD
+        cd "$OLDPWD"
 
-    - name: Get latest prerelease bladebit plotter
-      if: env.PRE_RELEASE == 'true'
+    - name: Get latest beta bladebit plotter
+      if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'beta'"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       shell: bash
       run: |
-        LATEST_PRERELEASE=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease)) | first | .tag_name')
-        mkdir $GITHUB_WORKSPACE\\bladebit
-        cd $GITHUB_WORKSPACE\\bladebit
-        gh release download -R Chia-Network/bladebit $LATEST_PRERELEASE -p 'bladebit*windows-x86-64.zip'
+        LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
+        mkdir "$GITHUB_WORKSPACE\\bladebit"
+        cd "$GITHUB_WORKSPACE\\bladebit"
+        gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*windows-x86-64.zip'
         ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd $OLDPWD
+        cd "$OLDPWD"
+
+    - name: Get latest RC bladebit plotter
+      if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'rc'"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
+        mkdir "$GITHUB_WORKSPACE\\bladebit"
+        cd "$GITHUB_WORKSPACE\\bladebit"
+        gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*windows-x86-64.zip'
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+        cd "$OLDPWD"
+
+    - name: Get latest bladebit plotter for Dev
+      if: "!github.event.release"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-(beta|rc)[0-9]+$")))) | first | .tag_name')
+        mkdir "$GITHUB_WORKSPACE\\bladebit"
+        cd "$GITHUB_WORKSPACE\\bladebit"
+        gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*windows-x86-64.zip'
+        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+        cd "$OLDPWD"
 
     - name: Run install script
       env:
@@ -177,7 +226,7 @@ jobs:
       run: |
         gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
         echo "${gui_ref}"
-        echo "GUI_REF=${gui_ref}" >>$GITHUB_OUTPUT
+        echo "GUI_REF=${gui_ref}" >> "$GITHUB_OUTPUT"
         echo "rm -rf ./chia-blockchain-gui"
         rm -rf ./chia-blockchain-gui
 
@@ -233,7 +282,7 @@ jobs:
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-        echo CHIA_DEV_BUILD=${CHIA_DEV_BUILD} >>$GITHUB_OUTPUT
+        echo CHIA_DEV_BUILD=${CHIA_DEV_BUILD} >> "$GITHUB_OUTPUT"
         echo ${CHIA_DEV_BUILD}
         pwd
         aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
@@ -272,14 +321,6 @@ jobs:
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download.chia.net/torrents/
 
-    - name: Get tag name
-      if: startsWith(github.ref, 'refs/tags/')
-      id: tag-name
-      shell: bash
-      run: |
-        echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >>$GITHUB_OUTPUT
-        echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >>$GITHUB_OUTPUT
-
     - name: Upload release artifacts
       if: env.RELEASE == 'true'
       env:
@@ -295,10 +336,10 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='${{ steps.tag-name.outputs.TAG_NAME }}'
+            chia_ref='$RELEASE_TAG'
         }
         $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
     - name: Remove Windows exe and installer to exclude from cache
       run: |

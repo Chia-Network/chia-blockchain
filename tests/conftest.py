@@ -53,7 +53,6 @@ from chia.util.ints import uint16, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
@@ -170,7 +169,7 @@ def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3886635, 4410000, 5496000])
+@pytest.fixture(scope="function", params=[1000000, 4410000, 5496000])
 def softfork_height(request) -> int:
     return request.param
 
@@ -541,48 +540,6 @@ async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulato
         yield _
 
 
-@pytest.fixture(scope="function", params=[True, False])
-def enable_softfork2(request):
-    return request.param
-
-
-@pytest_asyncio.fixture(scope="function")
-async def one_node_one_block_with_softfork2(
-    enable_softfork2,
-) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
-    if enable_softfork2:
-        constant_replacements = {"SOFT_FORK2_HEIGHT": 0}
-    else:
-        constant_replacements = {}
-
-    async_gen = setup_simulators_and_wallets(1, 0, constant_replacements)
-    nodes, _, bt = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    server_1 = full_node_1.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-
-    reward_ph = wallet_a.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        1,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-        genesis_timestamp=uint64(10000),
-        time_per_block=10,
-    )
-    assert blocks[0].height == 0
-
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
-
-    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
-
-    yield full_node_1, server_1, bt
-
-    async for _ in async_gen:
-        yield _
-
-
 @pytest_asyncio.fixture(scope="function")
 async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async_gen = setup_simulators_and_wallets(1, 0, {})
@@ -664,8 +621,11 @@ async def farmer_one_harvester_simulator_wallet(
             yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
 
 
+FarmerOneHarvester = Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
+
+
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[Tuple[List[Service], Service]]:
+async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
     async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 

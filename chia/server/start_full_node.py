@@ -72,8 +72,6 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
         return
     # activate softforks immediately on testnet
     # these numbers are supposed to match initial-config.yaml
-    if "SOFT_FORK2_HEIGHT" not in overrides:
-        overrides["SOFT_FORK2_HEIGHT"] = 0
     if "SOFT_FORK3_HEIGHT" not in overrides:
         overrides["SOFT_FORK3_HEIGHT"] = 2997292
     if "HARD_FORK_HEIGHT" not in overrides:
