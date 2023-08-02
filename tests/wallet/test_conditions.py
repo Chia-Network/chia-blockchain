@@ -9,19 +9,31 @@ from clvm.casts import int_from_bytes
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,
     AssertAnnouncement,
+    AssertBeforeHeightAbsolute,
+    AssertBeforeHeightRelative,
+    AssertBeforeSecondsAbsolute,
+    AssertBeforeSecondsRelative,
     AssertCoinAnnouncement,
+    AssertHeightAbsolute,
+    AssertHeightRelative,
     AssertPuzzleAnnouncement,
+    AssertSecondsAbsolute,
+    AssertSecondsRelative,
     Condition,
+    ConditionValidTimes,
     CreateAnnouncement,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    Timelock,
     UnknownCondition,
     conditions_from_json_dicts,
     parse_conditions_non_consensus,
+    parse_timelock_info,
 )
 
 
@@ -185,3 +197,27 @@ def test_announcement_inversions(
     assert_instance.to_program()  # Verifying that even without a specific message, we can still calculate the condition
     assert create_instance.corresponding_assertion() == assert_instance
     assert assert_instance.corresponding_creation() == create_instance
+
+
+@dataclass(frozen=True)
+class TimelockInfo:
+    driver: Condition
+    parsed_info: ConditionValidTimes
+
+
+@pytest.mark.parametrize(
+    "timelock_info",
+    [
+        TimelockInfo(AssertSecondsRelative(uint64(0)), ConditionValidTimes(min_secs_since_created=uint64(0))),
+        TimelockInfo(AssertHeightRelative(uint32(0)), ConditionValidTimes(min_blocks_since_created=uint32(0))),
+        TimelockInfo(AssertSecondsAbsolute(uint64(0)), ConditionValidTimes(min_time=uint64(0))),
+        TimelockInfo(AssertHeightAbsolute(uint32(0)), ConditionValidTimes(min_height=uint32(0))),
+        TimelockInfo(AssertBeforeSecondsRelative(uint64(0)), ConditionValidTimes(max_secs_after_created=uint64(0))),
+        TimelockInfo(AssertBeforeHeightRelative(uint32(0)), ConditionValidTimes(max_blocks_after_created=uint32(0))),
+        TimelockInfo(AssertBeforeSecondsAbsolute(uint64(0)), ConditionValidTimes(max_time=uint64(0))),
+        TimelockInfo(AssertBeforeHeightAbsolute(uint32(0)), ConditionValidTimes(max_height=uint32(0))),
+        TimelockInfo(Timelock(True, True, True, uint64(0)), ConditionValidTimes(min_secs_since_created=uint64(0))),
+    ],
+)
+def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
+    assert timelock_info.parsed_info == parse_timelock_info([timelock_info.driver])
