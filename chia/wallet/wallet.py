@@ -203,7 +203,6 @@ class Wallet:
             if record is None:
                 return await self.get_new_puzzle()  # pragma: no cover
             puzzle = puzzle_for_pk(record.pubkey)
-            await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
             return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
@@ -215,7 +214,6 @@ class Wallet:
             ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzlehash()
-            await self.hack_populate_secret_key_for_puzzle_hash(record.puzzle_hash)
             return record.puzzle_hash
 
     async def get_new_puzzlehash(self) -> bytes32:
