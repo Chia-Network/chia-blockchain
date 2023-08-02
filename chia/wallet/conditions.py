@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
 
 from blspy import G1Element
@@ -826,12 +826,12 @@ TIMELOCK_DRIVERS: List[Type[TIMELOCK_TYPES]] = [
 
 TIMELOCK_OPCODES: List[bytes] = [
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
-    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
-    ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 ]
 
@@ -851,12 +851,12 @@ class Timelock(Condition):
         else:
             potential_drivers = TIMELOCK_DRIVERS[4:]
 
-        if self.seconds_not_height:
+        if self.relative_not_absolute:
             potential_drivers = potential_drivers[0:2]
         else:
             potential_drivers = potential_drivers[2:]
 
-        if self.relative_not_absolute:
+        if self.seconds_not_height:
             driver: Type[TIMELOCK_TYPES] = potential_drivers[0]
         else:
             driver = potential_drivers[1]
@@ -1008,3 +1008,59 @@ def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Con
             final_condition_list.append(UnknownCondition.from_json_dict(condition))
 
     return final_condition_list
+
+
+@streamable
+@dataclass(frozen=True)
+class ConditionValidTimes(Streamable):
+    min_secs_since_created: Optional[uint64] = None  # ASSERT_SECONDS_RELATIVE
+    min_time: Optional[uint64] = None  # ASSERT_SECONDS_ABSOLUTE
+    min_blocks_since_created: Optional[uint32] = None  # ASSERT_HEIGHT_RELATIVE
+    min_height: Optional[uint32] = None  # ASSERT_HEIGHT_ABSOLUTE
+    max_secs_after_created: Optional[uint64] = None  # ASSERT_BEFORE_SECONDS_RELATIVE
+    max_time: Optional[uint64] = None  # ASSERT_BEFORE_SECONDS_ABSOLUTE
+    max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
+    max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
+
+
+def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
+    valid_times: ConditionValidTimes = ConditionValidTimes()
+    properties: List[str] = list(valid_times.__dict__.keys())
+    for condition in conditions:
+        if condition.__class__ in TIMELOCK_DRIVERS:
+            timelock: Timelock = Timelock.from_program(condition.to_program())
+        elif isinstance(condition, Timelock):
+            timelock = condition
+        else:
+            continue
+
+        properties_left = properties.copy()
+        min_not_max: bool = True
+        if timelock.after_not_before:
+            properties_left = properties_left[0:4]
+        else:
+            min_not_max = False
+            properties_left = properties_left[4:]
+
+        if timelock.seconds_not_height:
+            properties_left = properties_left[0:2]
+        else:
+            properties_left = properties_left[2:]
+
+        if timelock.relative_not_absolute:
+            properties_left = properties_left[0:1]
+        else:
+            properties_left = properties_left[1:]
+
+        current_value: Optional[int] = getattr(valid_times, properties_left[0])
+        if current_value is not None:
+            if min_not_max:
+                new_value: int = min(current_value, timelock.timestamp)
+            else:
+                new_value = max(current_value, timelock.timestamp)
+        else:
+            new_value = timelock.timestamp
+
+        valid_times = replace(valid_times, **{properties_left[0]: new_value})
+
+    return valid_times
