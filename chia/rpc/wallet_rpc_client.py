@@ -105,7 +105,7 @@ class WalletRpcClient(RpcClient):
         return uint64((await self.fetch("get_timestamp_for_height", {"height": height}))["timestamp"])
 
     # Wallet Management APIs
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
+    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Any]]:
         request: Dict[str, Any] = {}
         if wallet_type is not None:
             request["type"] = wallet_type
