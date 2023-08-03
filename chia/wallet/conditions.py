@@ -1005,6 +1005,7 @@ def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Con
         try:
             final_condition_list.append(CONDITION_DRIVERS[opcode].from_json_dict(condition["args"]))
         except Exception:
+            condition["opcode"] = Program.to(opcode)
             final_condition_list.append(UnknownCondition.from_json_dict(condition))
 
     return final_condition_list
@@ -1037,9 +1038,9 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         properties_left = properties.copy()
         min_not_max: bool = True
         if timelock.after_not_before:
+            min_not_max = False
             properties_left = properties_left[0:4]
         else:
-            min_not_max = False
             properties_left = properties_left[4:]
 
         if timelock.seconds_not_height:
