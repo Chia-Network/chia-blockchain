@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-parallel = 4
+parallel = 1
 job_timeout = 60
 checkout_blocks_and_plots = True
