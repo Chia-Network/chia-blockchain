@@ -145,8 +145,8 @@ class TestStructStream:
             with pytest.raises(struct.error):
                 struct.pack(struct_format, upper_boundary + 1)
 
-        assert type(cls.MINIMUM) == cls
-        assert type(cls.MAXIMUM) == cls
+        assert type(cls.MINIMUM) is cls
+        assert type(cls.MAXIMUM) is cls
 
     def test_int512(self) -> None:
         # int512 is special. it uses 65 bytes to allow positive and negative

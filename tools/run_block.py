@@ -134,7 +134,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
                 continue
 
             # If only 3 elements (opcode + 2 args), there is no memo, this is ph, amount
-            if type(condition[3]) != list:
+            if type(condition[3]) is not list:
                 # If it's not a list, it's not the correct format
                 conds[op].append(ConditionWithArgs(op, [i for i in condition[1:3]]))
                 continue

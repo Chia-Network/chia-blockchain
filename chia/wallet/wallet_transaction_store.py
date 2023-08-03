@@ -387,5 +387,12 @@ class WalletTransactionStore:
     async def delete_unconfirmed_transactions(self, wallet_id: int):
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
-                await conn.execute("DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,))
+                await conn.execute(
+                    "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)",
+                    (
+                        wallet_id,
+                        TransactionType.INCOMING_CLAWBACK_SEND.value,
+                        TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
+                    ),
+                )
             ).close()

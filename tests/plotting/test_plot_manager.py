@@ -99,13 +99,13 @@ class PlotRefreshTester:
         for name in ["loaded", "removed", "processed", "remaining"]:
             try:
                 actual_value = refresh_result.__getattribute__(name)
-                if type(actual_value) == list:
+                if type(actual_value) is list:
                     expected_list = self.expected_result.__getattribute__(name)
                     if len(expected_list) != len(actual_value):
                         return
                     values_found = 0
                     for value in actual_value:
-                        if type(value) == PlotInfo:
+                        if type(value) is PlotInfo:
                             for plot_info in expected_list:
                                 if plot_info.prover.get_filename() == value.prover.get_filename():
                                     values_found += 1
