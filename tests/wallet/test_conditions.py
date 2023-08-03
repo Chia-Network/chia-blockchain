@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Tuple, Type, Union
+from typing import Any, List, Optional, Tuple, Type, Union
 
 import pytest
 from clvm.casts import int_from_bytes
@@ -204,6 +204,7 @@ def test_announcement_inversions(
 class TimelockInfo:
     drivers: List[Condition]
     parsed_info: ConditionValidTimes
+    conditions_after: Optional[List[Condition]] = None
 
 
 @pytest.mark.parametrize(
@@ -217,7 +218,11 @@ class TimelockInfo:
         TimelockInfo([AssertBeforeHeightRelative(uint32(0))], ConditionValidTimes(max_blocks_after_created=uint32(0))),
         TimelockInfo([AssertBeforeSecondsAbsolute(uint64(0))], ConditionValidTimes(max_time=uint64(0))),
         TimelockInfo([AssertBeforeHeightAbsolute(uint32(0))], ConditionValidTimes(max_height=uint32(0))),
-        TimelockInfo([Timelock(True, True, True, uint64(0))], ConditionValidTimes(min_secs_since_created=uint64(0))),
+        TimelockInfo(
+            [Timelock(True, True, True, uint64(0))],
+            ConditionValidTimes(min_secs_since_created=uint64(0)),
+            [AssertSecondsRelative(uint64(0))],
+        ),
         TimelockInfo(
             [
                 AssertSecondsAbsolute(uint64(0)),
@@ -226,10 +231,17 @@ class TimelockInfo:
                 AssertBeforeSecondsAbsolute(uint64(10)),
             ],
             ConditionValidTimes(min_time=uint64(10), max_time=uint64(10)),
+            [
+                AssertSecondsAbsolute(uint64(10)),
+                AssertBeforeSecondsAbsolute(uint64(10)),
+            ],
         ),
     ],
 )
 def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
     assert timelock_info.parsed_info == parse_timelock_info(
         [UnknownCondition(Program.to(None), []), *timelock_info.drivers]
+    )
+    assert timelock_info.parsed_info.to_conditions() == (
+        timelock_info.conditions_after if timelock_info.conditions_after is not None else timelock_info.drivers
     )

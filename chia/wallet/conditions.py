@@ -1023,6 +1023,27 @@ class ConditionValidTimes(Streamable):
     max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
     max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
 
+    def to_conditions(self) -> List[Condition]:
+        final_condition_list: List[Condition] = []
+        if self.min_secs_since_created is not None:
+            final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
+        if self.min_time is not None:
+            final_condition_list.append(AssertSecondsAbsolute(self.min_time))
+        if self.min_blocks_since_created is not None:
+            final_condition_list.append(AssertHeightRelative(self.min_blocks_since_created))
+        if self.min_height is not None:
+            final_condition_list.append(AssertHeightAbsolute(self.min_height))
+        if self.max_secs_after_created is not None:
+            final_condition_list.append(AssertBeforeSecondsRelative(self.max_secs_after_created))
+        if self.max_time is not None:
+            final_condition_list.append(AssertBeforeSecondsAbsolute(self.max_time))
+        if self.max_blocks_after_created is not None:
+            final_condition_list.append(AssertBeforeHeightRelative(self.max_blocks_after_created))
+        if self.max_height is not None:
+            final_condition_list.append(AssertBeforeHeightAbsolute(self.max_height))
+
+        return final_condition_list
+
 
 def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
