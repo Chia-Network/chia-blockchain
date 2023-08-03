@@ -1417,9 +1417,7 @@ class WalletStateManager:
                             additions = [state.coin for state in children]
                             if len(children) > 0:
                                 fee = 0
-                                known_puzzle_hash: bool = await self.puzzle_store.puzzle_hash_exists(
-                                    coin_state.coin.puzzle_hash
-                                )
+
                                 to_puzzle_hash = None
                                 coin_spend: Optional[CoinSpend] = None
                                 clawback_metadata: Optional[ClawbackMetadata] = None
@@ -1441,7 +1439,7 @@ class WalletStateManager:
                                             solution: Program = coin_spend.solution.to_program()
                                             uncurried = uncurry_puzzle(puzzle)
                                             clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
-                                        if clawback_metadata is not None and known_puzzle_hash:
+                                        if clawback_metadata is not None:
                                             # Add the Clawback coin as the interested coin for the sender
                                             await self.add_interested_coin_ids([coin.name()])
                                     elif wallet_identifier.type == WalletType.CAT:
