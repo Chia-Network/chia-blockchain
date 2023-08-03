@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from pathlib import Path
 from typing import Optional
 
 import pytest
@@ -407,3 +408,44 @@ class TestBlockHeightMap:
             assert height_map.get_ses(6) == gen_ses(6)
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(8)
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="BlockHeightMap does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+
+@pytest.mark.asyncio
+async def test_empty_chain(tmp_dir, db_version):
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(0)
+
+        with pytest.raises(AssertionError) as _:
+            height_map.get_hash(0)
+
+
+@pytest.mark.asyncio
+async def test_peak_only_chain(tmp_dir, db_version):
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            )
+            await cursor.close()
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(0)
+
+        with pytest.raises(AssertionError) as _:
+            height_map.get_hash(0)

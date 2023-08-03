@@ -21,7 +21,6 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -180,12 +179,7 @@ class VCWallet:
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
         coin_spends.append(CoinSpend(original_coin, original_puzzle, solution))
-        spend_bundle = await sign_coin_spends(
-            coin_spends,
-            self.standard_wallet.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-        )
+        spend_bundle = await self.wallet_state_manager.sign_transaction(coin_spends)
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -297,14 +291,7 @@ class VCWallet:
             magic_conditions=[magic_condition],
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundles = [
-            await sign_coin_spends(
-                [coin_spend],
-                self.standard_wallet.secret_key_store.secret_key_for_public_key,
-                self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            )
-        ]
+        spend_bundles = [await self.wallet_state_manager.sign_transaction([coin_spend])]
         if did_announcement is not None:
             # Need to spend DID
             for _, wallet in self.wallet_state_manager.wallets.items():

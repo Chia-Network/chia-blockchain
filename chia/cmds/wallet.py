@@ -309,12 +309,22 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
+@click.option(
+    "--force",
+    help="Force to push the spend bundle even it may be a double spend",
+    is_flag=True,
+    default=False,
+)
 def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str
+    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool
 ) -> None:  # pragma: no cover
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(spend_clawback(wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids))
+    asyncio.run(
+        spend_clawback(
+            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force
+        )
+    )
 
 
 @wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")

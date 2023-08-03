@@ -71,13 +71,15 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
     conds = mk_agg_sig_conditions(opcode, agg_sig_data=[(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")])
     pks, msgs = pkm_pairs(conds, b"foobar")
     result_aligned = [(x, y) for x, y in zip(pks, msgs)]
-    conditions_dict = {opcode: [ConditionWithArgs(opcode, [PK1, b"msg1"]), ConditionWithArgs(opcode, [PK2, b"msg2"])]}
+    conditions_dict = {
+        opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"msg1"]), ConditionWithArgs(opcode, [bytes48(PK2), b"msg2"])]
+    }
     result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
     assert result_aligned == result2
 
     # missing message argument
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [PK1])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1)])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
@@ -86,12 +88,12 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
 
     # extra argument
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [PK1, b"msg1", b"msg2"])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"msg1", b"msg2"])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
     # message too long
     with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-        conditions_dict = {opcode: [ConditionWithArgs(opcode, [PK1, b"m" * 1025])]}
+        conditions_dict = {opcode: [ConditionWithArgs(opcode, [bytes48(PK1), b"m" * 1025])]}
         result2 = pkm_pairs_for_conditions_dict(conditions_dict, TEST_COIN, b"foobar")
 
 
@@ -213,7 +215,9 @@ class TestPkmPairsForConditionDict:
     def test_agg_sig_unsafe_restriction(self) -> None:
         ASU = ConditionOpcode.AGG_SIG_UNSAFE
 
-        conds = {ASU: [ConditionWithArgs(ASU, [PK1, b"msg1"]), ConditionWithArgs(ASU, [PK2, b"msg2"])]}
+        conds = {
+            ASU: [ConditionWithArgs(ASU, [bytes48(PK1), b"msg1"]), ConditionWithArgs(ASU, [bytes48(PK2), b"msg2"])]
+        }
         tuples = pkm_pairs_for_conditions_dict(conds, TEST_COIN, b"msg10")
         assert tuples == [(bytes48(PK1), b"msg1"), (bytes48(PK2), b"msg2")]
 

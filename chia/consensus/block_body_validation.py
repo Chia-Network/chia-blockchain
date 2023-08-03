@@ -80,15 +80,17 @@ async def validate_block_body(
 
         while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
             prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
-            if passes_plot_filter(
-                prefix_bits,
-                plot_id,
-                curr_optional_block_record.pos_ss_cc_challenge_hash,
-                curr_optional_block_record.cc_sp_hash,
-            ):
-                return Err.INVALID_POSPACE, None
 
             if curr_optional_block_record.cc_sp_hash != curr_sp:
+                if passes_plot_filter(
+                    prefix_bits,
+                    plot_id,
+                    curr_optional_block_record.pos_ss_cc_challenge_hash,
+                    curr_optional_block_record.cc_sp_hash,
+                ):
+                    log.error(f"Chip-13 Block Failed at height: {height}")
+                    return Err.INVALID_POSPACE, None
+
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash
             if sp_count < constants.UNIQUE_PLOTS_WINDOW:
@@ -493,17 +495,11 @@ async def validate_block_body(
     if npc_result is not None:
         assert npc_result.conds is not None
 
-        block_timestamp: uint64
-        if height < constants.SOFT_FORK2_HEIGHT:
-            block_timestamp = block.foliage_transaction_block.timestamp
-        else:
-            block_timestamp = prev_transaction_block_timestamp
-
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block_timestamp,
+            prev_transaction_block_timestamp,
         )
         if error:
             return error, None

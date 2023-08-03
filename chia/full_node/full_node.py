@@ -434,15 +434,12 @@ class FullNode:
             self.add_transaction_semaphore.release()
 
     async def _handle_transactions(self) -> None:
-        try:
-            while not self._shut_down:
-                # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
-                # However, doing them one at a time would be slow, because they get sent to other processes.
-                await self.add_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = await self.transaction_queue.pop()
-                asyncio.create_task(self._handle_one_transaction(item))
-        except asyncio.CancelledError:
-            raise
+        while not self._shut_down:
+            # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
+            # However, doing them one at a time would be slow, because they get sent to other processes.
+            await self.add_transaction_semaphore.acquire()
+            item: TransactionQueueEntry = await self.transaction_queue.pop()
+            asyncio.create_task(self._handle_one_transaction(item))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(

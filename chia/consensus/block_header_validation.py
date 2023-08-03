@@ -505,15 +505,16 @@ def validate_unfinished_header_block(
 
         while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
             prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
-            if passes_plot_filter(
-                prefix_bits,
-                plot_id,
-                curr_optional_block_record.pos_ss_cc_challenge_hash,
-                curr_optional_block_record.cc_sp_hash,
-            ):
-                return None, ValidationError(Err.INVALID_POSPACE)
 
             if curr_optional_block_record.cc_sp_hash != curr_sp:
+                if passes_plot_filter(
+                    prefix_bits,
+                    plot_id,
+                    curr_optional_block_record.pos_ss_cc_challenge_hash,
+                    curr_optional_block_record.cc_sp_hash,
+                ):
+                    return None, ValidationError(Err.INVALID_POSPACE, f"Chip-13 Block Failed: {height}")
+
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash
             if sp_count < constants.UNIQUE_PLOTS_WINDOW:
@@ -843,11 +844,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
-        if height >= constants.SOFT_FORK2_HEIGHT:
-            max_future_time = constants.MAX_FUTURE_TIME2
-        else:
-            max_future_time = constants.MAX_FUTURE_TIME
-        if header_block.foliage_transaction_block.timestamp > int(time.time() + max_future_time):
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME2):
             return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
         if prev_b is not None:

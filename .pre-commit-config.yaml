@@ -3,17 +3,16 @@ repos:
     hooks:
     -   id: check-sql
         name: Validate SQL statements
-        entry: python3 -m tests.check_sql_statements
-        language: python
+        entry: ./activated.py python3 -m tests.check_sql_statements
+        language: system
         pass_filenames: false
 -   repo: local
     hooks:
     -   id: init_py_files
         name: __init__.py files
-        entry: python3 tests/build-init-files.py -v --root .
-        language: python
+        entry: ./activated.py python3 tests/build-init-files.py -v --root .
+        language: system
         pass_filenames: false
-        additional_dependencies: [click~=7.1]
 -   repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
@@ -35,14 +34,14 @@ repos:
     -   id: clvm_hex
         name: .clsp.hex files
         entry: ./activated.py python tools/manage_clvm.py check
-        language: python
+        language: system
         pass_filenames: false
 -   repo: local
     hooks:
     -   id: chialispp
         name: Pretty print chialisp files
         entry: ./activated.py python tools/chialispp.py .
-        language: python
+        language: system
         pass_filenames: false
 -   repo: local
     hooks:
@@ -65,7 +64,10 @@ repos:
         entry: ./activated.py isort .
         language: system
         pass_filenames: false
--   repo: https://github.com/pycqa/flake8
-    rev: 5.0.4
+-   repo: local
     hooks:
-    - id: flake8
+    -   id: flake8
+        name: Flake8
+        entry: ./activated.py flake8
+        language: system
+        types: [python]
