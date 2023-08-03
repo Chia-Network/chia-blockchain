@@ -62,13 +62,6 @@ def curry_cat_eve(next_puzzle_hash: bytes32) -> Program:
 
 
 def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash: bytes32) -> Program:
-    # SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH (SINGLETON_ID . LAUNCHER_PUZZLE_HASH))
-    # PROPOSAL_MOD_HASH
-    # PROPOSAL_TIMER_MOD_HASH
-    # CAT_MOD_HASH
-    # LOCKUP_MOD_HASH
-    # TREASURY_MOD_HASH
-    # CAT_TAIL_HASH
     singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (treasury_id, SINGLETON_LAUNCHER_HASH)))
     lockup_puzzle: Program = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
@@ -97,14 +90,6 @@ def get_treasury_puzzle(dao_rules: DAORules, treasury_id: bytes32, cat_tail_hash
             treasury_id
         ).get_tree_hash(),  # TODO: let people set this later - for now a hidden feature
     )
-    # TREASURY_MOD_HASH
-    # PROPOSAL_VALIDATOR  ; this is the curryed proposal validator
-    # PROPOSAL_LENGTH
-    # PROPOSAL_SOFTCLOSE_LENGTH
-    # ATTENDANCE_REQUIRED
-    # PASS_MARGIN  ; this is a percentage 0 - 10,000 - 51% would be 5100
-    # PROPOSAL_SELF_DESTRUCT_TIME ; time in seconds after which proposals can be automatically closed
-    # ORACLE_SPEND_DELAY  ; timelock delay for oracle spend
     puzzle = DAO_TREASURY_MOD.curry(
         DAO_TREASURY_MOD_HASH,
         proposal_validator,
@@ -436,17 +421,6 @@ def get_treasury_rules_from_puzzle(puzzle_reveal: Optional[Program]) -> DAORules
 # This takes the treasury puzzle and treasury solution, not the full puzzle and full solution
 # This also returns the treasury puzzle and not the full puzzle
 def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Program) -> Optional[Program]:
-    # curried_args = uncurry_treasury(puzzle_reveal)
-    # (
-    #     DAO_TREASURY_MOD_HASH,
-    #     DAO_PROPOSAL_VALIDATOR_MOD,
-    #     proposal_timelock,
-    #     soft_close_length,
-    #     attendance_required_percentage,
-    #     proposal_pass_percentage,
-    #     proposal_self_destruct_length,
-    #     oracle_spend_delay,
-    # ) = curried_args
     if solution.rest().rest().first() != Program.to(0):
         # Proposal Spend
         mod, curried_args = solution.at("rrf").uncurry()
@@ -761,13 +735,23 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
 
 
 # This is used in WSM to determine whether we have a dao funding spend
-def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program) -> Optional[bool]:
-    # TODO: handle case where solution is for existing p2_singleton
+def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Coin) -> Optional[bool]:
     try:
         if match_cat_puzzle(uncurried):
             conditions = solution.at("frfr").as_iter()
         elif uncurried.mod == MOD:
             conditions = solution.at("rfr").as_iter()
+        elif uncurried.mod == SINGLETON_MOD:
+            inner_puz, _ = uncurried.args.at("rf").uncurry()
+            if inner_puz == DAO_TREASURY_MOD:
+                treasury_id = uncurried.args.at("frf").as_atom()
+                p2_singleton_puzhash = get_p2_singleton_puzhash(treasury_id)
+                delegated_puz = solution.at("rrfrrf")
+                delegated_mod, delegated_args = delegated_puz.uncurry()
+                if delegated_puz.uncurry()[0] == SPEND_P2_SINGLETON_MOD:
+                    if coin.puzzle_hash == delegated_args.at("rrrrf").as_atom():
+                        return True
+            return None
         else:
             return None
         for cond in conditions:
