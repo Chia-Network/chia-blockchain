@@ -2,6 +2,17 @@ name: 📦🚀 Build Installers - MacOS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Tagged release testing scenario'
+        required: false
+        type: choice
+        default: ''
+        options:
+        - ''
+        - 9.9.9-b1
+        - 9.9.9-rc1
+        - 9.9.9
   push:
     paths-ignore:
     - '**.md'
@@ -66,6 +77,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MACOSX_DEPLOYMENT_TARGET: 11
 
+      - name: Check tag type
+        id: check_tag_type
+        shell: bash
+        run: |
+          REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
+          REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
+          if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
+            echo "TAG_TYPE=beta" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
+            echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Test for secrets access
         id: check_secrets
         shell: bash
@@ -75,13 +98,13 @@ jobs:
           unset HAS_GLUE_SECRET
 
           if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
-          echo HAS_APPLE_SECRET=${HAS_APPLE_SECRET} >>$GITHUB_OUTPUT
+          echo HAS_APPLE_SECRET=${HAS_APPLE_SECRET} >> "$GITHUB_OUTPUT"
 
           if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-          echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >>$GITHUB_OUTPUT
+          echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
 
           if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-          echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >>$GITHUB_OUTPUT
+          echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
           AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
@@ -93,7 +116,7 @@ jobs:
           python3 -m venv ../venv
           . ../venv/bin/activate
           pip install setuptools_scm
-          echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> $GITHUB_OUTPUT
+          echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
           deactivate
 
       - name: Setup Python environment
@@ -120,40 +143,82 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-          mkdir "$GITHUB_WORKSPACE/madmax"
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
-          mv chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }} $GITHUB_WORKSPACE/madmax/chia_plot
-          gh release download -R Chia-Network/chia-plotter-madmax $LATEST_MADMAX -p 'chia_plot_k34-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
-          mv chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }} $GITHUB_WORKSPACE/madmax/chia_plot_k34
-          chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
-          chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+          mkdir "$GITHUB_WORKSPACE"/madmax
+          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
+          mv chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot
+          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
+          mv chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
+          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot
+          chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
-      - name: Get latest bladebit plotter
-        if: '!github.event.release.prerelease'
+      - name: Get latest bladebit plotter for Full Release
+        if: "github.event.release && !github.event.release.prerelease"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          mkdir "$GITHUB_WORKSPACE/bladebit"
-          cd "$GITHUB_WORKSPACE/bladebit"
-          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == false) | .tag_name' | while read tag; do
-              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
-              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
-          done
+          LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
+          ASSETS=$(gh release view "$LATEST_RELEASE" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
+              LATEST_RELEASE=v2.0.1
+            fi
+          gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 
-      - name: Get latest prerelease bladebit plotter
-        if: env.PRE_RELEASE == 'true'
+      - name: Get latest beta bladebit plotter
+        if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'beta'"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          mkdir "$GITHUB_WORKSPACE/bladebit"
-          cd "$GITHUB_WORKSPACE/bladebit"
-          gh api repos/Chia-Network/bladebit/releases --jq '.[] | select(.prerelease == true) | .tag_name' | while read tag; do
-              echo "Attempting to download bladebit artifact for macOS from release ${tag}...";
-              gh release download -R Chia-Network/bladebit $tag -p 'bladebit*macos-x86-64.tar.gz' && break
-          done
+          LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
+          ASSETS=$(gh release view "$LATEST_BETA" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
+              LATEST_BETA=v2.0.1
+            fi
+          gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
+
+      - name: Get latest RC bladebit plotter
+        if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'rc'"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
+          ASSETS=$(gh release view "$LATEST_RC" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
+              LATEST_RC=v2.0.1
+            fi
+          gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
+          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
+          ls bladebit* | xargs -I{} chmod +x {}
+          cd "$OLDPWD"
+
+      - name: Get latest bladebit plotter for Dev
+        if: "!github.event.release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-(beta|rc)[0-9]+$")))) | first | .tag_name')
+          mkdir "$GITHUB_WORKSPACE"/bladebit
+          cd "$GITHUB_WORKSPACE"/bladebit
+          ASSETS=$(gh release view "$LATEST_BLADEBIT" --repo Chia-Network/bladebit --json assets -q '.assets[].name')
+            if ! echo "$ASSETS" | grep -q 'bladebit.*-${{ matrix.os.bladebit-suffix }}'; then
+              LATEST_BLADEBIT=v2.0.1
+            fi
+          gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
@@ -175,7 +240,7 @@ jobs:
         run: |
           gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
           echo "${gui_ref}"
-          echo "GUI_REF=${gui_ref}" >> $GITHUB_OUTPUT
+          echo "GUI_REF=${gui_ref}" >> "$GITHUB_OUTPUT"
           echo "rm -rf ./chia-blockchain-gui"
           rm -rf ./chia-blockchain-gui
 
@@ -235,7 +300,7 @@ jobs:
         run: |
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-          echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >>$GITHUB_ENV
+          echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
 
       - name: Create torrent
@@ -269,13 +334,6 @@ jobs:
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
 
-      - name: Get tag name
-        if: startsWith(github.ref, 'refs/tags/')
-        id: tag-name
-        run: |
-          echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
-          echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >> $GITHUB_OUTPUT
-
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
         env:
@@ -289,7 +347,7 @@ jobs:
       - name: Mark installer complete
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/${{ matrix.os.glue-name }}
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/${{ matrix.os.glue-name }}
 
       # We want to delete this no matter what happened in the previous steps (failures, success, etc)
       - name: Delete signing keychain
