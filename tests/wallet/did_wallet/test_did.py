@@ -18,7 +18,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
@@ -1279,37 +1279,26 @@ class TestDIDWallet:
         # Check if the DID wallet is created in the wallet2
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
         await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
-        did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[2]
-        assert did_wallet_2 is not None
+        did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
         did_info = did_wallet_2.did_info
         # set flag to reset wallet sync data on start
         await wallet_api_1.set_wallet_resync_on_startup({"enable": True})
         fingerprint_1 = wallet_node_1.logged_in_fingerprint
-        assert wallet_node_1._wallet_state_manager
         await wallet_api_2.set_wallet_resync_on_startup({"enable": True})
         fingerprint_2 = wallet_node_2.logged_in_fingerprint
-        assert wallet_node_2._wallet_state_manager
         # 2 reward coins
-        assert len(await wallet_node_1._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+        assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
         # Delete tx records
         await wallet_node_1.wallet_state_manager.tx_store.rollback_to_block(0)
         wallet_node_1._close()
         await wallet_node_1._await_closed()
         wallet_node_2._close()
         await wallet_node_2._await_closed()
-        new_config_1 = wallet_node_1.config.copy()
-        new_config_1["reset_sync_for_fingerprint"] = fingerprint_1
-        new_config_1["database_path"] = "wallet/db/blockchain_wallet_v2_test_1_CHALLENGE_KEY.sqlite"
-        new_config_2 = wallet_node_2.config.copy()
-        new_config_2["reset_sync_for_fingerprint"] = fingerprint_2
-        new_config_2["database_path"] = "wallet/db/blockchain_wallet_v2_test_2_CHALLENGE_KEY.sqlite"
-        wallet_node_1.config = new_config_1
-        wallet_node_2.config = new_config_2
+        wallet_node_1.config["database_path"] = "wallet/db/blockchain_wallet_v2_test_1_CHALLENGE_KEY.sqlite"
+        wallet_node_2.config["database_path"] = "wallet/db/blockchain_wallet_v2_test_2_CHALLENGE_KEY.sqlite"
         # Start resync
         await wallet_node_1._start_with_fingerprint(fingerprint_1)
-        assert wallet_node_1._wallet_state_manager
         await wallet_node_2._start_with_fingerprint(fingerprint_2)
-        assert wallet_node_2._wallet_state_manager
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
@@ -1317,6 +1306,5 @@ class TestDIDWallet:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=20)
         await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
-        did_wallet_2 = wallet_node_2.wallet_state_manager.wallets[2]
-        assert did_wallet_2 is not None
+        did_wallet_2 = wallet_node_2.wallet_state_manager.get_wallet(uint32(2), DIDWallet)
         assert did_info == did_wallet_2.did_info
