@@ -15,6 +15,8 @@ from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_singleton_puzzle_hash
+from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_treasury_puzzle, get_p2_singleton_puzhash
+from chia.wallet.dao_wallet.dao_info import DAORules
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -552,6 +554,47 @@ def test_validator() -> None:
 
     return
 
+def test_spend_p2_singleton() -> None:
+    # Curried values
+    singleton_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_struct: Program = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
+    my_id = Program.to("my_id").get_tree_hash()
+    p2_singleton_puzhash = P2_SINGLETON_MOD.curry(singleton_struct, P2_SINGLETON_AGGREGATOR_MOD).get_tree_hash()
+    cat_tail_1 = Program.to("cat_tail_1").get_tree_hash()
+    cat_tail_2 = Program.to("cat_tail_2").get_tree_hash()
+    conditions = [[51, 0xCAFEF00D, 100], [51, 0xFEEDBEEF, 200]]
+    list_of_tailhash_conds = [
+        [cat_tail_1, [[51, 0x8BADF00D, 123], [51, 0xF00DF00D, 321]]],
+        [cat_tail_2, [[51, 0x8BADF00D, 123], [51, 0xF00DF00D, 321]]],
+    ]
+    # list_of_tailhash_conds = []
+
+    # Solution Values
+    xch_parent_amt_list = [[b"x"*32, 10], [b"y"*32, 100]]
+    cat_parent_amt_list = [
+        [cat_tail_1, [["b"*32, 100], [b"c"*32, 400]]],
+        [cat_tail_2, [[b"e"*32,100], [b"f"*32, 400]]],
+    ]
+    # cat_parent_amt_list = []
+    treasury_inner_puzhash = Program.to("treasury_inner").get_tree_hash()
+    
+    # Puzzle
+    spend_p2_puz = SPEND_P2_SINGLETON_MOD.curry(
+        singleton_struct,
+        CAT_MOD_HASH,
+        conditions,
+        list_of_tailhash_conds,
+        p2_singleton_puzhash
+    )
+
+    # Solution
+    spend_p2_sol = Program.to([xch_parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
+
+    cds = spend_p2_puz.run(spend_p2_sol)
+    
+    
+
+    
 
 def test_merge_p2_singleton() -> None:
     """
@@ -839,6 +882,17 @@ def test_proposal_lifecycle() -> None:
     self_destruct_time = 1000
     CAT_TAIL_HASH: Program = Program.to("tail").get_tree_hash()
     oracle_spend_delay = 10
+    min_amt = 1
+
+    dao_rules = DAORules(
+        proposal_timelock=proposal_timelock,
+        soft_close_length=soft_close_length,
+        attendance_required=attendance_required,
+        pass_percentage=proposal_pass_percentage,
+        self_destruct_length=self_destruct_time,
+        oracle_spend_delay=oracle_spend_delay,
+        proposal_minimum_amount=min_amt,
+    )
 
     # Setup the treasury
     treasury_id: Program = Program.to("treasury_id").get_tree_hash()
@@ -852,8 +906,8 @@ def test_proposal_lifecycle() -> None:
     locked_amount = 100000
     conditions = [[51, 0xDABBAD00, 1000], [51, 0xCAFEF00D, 100]]
 
-    min_amt = 1
-    excess_puzhash = bytes32(b"1" * 32)
+    
+    excess_puzhash = get_p2_singleton_puzhash(treasury_id)
     dao_lockup_self = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
         SINGLETON_LAUNCHER_HASH,
@@ -891,6 +945,9 @@ def test_proposal_lifecycle() -> None:
         oracle_spend_delay,
     )
     treasury_inner_puzhash = treasury_inner_puz.get_tree_hash()
+
+    calculated_treasury_puzhash = get_treasury_puzzle(dao_rules, treasury_id, CAT_TAIL_HASH).get_tree_hash()
+    assert treasury_inner_puzhash == calculated_treasury_puzhash
 
     full_treasury_puz = SINGLETON_MOD.curry(treasury_singleton_struct, treasury_inner_puz)
     full_treasury_puzhash = full_treasury_puz.get_tree_hash()
@@ -977,10 +1034,26 @@ def test_proposal_lifecycle() -> None:
     new_soft_close_length = 10
     new_self_destruct_time = 1000
     new_oracle_spend_delay = 20
+    new_minimum_amount = 10
+    proposal_excess_puzhash = get_p2_singleton_puzhash(treasury_id)
+
+    new_dao_rules = DAORules(
+        proposal_timelock=new_proposal_timelock,
+        soft_close_length=new_soft_close_length,
+        attendance_required=new_attendance_required,
+        pass_percentage=new_proposal_pass_percentage,
+        self_destruct_length=new_self_destruct_time,
+        oracle_spend_delay=new_oracle_spend_delay,
+        proposal_minimum_amount=new_minimum_amount,
+    )
 
     update_proposal = DAO_UPDATE_MOD.curry(
         DAO_TREASURY_MOD_HASH,
-        proposal_validator,
+        DAO_PROPOSAL_VALIDATOR_MOD_HASH,
+        treasury_singleton_struct,
+        proposal_curry_one.get_tree_hash(),
+        new_minimum_amount,
+        proposal_excess_puzhash,
         new_proposal_timelock,
         new_soft_close_length,
         new_attendance_required,
@@ -1044,3 +1117,11 @@ def test_proposal_lifecycle() -> None:
     ]
     proposal_apas = [cond.vars[0] for cond in proposal_conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT]]
     assert treasury_cpas[1] == proposal_apas[1]
+
+    new_treasury_inner = update_proposal.run(update_proposal_sol).at("frf").as_atom()
+    expected_treasury_inner = get_treasury_puzzle(new_dao_rules, treasury_id, CAT_TAIL_HASH)
+    assert new_treasury_inner == expected_treasury_inner.get_tree_hash()
+
+    expected_treasury_hash = curry_singleton(treasury_id, expected_treasury_inner).get_tree_hash()
+    assert treasury_conds[ConditionOpcode.CREATE_COIN][1].vars[0] == expected_treasury_hash
+    
