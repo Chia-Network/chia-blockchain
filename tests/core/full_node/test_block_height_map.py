@@ -436,13 +436,13 @@ async def test_peak_only_chain(tmp_dir, db_version):
     async with DBConnection(db_version) as db_wrapper:
         await setup_db(db_wrapper)
 
-        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
-
         async with db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
             )
             await cursor.close()
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
         with pytest.raises(KeyError) as _:
             height_map.get_ses(0)
