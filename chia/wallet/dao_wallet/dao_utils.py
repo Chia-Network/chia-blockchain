@@ -4,9 +4,9 @@ import logging
 from itertools import chain
 from typing import Iterator, List, Optional, Tuple
 
-from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -108,10 +108,10 @@ def get_proposal_validator(treasury_puz: Program, proposal_minimum_amount: uint6
     validator: Program = uncurried_args.rest().first()
     validator_args = validator.uncurry()[1]
     (
-     singleton_struct,
-     proposal_self_hash,
-     _,
-     p2_puzhash,
+        singleton_struct,
+        proposal_self_hash,
+        _,
+        p2_puzhash,
     ) = validator_args.as_iter()
     proposal_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
         singleton_struct,
@@ -119,16 +119,16 @@ def get_proposal_validator(treasury_puz: Program, proposal_minimum_amount: uint6
         proposal_minimum_amount,
         p2_puzhash,
     )
-    return validator
+    return proposal_validator
 
 
 def get_update_proposal_puzzle(dao_rules: DAORules, proposal_validator: Program) -> Program:
     validator_args = uncurry_proposal_validator(proposal_validator)
     (
-     singleton_struct,
-     proposal_self_hash,
-     _,
-     proposal_excess_puzhash,
+        singleton_struct,
+        proposal_self_hash,
+        _,
+        proposal_excess_puzhash,
     ) = validator_args.as_iter()
     update_proposal = DAO_UPDATE_PROPOSAL_MOD.curry(
         DAO_TREASURY_MOD_HASH,
@@ -440,10 +440,7 @@ def get_new_puzzle_from_treasury_solution(puzzle_reveal: Program, solution: Prog
                 oracle_spend_delay,
             ) = curried_args.as_iter()
             new_validator = DAO_PROPOSAL_VALIDATOR_MOD.curry(
-                TREASURY_SINGLETON_STRUCT,
-                PROPOSAL_SELF_HASH,
-                proposal_minimum_amount,
-                PROPOSAL_EXCESS_PAYOUT_PUZ_HASH
+                TREASURY_SINGLETON_STRUCT, PROPOSAL_SELF_HASH, proposal_minimum_amount, PROPOSAL_EXCESS_PAYOUT_PUZ_HASH
             )
             return DAO_TREASURY_MOD.curry(
                 DAO_TREASURY_MOD_HASH,
@@ -744,8 +741,6 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Co
         elif uncurried.mod == SINGLETON_MOD:
             inner_puz, _ = uncurried.args.at("rf").uncurry()
             if inner_puz == DAO_TREASURY_MOD:
-                treasury_id = uncurried.args.at("frf").as_atom()
-                p2_singleton_puzhash = get_p2_singleton_puzhash(treasury_id)
                 delegated_puz = solution.at("rrfrrf")
                 delegated_mod, delegated_args = delegated_puz.uncurry()
                 if delegated_puz.uncurry()[0] == SPEND_P2_SINGLETON_MOD:

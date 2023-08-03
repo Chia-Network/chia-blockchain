@@ -881,8 +881,7 @@ class DAOWallet(WalletProtocol):
         if not new_proposal_validator:
             assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
             new_proposal_validator = get_proposal_validator(
-                self.dao_info.current_treasury_innerpuz,
-                new_dao_rules.proposal_minimum_amount
+                self.dao_info.current_treasury_innerpuz, new_dao_rules.proposal_minimum_amount
             )
         return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
 
@@ -1311,8 +1310,9 @@ class DAOWallet(WalletProtocol):
             timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
         full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
+        assert isinstance(self.dao_info.current_treasury_coin, Coin)
         assert full_treasury_puz.get_tree_hash() == self.dao_info.current_treasury_coin.puzzle_hash
-            
+
         cat_spend_bundle = None
         delegated_puzzle_sb = None
         puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
@@ -1526,9 +1526,6 @@ class DAOWallet(WalletProtocol):
         )
 
         treasury_cs = CoinSpend(self.dao_info.current_treasury_coin, full_treasury_puz, full_treasury_solution)
-
-        props = SpendBundle([proposal_cs], AugSchemeMPL.aggregate([]))
-        treas = props = SpendBundle([treasury_cs], AugSchemeMPL.aggregate([]))
 
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))

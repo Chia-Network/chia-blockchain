@@ -30,12 +30,12 @@
         (sha256 ONE ATTENDANCE_REQUIRED)
         (sha256 ONE PROPOSAL_SOFTCLOSE_LENGTH)
         (sha256 ONE PROPOSAL_LENGTH)
-	(puzzle-hash-of-curried-function VALIDATOR_MOD_HASH
-	  (sha256 ONE PROPOSAL_EXCESS_PAYOUT_PUZHASH)
-	  (sha256 ONE PROPOSAL_MINIMUM_AMOUNT)
-	  (sha256 ONE PROPOSAL_SELF_HASH)
-	  (sha256tree SINGLETON_STRUCT)	  
-	)
+        (puzzle-hash-of-curried-function VALIDATOR_MOD_HASH
+          (sha256 ONE PROPOSAL_EXCESS_PAYOUT_PUZHASH)
+          (sha256 ONE PROPOSAL_MINIMUM_AMOUNT)
+          (sha256 ONE PROPOSAL_SELF_HASH)
+          (sha256tree SINGLETON_STRUCT)
+        )
         (sha256 ONE TREASURY_MOD_HASH)
       )
       ONE
