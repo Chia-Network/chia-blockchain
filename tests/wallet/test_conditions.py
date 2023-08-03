@@ -154,6 +154,7 @@ def test_condition_serialization(serializations: ConditionSerializations, abstra
 def test_unknown_condition() -> None:
     unknown_condition: Condition = parse_conditions_non_consensus([Program.to([-10, HASH, AMT])])[0]
     assert unknown_condition == conditions_from_json_dicts([{"opcode": "81f6", "args": ["a0" + HASH_HEX, "80"]}])[0]
+    assert unknown_condition == conditions_from_json_dicts([{"opcode": -10, "args": ["a0" + HASH_HEX, "80"]}])[0]
     with pytest.raises(ValueError, match="Invalid condition opcode"):
         conditions_from_json_dicts([{"opcode": bytes(32)}])
     assert unknown_condition == UnknownCondition(Program.to(-10), [Program.to(HASH), Program.to(AMT)])
@@ -201,23 +202,34 @@ def test_announcement_inversions(
 
 @dataclass(frozen=True)
 class TimelockInfo:
-    driver: Condition
+    drivers: List[Condition]
     parsed_info: ConditionValidTimes
 
 
 @pytest.mark.parametrize(
     "timelock_info",
     [
-        TimelockInfo(AssertSecondsRelative(uint64(0)), ConditionValidTimes(min_secs_since_created=uint64(0))),
-        TimelockInfo(AssertHeightRelative(uint32(0)), ConditionValidTimes(min_blocks_since_created=uint32(0))),
-        TimelockInfo(AssertSecondsAbsolute(uint64(0)), ConditionValidTimes(min_time=uint64(0))),
-        TimelockInfo(AssertHeightAbsolute(uint32(0)), ConditionValidTimes(min_height=uint32(0))),
-        TimelockInfo(AssertBeforeSecondsRelative(uint64(0)), ConditionValidTimes(max_secs_after_created=uint64(0))),
-        TimelockInfo(AssertBeforeHeightRelative(uint32(0)), ConditionValidTimes(max_blocks_after_created=uint32(0))),
-        TimelockInfo(AssertBeforeSecondsAbsolute(uint64(0)), ConditionValidTimes(max_time=uint64(0))),
-        TimelockInfo(AssertBeforeHeightAbsolute(uint32(0)), ConditionValidTimes(max_height=uint32(0))),
-        TimelockInfo(Timelock(True, True, True, uint64(0)), ConditionValidTimes(min_secs_since_created=uint64(0))),
+        TimelockInfo([AssertSecondsRelative(uint64(0))], ConditionValidTimes(min_secs_since_created=uint64(0))),
+        TimelockInfo([AssertHeightRelative(uint32(0))], ConditionValidTimes(min_blocks_since_created=uint32(0))),
+        TimelockInfo([AssertSecondsAbsolute(uint64(0))], ConditionValidTimes(min_time=uint64(0))),
+        TimelockInfo([AssertHeightAbsolute(uint32(0))], ConditionValidTimes(min_height=uint32(0))),
+        TimelockInfo([AssertBeforeSecondsRelative(uint64(0))], ConditionValidTimes(max_secs_after_created=uint64(0))),
+        TimelockInfo([AssertBeforeHeightRelative(uint32(0))], ConditionValidTimes(max_blocks_after_created=uint32(0))),
+        TimelockInfo([AssertBeforeSecondsAbsolute(uint64(0))], ConditionValidTimes(max_time=uint64(0))),
+        TimelockInfo([AssertBeforeHeightAbsolute(uint32(0))], ConditionValidTimes(max_height=uint32(0))),
+        TimelockInfo([Timelock(True, True, True, uint64(0))], ConditionValidTimes(min_secs_since_created=uint64(0))),
+        TimelockInfo(
+            [
+                AssertSecondsAbsolute(uint64(0)),
+                AssertSecondsAbsolute(uint64(10)),
+                AssertBeforeSecondsAbsolute(uint64(20)),
+                AssertBeforeSecondsAbsolute(uint64(10)),
+            ],
+            ConditionValidTimes(min_time=uint64(10), max_time=uint64(10)),
+        ),
     ],
 )
 def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
-    assert timelock_info.parsed_info == parse_timelock_info([timelock_info.driver])
+    assert timelock_info.parsed_info == parse_timelock_info(
+        [*timelock_info.drivers, UnknownCondition(Program.to(None), [])]
+    )
