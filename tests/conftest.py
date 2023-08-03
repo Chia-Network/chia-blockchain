@@ -164,7 +164,7 @@ def latest_db_version() -> int:
     return 2
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest.fixture(scope="function", params=[2])
 def db_version(request) -> int:
     return request.param
 

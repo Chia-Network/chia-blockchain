@@ -510,3 +510,10 @@ class TestCoinStoreWithBlocks:
 
             # if the limit is very high, we should get all of them
             assert len(await coin_store.get_coin_states_by_ids(True, coins, uint32(0), max_items=10000)) == 600
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await CoinStore.create(db_wrapper)
