@@ -6,9 +6,12 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import List
+from typing import List, cast
 
 import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 from clvm.casts import int_to_bytes
 
 from chia.consensus.blockchain import Blockchain
@@ -31,8 +34,15 @@ from tests.util.db_connection import DBConnection
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="function", params=[True, False])
+def use_cache(request: SubRequest) -> bool:
+    return cast(bool, request.param)
+
+
 @pytest.mark.asyncio
-async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+async def test_block_store(
+    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool
+) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
 
@@ -42,10 +52,10 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, conse
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
-        store = await BlockStore.create(db_wrapper)
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         await BlockStore.create(db_wrapper_2)
 
         # Save/get block
@@ -92,7 +102,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, conse
 
 
 @pytest.mark.asyncio
-async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode) -> None:
+async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool) -> None:
     """
     This test was added because the store was deadlocking in certain situations, when fetching and
     adding blocks repeatedly. The issue was patched.
@@ -102,7 +112,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, consensu
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as wrapper, DBConnection(db_version) as wrapper_2:
-        store = await BlockStore.create(wrapper)
+        store = await BlockStore.create(wrapper, use_cache=use_cache)
         coin_store_2 = await CoinStore.create(wrapper_2)
         store_2 = await BlockStore.create(wrapper_2)
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
@@ -126,7 +136,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, consensu
 
 
 @pytest.mark.asyncio
-async def test_rollback(bt: BlockTools, tmp_dir: Path, consensus_mode: Mode) -> None:
+async def test_rollback(bt: BlockTools, tmp_dir: Path, consensus_mode: Mode, use_cache: bool) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
@@ -134,7 +144,7 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, consensus_mode: Mode) -> 
     async with DBConnection(2) as db_wrapper:
         # Use a different file for the blockchain
         coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         # insert all blocks
@@ -173,14 +183,16 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, consensus_mode: Mode) -> 
 
 
 @pytest.mark.asyncio
-async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode) -> None:
+async def test_count_compactified_blocks(
+    bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode, use_cache: bool
+) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
 
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = await block_store.count_compactified_blocks()
@@ -195,7 +207,7 @@ async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_versi
 
 @pytest.mark.asyncio
 async def test_count_uncompactified_blocks(
-    bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode
+    bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode, use_cache: bool
 ) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
@@ -203,7 +215,7 @@ async def test_count_uncompactified_blocks(
 
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
 
         count = await block_store.count_uncompactified_blocks()
@@ -217,7 +229,9 @@ async def test_count_uncompactified_blocks(
 
 
 @pytest.mark.asyncio
-async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode) -> None:
+async def test_replace_proof(
+    bt: BlockTools, tmp_dir: Path, db_version: int, consensus_mode: Mode, use_cache: bool
+) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
@@ -237,7 +251,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, con
 
     async with DBConnection(db_version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
-        block_store = await BlockStore.create(db_wrapper)
+        block_store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         bc = await Blockchain.create(coin_store, block_store, bt.constants, tmp_dir, 2)
         for block in blocks:
             await _validate_and_add_block(bc, block)
@@ -265,7 +279,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, con
 
 
 @pytest.mark.asyncio
-async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mode, use_cache: bool) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     blocks = bt.get_consecutive_blocks(10)
@@ -274,7 +288,7 @@ async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mo
         return SerializedProgram.from_bytes(int_to_bytes(i))
 
     async with DBConnection(db_version) as db_wrapper:
-        store = await BlockStore.create(db_wrapper)
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
 
         new_blocks = []
         for i, block in enumerate(blocks):
@@ -307,7 +321,9 @@ async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mo
 
 
 @pytest.mark.asyncio
-async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+async def test_get_blocks_by_hash(
+    tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode, use_cache: bool
+) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     assert sqlite3.threadsafety >= 1
@@ -316,10 +332,10 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
-        store = await BlockStore.create(db_wrapper)
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         await BlockStore.create(db_wrapper_2)
 
         print("starting test")
@@ -347,7 +363,9 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
 
 
 @pytest.mark.asyncio
-async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode) -> None:
+async def test_get_block_bytes_in_range(
+    tmp_dir: Path, bt: BlockTools, db_version: int, consensus_mode: Mode, use_cache: bool
+) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
     assert sqlite3.threadsafety >= 1
@@ -356,7 +374,7 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
     async with DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
         await BlockStore.create(db_wrapper_2)
@@ -378,15 +396,15 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
 @pytest.mark.asyncio
 async def test_get_plot_filer_info(
-    default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools
+    default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool
 ) -> None:
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
         coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
         bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
 
-        store = await BlockStore.create(db_wrapper)
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
         blocks: List[FullBlock] = []
         expected_cc_sp_hashes: List[bytes32] = []
         for block in default_400_blocks:
@@ -432,7 +450,7 @@ async def test_get_plot_filer_info(
 
 
 @pytest.mark.asyncio
-async def test_unsupported_version(tmp_dir: Path) -> None:
+async def test_unsupported_version(tmp_dir: Path, use_cache: bool) -> None:
     with pytest.raises(RuntimeError, match="BlockStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
-            await BlockStore.create(db_wrapper)
+            await BlockStore.create(db_wrapper, use_cache=use_cache)

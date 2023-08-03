@@ -137,11 +137,14 @@ class BlockStore:
     ses_challenge_cache: LRUCache[bytes32, List[SubEpochChallengeSegment]]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> BlockStore:
+    async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
         if db_wrapper.db_version != 2:
             raise RuntimeError(f"BlockStore does not support database schema v{db_wrapper.db_version}")
 
-        self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
+        if use_cache:
+            self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
+        else:
+            self = cls(LRUCache(0), db_wrapper, LRUCache(0))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating block store tables and indexes.")
