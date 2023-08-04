@@ -302,6 +302,10 @@ class TestDLWallet:
         await time_out_assert(10, wallet_0.get_confirmed_balance, funds - 2000000000000)
         await asyncio.sleep(0.5)
 
+        dl_coin_record = await dl_wallet.wallet_state_manager.coin_store.get_coin_record(new_record.coin_id)
+        assert dl_coin_record is not None
+        assert await dl_wallet.match_hinted_coin(dl_coin_record.coin, new_record.launcher_id)
+
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()

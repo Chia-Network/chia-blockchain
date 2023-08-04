@@ -28,9 +28,13 @@ from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_pending_approval_state
+from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -342,6 +346,7 @@ class TradeManager:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         reuse_puzhash: Optional[bool] = None,
+        taking: bool = False,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
@@ -355,6 +360,7 @@ class TradeManager:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             reuse_puzhash=reuse_puzhash,
+            taking=taking,
         )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -390,6 +396,7 @@ class TradeManager:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         reuse_puzhash: Optional[bool] = None,
+        taking: bool = False,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -481,6 +488,10 @@ class TradeManager:
                     else:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
+            requested_payments = await self.check_for_requested_payment_modifications(
+                requested_payments, driver_dict, taking
+            )
+
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
                 offer_dict_no_ints, driver_dict, solver, fee, min_coin_amount, max_coin_amount
             )
@@ -538,6 +549,7 @@ class TradeManager:
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
                         reuse_puzhash=reuse_puzhash,
+                        add_authorizations_to_cr_cats=False,
                     )
                     all_transactions.extend(txs)
 
@@ -584,16 +596,22 @@ class TradeManager:
 
         settlement_coins: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        additions: List[Coin] = final_spend_bundle.not_ephemeral_additions()
+        hint_dict: Dict[bytes32, bytes32] = {}
+        additions_dict: Dict[bytes32, Coin] = {}
+        for hinted_coins in (compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends):
+            hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
+            additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
         removals: List[Coin] = final_spend_bundle.removals()
+        additions: List[Coin] = list(a for a in additions_dict.values() if a not in removals)
         all_fees = uint64(final_spend_bundle.fees())
 
         txs = []
 
         addition_dict: Dict[uint32, List[Coin]] = {}
         for addition in additions:
-            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                addition.puzzle_hash
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(
+                addition,
+                hint_dict,
             )
             if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
@@ -616,7 +634,7 @@ class TradeManager:
                             trade_id=offer.name(),
                             type=uint32(TransactionType.INCOMING_TRADE.value),
                             name=std_hash(final_spend_bundle.name() + addition.name()),
-                            memos=[],
+                            memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
                         )
                     )
                 else:  # This is change
@@ -626,8 +644,9 @@ class TradeManager:
         # While we want additions to show up as separate records, removals of the same wallet should show as one
         removal_dict: Dict[uint32, List[Coin]] = {}
         for removal in removals:
-            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
-                removal.puzzle_hash
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_coin(
+                removal,
+                hint_dict,
             )
             if wallet_identifier is not None:
                 removal_dict.setdefault(wallet_identifier.id, [])
@@ -662,7 +681,7 @@ class TradeManager:
                     trade_id=offer.name(),
                     type=uint32(TransactionType.OUTGOING_TRADE.value),
                     name=std_hash(final_spend_bundle.name() + removal_tree_hash),
-                    memos=[],
+                    memos=[(coin_id, [hint]) for coin_id, hint in hint_dict.items()],
                 )
             )
 
@@ -710,16 +729,21 @@ class TradeManager:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             reuse_puzhash=reuse_puzhash,
+            taking=True,
         )
         if not result[0] or result[1] is None:
             raise ValueError(result[2])
 
         success, take_offer, error = result
 
-        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
+        complete_offer, valid_spend_solver = await self.check_for_final_modifications(
+            Offer.aggregate([offer, take_offer]), solver, reuse_puzhash
+        )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(
+            solver=Solver({**valid_spend_solver.info, **solver.info})
+        )
         await self.maybe_create_wallets_for_offer(complete_offer)
 
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
@@ -834,7 +858,9 @@ class TradeManager:
         offered, requested, infos = offer.summary()
         return {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos}
 
-    async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
+    async def check_for_final_modifications(
+        self, offer: Offer, solver: Solver, reuse_puzhash: Optional[bool] = None
+    ) -> Tuple[Offer, Solver]:
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(
@@ -845,6 +871,66 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
-                return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
+                return (await DataLayerWallet.finish_graftroot_solutions(offer, solver), Solver({}))
+            elif puzzle_info.check_type(
+                [
+                    AssetType.CAT.value,
+                    AssetType.CR.value,
+                ]
+            ):
+                # get VC wallet
+                for _, wallet in self.wallet_state_manager.wallets.items():
+                    if WalletType(wallet.type()) == WalletType.VC:
+                        assert isinstance(wallet, VCWallet)
+                        return await wallet.add_vc_authorization(offer, solver, reuse_puzhash)
+                else:
+                    raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
 
-        return offer
+        return offer, Solver({})
+
+    async def check_for_requested_payment_modifications(
+        self,
+        requested_payments: Dict[Optional[bytes32], List[Payment]],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        taking: bool,
+    ) -> Dict[Optional[bytes32], List[Payment]]:
+        # This function exclusively deals with CR-CATs for now
+        if not taking:
+            for asset_id, puzzle_info in driver_dict.items():
+                if puzzle_info.check_type(
+                    [
+                        AssetType.CAT.value,
+                        AssetType.CR.value,
+                    ]
+                ):
+                    vc = await (
+                        await self.wallet_state_manager.get_or_create_vc_wallet()
+                    ).get_vc_with_provider_in_and_proofs(
+                        puzzle_info["also"]["authorized_providers"],
+                        ProofsChecker.from_program(uncurry_puzzle(puzzle_info["also"]["proofs_checker"])).flags,
+                    )
+                    if vc is None:
+                        raise ValueError("Cannot request CR-CATs that you cannot approve with a VC")  # pragma: no cover
+
+            return {
+                asset_id: [
+                    dataclasses.replace(
+                        payment,
+                        puzzle_hash=construct_pending_approval_state(
+                            payment.puzzle_hash, payment.amount
+                        ).get_tree_hash(),
+                    )
+                    for payment in payments
+                ]
+                if asset_id is not None
+                and driver_dict[asset_id].check_type(
+                    [
+                        AssetType.CAT.value,
+                        AssetType.CR.value,
+                    ]
+                )
+                else payments
+                for asset_id, payments in requested_payments.items()
+            }
+        else:
+            return requested_payments

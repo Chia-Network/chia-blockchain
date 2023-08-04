@@ -786,6 +786,12 @@ class TestDIDWallet:
         assert metadata["Twitter"] == "Test"
         assert metadata["GitHub"] == "测试"
 
+        # Test match_hinted_coin
+        assert await did_wallet_2.match_hinted_coin(
+            list(await did_wallet_2.select_coins(1))[0],
+            new_puzhash,
+        )
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],

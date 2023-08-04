@@ -495,17 +495,11 @@ async def validate_block_body(
     if npc_result is not None:
         assert npc_result.conds is not None
 
-        block_timestamp: uint64
-        if height < constants.SOFT_FORK2_HEIGHT:
-            block_timestamp = block.foliage_transaction_block.timestamp
-        else:
-            block_timestamp = prev_transaction_block_timestamp
-
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block_timestamp,
+            prev_transaction_block_timestamp,
         )
         if error:
             return error, None

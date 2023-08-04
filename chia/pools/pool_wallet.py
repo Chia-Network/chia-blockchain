@@ -992,3 +992,6 @@ class PoolWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
+        return False  # PoolWallet pre-dates hints
