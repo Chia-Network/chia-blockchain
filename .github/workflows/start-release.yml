@@ -11,7 +11,7 @@ jobs:
     runs-on: [glue-notify]
     steps:
       - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
+        uses: Chia-Network/actions/setjobenv@wallentx-patch-1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Start release
