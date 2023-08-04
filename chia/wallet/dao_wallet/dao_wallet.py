@@ -303,6 +303,9 @@ class DAOWallet(WalletProtocol):
     def get_name(self) -> str:
         return self.wallet_info.name
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        raise NotImplementedError("Method not implemented for DAO Wallet")
+
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise NotImplementedError("puzzle_hash_for_pk is not available in DAO wallets")
 
