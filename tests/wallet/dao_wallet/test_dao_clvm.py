@@ -3,12 +3,17 @@ from __future__ import annotations
 import pytest
 
 # mypy: ignore-errors
+from blspy import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
+from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -139,19 +144,6 @@ def test_proposal() -> None:
     vote_amount = 10
     vote_type = 1  # yes vote
     vote_coin_id = Program.to("vote_coin").get_tree_hash()
-    # vote_amounts_or_proposal_validator_hash  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-    # vote_info  ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-    # vote_coin_ids_or_proposal_timelock_length  ; this is either the coin ID we're taking a vote from
-    # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-    # ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-    # lockup_innerpuzhashes_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-    # ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
-    # innerpuz_reveal  ; this is only added during the first vote
-    # soft_close_length  ; revealed by the treasury - 0 in add vote case
-    # self_destruct_time  ; revealed by the treasury
-    # oracle_spend_delay  ; used to recreate the treasury
-    # self_destruct_flag  ; if not 0, do the self-destruct spend
-    # my_amount
     solution: Program = Program.to(
         [
             [vote_amount],  # vote amounts
@@ -1117,3 +1109,86 @@ def test_proposal_lifecycle() -> None:
 
     expected_treasury_hash = curry_singleton(treasury_id, expected_treasury_inner).get_tree_hash()
     assert treasury_conds[ConditionOpcode.CREATE_COIN][1].vars[0] == expected_treasury_hash
+
+
+async def do_spend(
+    sim: SpendSim,
+    sim_client: SimClient,
+    coins: List[Coin],
+    puzzles: List[Program],
+    solutions: List[Program],
+) -> MempoolInclusionStatus:
+    spends = []
+    for coin, puzzle, solution in zip(coins, puzzles, solutions):
+        spends.append(CoinSpend(coin, puzzle, solution))
+    spend_bundle = SpendBundle(spends, AugSchemeMPL.aggregate([]))
+    result = await sim_client.push_tx(spend_bundle)
+    await sim.farm_block()
+    return result
+
+
+@pytest.mark.asyncio()
+async def test_singleton_aggregator() -> None:
+    async with sim_and_client() as (sim, sim_client):
+        aggregator = P2_SINGLETON_AGGREGATOR_MOD
+        aggregator_hash = aggregator.get_tree_hash()
+        await sim.farm_block(aggregator_hash)
+        await sim.farm_block(aggregator_hash)
+        for i in range(5):
+            await sim.farm_block()
+
+        coin_records = await sim_client.get_coin_records_by_puzzle_hash(aggregator_hash)
+        coins = [c.coin for c in coin_records]
+
+        output_coin = coins[0]
+        output_sol = Program.to(
+            [
+                output_coin.name(),
+                output_coin.puzzle_hash,
+                output_coin.amount,
+                [[c.parent_coin_info, c.puzzle_hash, c.amount] for c in coins[1:]],
+            ]
+        )
+        merge_sols = [
+            Program.to([c.name(), c.puzzle_hash, c.amount, [], [output_coin.parent_coin_info, output_coin.amount]])
+            for c in coins[1:]
+        ]
+
+        res = await do_spend(sim, sim_client, coins, [aggregator] * 4, [output_sol, *merge_sols])
+        assert res[0] == MempoolInclusionStatus.SUCCESS
+
+        await sim.rewind(sim.block_height - 1)
+
+        # Spend a merge coin with empty output details
+        output_sol = Program.to(
+            [
+                output_coin.name(),
+                output_coin.puzzle_hash,
+                output_coin.amount,
+                [],
+                [],
+            ]
+        )
+        res = await do_spend(sim, sim_client, [output_coin], [aggregator], [output_sol])
+        assert res[0] == MempoolInclusionStatus.FAILED
+
+        # Try to steal treasury coins with a phoney output
+        acs = Program.to(1)
+        acs_ph = acs.get_tree_hash()
+        await sim.farm_block(acs_ph)
+        bad_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph))[0].coin
+        bad_sol = Program.to(
+            [
+                [ConditionOpcode.CREATE_COIN, acs_ph, sum(c.amount for c in coins)],
+                *[[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(c.name())] for c in coins],
+                [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, 0],
+            ]
+        )
+
+        merge_sols = [
+            Program.to([c.name(), c.puzzle_hash, c.amount, [], [bad_coin.parent_coin_info, bad_coin.amount]])
+            for c in coins
+        ]
+
+        res = await do_spend(sim, sim_client, [bad_coin, *coins], [acs] + [aggregator] * 4, [bad_sol, *merge_sols])
+        assert res[0] == MempoolInclusionStatus.FAILED

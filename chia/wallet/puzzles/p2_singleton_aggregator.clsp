@@ -1,12 +1,14 @@
 ;; Works with p2_singleton_via_delegated_puzzle
 ;; When we have many p2_singleton coins and want to aggregate them together
 
+
 (mod
   (
     my_id
     my_puzhash
     my_amount
-    list_of_parent_puzhash_amounts  ; (parent_id puzhash amount)
+    list_of_parent_puzhash_amounts  ; list of (parent_id puzhash amount) for the merge
+    output_parent_amount
   )
 
   (include condition_codes.clib)
@@ -15,7 +17,7 @@
 
   (defun cons_announcements_to_output (coin_id output)
     (c
-      (list ASSERT_COIN_ANNOUNCEMENT (sha256tree (list coin_id 0)))
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 coin_id 0))
       output
     )
   )
@@ -38,22 +40,31 @@
     )
   )
 
-  (defun-inline give_self_to_merge ()
+  (defun-inline give_self_to_merge (my_puzhash (@ output_info (parent amount)))
+    ;; Coins being merged are asserting the output coin id, and insisting it has the same puzhash as them
+    ;; This ensures that the puzzle which issues the CREATE_COIN condition is the same as this puzzle.
     (list
       (list CREATE_COIN_ANNOUNCEMENT 0)
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 (calculate_coin_id parent my_puzhash amount) 0))
     )
   )
 
   (c
-    (list ASSERT_MY_PUZZLEHASH my_puzhash)
-    (if list_of_parent_puzhash_amounts
-        ; we are making the output
-        (c
-          (list ASSERT_MY_COIN_ID my_id)
-          (for_parent_puzhash_amounts my_puzhash list_of_parent_puzhash_amounts my_amount)
-        )
-        ; we are letting another coin make the output
-        (give_self_to_merge)
+    (list ASSERT_MY_AMOUNT my_amount)
+    (c
+      (list ASSERT_MY_PUZZLEHASH my_puzhash)
+      (if list_of_parent_puzhash_amounts
+          ; we are making the output
+          (c
+            (list ASSERT_MY_COIN_ID my_id)
+            (c
+              (list CREATE_COIN_ANNOUNCEMENT 0)
+              (for_parent_puzhash_amounts my_puzhash list_of_parent_puzhash_amounts my_amount)
+            )
+          )
+          ; we are letting another coin make the output
+          (give_self_to_merge my_puzhash output_parent_amount)
+      )
     )
   )
 
