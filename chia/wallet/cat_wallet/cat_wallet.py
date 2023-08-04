@@ -837,12 +837,12 @@ class CATWallet:
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
-        override_memos: Optional[bool] = None,
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         excluded_cat_coins: Optional[Set[Coin]] = kwargs.get("excluded_cat_coins", None)
         # (extra_delta, tail_reveal, tail_solution)
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
+        override_memos: Optional[bool] = kwargs.get("override_memos", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
