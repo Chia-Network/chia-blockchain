@@ -82,16 +82,16 @@ def print_transaction(
         print("")
 
 
-def get_mojo_per_unit(wallet_type: WalletType) -> int:
+def get_mojo_per_unit(wallet_type: WalletType) -> int:  # pragma: no cover
     mojo_per_unit: int
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
-    }:  # pragma: no cover
+    }:
         mojo_per_unit = units["chia"]
-    elif wallet_type == WalletType.CAT:
+    elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         mojo_per_unit = units["cat"]
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
@@ -115,7 +115,7 @@ async def get_unit_name_for_wallet_id(
     wallet_type: WalletType,
     wallet_id: int,
     wallet_client: WalletRpcClient,
-) -> str:
+) -> str:  # pragma: no cover
     if wallet_type in {
         WalletType.STANDARD_WALLET,
         WalletType.POOLING_WALLET,
@@ -123,7 +123,7 @@ async def get_unit_name_for_wallet_id(
         WalletType.VC,
     }:  # pragma: no cover
         name: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
-    elif wallet_type == WalletType.CAT:
+    elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         name = await wallet_client.get_cat_name(wallet_id=wallet_id)
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
@@ -310,7 +310,7 @@ async def send(
                 if clawback_time_lock > 0
                 else None,
             )
-        elif typ == WalletType.CAT:
+        elif typ in {WalletType.CAT, WalletType.CRCAT}:
             print("Submitting transaction...")
             res = await wallet_client.cat_spend(
                 wallet_id,
@@ -781,8 +781,8 @@ async def cancel_offer(
                 print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
 
 
-def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
-    if typ == WalletType.CAT:
+def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  # pragma: no cover
+    if typ in {WalletType.CAT, WalletType.CRCAT}:
         return "", units["cat"]
     if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
@@ -802,7 +802,7 @@ def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only:
 
 async def print_balances(
     wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
-) -> None:
+) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         summaries_response = await wallet_client.get_wallets(wallet_type)
         address_prefix = selected_network_address_prefix(config)
@@ -839,24 +839,32 @@ async def print_balances(
                 )
                 spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
                 my_did: Optional[str] = None
+                ljust = 23
+                if typ == WalletType.CRCAT:
+                    ljust = 36
                 print()
                 print(f"{summary['name']}:")
-                print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
-                print(f"{indent}{'-Pending Total Balance:'.ljust(23)} {unconfirmed_wallet_balance}")
-                print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
-                print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
+                print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
+                if typ == WalletType.CRCAT:
+                    print(
+                        f"{indent}{'-Balance Pending VC Approval:'.ljust(ljust)} "
+                        f"{print_balance(balances['pending_approval_balance'], scale, address_prefix)}"
+                    )
+                print(f"{indent}{'-Pending Total Balance:'.ljust(ljust)} {unconfirmed_wallet_balance}")
+                print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
+                print(f"{indent}{'-Type:'.ljust(ljust)} {typ.name}")
                 if typ == WalletType.DECENTRALIZED_ID:
                     get_did_response = await wallet_client.get_did_id(wallet_id)
                     my_did = get_did_response["my_did"]
-                    print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+                    print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif typ == WalletType.NFT:
                     get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
                     my_did = get_did_response["did_id"]
                     if my_did is not None and len(my_did) > 0:
-                        print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+                        print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
                 elif len(asset_id) > 0:
-                    print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
-                print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
+                    print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
+                print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")
 
         print(" ")
         trusted_peers: dict[str, str] = config["wallet"].get("trusted_peers", {})
@@ -1526,4 +1534,52 @@ async def revoke_vc(
                 name="XCH",
                 address_prefix=selected_network_address_prefix(config),
                 mojo_per_unit=get_mojo_per_unit(wallet_type=WalletType.STANDARD_WALLET),
+            )
+
+
+async def approve_r_cats(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    min_amount_to_claim: str,
+    fee: Decimal,
+    min_coin_amount: Optional[int],
+    max_coin_amount: Optional[int],
+    reuse: bool,
+) -> None:  # pragma: no cover
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+        if wallet_client is None:
+            return
+        txs = await wallet_client.crcat_approve_pending(
+            wallet_id=uint32(id),
+            min_amount_to_claim=uint64(int(Decimal(min_amount_to_claim) * units["cat"])),
+            fee=uint64(int(fee * units["chia"])),
+            min_coin_amount=uint64(min_coin_amount) if min_coin_amount is not None else None,
+            max_coin_amount=uint64(max_coin_amount) if max_coin_amount is not None else None,
+            reuse_puzhash=reuse,
+        )
+
+        print("VC successfully approved R-CATs!")
+        print("Relevant TX records:")
+        print("")
+        for tx in txs:
+            try:
+                wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
+                mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+                name = await get_unit_name_for_wallet_id(
+                    config=config,
+                    wallet_type=wallet_type,
+                    wallet_id=tx.wallet_id,
+                    wallet_client=wallet_client,
+                )
+            except LookupError as e:
+                print(e.args[0])
+                return
+
+            print_transaction(
+                tx,
+                verbose=False,
+                name=name,
+                address_prefix=selected_network_address_prefix(config),
+                mojo_per_unit=mojo_per_unit,
             )

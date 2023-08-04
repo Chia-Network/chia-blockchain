@@ -238,7 +238,19 @@ class CATWallet:
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
-    ) -> CATWallet:
+        # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
+        potential_subclasses: Dict[AssetType, Any] = {},
+    ) -> Any:
+        next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
+        if next_layer is not None:
+            if AssetType(next_layer.type()) in potential_subclasses:
+                return await potential_subclasses[AssetType(next_layer.type())].create_from_puzzle_info(
+                    wallet_state_manager,
+                    wallet,
+                    puzzle_driver,
+                    name,
+                    potential_subclasses,
+                )
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
@@ -569,7 +581,7 @@ class CATWallet:
         self,
         fee: uint64,
         amount_to_claim: uint64,
-        announcement_to_assert: Optional[Announcement] = None,
+        announcements_to_assert: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
@@ -604,7 +616,25 @@ class CATWallet:
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
                 negative_change_allowed=False,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
+                reuse_puzhash=reuse_puzhash,
+            )
+            assert chia_tx.spend_bundle is not None
+        else:
+            chia_coins = await self.standard_wallet.select_coins(
+                fee,
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
+            )
+            origin_id = list(chia_coins)[0].name()
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(selected_amount + amount_to_claim - fee),
+                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
+                coins=chia_coins,
+                negative_change_allowed=True,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
                 reuse_puzhash=reuse_puzhash,
             )
             assert chia_tx.spend_bundle is not None
@@ -619,23 +649,6 @@ class CATWallet:
 
             assert message is not None
             announcement = Announcement(origin_id, message)
-        else:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                min_coin_amount=min_coin_amount,
-                max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
-            )
-            selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(not reuse_puzhash)),
-                coins=chia_coins,
-                negative_change_allowed=True,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-                reuse_puzhash=reuse_puzhash,
-            )
-            assert chia_tx.spend_bundle is not None
 
         return chia_tx, announcement
 
@@ -737,7 +750,7 @@ class CATWallet:
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
-                            announcement_to_assert=announcement,
+                            announcements_to_assert={announcement},
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
                             excluded_coin_amounts=excluded_coin_amounts,
@@ -948,3 +961,13 @@ class CATWallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount)
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        return (
+            construct_cat_puzzle(
+                CAT_MOD,
+                self.cat_info.limitations_program_hash,
+                hint,  # type: ignore[arg-type]
+            ).get_tree_hash_precalc(hint)
+            == coin.puzzle_hash
+        )

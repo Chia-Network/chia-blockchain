@@ -1299,6 +1299,9 @@ class DataLayerWallet:
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        return coin.amount % 2 == 1 and await self.wallet_state_manager.dl_store.get_launcher(hint) is not None
+
 
 def verify_offer(
     maker: Tuple[StoreProofs, ...],
