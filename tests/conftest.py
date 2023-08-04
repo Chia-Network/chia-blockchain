@@ -164,12 +164,15 @@ def latest_db_version() -> int:
     return 2
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest.fixture(scope="function", params=[2])
 def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 4410000, 5496000])
+SOFTFORK_HEIGHTS = [1000000, 4410000, 5496000]
+
+
+@pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
 def softfork_height(request) -> int:
     return request.param
 
@@ -722,11 +725,14 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted):
+async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted, request):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
-    farm_blocks = 3
+    try:
+        farm_blocks = request.param
+    except AttributeError:
+        farm_blocks = 3
     buffer = 1
     full_nodes, wallets, bt = two_wallet_nodes_services
     full_node_api = full_nodes[0]._api

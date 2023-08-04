@@ -67,6 +67,9 @@ class WalletProtocol(Protocol):
     def get_name(self) -> str:
         ...
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        ...
+
     wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
@@ -90,6 +93,8 @@ class GSTOptionalArgs(TypedDict):
     trade_prices_list: NotRequired[Optional[Program]]
     additional_bundles: NotRequired[List[SpendBundle]]
     metadata_update: NotRequired[Optional[Tuple[str, str]]]
+    # CR-CAT Wallet
+    add_authorizations_to_cr_cats: NotRequired[bool]
     # VCWallet
     new_proof_hash: NotRequired[Optional[bytes32]]
     provider_inner_puzhash: NotRequired[Optional[bytes32]]

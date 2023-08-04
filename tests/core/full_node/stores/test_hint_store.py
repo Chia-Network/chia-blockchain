@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -181,3 +182,10 @@ class TestHintStore:
                 assert len(await hint_store.get_coin_ids(hint, max_items=limit)) == limit
 
             assert len(await hint_store.get_coin_ids(hint, max_items=10000)) == 200
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="HintStore does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await HintStore.create(db_wrapper)
