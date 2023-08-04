@@ -1164,10 +1164,12 @@ def nft_transfer_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
+@click.option("--num", help="Number of NFTs to return", type=int, default=50)
+@click.option("--start-index", help="Which starting index to start listing NFTs from", type=int, default=0)
+def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num: int, start_index: int) -> None:
     from .wallet_funcs import list_nfts
 
-    asyncio.run(list_nfts(wallet_rpc_port, fingerprint, id))
+    asyncio.run(list_nfts(wallet_rpc_port, fingerprint, id, num, start_index))
 
 
 @nft_cmd.command("set_did", help="Set a DID on an NFT")
