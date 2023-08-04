@@ -170,7 +170,7 @@ jobs:
                   split(a[2],b,":");
                   print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
                 }
-              }' coverage-reports/diff-cover-stdout > coverage-reports/diff-cover-md-tablel
+              }' coverage-reports/diff-cover-stdout > coverage-reports/diff-cover-md-table
           cat coverage-reports/diff-cover-md-table >> $GITHUB_STEP_SUMMARY
           # Add comment to PR
           if [[ $coverage_status != 0 ]]; then
