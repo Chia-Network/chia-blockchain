@@ -719,6 +719,9 @@ class DAOCATWallet:
     def require_derivation_paths(self) -> bool:
         return True
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        raise NotImplementedError("Method not implemented for DAO CAT Wallet")
+
     async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
         result: List[WalletCoinRecord] = []
 
