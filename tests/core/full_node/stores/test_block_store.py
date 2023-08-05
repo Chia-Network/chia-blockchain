@@ -483,3 +483,39 @@ async def test_unsupported_version(tmp_dir: Path, use_cache: bool) -> None:
     with pytest.raises(RuntimeError, match="BlockStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await BlockStore.create(db_wrapper, use_cache=use_cache)
+
+
+@pytest.mark.asyncio
+async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
+
+        assert await store.get_peak() is None
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            )
+
+        assert await store.get_peak() is None
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    b"00000000000000000000000000000000",
+                    1337,
+                    None,
+                    0,
+                    True,  # in_main_chain
+                    None,
+                    None,
+                ),
+            )
+
+        res = await store.get_peak()
+        assert res is not None
+        block_hash, height = res
+        assert block_hash == b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        assert height == 1337
