@@ -127,8 +127,8 @@ class BlockHeightMap:
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
-    async def maybe_flush(self) -> None:
-        if self.__dirty < 1000:
+    async def maybe_flush(self, bForce: bool = False) -> None:
+        if self.__dirty < 1000 and !bForce:
             return
 
         assert (len(self.__height_to_hash) % 32) == 0
@@ -209,6 +209,8 @@ class BlockHeightMap:
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
         del self.__height_to_hash[(fork_height + 1) * 32 :]
+        # Must force a flush here so reloaded cache doesn't have bogus values
+        await self.maybe_flush(True)
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
