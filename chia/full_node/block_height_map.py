@@ -209,8 +209,6 @@ class BlockHeightMap:
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
         del self.__height_to_hash[(fork_height + 1) * 32 :]
-        # Must force a flush here so reloaded cache doesn't have bogus values
-        await self.maybe_flush(True)
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
