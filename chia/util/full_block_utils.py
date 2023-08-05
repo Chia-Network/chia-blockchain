@@ -229,6 +229,25 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
     return SerializedProgram.from_bytes(bytes(buf[:length]))
 
 
+# returns the offset into the block where the Optional[] transactions_generator
+# starts. The byte it points to is the 0 or 1 indicating whether the optional
+# is set or not
+def generator_offset_in_block(buf: memoryview) -> int:
+    full_size = len(buf)
+    buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
+    buf = skip_reward_chain_block(buf)  # reward_chain_block
+    buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # challenge_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # reward_chain_sp_proof
+    buf = skip_vdf_proof(buf)  # reward_chain_ip_proof
+    buf = skip_optional(buf, skip_vdf_proof)  # infused_challenge_chain_ip_proof
+    buf = skip_foliage(buf)  # foliage
+    buf = skip_optional(buf, skip_foliage_transaction_block)  # foliage_transaction_block
+    buf = skip_optional(buf, skip_transactions_info)  # transactions_info
+
+    return full_size - len(buf)
+
+
 # this implements the BlockInfo protocol
 @dataclass(frozen=True)
 class GeneratorBlockInfo:

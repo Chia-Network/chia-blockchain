@@ -52,7 +52,7 @@ class BlockHeightMap:
 
     @classmethod
     async def create(cls, blockchain_dir: Path, db: DBWrapper2) -> "BlockHeightMap":
-        if db.db_version != 2:
+        if db.db_version not in [2, 3]:
             raise RuntimeError(f"BlockHeightMap does not support database schema v{db.db_version}")
         self = BlockHeightMap()
         self.db = db

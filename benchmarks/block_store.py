@@ -504,3 +504,5 @@ async def run_add_block_benchmark(version: int) -> None:
 if __name__ == "__main__":
     print("version 2")
     asyncio.run(run_add_block_benchmark(2))
+    print("version 3")
+    asyncio.run(run_add_block_benchmark(3))

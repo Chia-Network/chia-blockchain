@@ -24,6 +24,7 @@ from chia.util.full_block_utils import (
     PlotFilterInfo,
     block_info_from_block,
     generator_from_block,
+    generator_offset_in_block,
     plot_filter_info_from_block,
 )
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -154,6 +155,20 @@ def decompress_blob(block_bytes: bytes) -> bytes:
     return ret
 
 
+def compress_gen(gen: Optional[SerializedProgram]) -> Optional[bytes]:
+    if gen is None:
+        return None
+    ret: bytes = zstd.compress(bytes(gen))
+    return ret
+
+
+def decompress_gen(block_bytes: Optional[bytes]) -> Optional[SerializedProgram]:
+    if block_bytes is None:
+        return None
+    b: bytes = zstd.decompress(block_bytes)
+    return SerializedProgram.from_bytes(b)
+
+
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
@@ -163,7 +178,7 @@ class BlockStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
-        if db_wrapper.db_version != 2:
+        if db_wrapper.db_version not in [2, 3]:
             raise RuntimeError(f"BlockStore does not support database schema v{db_wrapper.db_version}")
 
         if use_cache:
@@ -173,27 +188,43 @@ class BlockStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating block store tables and indexes.")
-            # TODO: most data in block is duplicated in block_record. The only
-            # reason for this is that our parsing of a FullBlock is so slow,
-            # it's faster to store duplicate data to parse less when we just
-            # need the BlockRecord. Once we fix the parsing (and data structure)
-            # of FullBlock, this can use less space
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS full_blocks("
-                "header_hash blob PRIMARY KEY,"
-                "prev_hash blob,"
-                "height bigint,"
-                "sub_epoch_summary blob,"
-                "is_fully_compactified tinyint,"
-                "in_main_chain tinyint,"
-                "block blob,"
-                "block_record blob)"
-            )
+            if db_wrapper.db_version == 2:
+                # TODO: most data in block is duplicated in block_record. The only
+                # reason for this is that our parsing of a FullBlock is so slow,
+                # it's faster to store duplicate data to parse less when we just
+                # need the BlockRecord. Once we fix the parsing (and data structure)
+                # of FullBlock, this can use less space
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS full_blocks("
+                    "header_hash blob PRIMARY KEY,"
+                    "prev_hash blob,"
+                    "height bigint,"
+                    "sub_epoch_summary blob,"
+                    "is_fully_compactified tinyint,"
+                    "in_main_chain tinyint,"
+                    "block blob,"
+                    "block_record blob)"
+                )
 
-            # for CHIP-13, we need cheap access to these fields
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS plot_info (" "header_hash blob PRIMARY KEY," "plot_filter_info blob)"
-            )
+                # for CHIP-13, we need cheap access to these fields
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS plot_info (" "header_hash blob PRIMARY KEY," "plot_filter_info blob)"
+                )
+
+            else:
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS full_blocks("
+                    "header_hash blob PRIMARY KEY,"
+                    "prev_hash blob,"
+                    "height bigint,"
+                    "sub_epoch_summary blob,"
+                    "is_fully_compactified tinyint,"
+                    "in_main_chain tinyint,"
+                    "generator blob,"  # the block generator, or null
+                    "block blob,"
+                    "block_record blob,"
+                    "plot_filter_info blob)"
+                )
 
             # This is a single-row table containing the hash of the current
             # peak. The "key" field is there to make update statements simple
@@ -264,36 +295,65 @@ class BlockStore:
         plot_filter_info = plot_filter_from_block(block)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                "INSERT OR IGNORE INTO full_blocks "
-                "(header_hash, "
-                "prev_hash, "
-                "height, "
-                "sub_epoch_summary, "
-                "is_fully_compactified, "
-                "in_main_chain, "
-                "block, "
-                "block_record) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    header_hash,
-                    block.prev_header_hash,
-                    block.height,
-                    ses,
-                    int(block.is_fully_compactified()),
-                    False,  # in_main_chain
-                    compress(block),
-                    bytes(block_record_db),
-                ),
-            )
-
-            await conn.execute(
-                "INSERT OR IGNORE INTO plot_info (header_hash, plot_filter_info) VALUES(?, ?)",
-                (
-                    header_hash,
-                    bytes(plot_filter_info),
-                ),
-            )
+            if self.db_wrapper.db_version == 2:
+                await conn.execute(
+                    "INSERT OR IGNORE INTO full_blocks "
+                    "(header_hash, "
+                    "prev_hash, "
+                    "height, "
+                    "sub_epoch_summary, "
+                    "is_fully_compactified, "
+                    "in_main_chain, "
+                    "block, "
+                    "block_record) "
+                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        header_hash,
+                        block.prev_header_hash,
+                        block.height,
+                        ses,
+                        int(block.is_fully_compactified()),
+                        False,  # in_main_chain
+                        compress(block),
+                        bytes(block_record_db),
+                    ),
+                )
+                await conn.execute(
+                    "INSERT OR IGNORE INTO plot_info (header_hash, plot_filter_info) VALUES(?, ?)",
+                    (
+                        header_hash,
+                        bytes(plot_filter_info),
+                    ),
+                )
+            else:
+                gen = block.transactions_generator
+                small_block = dataclasses.replace(block, transactions_generator=None)
+                await conn.execute(
+                    "INSERT OR IGNORE INTO full_blocks "
+                    "(header_hash, "
+                    "prev_hash, "
+                    "height, "
+                    "sub_epoch_summary, "
+                    "is_fully_compactified, "
+                    "in_main_chain, "
+                    "generator, "
+                    "block, "
+                    "block_record, "
+                    "plot_filter_info) "
+                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        header_hash,
+                        block.prev_header_hash,
+                        block.height,
+                        ses,
+                        int(block.is_fully_compactified()),
+                        False,  # in_main_chain
+                        compress_gen(gen),
+                        compress(small_block),
+                        bytes(block_record_db),
+                        bytes(plot_filter_info),
+                    ),
+                )
 
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
@@ -337,25 +397,56 @@ class BlockStore:
         cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
             return cached
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
-                row = await cursor.fetchone()
-        if row is not None:
-            block = decompress(row[0])
-            self.block_cache.put(header_hash, block)
-            return block
+        if self.db_wrapper.db_version == 2:
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
+                    row = await cursor.fetchone()
+            if row is not None:
+                block = decompress(row[0])
+                self.block_cache.put(header_hash, block)
+                return block
+        else:
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(
+                    "SELECT block, generator from full_blocks WHERE header_hash=?", (header_hash,)
+                ) as cursor:
+                    row = await cursor.fetchone()
+            if row is not None:
+                block = decompress(row[0])
+                block = dataclasses.replace(block, transactions_generator=decompress_gen(row[1]))
+                self.block_cache.put(header_hash, block)
+                return block
+
         return None
 
     async def get_full_block_bytes(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return bytes(cached)
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
-                row = await cursor.fetchone()
-        if row is not None:
-            ret: bytes = zstd.decompress(row[0])
-            return ret
+
+        ret: bytes
+        if self.db_wrapper.db_version == 2:
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
+                    row = await cursor.fetchone()
+            if row is not None:
+                ret = zstd.decompress(row[0])
+                return ret
+        else:
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(
+                    "SELECT block, generator from full_blocks WHERE header_hash=?", (header_hash,)
+                ) as cursor:
+                    row = await cursor.fetchone()
+            if row is not None:
+                ret = zstd.decompress(row[0])
+                if row[1] is not None:
+                    gen: bytes = bytes(zstd.decompress(row[1]))
+                    # in this case we need to inject the generator in the right
+                    # place in the buffer
+                    offset = generator_offset_in_block(memoryview(ret))
+                    ret = ret[:offset] + bytes([1]) + gen + ret[offset + 1 :]
+                return ret
 
         return None
 
@@ -363,13 +454,23 @@ class BlockStore:
         if len(heights) == 0:
             return []
 
-        formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, heights) as cursor:
-                ret: List[FullBlock] = []
-                for row in await cursor.fetchall():
-                    ret.append(decompress(row[0]))
-                return ret
+        ret: List[FullBlock] = []
+        if self.db_wrapper.db_version == 2:
+            formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, heights) as cursor:
+                    for row in await cursor.fetchall():
+                        ret.append(decompress(row[0]))
+                    return ret
+        else:
+            formatted_str = f'SELECT block, generator from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, heights) as cursor:
+                    for row in await cursor.fetchall():
+                        block = decompress(row[0])
+                        block = dataclasses.replace(block, transactions_generator=decompress_gen(row[1]))
+                        ret.append(block)
+                    return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
         cached = self.block_cache.get(header_hash)
@@ -378,73 +479,107 @@ class BlockStore:
                 cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
             )
 
-        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (header_hash,))
-            if row is None:
-                return None
-            block_bytes = zstd.decompress(row[0])
+        if self.db_wrapper.db_version == 2:
+            formatted_str = "SELECT block from full_blocks WHERE header_hash=?"
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                row = await execute_fetchone(conn, formatted_str, (header_hash,))
+                if row is None:
+                    return None
+                block_bytes = zstd.decompress(row[0])
 
-            try:
-                return block_info_from_block(block_bytes)
-            except Exception as e:
-                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
-                # this is defensive, on the off-chance that
-                # block_info_from_block() fails, fall back to the reliable
-                # definition of parsing a block
-                b = FullBlock.from_bytes(block_bytes)
-                return GeneratorBlockInfo(
-                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
-                )
+                try:
+                    return block_info_from_block(block_bytes)
+                except Exception as e:
+                    log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
+                    # this is defensive, on the off-chance that
+                    # block_info_from_block() fails, fall back to the reliable
+                    # definition of parsing a block
+                    b = FullBlock.from_bytes(block_bytes)
+                    return GeneratorBlockInfo(
+                        b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                    )
+        else:
+            formatted_str = "SELECT block, generator from full_blocks WHERE header_hash=?"
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                row = await execute_fetchone(conn, formatted_str, (header_hash,))
+                if row is None:
+                    return None
+                block_bytes = zstd.decompress(row[0])
+                block_info = block_info_from_block(block_bytes)
+                if row[1] is not None:
+                    block_info = dataclasses.replace(block_info, transactions_generator=decompress_gen(row[1]))
+                return block_info
 
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
             return cached.transactions_generator
 
-        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (header_hash,))
-            if row is None:
-                return None
-            block_bytes = zstd.decompress(row[0])
+        if self.db_wrapper.db_version == 2:
+            formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                row = await execute_fetchone(conn, formatted_str, (header_hash,))
+                if row is None:
+                    return None
+                block_bytes = zstd.decompress(row[0])
 
-            try:
-                return generator_from_block(block_bytes)
-            except Exception as e:
-                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
-                # this is defensive, on the off-chance that
-                # generator_from_block() fails, fall back to the reliable
-                # definition of parsing a block
-                b = FullBlock.from_bytes(block_bytes)
-                return b.transactions_generator
+                try:
+                    return generator_from_block(block_bytes)
+                except Exception as e:
+                    log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                    # this is defensive, on the off-chance that
+                    # generator_from_block() fails, fall back to the reliable
+                    # definition of parsing a block
+                    b = FullBlock.from_bytes(block_bytes)
+                    return b.transactions_generator
+        else:
+            formatted_str = "SELECT generator from full_blocks WHERE header_hash=?"
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                row = await execute_fetchone(conn, formatted_str, (header_hash,))
+                if row is None:
+                    return None
+                return decompress_gen(row[0])
 
     async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
         if len(heights) == 0:
             return []
 
         generators: Dict[uint32, SerializedProgram] = {}
-        formatted_str = (
-            f"SELECT block, height from full_blocks "
-            f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
-        )
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, heights) as cursor:
-                async for row in cursor:
-                    block_bytes = zstd.decompress(row[0])
 
-                    try:
-                        gen = generator_from_block(block_bytes)
-                    except Exception as e:
-                        log.error(f"cheap parser failed for block at height {row[1]}: {e}")
-                        # this is defensive, on the off-chance that
-                        # generator_from_block() fails, fall back to the reliable
-                        # definition of parsing a block
-                        b = FullBlock.from_bytes(block_bytes)
-                        gen = b.transactions_generator
-                    if gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    generators[uint32(row[1])] = gen
+        if self.db_wrapper.db_version == 2:
+            formatted_str = (
+                f"SELECT block, height from full_blocks "
+                f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
+            )
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, heights) as cursor:
+                    async for row in cursor:
+                        block_bytes = zstd.decompress(row[0])
+
+                        try:
+                            gen = generator_from_block(block_bytes)
+                        except Exception as e:
+                            log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                            # this is defensive, on the off-chance that
+                            # generator_from_block() fails, fall back to the reliable
+                            # definition of parsing a block
+                            b = FullBlock.from_bytes(block_bytes)
+                            gen = b.transactions_generator
+                        if gen is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        generators[uint32(row[1])] = gen
+        else:
+            formatted_str = (
+                f"SELECT generator, height from full_blocks "
+                f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
+            )
+            async with self.db_wrapper.reader_no_transaction() as conn:
+                async with conn.execute(formatted_str, heights) as cursor:
+                    async for row in cursor:
+                        gen = decompress_gen(row[0])
+                        if gen is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        generators[uint32(row[1])] = gen
 
         return [generators[h] for h in heights]
 
@@ -458,25 +593,37 @@ class BlockStore:
 
         all_blocks: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
-                header_hashes,
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    block_rec_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(block_rec_db.header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+            all_rows: List[sqlite3.Row]
+            if self.db_wrapper.db_version == 2:
+                async with conn.execute(
+                    "SELECT header_hash,block_record,plot_info.plot_filter_info "
+                    "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
+                    f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
+                    header_hashes,
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
+            else:
+                async with conn.execute(
+                    "SELECT header_hash,block_record,plot_filter_info "
+                    "FROM full_blocks "
+                    f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
+                    header_hashes,
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
 
-                    all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
+            for row in all_rows:
+                block_rec_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
+                if row[2] is None:
+                    # since we're adding this field lazily, it may not be
+                    # set. If so, fall back to the slow path
+                    plot_filter_info = await self.get_plot_filter_info(block_rec_db.header_hash)
+                else:
+                    plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
+                all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
+                    plot_filter_info.pos_ss_cc_challenge_hash,
+                    plot_filter_info.cc_sp_hash,
+                )
 
         ret: List[BlockRecord] = []
         for hh in header_hashes:
@@ -543,13 +690,23 @@ class BlockStore:
 
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE header_hash=?",
-                (header_hash,),
-            ) as cursor:
-                row = await cursor.fetchone()
+            row: Optional[sqlite3.Row]
+            if self.db_wrapper.db_version == 2:
+                async with conn.execute(
+                    "SELECT block_record,plot_info.plot_filter_info "
+                    "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
+                    "WHERE header_hash=?",
+                    (header_hash,),
+                ) as cursor:
+                    row = await cursor.fetchone()
+            else:
+                async with conn.execute(
+                    "SELECT block_record,plot_filter_info "
+                    "FROM full_blocks "
+                    "WHERE header_hash=?",
+                    (header_hash,),
+                ) as cursor:
+                    row = await cursor.fetchone()
         if row is None:
             return None
         block_record_db = BlockRecordDB2.from_bytes(row[0])
@@ -591,27 +748,39 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE height >= ? AND height <= ?",
-                (start, stop),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+            all_rows: List[sqlite3.Row]
+            if self.db_wrapper.db_version == 2:
+                async with conn.execute(
+                    "SELECT header_hash,block_record,plot_info.plot_filter_info "
+                    "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
+                    "WHERE height >= ? AND height <= ?",
+                    (start, stop),
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
+            else:
+                async with conn.execute(
+                    "SELECT header_hash,block_record,plot_filter_info "
+                    "FROM full_blocks "
+                    "WHERE height >= ? AND height <= ?",
+                    (start, stop),
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
 
-                    block_record = block_record_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
-                    ret[header_hash] = block_record
+            for row in all_rows:
+                header_hash = bytes32(row[0])
+                block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
+                if row[2] is None:
+                    # since we're adding this field lazily, it may not be
+                    # set. If so, fall back to the slow path
+                    plot_filter_info = await self.get_plot_filter_info(header_hash)
+                else:
+                    plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
+                block_record = block_record_db.to_block_record(
+                    plot_filter_info.pos_ss_cc_challenge_hash,
+                    plot_filter_info.cc_sp_hash,
+                )
+                ret[header_hash] = block_record
 
         return ret
 
@@ -625,7 +794,7 @@ class BlockStore:
         if present.
         """
 
-        assert self.db_wrapper.db_version == 2
+        assert self.db_wrapper.db_version in [2, 3]
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
@@ -663,27 +832,39 @@ class BlockStore:
 
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT header_hash, block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE height >= ?",
-                (peak[1] - blocks_n,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+            all_rows: List[sqlite3.Row]
+            if self.db_wrapper.db_version == 2:
+                async with conn.execute(
+                    "SELECT header_hash, block_record,plot_info.plot_filter_info "
+                    "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
+                    "WHERE height >= ?",
+                    (peak[1] - blocks_n,),
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
+            else:
+                async with conn.execute(
+                    "SELECT header_hash, block_record,plot_filter_info "
+                    "FROM full_blocks "
+                    "WHERE height >= ?",
+                    (peak[1] - blocks_n,),
+                ) as cursor:
+                    all_rows = await cursor.fetchall()
 
-                    block_record = block_record_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
-                    ret[header_hash] = block_record
+            for row in all_rows:
+                header_hash = bytes32(row[0])
+                block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
+                if row[2] is None:
+                    # since we're adding this field lazily, it may not be
+                    # set. If so, fall back to the slow path
+                    plot_filter_info = await self.get_plot_filter_info(header_hash)
+                else:
+                    plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
+                block_record = block_record_db.to_block_record(
+                    plot_filter_info.pos_ss_cc_challenge_hash,
+                    plot_filter_info.cc_sp_hash,
+                )
+                ret[header_hash] = block_record
 
         return ret, peak[0]
 

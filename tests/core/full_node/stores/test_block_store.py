@@ -95,7 +95,12 @@ async def test_block_store(
                 # simulate an existing database, created before this column was
                 # added
                 async with db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record.header_hash,))
+                    if db_version == 2:
+                        await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record.header_hash,))
+                    else:
+                        await conn.execute(
+                            "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block_record.header_hash,)
+                        )
 
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)
@@ -465,9 +470,12 @@ async def test_get_plot_filer_info(
                 # simulate an existing database, created before this column was
                 # added
                 async with db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute(
-                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
-                    )
+                    if db_version == 2:
+                        await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record_to_add.header_hash,))
+                    else:
+                        await conn.execute(
+                            "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block_record_to_add.header_hash,)
+                        )
 
             blocks.append(block)
             if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -528,19 +536,36 @@ async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None
         assert await store.get_peak() is None
 
         async with db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                    b"00000000000000000000000000000000",
-                    1337,
-                    None,
-                    0,
-                    True,  # in_main_chain
-                    None,
-                    None,
-                ),
-            )
+            if db_version == 2:
+                await conn.execute(
+                    "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        b"00000000000000000000000000000000",
+                        1337,
+                        None,
+                        0,
+                        True,  # in_main_chain
+                        None,
+                        None,
+                    ),
+                )
+            else:
+                await conn.execute(
+                    "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        b"00000000000000000000000000000000",
+                        1337,
+                        None,
+                        0,
+                        True,  # in_main_chain
+                        None,
+                        None,
+                        None,
+                        None,
+                    ),
+                )
 
         res = await store.get_peak()
         assert res is not None

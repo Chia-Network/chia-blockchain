@@ -19,7 +19,7 @@ class HintStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> HintStore:
-        if db_wrapper.db_version != 2:
+        if db_wrapper.db_version not in [2, 3]:
             raise RuntimeError(f"HintStore does not support database schema v{db_wrapper.db_version}")
 
         self = HintStore(db_wrapper)
