@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 @streamable
 @dataclass(frozen=True)
-class BlockRecordDB(Streamable):
+class BlockRecordDB2(Streamable):
     """
     This class contains the fields from `BlockRecord` that get stored in the DB.
     Unlike `BlockRecord`, this should never extend with more fields, in order to avoid DB corruption.
@@ -99,7 +99,7 @@ class BlockRecordDB(Streamable):
         )
 
     @classmethod
-    def from_block_record(cls, block_record: BlockRecord) -> BlockRecordDB:
+    def from_block_record(cls, block_record: BlockRecord) -> BlockRecordDB2:
         return cls(
             header_hash=block_record.header_hash,
             prev_hash=block_record.prev_hash,
@@ -256,7 +256,7 @@ class BlockStore:
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
-        block_record_db: BlockRecordDB = BlockRecordDB.from_block_record(block_record)
+        block_record_db: BlockRecordDB2 = BlockRecordDB2.from_block_record(block_record)
 
         ses: Optional[bytes] = (
             None if block_record.sub_epoch_summary_included is None else bytes(block_record.sub_epoch_summary_included)
@@ -465,7 +465,7 @@ class BlockStore:
                 header_hashes,
             ) as cursor:
                 for row in await cursor.fetchall():
-                    block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                    block_rec_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
                     if row[2] is None:
                         # since we're adding this field lazily, it may not be
                         # set. If so, fall back to the slow path
@@ -552,7 +552,7 @@ class BlockStore:
                 row = await cursor.fetchone()
         if row is None:
             return None
-        block_record_db = BlockRecordDB.from_bytes(row[0])
+        block_record_db = BlockRecordDB2.from_bytes(row[0])
         if row[1] is None:
             # since we're adding this field lazily, it may not be
             # set. If so, fall back to the slow path
@@ -599,7 +599,7 @@ class BlockStore:
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                    block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
                     if row[2] is None:
                         # since we're adding this field lazily, it may not be
                         # set. If so, fall back to the slow path
@@ -671,7 +671,7 @@ class BlockStore:
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
+                    block_record_db: BlockRecordDB2 = BlockRecordDB2.from_bytes(row[1])
                     if row[2] is None:
                         # since we're adding this field lazily, it may not be
                         # set. If so, fall back to the slow path
