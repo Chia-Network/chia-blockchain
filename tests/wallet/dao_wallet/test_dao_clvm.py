@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 import pytest
+from blspy import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
@@ -14,8 +15,9 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
+from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_p2_singleton_puzhash, get_treasury_puzzle
@@ -612,19 +614,22 @@ def test_merge_p2_singleton() -> None:
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
 
     # Merge Spend (not output creator)
-    merge_sol = Program.to([[my_id, my_puzhash, 300, 0]])
-    conds = conditions_dict_for_solution(p2_singleton, merge_sol, INFINITE_COST)
-    assert len(conds) == 2
+    output_parent_id = Program.to("output_parent").get_tree_hash()
+    output_coin_amount = 100
+    aggregator_sol = Program.to([my_id, my_puzhash, 300, 0, [output_parent_id, output_coin_amount]])
+    merge_p2_singleton_sol = Program.to([aggregator_sol, 0, 0, 0, 0])
+    conds = conditions_dict_for_solution(p2_singleton, merge_p2_singleton_sol, INFINITE_COST)
+    assert len(conds) == 4
     assert conds[ConditionOpcode.ASSERT_MY_PUZZLEHASH][0].vars[0] == my_puzhash
     assert conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0] == int_to_bytes(0)
 
     # Merge Spend (output creator)
     fake_parent_id = Program.to("fake_parent").get_tree_hash()
     merged_coin_id = Coin(fake_parent_id, my_puzhash, 200).name()
-    merge_sol = Program.to([[my_id, my_puzhash, 100, [[fake_parent_id, my_puzhash, 200]]]])
+    merge_sol = Program.to([[my_id, my_puzhash, 100, [[fake_parent_id, my_puzhash, 200]], 0]])
     conds = conditions_dict_for_solution(p2_singleton, merge_sol, INFINITE_COST)
-    assert len(conds) == 5
-    assert conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT][0].vars[0] == Program.to([merged_coin_id, 0]).get_tree_hash()
+    assert len(conds) == 7
+    assert conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT][0].vars[0] == std_hash(merged_coin_id)
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
     return
 
@@ -1116,7 +1121,7 @@ async def do_spend(
     coins: List[Coin],
     puzzles: List[Program],
     solutions: List[Program],
-) -> MempoolInclusionStatus:
+) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
         spends.append(CoinSpend(coin, puzzle, solution))
@@ -1156,7 +1161,7 @@ async def test_singleton_aggregator() -> None:
         res = await do_spend(sim, sim_client, coins, [aggregator] * 4, [output_sol, *merge_sols])
         assert res[0] == MempoolInclusionStatus.SUCCESS
 
-        await sim.rewind(sim.block_height - 1)
+        await sim.rewind(uint32(sim.block_height - 1))
 
         # Spend a merge coin with empty output details
         output_sol = Program.to(
