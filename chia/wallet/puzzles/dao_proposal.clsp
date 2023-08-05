@@ -37,6 +37,28 @@
 
   (defconstant TEN_THOUSAND 10000)
 
+  (defun is_member (e L)
+    (if L
+        (if (= e (f L))
+            1
+            (is_member e (r L))
+        )
+        0
+    )
+  )
+
+  (defun distinct_or_raise (L result)
+    ;; This is O(n^2). Don't use unless you're passing in a pre-sorted list.
+    ;; When called, pass in '()' as the result param.
+    (if L
+        (if (is_member (f L) result)
+            (x)
+            (distinct_or_raise (r L) (c (f L) result))
+        )
+        result
+    )
+  )
+
   (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
@@ -179,8 +201,8 @@
                   PROPOSED_PUZ_HASH
                   (r coin_id_list)
                   (r vote_amount_list)
-                  (r previous_votes)
-                  (r lockup_innerpuzhashes)
+                  previous_votes
+                  lockup_innerpuzhashes
                   vote_info
                   (+ (f vote_amount_list) sum)
                   output
@@ -330,7 +352,7 @@
             YES_VOTES
             TOTAL_VOTES
             PROPOSED_PUZ_HASH
-            vote_coin_ids_or_proposal_timelock_length
+            (distinct_or_raise vote_coin_ids_or_proposal_timelock_length ())
             vote_amounts_or_proposal_validator_hash
             previous_votes_or_pass_margin
             lockup_innerpuzhashes_or_attendance_required

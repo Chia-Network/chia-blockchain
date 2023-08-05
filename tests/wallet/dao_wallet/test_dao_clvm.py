@@ -182,6 +182,49 @@ def test_proposal() -> None:
     assert bytes32(conditions[ConditionOpcode.CREATE_COIN][0].vars[0]) == next_proposal.get_tree_hash()
     assert conditions[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(1)
 
+    # Try to vote using multiple coin ids
+    vote_coin_id_1 = Program.to("vote_coin_1").get_tree_hash()
+    vote_coin_id_2 = Program.to("vote_coin_2").get_tree_hash()
+    repeat_solution_1: Program = Program.to(
+        [
+            [vote_amount, 20],  # vote amounts
+            vote_type,  # vote type (yes)
+            [vote_coin_id_1, vote_coin_id_2],  # vote coin ids
+            [active_votes_list],  # previous votes
+            [acs_ph],  # lockup inner puz hash
+            0,  # inner puz reveal
+            0,  # soft close len
+            self_destruct_time,
+            oracle_spend_delay,
+            0,
+            1,
+        ]
+    )
+
+    conds_repeated = conditions_dict_for_solution(full_proposal, repeat_solution_1, INFINITE_COST)
+    assert len(conds_repeated) == 4
+
+    # Try to vote using repeated coin ids
+    repeat_solution_2: Program = Program.to(
+        [
+            [vote_amount, vote_amount, 20],  # vote amounts
+            vote_type,  # vote type (yes)
+            [vote_coin_id_1, vote_coin_id_1, vote_coin_id_2],  # vote coin ids
+            [active_votes_list],  # previous votes
+            [acs_ph],  # lockup inner puz hash
+            0,  # inner puz reveal
+            0,  # soft close len
+            self_destruct_time,
+            oracle_spend_delay,
+            0,
+            1,
+        ]
+    )
+
+    with pytest.raises(ValueError) as e_info:
+        conditions_dict_for_solution(full_proposal, repeat_solution_2, INFINITE_COST)
+    assert e_info.value.args[0] == "clvm raise"
+
     # Test Launch
     current_yes_votes = 0
     current_total_votes = 0
