@@ -129,10 +129,10 @@ jobs:
         # Compare the versions and choose the newest that matches the requirements
         if [[ "$TAG_TYPE" == "beta" || -z "${{ github.event.release.tag_name }}" ]]; then
           # For beta or dev builds (indicated by the absence of a tag), use the latest version available
-          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!{s/$/_/}' | sort -V | sed 's/_$//' | tail -n 1)
+          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
         elif [[ "$TAG_TYPE" == "rc" ]]; then
           # For RC builds, use the latest RC or full release if it's newer
-          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!{s/$/_/}' | sort -V | sed 's/_$//' | tail -n 1)
+          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
         else
           # For full releases, use the latest full release
           LATEST_VERSION="$LATEST_RELEASE"
@@ -142,7 +142,7 @@ jobs:
     - name: Get latest bladebit plotter
       shell: bash
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}z
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # Download and extract the chosen version
         mkdir "$GITHUB_WORKSPACE"/bladebit
