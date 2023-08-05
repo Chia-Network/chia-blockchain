@@ -128,7 +128,7 @@ class BlockHeightMap:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
     async def maybe_flush(self, bForce: bool = False) -> None:
-        if self.__dirty < 1000 and !bForce:
+        if self.__dirty < 1000 and not bForce:
             return
 
         assert (len(self.__height_to_hash) % 32) == 0
