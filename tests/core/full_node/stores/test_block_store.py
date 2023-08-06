@@ -39,9 +39,14 @@ def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
+@pytest.fixture(scope="function", params=[True, False])
+def use_plot_filter_info(request: SubRequest) -> bool:
+    return cast(bool, request.param)
+
+
 @pytest.mark.asyncio
 async def test_block_store(
-    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool
+    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool, use_plot_filter_info: bool
 ) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
@@ -65,6 +70,16 @@ async def test_block_store(
             block_record_hh = block_record.header_hash
             await store.add_full_block(block.header_hash, block, block_record)
             await store.add_full_block(block.header_hash, block, block_record)
+
+            if not use_plot_filter_info:
+                # in this test mode, erase the plot_filter_info column, to
+                # simulate an existing database, created before this column was
+                # added
+                async with db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute(
+                        "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block_record.header_hash,)
+                    )
+
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)
             assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
@@ -396,7 +411,12 @@ async def test_get_block_bytes_in_range(
 
 @pytest.mark.asyncio
 async def test_get_plot_filer_info(
-    default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool
+    default_400_blocks: List[FullBlock],
+    tmp_dir: Path,
+    db_version: int,
+    bt: BlockTools,
+    use_cache: bool,
+    use_plot_filter_info: bool,
 ) -> None:
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
@@ -411,6 +431,15 @@ async def test_get_plot_filer_info(
             await _validate_and_add_block(bc, block)
             block_record_to_add = bc.block_record(block.header_hash)
             await store.add_full_block(block.header_hash, block, block_record_to_add)
+
+            if not use_plot_filter_info:
+                # in this test mode, erase the plot_filter_info column, to
+                # simulate an existing database, created before this column was
+                # added
+                async with db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute(
+                        "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
+                    )
 
             blocks.append(block)
             if block.reward_chain_block.challenge_chain_sp_vdf is None:

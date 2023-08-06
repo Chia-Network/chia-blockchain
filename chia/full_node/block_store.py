@@ -129,6 +129,17 @@ class BlockRecordDB(Streamable):
         )
 
 
+def plot_filter_from_block(block: FullBlock) -> PlotFilterInfo:
+    pos_cc_ss = block.reward_chain_block.pos_ss_cc_challenge_hash
+    cc_sp_hash: bytes32
+    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+        cc_sp_hash = pos_cc_ss
+    else:
+        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+
+    return PlotFilterInfo(pos_cc_ss, cc_sp_hash)
+
+
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
@@ -162,8 +173,15 @@ class BlockStore:
                 "is_fully_compactified tinyint,"
                 "in_main_chain tinyint,"
                 "block blob,"
-                "block_record blob)"
+                "block_record blob,"
+                "plot_filter_info blob)"
             )
+
+            # for CHIP-13, we need cheap access to these fields
+            try:
+                await conn.execute("ALTER TABLE full_blocks ADD COLUMN plot_filter_info blob")
+            except sqlite3.OperationalError:
+                pass
 
             # This is a single-row table containing the hash of the current
             # peak. The "key" field is there to make update statements simple
@@ -250,10 +268,11 @@ class BlockStore:
         ses: Optional[bytes] = (
             None if block_record.sub_epoch_summary_included is None else bytes(block_record.sub_epoch_summary_included)
         )
+        plot_filter_info = plot_filter_from_block(block)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
@@ -263,6 +282,7 @@ class BlockStore:
                     False,  # in_main_chain
                     self.compress(block),
                     bytes(block_record_db),
+                    bytes(plot_filter_info),
                 ),
             )
 
@@ -434,13 +454,19 @@ class BlockStore:
         all_blocks: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record,block FROM full_blocks "
+                "SELECT header_hash,block_record,plot_filter_info FROM full_blocks "
                 f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                 header_hashes,
             ) as cursor:
                 for row in await cursor.fetchall():
                     block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                    if row[2] is None:
+                        # since we're adding this field lazily, it may not be
+                        # set. If so, fall back to the slow path
+                        plot_filter_info = await self.get_plot_filter_info(block_rec_db.header_hash)
+                    else:
+                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
                     all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
                         plot_filter_info.pos_ss_cc_challenge_hash,
                         plot_filter_info.cc_sp_hash,
@@ -512,21 +538,38 @@ class BlockStore:
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block_record,block FROM full_blocks WHERE header_hash=?",
+                "SELECT block_record,plot_filter_info FROM full_blocks WHERE header_hash=?",
                 (header_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:
             return None
         block_record_db = BlockRecordDB.from_bytes(row[0])
-        block_bytes = zstd.decompress(row[1])
+        if row[1] is None:
+            # since we're adding this field lazily, it may not be
+            # set. If so, fall back to the slow path
+            plot_filter_info = await self.get_plot_filter_info(block_record_db.header_hash)
+        else:
+            plot_filter_info = PlotFilterInfo.from_bytes(row[1])
 
-        plot_filter_info = plot_filter_info_from_block(block_bytes)
         block_record = block_record_db.to_block_record(
             plot_filter_info.pos_ss_cc_challenge_hash,
             plot_filter_info.cc_sp_hash,
         )
         return block_record
+
+    # this is the slow-path
+    async def get_plot_filter_info(self, header_hash: bytes32) -> PlotFilterInfo:
+        block = self.block_cache.get(header_hash)
+        if block is not None:
+            return plot_filter_from_block(block)
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT block FROM full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
+                row = await cursor.fetchone()
+        assert row is not None
+        block_bytes = zstd.decompress(row[0])
+        return plot_filter_info_from_block(block_bytes)
 
     async def get_block_records_in_range(
         self,
@@ -541,13 +584,19 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ? AND height <= ?",
+                "SELECT header_hash,block_record,plot_filter_info FROM full_blocks WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
                     block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                    if row[2] is None:
+                        # since we're adding this field lazily, it may not be
+                        # set. If so, fall back to the slow path
+                        plot_filter_info = await self.get_plot_filter_info(header_hash)
+                    else:
+                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
                     block_record = block_record_db.to_block_record(
                         plot_filter_info.pos_ss_cc_challenge_hash,
                         plot_filter_info.cc_sp_hash,
@@ -614,13 +663,19 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record,block FROM full_blocks WHERE height >= ?",
+                "SELECT header_hash, block_record,plot_filter_info FROM full_blocks WHERE height >= ?",
                 (peak[1] - blocks_n,),
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
                     block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    plot_filter_info: PlotFilterInfo = plot_filter_info_from_block(zstd.decompress(row[2]))
+                    if row[2] is None:
+                        # since we're adding this field lazily, it may not be
+                        # set. If so, fall back to the slow path
+                        plot_filter_info = await self.get_plot_filter_info(header_hash)
+                    else:
+                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
+
                     block_record = block_record_db.to_block_record(
                         plot_filter_info.pos_ss_cc_challenge_hash,
                         plot_filter_info.cc_sp_hash,
