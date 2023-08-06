@@ -130,6 +130,18 @@ async def test_block_store(
         assert len(await store.get_full_blocks_at([uint32(0)])) == 1
         assert len(await store.get_full_blocks_at([uint32(100)])) == 0
 
+        # get_timestamp_by_heights
+        if db_version == 3:
+            timestamps = await store.get_timestamp_by_heights([uint32(1)])
+            assert timestamps == {uint32(1): blocks[1].timestamp}
+
+            # block height 100 does not exist
+            timestamps = await store.get_timestamp_by_heights([uint32(1), uint32(0), uint32(1), uint32(100)])
+            assert timestamps == {
+                uint32(1): blocks[1].timestamp,
+                uint32(0): blocks[0].timestamp,
+            }
+
         # get_block_records_in_range
         block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
         assert len(block_record_records) == len(blocks)
@@ -552,11 +564,12 @@ async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None
                 )
             else:
                 await conn.execute(
-                    "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                         b"00000000000000000000000000000000",
-                        1337,
+                        1337,  # height
+                        13371337,  # timestamp
                         None,
                         0,
                         True,  # in_main_chain

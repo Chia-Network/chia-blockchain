@@ -17,7 +17,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.db_wrapper import DBWrapper2, execute_fetchone
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.full_block_utils import (
     GeneratorBlockInfo,
@@ -29,6 +29,7 @@ from chia.util.full_block_utils import (
 )
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.misc import to_batches
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -217,6 +218,7 @@ class BlockStore:
                     "header_hash blob PRIMARY KEY,"
                     "prev_hash blob,"
                     "height bigint,"
+                    "timestamp int,"
                     "sub_epoch_summary blob,"
                     "is_fully_compactified tinyint,"
                     "in_main_chain tinyint,"
@@ -333,6 +335,7 @@ class BlockStore:
                     "(header_hash, "
                     "prev_hash, "
                     "height, "
+                    "timestamp, "
                     "sub_epoch_summary, "
                     "is_fully_compactified, "
                     "in_main_chain, "
@@ -340,11 +343,12 @@ class BlockStore:
                     "block, "
                     "block_record, "
                     "plot_filter_info) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         header_hash,
                         block.prev_header_hash,
                         block.height,
+                        block.timestamp,
                         ses,
                         int(block.is_fully_compactified()),
                         False,  # in_main_chain
@@ -582,6 +586,32 @@ class BlockStore:
                         generators[uint32(row[1])] = gen
 
         return [generators[h] for h in heights]
+
+    async def get_timestamp_by_heights(self, heights: List[uint32]) -> Dict[uint32, uint64]:
+        """
+        Returns a map from block height to timestamp for the specified block heights
+        """
+
+        # this call is only supported for database v3
+        assert self.db_wrapper.db_version == 3
+
+        ret: Dict[uint32, uint64] = {}
+        if heights == []:
+            return ret
+
+        heights_unique = set(heights)
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            for batch in to_batches(heights_unique, SQLITE_MAX_VARIABLE_NUMBER):
+                args = ",".join(["?"] * len(batch.entries))
+                async with conn.execute(
+                    f"SELECT height,timestamp FROM full_blocks WHERE in_main_chain=1 AND height IN ({args})",
+                    tuple(heights_unique),
+                ) as cursor:
+                    for row in await cursor.fetchall():
+                        ret[uint32(row[0])] = uint64(row[1])
+
+        return ret
 
     async def get_block_records_by_hash(self, header_hashes: List[bytes32]) -> List[BlockRecord]:
         """

@@ -10,7 +10,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint32, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 
@@ -52,6 +52,12 @@ class FullBlock(Streamable):
     @property
     def header_hash(self) -> bytes32:
         return self.foliage.get_hash()
+
+    @property
+    def timestamp(self) -> Optional[uint64]:
+        if self.foliage_transaction_block is None:
+            return None
+        return self.foliage_transaction_block.timestamp
 
     def is_transaction_block(self) -> bool:
         return self.foliage_transaction_block is not None
