@@ -287,7 +287,7 @@ class Blockchain(BlockchainInterface):
                 if state_change_summary is not None:
                     self.__height_map.rollback(state_change_summary.fork_height)
                     # Must force a flush here so reloaded cache doesn't have bogus values
-                    await self.__height_map.maybe_flush(False)
+                    await self.__height_map.maybe_flush(True)
 
                 for fetched_block_record in records:
                     self.__height_map.update_height(
