@@ -128,6 +128,7 @@ if [ "$1" = "-h" ] || [ "$1" = "" ]; then
 fi
 
 DEFAULT_BLADEBIT_VERSION="v3.0.0"
+DEFAULT_BLADEBIT_VERSION_FOR_MACOS="v2.0.1"
 DEFAULT_MADMAX_VERSION="0.0.2"
 VERSION=
 PLOTTER=$1
@@ -209,7 +210,11 @@ cd "${VIRTUAL_ENV}/bin"
 # Handle BladeBit and BladeBit CUDA binaries
 if [ "$PLOTTER" = "bladebit" ]; then
   if [ "$VERSION" = "" ]; then
-    VERSION="$DEFAULT_BLADEBIT_VERSION"
+    if [ "$OS" = "macos" ]; then
+      VERSION="$DEFAULT_BLADEBIT_VERSION_FOR_MACOS"
+    else
+      VERSION="$DEFAULT_BLADEBIT_VERSION"
+    fi
   fi
 
   echo -e "Installing bladebit $VERSION\n"
