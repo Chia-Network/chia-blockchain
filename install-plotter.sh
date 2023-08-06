@@ -223,10 +223,13 @@ if [ "$PLOTTER" = "bladebit" ]; then
   url="$(get_bladebit_url "$VERSION" "$OS" "$ARCH")"
   bladebit_filename="$(get_bladebit_filename "$VERSION" "$OS" "$ARCH")"
   handle_binary "$url" "$bladebit_filename" "bladebit"
+
   # CUDA bladebit binary
-  url="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
-  bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
-  handle_binary "$url" "$bladebit_cuda_filename" "bladebit_cuda"
+  if [ "$OS" != "macos" ]; then
+    url="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
+    bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
+    handle_binary "$url" "$bladebit_cuda_filename" "bladebit_cuda"
+  fi
 
 # Handle MadMax binaries
 elif [ "$PLOTTER" = "madmax" ]; then
