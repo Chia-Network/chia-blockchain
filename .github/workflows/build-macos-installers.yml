@@ -89,18 +89,6 @@ jobs:
             echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check tag type
-        id: check_tag_type
-        shell: bash
-        run: |
-          REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
-          REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
-          if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
-            echo "TAG_TYPE=beta" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
-            echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Test for secrets access
         id: check_secrets
         shell: bash
