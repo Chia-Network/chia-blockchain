@@ -62,6 +62,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.weight_proof import WeightProof
 from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
@@ -125,6 +126,7 @@ class FullNode:
     _blockchain: Optional[Blockchain]
     _timelord_lock: Optional[asyncio.Lock]
     weight_proof_handler: Optional[WeightProofHandler]
+    bad_peak_cache: List[bytes32] #hashes of peaks that failed long sync on chip13 Validation
 
     @property
     def server(self) -> ChiaServer:
@@ -993,6 +995,8 @@ class FullNode:
                         f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
                     )
 
+            if not self.wp_check_bad_peak_cache(response.wp):
+                raise ValueError("Weight proof failed bad peak cache validation")
             try:
                 validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
             except Exception as e:
@@ -1109,6 +1113,8 @@ class FullNode:
         try:
             await asyncio.gather(fetch_task, validate_task)
         except Exception as e:
+            # check Chip 13 exception
+            self.bad_peak_cache.append(peak_hash)
             assert validate_task.done()
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
             self.log.error(f"sync from fork point failed err: {e}")
@@ -2480,6 +2486,13 @@ class FullNode:
         )
         if self._server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+    async def wp_check_bad_peak_cache(self, wp: WeightProof) -> bool:
+        for block in wp.recent_chain_data:
+            if block.header_hash in self.bad_peak_cache:
+                return False
+        return True
+
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
