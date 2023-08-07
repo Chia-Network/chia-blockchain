@@ -47,9 +47,16 @@ class TimelordAPI:
                     elif unf_block.reward_chain_block.total_iters < first_block.reward_chain_block.total_iters:
                         first_block = unf_block
 
-            if first_block is not None and first_block.rc_prev != new_peak.reward_chain_block.get_hash():
-                log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
-                return None
+            if first_block is not None:
+                found = False
+                for rc, total_iters in new_peak.previous_reward_challenges:
+                    if rc == first_block.rc_prev:
+                        found = True
+                        break
+
+                if not found:
+                    log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
+                    return None
 
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
