@@ -156,7 +156,6 @@ jobs:
         if: always()
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -o pipefail
           diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
@@ -165,6 +164,8 @@ jobs:
 
       - name: Add diff coverage report comment to PR
         if: env.COV_STATUS != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Transform diff-cover output into a markdown table
           awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
