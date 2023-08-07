@@ -38,25 +38,18 @@ class TimelordAPI:
                 return None
             self.timelord.max_allowed_inactivity_time = 60
 
-            # if there is a heavier unfinished block skip
-            first_block = None
+            # if there is a heavier unfinished block from a diff chain, skip
             for unf_block in self.timelord.unfinished_blocks:
                 if unf_block.reward_chain_block.total_iters > new_peak.reward_chain_block.total_iters:
-                    if first_block is None:
-                        first_block = unf_block
-                    elif unf_block.reward_chain_block.total_iters < first_block.reward_chain_block.total_iters:
-                        first_block = unf_block
+                    found = False
+                    for rc, total_iters in new_peak.previous_reward_challenges:
+                        if rc == unf_block.rc_prev:
+                            found = True
+                            break
 
-            if first_block is not None:
-                found = False
-                for rc, total_iters in new_peak.previous_reward_challenges:
-                    if rc == first_block.rc_prev:
-                        found = True
-                        break
-
-                if not found:
-                    log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
-                    return None
+                    if not found:
+                        log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
+                        return None
 
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():
                 log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
