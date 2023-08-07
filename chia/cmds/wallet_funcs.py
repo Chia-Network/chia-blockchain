@@ -275,9 +275,6 @@ async def send(
                 f"Pass in --override if you are sure you mean to do this."
             )
             return
-        if amount == 0:
-            print("You can not send an empty transaction")
-            return
         if clawback_time_lock < 0:
             print("Clawback time lock seconds cannot be negative.")
             return
