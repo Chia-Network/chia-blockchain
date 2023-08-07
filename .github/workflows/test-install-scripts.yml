@@ -55,6 +55,10 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: Run chia --help
+      run: |
+        chia --help
+
     - name: Run install-gui script
       run: |
         sh install-gui.sh
