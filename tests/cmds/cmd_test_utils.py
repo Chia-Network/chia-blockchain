@@ -61,9 +61,9 @@ class TestRpcClient:
 
     def check_log(self, expected_calls: logType) -> None:
         for k, v in expected_calls.items():
-            assert k in self.rpc_log, f"key {k} not in rpc_log, rpc log's keys are {list(self.rpc_log.keys())}"
+            assert k in self.rpc_log, f"key '{k}' not in rpc_log, rpc log's keys are: '{list(self.rpc_log.keys())}'"
             if v is not None:  # None means we don't care about the value used when calling the rpc.
-                assert self.rpc_log[k] == v, f"for key {k}, {self.rpc_log[k]} != {v}"
+                assert self.rpc_log[k] == v, f"for key '{k}'\n'{self.rpc_log[k]}'\n!=\n'{v}'"
         self.rpc_log = {}
 
 
@@ -344,4 +344,4 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
     Asserts that all the strings in strings_to_assert are in the output
     """
     for string_to_assert in strings_to_assert:
-        assert string_to_assert in output, f"{string_to_assert} was not in {output} ."
+        assert string_to_assert in output, f"'{string_to_assert}' was not in\n'{output}'"
