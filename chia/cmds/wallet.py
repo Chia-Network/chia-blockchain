@@ -461,13 +461,31 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     required=True,
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
+@click.option(
+    "-p",
+    "--filepath",
+    help="The path to write the generated offer file to, required if --no-path flag is not set",
+    required=False,
+    default="",
+)
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
 @click.option(
     "--reuse",
     help="Reuse existing address for the offer.",
+    is_flag=True,
+    default=False,
+)
+@click.option(
+    "--no-confirm",
+    help="Do not ask for confirmation before making the offer or adding royalties.",
+    is_flag=True,
+    default=False,
+)
+@click.option(
+    "--no-file",
+    help="Do not write the offer file to disk.",
     is_flag=True,
     default=False,
 )
@@ -479,9 +497,14 @@ def make_offer_cmd(
     filepath: str,
     fee: str,
     reuse: bool,
+    no_confirm: bool,
+    no_file: bool,
 ) -> None:
     from .wallet_funcs import make_offer
 
+    if filepath == "" and not no_file:
+        print("Please provide a filepath or set the --no-file flag, to not save the offer file to disk.")
+        return
     asyncio.run(
         make_offer(
             wallet_rpc_port=wallet_rpc_port,
@@ -491,6 +514,8 @@ def make_offer_cmd(
             requests=request,
             filepath=filepath,
             reuse_puzhash=True if reuse else None,
+            no_confirm=no_confirm,
+            no_file=no_file,
         )
     )
 
@@ -563,6 +588,12 @@ def get_offers_cmd(
     is_flag=True,
     default=False,
 )
+@click.option(
+    "--no-confirm",
+    help="Do not ask for confirmation before taking the offer.",
+    is_flag=True,
+    default=False,
+)
 def take_offer_cmd(
     path_or_hex: str,
     wallet_rpc_port: Optional[int],
@@ -570,10 +601,13 @@ def take_offer_cmd(
     examine_only: bool,
     fee: str,
     reuse: bool,
+    no_confirm: bool,
 ) -> None:
     from .wallet_funcs import take_offer
 
-    asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only))  # reuse is not used
+    asyncio.run(
+        take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only, no_confirm)
+    )  # reuse is not used
 
 
 @wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
@@ -590,10 +624,18 @@ def take_offer_cmd(
 @click.option(
     "-m", "--fee", help="The fee to use when cancelling the offer securely, in XCH", default="0", show_default=True
 )
-def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
+@click.option(
+    "--no-confirm",
+    help="Do not ask for confirmation before canceling the offer.",
+    is_flag=True,
+    default=False,
+)
+def cancel_offer_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str, no_confirm: bool
+) -> None:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, insecure))
+    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure, no_confirm))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)

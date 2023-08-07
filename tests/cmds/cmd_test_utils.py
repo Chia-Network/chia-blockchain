@@ -4,7 +4,7 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
 from blspy import G2Element
 from chia_rs import Coin
@@ -21,9 +21,13 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
@@ -57,9 +61,9 @@ class TestRpcClient:
 
     def check_log(self, expected_calls: logType) -> None:
         for k, v in expected_calls.items():
-            assert k in self.rpc_log
+            assert k in self.rpc_log, f"key {k} not in rpc_log, rpc log's keys are {list(self.rpc_log.keys())}"
             if v is not None:  # None means we don't care about the value used when calling the rpc.
-                assert self.rpc_log[k] == v
+                assert self.rpc_log[k] == v, f"for key {k}, {self.rpc_log[k]} != {v}"
         self.rpc_log = {}
 
 
@@ -73,9 +77,12 @@ class TestWalletRpcClient(TestRpcClient):
     client_type: Type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
 
-    async def get_wallets(self) -> List[Dict[str, int]]:
+    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
+        self.add_to_log("get_wallets", (wallet_type,))
         # we cant start with zero because ints cant have a leading zero
-        if str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
+        if wallet_type is not None:
+            w_type = wallet_type
+        elif str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
             w_type = WalletType.STANDARD_WALLET
         elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
             w_type = WalletType.CAT
@@ -87,7 +94,6 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.POOLING_WALLET
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
-        self.add_to_log("get_wallets", ())
         return [{"id": 1, "type": w_type}]
 
     async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
@@ -109,6 +115,74 @@ class TestWalletRpcClient(TestRpcClient):
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
             memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+        )
+
+    async def get_cat_name(self, wallet_id: int) -> str:
+        self.add_to_log("get_cat_name", (wallet_id,))
+        return "test" + str(wallet_id)
+
+    async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str, str]:
+        self.add_to_log("sign_message_by_address", (address, message))
+        pubkey = bytes([3] * 48).hex()
+        signature = bytes([6] * 576).hex()
+        signing_mode = SigningMode.CHIP_0002.value
+        return pubkey, signature, signing_mode
+
+    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
+        self.add_to_log("sign_message_by_id", (id, message))
+        pubkey = bytes([4] * 48).hex()
+        signature = bytes([7] * 576).hex()
+        signing_mode = SigningMode.CHIP_0002.value
+        return pubkey, signature, signing_mode
+
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
+        """
+        if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
+        """
+        self.add_to_log("cat_asset_id_to_name", (asset_id,))
+        if asset_id == bytes32([1] * 32):
+            return uint32(2), "test1"
+        elif asset_id == bytes32([2] * 32):
+            return uint32(3), "test2"
+        else:
+            return None
+
+    async def get_nft_info(self, coin_id: str, latest: bool = True) -> Dict[str, Any]:
+        self.add_to_log("get_nft_info", (coin_id, latest))
+        coin_id_bytes = bytes32.fromhex(coin_id)
+        nft_info = NFTInfo(
+            nft_id=encode_puzzle_hash(coin_id_bytes, "nft"),
+            launcher_id=bytes32([1] * 32),
+            nft_coin_id=coin_id_bytes,
+            nft_coin_confirmation_height=uint32(2),
+            owner_did=bytes32([2] * 32),
+            royalty_percentage=uint16(1000),
+            royalty_puzzle_hash=bytes32([3] * 32),
+            data_uris=["https://example.com/data"],
+            data_hash=bytes([4]),
+            metadata_uris=["https://example.com/mdata"],
+            metadata_hash=bytes([5]),
+            license_uris=["https://example.com/license"],
+            license_hash=bytes([6]),
+            edition_total=uint64(10),
+            edition_number=uint64(1),
+            updater_puzhash=bytes32([7] * 32),
+            chain_info="",
+            mint_height=uint32(1),
+            supports_did=True,
+            p2_address=bytes32([8] * 32),
+        )
+        return {"nft_info": nft_info.to_json_dict()}
+
+    async def nft_calculate_royalties(
+        self,
+        royalty_assets_dict: Dict[Any, Tuple[Any, uint16]],
+        fungible_asset_dict: Dict[Any, uint64],
+    ) -> Dict[Any, List[Dict[str, Any]]]:
+        self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
+        return NFTWallet.royalty_calculation(
+            royalty_assets_dict=royalty_assets_dict,
+            fungible_asset_dict=fungible_asset_dict,
         )
 
 
@@ -270,4 +344,4 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
     Asserts that all the strings in strings_to_assert are in the output
     """
     for string_to_assert in strings_to_assert:
-        assert string_to_assert in output
+        assert string_to_assert in output, f"{string_to_assert} was not in {output} ."

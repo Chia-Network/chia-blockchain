@@ -401,6 +401,8 @@ async def make_offer(
     requests: Sequence[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
+    no_confirm: bool = False,
+    no_file: bool = False,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
@@ -528,32 +530,34 @@ async def make_offer(
                         converted_amount = Decimal(requested_amount) / divisor
                         print(f"  - {converted_amount} {asset} ({requested_amount} mojos)")
 
-                    print()
-                    nft_confirmation = input(
-                        "Offers for NFTs will have royalties automatically added. "
-                        + "Are you sure you would like to continue? (y/n): "
-                    )
-                    if nft_confirmation not in ["y", "yes"]:
+                    if not no_confirm:
+                        print()
+                        nft_confirmation = input(
+                            "Offers for NFTs will have royalties automatically added. "
+                            + "Are you sure you would like to continue? (y/n): "
+                        )
+                        if nft_confirmation not in ["y", "yes"]:
+                            print("Not creating offer...")
+                            return
+
+                if not no_confirm:
+                    confirmation = input("Confirm (y/n): ")
+                    if confirmation not in ["y", "yes"]:
                         print("Not creating offer...")
                         return
-
-                confirmation = input("Confirm (y/n): ")
-                if confirmation not in ["y", "yes"]:
-                    print("Not creating offer...")
-                else:
-                    with open(pathlib.Path(filepath), "w") as file:
-                        offer, trade_record = await wallet_client.create_offer_for_ids(
-                            offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
-                        )
-                        if offer is not None:
+                offer, trade_record = await wallet_client.create_offer_for_ids(
+                    offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
+                )
+                if offer is not None:
+                    if not no_file:
+                        with open(pathlib.Path(filepath), "w") as file:
                             file.write(offer.to_bech32())
-                            print(f"Created offer with ID {trade_record.trade_id}")
-                            print(
-                                f"Use chia wallet get_offers --id "
-                                f"{trade_record.trade_id} -f {fingerprint} to view status"
-                            )
-                        else:
-                            print("Error creating offer")
+                    print(f"Created offer with ID {trade_record.trade_id}")
+                    print(
+                        f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
+                    )
+                else:
+                    print("Error creating offer")
 
 
 def timestamp_to_time(timestamp: int) -> str:
@@ -676,6 +680,7 @@ async def take_offer(
     d_fee: Decimal,
     file: str,
     examine_only: bool,
+    no_confirm: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
@@ -756,15 +761,17 @@ async def take_offer(
 
         if not examine_only:
             print()
-            confirmation = input("Would you like to take this offer? (y/n): ")
-            if confirmation in ["y", "yes"]:
-                trade_record = await wallet_client.take_offer(offer, fee=fee)
-                print(f"Accepted offer with ID {trade_record.trade_id}")
-                print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
+            if not no_confirm:
+                confirmation = input("Would you like to take this offer? (y/n): ")
+                if confirmation not in ["y", "yes"]:
+                    return
+            trade_record = await wallet_client.take_offer(offer, fee=fee)
+            print(f"Accepted offer with ID {trade_record.trade_id}")
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
 
 async def cancel_offer(
-    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool
+    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool, no_confirm: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         offer_id = bytes32.from_hexstr(offer_id_hex)
@@ -773,12 +780,14 @@ async def cancel_offer(
         trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
-        confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
-        if confirmation in ["y", "yes"]:
-            await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
-            print(f"Cancelled offer with ID {trade_record.trade_id}")
-            if secure:
-                print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
+        if not no_confirm:
+            confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
+            if confirmation not in ["y", "yes"]:
+                return
+        await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
+        print(f"Cancelled offer with ID {trade_record.trade_id}")
+        if secure:
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  # pragma: no cover
