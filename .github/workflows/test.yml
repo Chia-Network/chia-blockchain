@@ -168,9 +168,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
-          comment_id=$(gh pr comments "$PR_NUM" --json body,author --jq ' .[] | select(.author.login == "github-actions[bot]" and .body | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->")) | .id ')
+          comments=$(gh api -X GET /repos/${{ github.repository }}/issues/${PR_NUM}/comments)
+          comment_id=$(echo "$comments" | jq ' .[] | select(.user.login == "github-actions[bot]" and .body | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->")) | .id ')
           if [[ -n "$comment_id" ]]; then
-            gh api -X DELETE repos/${{ github.repository }}/issues/comments/"$comment_id"
+            gh api -X DELETE /repos/${{ github.repository }}/issues/comments/"$comment_id"
           fi
           if [[ ${{ env.COV_STATUS }} == 0 ]]; then
             if gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")'; then
