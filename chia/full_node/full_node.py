@@ -126,7 +126,7 @@ class FullNode:
     _blockchain: Optional[Blockchain]
     _timelord_lock: Optional[asyncio.Lock]
     weight_proof_handler: Optional[WeightProofHandler]
-    bad_peak_cache: List[bytes32] #hashes of peaks that failed long sync on chip13 Validation
+    bad_peak_cache: List[bytes32]  # hashes of peaks that failed long sync on chip13 Validation
 
     @property
     def server(self) -> ChiaServer:
@@ -553,7 +553,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary = await self.add_block_batch(response.blocks, peer, None)
+                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1083,11 +1083,14 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                success, state_change_summary = await self.add_block_batch(
+                success, state_change_summary, err = await self.add_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
                     await peer.close(600)
+                    # check Chip 13 exception
+                    if err == Err.INVALID_POSPACE:
+                        self.bad_peak_cache.append(peak_hash)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1113,8 +1116,6 @@ class FullNode:
         try:
             await asyncio.gather(fetch_task, validate_task)
         except Exception as e:
-            # check Chip 13 exception
-            self.bad_peak_cache.append(peak_hash)
             assert validate_task.done()
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
             self.log.error(f"sync from fork point failed err: {e}")
@@ -1190,7 +1191,7 @@ class FullNode:
         peer: WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, Optional[StateChangeSummary]]:
+    ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
@@ -1200,7 +1201,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, None
+            return True, None, None
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
@@ -1221,7 +1222,7 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, None
+                return False, None, None
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
 
@@ -1251,7 +1252,7 @@ class FullNode:
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, agg_state_change_summary
+                return False, agg_state_change_summary, error
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
@@ -1262,7 +1263,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: True"
             )
-        return True, agg_state_change_summary
+        return True, agg_state_change_summary, None
 
     async def _finish_sync(self) -> None:
         """
@@ -2492,7 +2493,6 @@ class FullNode:
             if block.header_hash in self.bad_peak_cache:
                 return False
         return True
-
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool
