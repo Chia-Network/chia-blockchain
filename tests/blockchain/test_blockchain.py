@@ -1369,8 +1369,8 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt):
-        if bt.constants.SOFT_FORK3_HEIGHT == 0:
+    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: Mode):
+        if consensus_mode == Mode.SOFT_FORK4:
             pytest.skip("Skipped temporarily until adding more pool plots.")
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1503,18 +1503,12 @@ class TestBlockHeaderValidation:
             await _validate_and_add_block(empty_blockchain, blocks[-1])
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
-    async def test_bad_timestamp(self, bt, with_softfork2):
+    async def test_bad_timestamp(self, bt):
         # 26
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
-            # default for this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0, MAX_FUTURE_TIME=5 * 60, MAX_FUTURE_TIME2=2 * 60)
-            time_delta = 2 * 60 + 1
-        else:
-            constants = bt.constants.replace(MAX_FUTURE_TIME=5 * 60)
-            time_delta = 5 * 60 + 1
+        # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
+        # default for this test
+        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
+        time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
 
@@ -1867,7 +1861,6 @@ class TestBodyValidation:
         assert state_change.fork_height == 2
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
@@ -1941,35 +1934,8 @@ class TestBodyValidation:
             (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
-    async def test_timelock_conditions(self, opcode, lock_value, expected, with_softfork2, bt):
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
-        else:
-            constants = bt.constants
-
-            # if the softfork is not active in this test, fixup all the
-            # tests to instead expect NEW_PEAK unconditionally
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-            ]:
-                expected = AddBlockResult.NEW_PEAK
-
-            # before soft-fork 2, the timestamp we compared against was the
-            # current block's timestamp as opposed to the previous tx-block's
-            # timestamp. These conditions used to be valid, before the soft-fork
-            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and lock_value > 0 and lock_value <= 10:
-                expected = AddBlockResult.NEW_PEAK
-
-            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
-                expected = AddBlockResult.NEW_PEAK
-
-        async with make_empty_blockchain(constants) as b:
+    async def test_timelock_conditions(self, opcode, lock_value, expected, bt):
+        async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
                 3,
                 guarantee_transaction_block=True,
@@ -2100,7 +2066,6 @@ class TestBodyValidation:
         assert (res, error, state_change.fork_height if state_change else None) == expected
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("with_softfork2", [False, True])
     @pytest.mark.parametrize("with_garbage", [True, False])
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
@@ -2165,47 +2130,19 @@ class TestBodyValidation:
             (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10032, rbr.NEW_PEAK),
         ],
     )
-    async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, with_softfork2, bt):
-        if with_softfork2:
-            # enable softfork2 at height 0, to make it apply to this test
-            constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
+    async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, bt):
+        # we don't allow any birth assertions, not
+        # relative time locks on ephemeral coins. This test is only for
+        # ephemeral coins, so these cases should always fail
+        if opcode in [
+            ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
+            ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
+            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
+            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
+        ]:
+            expected = AddBlockResult.INVALID_BLOCK
 
-            # after the softfork, we don't allow any birth assertions, not
-            # relative time locks on ephemeral coins. This test is only for
-            # ephemeral coins, so these cases should always fail
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
-            ]:
-                expected = AddBlockResult.INVALID_BLOCK
-
-        else:
-            constants = bt.constants
-
-            # if the softfork is not active in this test, fixup all the
-            # tests to instead expect NEW_PEAK unconditionally
-            if opcode in [
-                ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-                ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE,
-                ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-            ]:
-                expected = AddBlockResult.NEW_PEAK
-
-            # before the softfork, we compared ASSERT_SECONDS_* conditions
-            # against the current block's timestamp, so we need to
-            # adjust these test cases
-            if opcode == co.ASSERT_SECONDS_ABSOLUTE and lock_value > 10020 and lock_value <= 10030:
-                expected = rbr.NEW_PEAK
-
-            if opcode == co.ASSERT_SECONDS_RELATIVE and lock_value > -10 and lock_value <= 0:
-                expected = rbr.NEW_PEAK
-
-        async with make_empty_blockchain(constants) as b:
+        async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
                 3,
                 guarantee_transaction_block=True,
@@ -3675,13 +3612,13 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
 
 @pytest.mark.parametrize("unique_plots_window", [1, 2])
-@pytest.mark.parametrize("bt_respects_soft_fork3", [True, False])
-@pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
+@pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
+@pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
 @pytest.mark.asyncio
-async def test_soft_fork3_activation(
-    consensus_mode, blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
+async def test_soft_fork4_activation(
+    consensus_mode, blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
 ):
-    # We don't run Mode.SOFT_FORK3, since this is already parametrized by this test.
+    # We don't run Mode.SOFT_FORK4, since this is already parametrized by this test.
     # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
     # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
     if consensus_mode != Mode.PLAIN:
@@ -3689,12 +3626,12 @@ async def test_soft_fork3_activation(
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
-                SOFT_FORK3_HEIGHT=(0 if bt_respects_soft_fork3 else 10000),
+                SOFT_FORK4_HEIGHT=(0 if bt_respects_soft_fork4 else 10000),
                 UNIQUE_PLOTS_WINDOW=unique_plots_window,
             ),
             keychain=keychain,
         )
-        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=soft_fork3_height)
+        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=0, SOFT_FORK4_HEIGHT=soft_fork4_height)
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
@@ -3710,17 +3647,17 @@ async def test_soft_fork3_activation(
         # We expect to add all blocks here (25 blocks), either because `unique_plots_window`=1 means we're not
         # checking any extra plot filter, or `unique_plots_window`=True means `BlockTools` produced blocks
         # that respect CHIP-13.
-        if bt_respects_soft_fork3 or unique_plots_window == 1:
+        if bt_respects_soft_fork4 or unique_plots_window == 1:
             assert peak.height == 24
         else:
-            # Here we have `bt_respects_soft_fork3`=False, which means the produced blocks by `BlockTools` will not
+            # Here we have `bt_respects_soft_fork4`=False, which means the produced blocks by `BlockTools` will not
             # respect the CHIP-13 condition. We expect not adding blocks at some point after the soft fork 3
-            # activation height (`soft_fork3_height`).
-            if soft_fork3_height == 0:
+            # activation height (`soft_fork4_height`).
+            if soft_fork4_height == 0:
                 # We're not adding all blocks, since at some point `BlockTools` will break the CHIP-13 condition with
                 # very high likelyhood.
                 assert peak.height < 24
-            elif soft_fork3_height == 10:
+            elif soft_fork4_height == 10:
                 # We're not adding all blocks, but we've added all of them until the soft fork 3 activated (height 10)
                 assert peak.height < 24 and peak.height >= 9
             else:

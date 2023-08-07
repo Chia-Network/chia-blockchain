@@ -72,8 +72,6 @@ git submodule update --init mozilla-ca
 
 UBUNTU_PRE_20=0
 UBUNTU_20=0
-UBUNTU_21=0
-UBUNTU_22=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -84,12 +82,8 @@ if $UBUNTU; then
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
   if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
     UBUNTU_PRE_20=1
-  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
-    UBUNTU_20=1
-  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
-    UBUNTU_21=1
   else
-    UBUNTU_22=1
+    UBUNTU_20=1
   fi
 fi
 
@@ -203,17 +197,9 @@ elif [ "$(uname)" = "Linux" ]; then
     # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_20" = "1" ]; then
-    echo "Installing on Ubuntu 20.*."
+    echo "Installing on Ubuntu 20.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv openssl
-  elif [ "$UBUNTU_21" = "1" ]; then
-    echo "Installing on Ubuntu 21.*."
-    sudo apt-get update
-    sudo apt-get install -y python3.9-venv openssl
-  elif [ "$UBUNTU_22" = "1" ]; then
-    echo "Installing on Ubuntu 22.* or newer."
-    sudo apt-get update
-    sudo apt-get install -y python3.10-venv openssl
+    sudo apt-get install -y python3-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update

@@ -66,7 +66,7 @@ async def validate_block_body(
     # from the database too (BlockStore). In `BlockHeaderValidation` we don't have access to the database,
     # just the cache. This check makes sure we retrieve blocks from the database and perform the check with them,
     # in case they were missing from the cache.
-    if height >= constants.SOFT_FORK3_HEIGHT:
+    if height >= constants.SOFT_FORK4_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = await blocks.get_block_record_from_db(
             block.prev_header_hash
         )
@@ -495,17 +495,11 @@ async def validate_block_body(
     if npc_result is not None:
         assert npc_result.conds is not None
 
-        block_timestamp: uint64
-        if height < constants.SOFT_FORK2_HEIGHT:
-            block_timestamp = block.foliage_transaction_block.timestamp
-        else:
-            block_timestamp = prev_transaction_block_timestamp
-
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block_timestamp,
+            prev_transaction_block_timestamp,
         )
         if error:
             return error, None

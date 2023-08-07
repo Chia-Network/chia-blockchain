@@ -497,7 +497,7 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_POSPACE)
 
     # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
-    if height >= constants.SOFT_FORK3_HEIGHT:
+    if height >= constants.SOFT_FORK4_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = prev_b
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         curr_sp = cc_sp_hash
@@ -844,11 +844,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
-        if height >= constants.SOFT_FORK2_HEIGHT:
-            max_future_time = constants.MAX_FUTURE_TIME2
-        else:
-            max_future_time = constants.MAX_FUTURE_TIME
-        if header_block.foliage_transaction_block.timestamp > int(time.time() + max_future_time):
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME2):
             return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
         if prev_b is not None:

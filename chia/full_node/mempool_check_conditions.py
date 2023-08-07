@@ -55,8 +55,7 @@ def get_name_puzzle_conditions(
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
 
-    if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK3_HEIGHT:
         # the soft-fork initiated with 2.0. To activate end of October 2023
