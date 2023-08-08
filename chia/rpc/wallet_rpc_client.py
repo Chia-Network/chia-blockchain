@@ -1181,7 +1181,7 @@ class WalletRpcClient(RpcClient):
         return response["pubkey"], response["signature"], response["signing_mode"]
 
     async def vc_mint(
-        self, did_id: bytes32, target_address: Optional[bytes32] = None, fee: uint64 = uint64(0)
+        self, did_id: bytes32, tx_config: TXConfig, target_address: Optional[bytes32] = None, fee: uint64 = uint64(0)
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
         response = await self.fetch(
             "vc_mint",
@@ -1189,6 +1189,7 @@ class WalletRpcClient(RpcClient):
                 "did_id": encode_puzzle_hash(did_id, "rpc"),
                 "target_address": encode_puzzle_hash(target_address, "rpc") if target_address is not None else None,
                 "fee": fee,
+                **tx_config.to_json_dict(),
             },
         )
         return VCRecord.from_json_dict(response["vc_record"]), [

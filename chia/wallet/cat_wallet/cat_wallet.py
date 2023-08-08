@@ -602,6 +602,22 @@ class CATWallet:
                 coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
             )
             assert chia_tx.spend_bundle is not None
+        else:
+            chia_coins = await self.standard_wallet.select_coins(
+                fee,
+                tx_config.coin_selection_config,
+            )
+            origin_id = list(chia_coins)[0].name()
+            selected_amount = sum([c.amount for c in chia_coins])
+            chia_tx = await self.standard_wallet.generate_signed_transaction(
+                uint64(selected_amount + amount_to_claim - fee),
+                (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
+                tx_config,
+                coins=chia_coins,
+                negative_change_allowed=True,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
+            )
+            assert chia_tx.spend_bundle is not None
 
             message = None
             for spend in chia_tx.spend_bundle.coin_spends:
@@ -613,21 +629,6 @@ class CATWallet:
 
             assert message is not None
             announcement = Announcement(origin_id, message)
-        else:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                tx_config.coin_selection_config,
-            )
-            selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
-                tx_config,
-                coins=chia_coins,
-                negative_change_allowed=True,
-                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
-            )
-            assert chia_tx.spend_bundle is not None
 
         return chia_tx, announcement
 

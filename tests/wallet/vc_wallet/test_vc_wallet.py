@@ -166,7 +166,9 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
-    vc_record, txs = await client_0.vc_mint(did_id, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200))
+    vc_record, txs = await client_0.vc_mint(
+        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    )
     confirmed_balance -= 1
     confirmed_balance -= 200
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)

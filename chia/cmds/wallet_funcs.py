@@ -1461,6 +1461,7 @@ async def mint_vc(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         vc_record, txs = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
+            CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             None
             if target_address is None
             else decode_puzzle_hash(
