@@ -262,7 +262,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     expected_balance_dict["wallet_id"] = wallet.id()
     expected_balance_dict["wallet_type"] = wallet.type()
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
-    if wallet.type() == WalletType.CAT:
+    if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
         expected_balance_dict["asset_id"] = wallet.get_asset_id()
     assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict

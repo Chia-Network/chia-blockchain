@@ -424,7 +424,7 @@ class Offer:
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
     # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
-    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None) -> SpendBundle:
+    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None, solver: Solver = Solver({})) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
@@ -496,6 +496,7 @@ class Offer:
                                 "sibling_spends": sibling_spends,
                                 "sibling_puzzles": sibling_puzzles,
                                 "sibling_solutions": sibling_solutions,
+                                **solver.info,
                             }
                         ),
                         OFFER_MOD,

@@ -1432,3 +1432,20 @@ class DIDWallet:
         if len(spendable_coins) == 0:
             raise RuntimeError("DID is not currently spendable")
         return list(spendable_coins)[0].coin
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        if self.did_info.origin_coin is None:
+            return False  # pragma: no cover
+        return (
+            create_singleton_puzzle(
+                did_wallet_puzzles.create_innerpuz(
+                    hint,  # type: ignore[arg-type]
+                    self.did_info.backup_ids,
+                    uint64(self.did_info.num_of_backup_ids_needed),
+                    self.did_info.origin_coin.name(),
+                    did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+                ),
+                self.did_info.origin_coin.name(),
+            ).get_tree_hash_precalc(hint)
+            == coin.puzzle_hash
+        )

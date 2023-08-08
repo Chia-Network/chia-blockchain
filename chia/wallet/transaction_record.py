@@ -124,3 +124,6 @@ class TransactionRecord(Streamable):
             # we tried to push it to mempool and got a fee error so it's a temporary error
             return True
         return False
+
+    def hint_dict(self) -> Dict[bytes32, bytes32]:
+        return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
