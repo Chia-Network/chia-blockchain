@@ -9,3 +9,5 @@ except DistributionNotFound:
     __version__ = "unknown"
 
 PYINSTALLER_SPEC_PATH = resource_filename("chia", "pyinstaller.spec")
+
+# testing
