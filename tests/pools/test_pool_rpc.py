@@ -16,6 +16,7 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 from blspy import G1Element
 
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
@@ -97,11 +98,10 @@ OneWalletNodeAndRpc = Tuple[WalletRpcClient, Any, FullNodeSimulator, int, BlockT
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc(
-    trusted: bool,
-    self_hostname: str,
+    trusted: bool, self_hostname: str, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[OneWalletNodeAndRpc]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
+    async for nodes in setup_simulators_and_wallets_service(1, 1, blockchain_constants):
         full_nodes, wallets, bt = nodes
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         wallet_service = wallets[0]
