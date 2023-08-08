@@ -241,7 +241,19 @@ class CATWallet:
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
-    ) -> CATWallet:
+        # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
+        potential_subclasses: Dict[AssetType, Any] = {},
+    ) -> Any:
+        next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
+        if next_layer is not None:
+            if AssetType(next_layer.type()) in potential_subclasses:
+                return await potential_subclasses[AssetType(next_layer.type())].create_from_puzzle_info(
+                    wallet_state_manager,
+                    wallet,
+                    puzzle_driver,
+                    name,
+                    potential_subclasses,
+                )
         return await cls.get_or_create_wallet_for_cat(
             wallet_state_manager,
             wallet,
@@ -565,7 +577,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         tx_config: TXConfig,
-        announcement_to_assert: Optional[Announcement] = None,
+        announcements_to_assert: Optional[Set[Announcement]] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -587,7 +599,7 @@ class CATWallet:
                 coins=chia_coins,
                 origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
                 negative_change_allowed=False,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -613,7 +625,7 @@ class CATWallet:
                 tx_config,
                 coins=chia_coins,
                 negative_change_allowed=True,
-                coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+                coin_announcements_to_consume=announcements_to_assert if announcements_to_assert is not None else None,
             )
             assert chia_tx.spend_bundle is not None
 
@@ -699,7 +711,7 @@ class CATWallet:
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
-                            announcement_to_assert=announcement,
+                            announcements_to_assert={announcement},
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
@@ -894,3 +906,13 @@ class CATWallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, coin_selection_config)
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        return (
+            construct_cat_puzzle(
+                CAT_MOD,
+                self.cat_info.limitations_program_hash,
+                hint,  # type: ignore[arg-type]
+            ).get_tree_hash_precalc(hint)
+            == coin.puzzle_hash
+        )

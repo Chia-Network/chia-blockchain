@@ -1,20 +1,20 @@
 name: ⚡️ Benchmarks
 
-on:
-  push:
-    paths-ignore:
-        - '**.md'
-    branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
-  release:
-    types: [published]
-  pull_request:
-    paths-ignore:
-        - '**.md'
-    branches:
-      - '**'
+on: workflow_dispatch
+#  push:
+#    paths-ignore:
+#        - '**.md'
+#    branches:
+#      - 'long_lived/**'
+#      - main
+#      - 'release/**'
+#  release:
+#    types: [published]
+#  pull_request:
+#    paths-ignore:
+#        - '**.md'
+#    branches:
+#      - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run

@@ -967,8 +967,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_count_nfts", request)
         return response
 
-    async def list_nfts(self, wallet_id) -> dict[str, Any]:
-        request: Dict[str, Any] = {"wallet_id": wallet_id, "num": 100_000}
+    async def list_nfts(self, wallet_id, num: int = 50, start_index: int = 0):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "num": num, "start_index": start_index}
         response = await self.fetch("nft_get_nfts", request)
         return response
 
@@ -1242,5 +1242,23 @@ class WalletRpcClient(RpcClient):
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             "vc_revoke", {"vc_parent_id": vc_parent_id.hex(), "fee": fee, **tx_config.to_json_dict()}
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def crcat_approve_pending(
+        self,
+        wallet_id: uint32,
+        min_amount_to_claim: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+    ) -> List[TransactionRecord]:
+        response = await self.fetch(
+            "crcat_approve_pending",
+            {
+                "wallet_id": wallet_id,
+                "min_amount_to_claim": min_amount_to_claim,
+                "fee": fee,
+                **tx_config.to_json_dict(),
+            },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]

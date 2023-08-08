@@ -29,7 +29,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
@@ -130,6 +130,10 @@ class TestWalletSimulator:
 
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
+
+        # Test match_hinted_coin
+        selected_coin = list(await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG))[0]
+        assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
         "trusted",
