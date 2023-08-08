@@ -114,7 +114,7 @@
     )
     (if parent_amount_list
         (add_announcements_to_result
-          (sha256 (f (f parent_amount_list)) p2_singleton_puzzle_hash (f (r (f parent_amount_list))))
+          (calculate_coin_id (f (f parent_amount_list)) p2_singleton_puzzle_hash (f (r (f parent_amount_list))))
           (if
             (r parent_amount_list)  ; this is the delegated_puzhash
             (sha256tree 0)  ; most coins destroy themselves
@@ -190,7 +190,7 @@
         TREASURY_SINGLETON_STRUCT
         (sum_create_coins CONDITIONS)
         P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
-        (sha256 (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
+        (calculate_coin_id (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
         (r p2_singleton_parent_amount_list)
         (f (r (f p2_singleton_parent_amount_list)))
         (for_each_asset_type

@@ -41,6 +41,8 @@
     )
   )
 
+  (defconst singleton_launcher_hash 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)
+
   (defun calculate_singleton_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
       inner_puzzle_hash
@@ -52,11 +54,14 @@
     (c
       (if singleton_struct
           (list ASSERT_MY_COIN_ID
-            (sha256
+            (calculate_coin_id
               (f (r singleton_struct))
               (calculate_singleton_puzzle_hash singleton_struct my_inner_puzhash)
               ONE
             )
+            ;; TODO: When the new condition codes are available, use ASSERT_EPHEMERAL to ensure this
+            ;; spend path is only used in the eve spend.
+            ;; (list ASSERT_EPHEMERAL)
           )
           (list ASSERT_HEIGHT_RELATIVE ORACLE_SPEND_DELAY)
       )
