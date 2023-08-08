@@ -173,7 +173,7 @@ jobs:
           comments=$(gh api -X GET /repos/${{ github.repository }}/issues/${PR_NUM}/comments)
           comment_id=$(echo "$comments" | jq '.[] | select(.user.login == "github-actions[bot]" and (.body | tostring | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->"))) | .id')
           coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
-          if [[ -z "$comment_id" ]]; then
+          if [[ -n "$comment_id" ]]; then
             gh api -X DELETE /repos/${{ github.repository }}/issues/comments/"$comment_id"
           fi
           if [[ $COV_STATUS != '0' ]]; then
