@@ -637,6 +637,36 @@ class WalletStateManager:
         wallet_identifier = await self.get_wallet_identifier_for_coin(coin, hint_dict)
         return wallet_identifier is not None and wallet_identifier.id == wallet_id
 
+    async def get_fee_for_coin(
+        self,
+        coin: Coin,
+        peer: WSChiaConnection,
+    ) -> uint64:
+        """
+        Calculate the tx fee of a coin
+        :param coin: The coin includes the fee
+        :param peer: Peer node
+        :return: Transaction fee
+        """
+        # Get all children coins
+        children: List[CoinState] = await self.wallet_node.fetch_children(coin.name(), peer=peer)
+        # Get parent coin amount
+        parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.name())
+        parent_coin: Optional[Coin] = None
+        if parent_coin_record is None:
+            coin_states: List[CoinState] = await self.wallet_node.get_coin_state([coin.name()], peer)
+            if len(coin_states) > 0:
+                parent_coin = coin_states[0].coin
+        else:
+            parent_coin = parent_coin_record.coin
+        if parent_coin is None:
+            return uint64(0)
+        children_amount: uint64 = uint64(0)
+        for child_coin in children:
+            children_amount = uint64(children_amount + child_coin.coin.amount)
+
+        return uint64(parent_coin.amount - children_amount)
+
     async def get_confirmed_balance_for_wallet(
         self,
         wallet_id: int,
@@ -1287,7 +1317,7 @@ class WalletStateManager:
                         if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
                         else metadata.recipient_puzzle_hash,
                         amount=uint64(coin_state.coin.amount),
-                        fee_amount=uint64(0),
+                        fee_amount=await self.get_fee_for_coin(coin_state.coin, peer),
                         confirmed=True,
                         sent=uint32(0),
                         spend_bundle=clawback_spend_bundle,
@@ -1530,12 +1560,13 @@ class WalletStateManager:
 
                             additions = [state.coin for state in children]
                             if len(children) > 0:
-                                fee = 0
+                                fee = coin_state.coin.amount
 
                                 to_puzzle_hash = None
                                 # Find coin that doesn't belong to us
                                 amount = 0
                                 for coin in additions:
+                                    fee = uint64(fee - coin.amount)
                                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                                         coin.puzzle_hash
                                     )
