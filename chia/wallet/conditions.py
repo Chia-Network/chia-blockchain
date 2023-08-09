@@ -1098,6 +1098,9 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         elif isinstance(condition, Timelock):
             timelock = condition
         else:
+            print("hey")
+            print("cover me")
+            print("I'm running")
             continue
 
         properties_left = properties.copy()
