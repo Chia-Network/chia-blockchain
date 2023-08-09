@@ -362,7 +362,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert cat_wallet_1
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
-    if untrusted:
+    if not trusted:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
         await asyncio.sleep(1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
