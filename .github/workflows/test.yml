@@ -163,48 +163,55 @@ jobs:
           echo "COV_STATUS=$COV_STATUS" >> "$GITHUB_ENV"
 
       - name: Remove previous coverage report comment and label from PR
+        if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          COV_STATUS: ${{ env.COV_STATUS }}
         run: |
           PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
           comments=$(gh api -X GET /repos/${{ github.repository }}/issues/${PR_NUM}/comments)
           comment_id=$(echo "$comments" | jq '.[] | select(.user.login == "github-actions[bot]" and (.body | tostring | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->"))) | .id')
+          coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
           if [[ -n "$comment_id" ]]; then
             gh api -X DELETE /repos/${{ github.repository }}/issues/comments/"$comment_id"
           fi
-          if [[ ${{ env.COV_STATUS }} == 0 ]]; then
-            if gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")'; then
+          if [[ $COV_STATUS != '0' ]]; then
+            if [[ $coverage_label == "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --remove-label "coverage-diff"
             fi
           fi
 
       - name: Add diff coverage report comment to PR
-        if: env.COV_STATUS != '0'
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          COV_STATUS: ${{ env.COV_STATUS }}
         run: |
-          # Add unique identifier to the comment file
-          PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
-          echo "<!-- COVERAGE_COMMENT_${PR_NUM} -->" > coverage-reports/diff-cover-md-table
-          # Transform diff-cover output into a markdown table
-          awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
-              /.*\.py/ {
-                split($0,a,"(");
-                gsub(")","",a[2])
-                if (index(a[2], ":") == 0) {
-                  print "| " a[1] " | " a[2] " | None |"
-                } else {
-                  split(a[2],b,":");
-                  print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
-                }
-              }' coverage-reports/diff-cover-stdout >> coverage-reports/diff-cover-md-table
-          cat coverage-reports/diff-cover-md-table >> "$GITHUB_STEP_SUMMARY"
-          # Add comment to PR
-          gh pr comment "$PR_NUM" -F coverage-reports/diff-cover-md-table
-          # If label doesn't exist, add it
-          if ! gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")'; then
-            gh pr edit "$PR_NUM" --add-label "coverage-diff"
+          if [[ $COV_STATUS != '0' ]]; then
+            # Add unique identifier to the comment file
+            PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
+            coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
+            echo "<!-- COVERAGE_COMMENT_${PR_NUM} -->" > coverage-reports/diff-cover-md-table
+            # Transform diff-cover output into a markdown table
+            awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
+                /.*\.py/ {
+                  split($0,a,"(");
+                  gsub(")","",a[2])
+                  if (index(a[2], ":") == 0) {
+                    print "| " a[1] " | " a[2] " | None |"
+                  } else {
+                    split(a[2],b,":");
+                    print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
+                  }
+                }' coverage-reports/diff-cover-stdout >> coverage-reports/diff-cover-md-table
+            cat coverage-reports/diff-cover-md-table >> "$GITHUB_STEP_SUMMARY"
+            # Add comment to PR
+            gh pr comment "$PR_NUM" -F coverage-reports/diff-cover-md-table
+            # If label doesn't exist, add it
+            if [[ $coverage_label != "coverage-diff" ]]; then
+              gh pr edit "$PR_NUM" --add-label "coverage-diff"
+            fi
           fi
 
       - name: Add diff coverage report to workflow summary

@@ -57,7 +57,7 @@ async def get_average_block_time(
     if newer_block.height < 1:
         return None
 
-    prev_height = uint32(max(newer_block.height - 1, newer_block.height - height_distance))
+    prev_height = uint32(max(1, newer_block.height - height_distance))
     prev_hash = blockchain.height_to_hash(prev_height)
     assert prev_hash
     prev_block = await blockchain.get_block_record_from_db(prev_hash)
