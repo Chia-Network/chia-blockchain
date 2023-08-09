@@ -228,6 +228,7 @@ jobs:
           mv notchia/ chia/
 
       - name: Process coverage data
+        if: always()
         run: |
           coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage-data
@@ -235,7 +236,16 @@ jobs:
           cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
           coverage report --rcfile=.coveragerc --show-missing
 
+      - uses: coverallsapp/github-action@v2
+        if: always()
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          flag-name: ${{ env.JOB_FILE_NAME }}
+          path-to-lcov: "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
+
       - name: Publish coverage data
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: coverage-data
