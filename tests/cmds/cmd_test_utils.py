@@ -407,26 +407,24 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
 
 
-def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:
+def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> str:
     """
     This is just an easy way to run the chia CLI with the given command list.
     """
     # we don't use the real capsys object because its only accessible in a private part of the pytest module
+    exited_cleanly = True
     argv_temp = sys.argv
     try:
         sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
-        exited_cleanly = True
-        try:
-            chia_cli()  # pylint: disable=no-value-for-parameter
-        except SystemExit as e:
-            if e.code != 0:
-                exited_cleanly = False
-        output = capsys.readouterr()  # type: ignore[attr-defined]
+        chia_cli()  # pylint: disable=no-value-for-parameter
+    except SystemExit as e:
+        if e.code != 0:
+            exited_cleanly = False
     finally:  # always reset sys.argv
         sys.argv = argv_temp
-    if not exited_cleanly:  # so we can look at what went wrong
-        print(f"\n{output.out}\n{output.err}")
-    return exited_cleanly, output.out
+    output = capsys.readouterr()  # type: ignore[attr-defined]
+    assert exited_cleanly, f"\n{output.out}\n{output.err}"
+    return str(output.out)
 
 
 def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:

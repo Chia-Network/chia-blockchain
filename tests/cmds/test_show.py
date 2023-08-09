@@ -95,8 +95,7 @@ def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
         "10",
         "-b0x000000000000000000000000000000000000000000000000000000000000000b",
     ]
-    success, output = run_cli_command(capsys, root_dir, command_args)
-    assert success
+    output = run_cli_command(capsys, root_dir, command_args)
     # these are various things that should be in the output
     assert_list = [
         "Current Blockchain Status: Full Node Synced",
