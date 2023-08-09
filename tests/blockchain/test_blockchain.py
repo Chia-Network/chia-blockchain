@@ -1369,8 +1369,8 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt):
-        if bt.constants.SOFT_FORK3_HEIGHT == 0:
+    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: Mode):
+        if consensus_mode == Mode.SOFT_FORK4:
             pytest.skip("Skipped temporarily until adding more pool plots.")
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -3612,13 +3612,13 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
 
 @pytest.mark.parametrize("unique_plots_window", [1, 2])
-@pytest.mark.parametrize("bt_respects_soft_fork3", [True, False])
-@pytest.mark.parametrize("soft_fork3_height", [0, 10, 10000])
+@pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
+@pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
 @pytest.mark.asyncio
-async def test_soft_fork3_activation(
-    consensus_mode, blockchain_constants, bt_respects_soft_fork3, soft_fork3_height, db_version, unique_plots_window
+async def test_soft_fork4_activation(
+    consensus_mode, blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
 ):
-    # We don't run Mode.SOFT_FORK3, since this is already parametrized by this test.
+    # We don't run Mode.SOFT_FORK4, since this is already parametrized by this test.
     # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
     # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
     if consensus_mode != Mode.PLAIN:
@@ -3626,12 +3626,12 @@ async def test_soft_fork3_activation(
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
-                SOFT_FORK3_HEIGHT=(0 if bt_respects_soft_fork3 else 10000),
+                SOFT_FORK4_HEIGHT=(0 if bt_respects_soft_fork4 else 10000),
                 UNIQUE_PLOTS_WINDOW=unique_plots_window,
             ),
             keychain=keychain,
         )
-        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=soft_fork3_height)
+        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=0, SOFT_FORK4_HEIGHT=soft_fork4_height)
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
@@ -3647,17 +3647,17 @@ async def test_soft_fork3_activation(
         # We expect to add all blocks here (25 blocks), either because `unique_plots_window`=1 means we're not
         # checking any extra plot filter, or `unique_plots_window`=True means `BlockTools` produced blocks
         # that respect CHIP-13.
-        if bt_respects_soft_fork3 or unique_plots_window == 1:
+        if bt_respects_soft_fork4 or unique_plots_window == 1:
             assert peak.height == 24
         else:
-            # Here we have `bt_respects_soft_fork3`=False, which means the produced blocks by `BlockTools` will not
+            # Here we have `bt_respects_soft_fork4`=False, which means the produced blocks by `BlockTools` will not
             # respect the CHIP-13 condition. We expect not adding blocks at some point after the soft fork 3
-            # activation height (`soft_fork3_height`).
-            if soft_fork3_height == 0:
+            # activation height (`soft_fork4_height`).
+            if soft_fork4_height == 0:
                 # We're not adding all blocks, since at some point `BlockTools` will break the CHIP-13 condition with
                 # very high likelyhood.
                 assert peak.height < 24
-            elif soft_fork3_height == 10:
+            elif soft_fork4_height == 10:
                 # We're not adding all blocks, but we've added all of them until the soft fork 3 activated (height 10)
                 assert peak.height < 24 and peak.height >= 9
             else:

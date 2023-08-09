@@ -399,6 +399,7 @@ class NFTWallet:
             False,
             announcement_set,
             origin_id=origin.name(),
+            reuse_puzhash=reuse_puzhash,
         )
         genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
 

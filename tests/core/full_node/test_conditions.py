@@ -378,7 +378,7 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if consensus_mode != Mode.SOFT_FORK3:
+        if consensus_mode.value < Mode.SOFT_FORK3.value:
             # before softfork 3, there was no limit on the number of
             # announcements
             expect_err = None

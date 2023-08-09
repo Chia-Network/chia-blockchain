@@ -27,13 +27,17 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("test does not depend on consesus rules")
+
         num_blocks = 5
         nodes, _, bt = two_nodes_sim_and_wallets_services
         full_node_service_1, full_node_service_2 = nodes

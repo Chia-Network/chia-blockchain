@@ -497,7 +497,7 @@ def validate_unfinished_header_block(
         return None, ValidationError(Err.INVALID_POSPACE)
 
     # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
-    if height >= constants.SOFT_FORK3_HEIGHT:
+    if height >= constants.SOFT_FORK4_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = prev_b
         plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
         curr_sp = cc_sp_hash

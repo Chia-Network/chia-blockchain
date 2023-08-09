@@ -181,6 +181,29 @@ async def pprint_pool_wallet_state(
             print(f"Expected to leave after block height: {expected_leave_height}")
 
 
+async def pprint_all_pool_wallet_state(
+    wallet_client: WalletRpcClient,
+    get_wallets_response: List[Dict[str, Any]],
+    address_prefix: str,
+    pool_state_dict: Dict[bytes32, Dict[str, Any]],
+) -> None:
+    print(f"Wallet height: {await wallet_client.get_height_info()}")
+    print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+    for wallet_info in get_wallets_response:
+        pool_wallet_id = wallet_info["id"]
+        typ = WalletType(int(wallet_info["type"]))
+        if typ == WalletType.POOLING_WALLET:
+            pool_wallet_info, _ = await wallet_client.pw_status(pool_wallet_id)
+            await pprint_pool_wallet_state(
+                wallet_client,
+                pool_wallet_id,
+                pool_wallet_info,
+                address_prefix,
+                pool_state_dict.get(pool_wallet_info.launcher_id),
+            )
+            print("")
+
+
 async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_passed_in: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         try:
@@ -209,23 +232,12 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                         address_prefix,
                         pool_state_dict.get(pool_wallet_info.launcher_id),
                     )
-        except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
-            print(f"Wallet height: {await wallet_client.get_height_info()}")
-            print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-            for summary in summaries_response:
-                wallet_id = summary["id"]
-                typ = WalletType(int(summary["type"]))
-                if typ == WalletType.POOLING_WALLET:
-                    print(f"Wallet id {wallet_id}: ")
-                    pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
-                    await pprint_pool_wallet_state(
-                        wallet_client,
-                        wallet_id,
-                        pool_wallet_info,
-                        address_prefix,
-                        pool_state_dict.get(pool_wallet_info.launcher_id),
+                else:
+                    await pprint_all_pool_wallet_state(
+                        wallet_client, summaries_response, address_prefix, pool_state_dict
                     )
-                    print("")
+        except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
+            await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
 
 
 async def get_login_link(launcher_id_str: str) -> None:
