@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, replace
-from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union
+from dataclasses import dataclass, fields, replace
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element
 from clvm.casts import int_to_bytes
@@ -849,7 +849,16 @@ TIMELOCK_TYPES = Union[
 ]
 
 
-TIMELOCK_DRIVERS: List[Type[TIMELOCK_TYPES]] = [
+TIMELOCK_DRIVERS: Tuple[
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+    Type[TIMELOCK_TYPES],
+] = (
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertSecondsAbsolute,
@@ -858,7 +867,7 @@ TIMELOCK_DRIVERS: List[Type[TIMELOCK_TYPES]] = [
     AssertBeforeHeightRelative,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
-]
+)
 
 TIMELOCK_OPCODES: List[bytes] = [
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
@@ -881,21 +890,20 @@ class Timelock(Condition):
     timestamp: uint64
 
     def to_program(self) -> Program:
-        potential_drivers: List[Type[TIMELOCK_TYPES]]
         if self.after_not_before:
-            potential_drivers = TIMELOCK_DRIVERS[0:4]
+            potential_drivers_4 = TIMELOCK_DRIVERS[0:4]
         else:
-            potential_drivers = TIMELOCK_DRIVERS[4:]
+            potential_drivers_4 = TIMELOCK_DRIVERS[4:]
 
         if self.relative_not_absolute:
-            potential_drivers = potential_drivers[0:2]
+            potential_drivers_2 = potential_drivers_4[0:2]
         else:
-            potential_drivers = potential_drivers[2:]
+            potential_drivers_2 = potential_drivers_4[2:]
 
         if self.seconds_not_height:
-            driver: Type[TIMELOCK_TYPES] = potential_drivers[0]
+            driver: Type[TIMELOCK_TYPES] = potential_drivers_2[0]
         else:
-            driver = potential_drivers[1]
+            driver = potential_drivers_2[1]
 
         if self.seconds_not_height:
             # Semantics here mean that we're assuredly passing a uint64 to a class that expects it
@@ -1083,9 +1091,9 @@ class ConditionValidTimes(Streamable):
 
 def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
-    properties: List[str] = list(valid_times.__dict__.keys())
+    properties: List[str] = [field.name for field in fields(valid_times)]
     for condition in conditions:
-        if condition.__class__ in TIMELOCK_DRIVERS:
+        if isinstance(condition, TIMELOCK_DRIVERS):
             timelock: Timelock = Timelock.from_program(condition.to_program())
         elif isinstance(condition, Timelock):
             timelock = condition
