@@ -644,7 +644,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     class MakeOfferRpcClient(TestWalletRpcClient):
         async def create_offer_for_ids(
             self,
-            offer_dict: Dict[Union[uint32, str], int],
+            offer_dict: Dict[uint32, int],
             driver_dict: Optional[Dict[str, Any]] = None,
             solver: Optional[Dict[str, Any]] = None,
             fee: uint64 = uint64(0),
@@ -660,13 +660,10 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             r_payments = {}
             for id, amount in offer_dict.items():
                 if amount < 0:
-                    if isinstance(id, uint32):
-                        if id == 1:
-                            asset_id = None
-                        else:
-                            asset_id = bytes32([id] * 32)
+                    if id == 1:
+                        asset_id = None
                     else:
-                        asset_id = bytes32.from_hexstr(id)
+                        asset_id = bytes32([id] * 32)
                     r_payments[asset_id] = [NotarizedPayment(get_bytes32(1), uint64(abs(amount)), [])]
             assert driver_dict is not None
             c_driver_dict: Dict[bytes32, PuzzleInfo] = {get_bytes32(3): PuzzleInfo(list(driver_dict.values())[0])}

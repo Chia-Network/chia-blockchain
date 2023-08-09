@@ -87,10 +87,6 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             did_id: Optional[str] = None,
             reuse_puzhash: Optional[bool] = None,
         ) -> dict[str, object]:
-            if meta_uris is None:
-                meta_uris = []
-            if license_uris is None:
-                license_uris = []
             self.add_to_log(
                 "mint_nft",
                 (
