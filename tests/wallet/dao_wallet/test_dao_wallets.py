@@ -356,6 +356,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
     # Get the cat wallets for wallet_1
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
