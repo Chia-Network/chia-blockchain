@@ -33,6 +33,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
     name: Linux amd64 DEB Installer
@@ -102,7 +106,7 @@ jobs:
         if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
         echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
       env:
-        AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
         GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
     - name: Get latest madmax plotter
@@ -216,12 +220,11 @@ jobs:
         name: chia-installers-linux-deb-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
-    - name: Configure AWS Credentials
+    - name: Configure AWS credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       uses: aws-actions/configure-aws-credentials@v2
       with:
-        aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-        aws-secret-access-key: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
+        role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
         aws-region: us-west-2
 
     - name: Upload to s3
