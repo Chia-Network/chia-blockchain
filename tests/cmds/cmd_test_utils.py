@@ -433,3 +433,13 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
     """
     for string_to_assert in strings_to_assert:
         assert string_to_assert in output, f"'{string_to_assert}' was not in\n'{output}'"
+
+
+def run_cli_command_and_assert(
+    capsys: object, chia_root: Path, command_list: List[str], strings_to_assert: Iterable[str]
+) -> None:
+    """
+    Runs the command and asserts that all the strings in strings_to_assert are in the output
+    """
+    output = run_cli_command(capsys, chia_root, command_list)
+    cli_assert_shortcut(output, strings_to_assert)
