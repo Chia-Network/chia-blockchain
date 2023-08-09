@@ -157,10 +157,12 @@ jobs:
         env:
           compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
         run: |
-          set -o pipefail
           diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           COV_STATUS="${PIPESTATUS[0]}"
           echo "COV_STATUS=$COV_STATUS" >> "$GITHUB_ENV"
+          if [[ $COV_STATUS != '0' ]]; then
+            exit 1
+          fi
 
       - name: Remove previous coverage report comment and label from PR
         if: always()
