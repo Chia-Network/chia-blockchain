@@ -348,12 +348,11 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, cat_funds, cat_id)
 
     # Create the other user's wallet from the treasury id
-    async with wallet_node_1.wallet_state_manager.lock:
-        dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            treasury_id,
-        )
+    dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+        wallet_node_1.wallet_state_manager,
+        wallet_1,
+        treasury_id,
+    )
     assert dao_wallet_1 is not None
     assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
