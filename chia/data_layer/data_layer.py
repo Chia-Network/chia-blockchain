@@ -667,7 +667,6 @@ class DataLayer:
                 )
 
                 if len(changelist) > 0:
-                    # TODO: calls update too...  inside the above transaction...
                     new_root_hash = await self.batch_insert(
                         tree_id=offer_store.store_id,
                         changelist=changelist,
