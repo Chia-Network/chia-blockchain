@@ -4,7 +4,7 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union, cast
 
 from blspy import G2Element
 from chia_rs import Coin
@@ -21,6 +21,7 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
@@ -76,6 +77,15 @@ class TestFarmerRpcClient(TestRpcClient):
 class TestWalletRpcClient(TestRpcClient):
     client_type: Type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
+    wallet_index: int = field(init=False, default=0)
+
+    async def get_sync_status(self) -> bool:
+        self.add_to_log("get_sync_status", ())
+        return False
+
+    async def get_synced(self) -> bool:
+        self.add_to_log("get_synced", ())
+        return True
 
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
         self.add_to_log("get_wallets", (wallet_type,))
@@ -183,6 +193,85 @@ class TestWalletRpcClient(TestRpcClient):
         return NFTWallet.royalty_calculation(
             royalty_assets_dict=royalty_assets_dict,
             fungible_asset_dict=fungible_asset_dict,
+        )
+
+    async def get_spendable_coins(
+        self,
+        wallet_id: int,
+        excluded_coins: Optional[List[Coin]] = None,
+        min_coin_amount: uint64 = uint64(0),
+        max_coin_amount: uint64 = uint64(0),
+        excluded_amounts: Optional[List[uint64]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
+    ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
+        """
+        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
+        """
+        self.add_to_log(
+            "get_spendable_coins",
+            (wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts, excluded_coin_ids),
+        )
+        confirmed_records = [
+            CoinRecord(
+                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
+                uint32(123456),
+                uint32(0),
+                False,
+                uint64(0),
+            ),
+            CoinRecord(
+                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
+                uint32(123456),
+                uint32(0),
+                False,
+                uint64(0),
+            ),
+        ]
+        unconfirmed_removals = [
+            CoinRecord(
+                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(1234570000)),
+                uint32(123457),
+                uint32(0),
+                True,
+                uint64(0),
+            )
+        ]
+        unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
+        return confirmed_records, unconfirmed_removals, unconfirmed_additions
+
+    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
+        self.add_to_log("get_next_address", (wallet_id, new_address))
+        addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
+        self.wallet_index += 1
+        if self.wallet_index > 254:
+            self.wallet_index = 1
+        return addr
+
+    async def send_transaction_multi(
+        self,
+        wallet_id: int,
+        additions: List[Dict[str, object]],
+        coins: Optional[List[Coin]] = None,
+        fee: uint64 = uint64(0),
+    ) -> TransactionRecord:
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, coins, fee))
+        return TransactionRecord(
+            confirmed_at_height=uint32(1),
+            created_at_time=uint64(1234),
+            to_puzzle_hash=bytes32([1] * 32),
+            amount=uint64(12345678),
+            fee_amount=uint64(1234567),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=SpendBundle([], G2Element()),
+            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+            wallet_id=uint32(1),
+            sent_to=[("aaaaa", uint8(1), None)],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32([2] * 32),
+            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
         )
 
 
@@ -315,6 +404,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
     chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
+    chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
 
 
 def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:

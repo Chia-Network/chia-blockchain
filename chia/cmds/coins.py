@@ -148,6 +148,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
+@click.option("--no-confirm", default=False, is_flag=True, help="Do not prompt for confirmation when combining coins.")
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -160,6 +161,7 @@ def combine_cmd(
     fee: str,
     input_coins: Sequence[str],
     largest_first: bool,
+    no_confirm: bool,
 ) -> None:
     from .coin_funcs import async_combine
 
@@ -176,6 +178,7 @@ def combine_cmd(
             target_coin_amount=Decimal(target_amount),
             target_coin_ids_str=input_coins,
             largest_first=largest_first,
+            no_confirm=no_confirm,
         )
     )
 

@@ -9,10 +9,12 @@ from chia_rs import Coin
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
@@ -217,14 +219,6 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             if wallet_type is WalletType.CAT:
                 return [wallet_list[1]]
             return wallet_list
-
-        async def get_sync_status(self) -> bool:
-            self.add_to_log("get_sync_status", ())
-            return False
-
-        async def get_synced(self) -> bool:
-            self.add_to_log("get_synced", ())
-            return True
 
         async def get_height_info(self) -> uint32:
             self.add_to_log("get_height_info", ())
@@ -1370,5 +1364,562 @@ def test_did_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     cli_assert_shortcut(output, assert_list)
     expected_calls: logType = {
         "did_transfer_did": [(w_id, t_address, "0.5", True, True)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+# NFT Commands
+
+
+def test_nft_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTCreateRpcClient(TestWalletRpcClient):
+        async def create_new_nft_wallet(self, did_id: str, name: Optional[str] = None) -> dict[str, Any]:
+            self.add_to_log("create_new_nft_wallet", (did_id, name))
+            return {"wallet_id": 4}
+
+    inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    did_id = encode_puzzle_hash(bytes32([2] * 32), "did:chia:")
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = ["wallet", "nft", "create", FINGERPRINT_ARG, "-ntest", "--did-id", did_id]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = [f"Successfully created an NFT wallet with id 4 on key {FINGERPRINT}"]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "create_new_nft_wallet": [(did_id, "test")],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+
+    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    did_id = encode_puzzle_hash(bytes32([1] * 32), "nft")
+    message = b"hello nft world!!"
+    command_args = ["wallet", "did", "sign_message", FINGERPRINT_ARG, f"-m{message.hex()}"]
+    success, output = run_cli_command(capsys, root_dir, command_args + [f"-i{did_id}"])
+    assert success
+    # these are various things that should be in the output
+    assert_list = [
+        f"Message: {message.hex()}",
+        f"Public Key: {bytes([4] * 48).hex()}",
+        f"Signature: {bytes([7] * 576).hex()}",
+        f"Signing Mode: {SigningMode.CHIP_0002.value}",
+    ]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "sign_message_by_id": [(did_id, message.hex())],  # xch std
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTCreateRpcClient(TestWalletRpcClient):
+        async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
+            self.add_to_log("get_nft_wallet_did", (wallet_id,))
+            return {"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}
+
+        async def mint_nft(
+            self,
+            wallet_id: int,
+            royalty_address: Optional[str],
+            target_address: Optional[str],
+            hash: str,
+            uris: List[str],
+            meta_hash: str = "",
+            meta_uris: Optional[List[str]] = None,
+            license_hash: str = "",
+            license_uris: Optional[List[str]] = None,
+            edition_total: uint8 = uint8(1),
+            edition_number: uint8 = uint8(1),
+            fee: uint64 = uint64(0),
+            royalty_percentage: int = 0,
+            did_id: Optional[str] = None,
+            reuse_puzhash: Optional[bool] = None,
+        ) -> dict[str, object]:
+            if meta_uris is None:
+                meta_uris = []
+            if license_uris is None:
+                license_uris = []
+            self.add_to_log(
+                "mint_nft",
+                (
+                    wallet_id,
+                    royalty_address,
+                    target_address,
+                    hash,
+                    uris,
+                    meta_hash,
+                    meta_uris,
+                    license_hash,
+                    license_uris,
+                    edition_total,
+                    edition_number,
+                    fee,
+                    royalty_percentage,
+                    did_id,
+                    reuse_puzhash,
+                ),
+            )
+            return {"spend_bundle": "spend bundle here"}
+
+    inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    target_addr = encode_puzzle_hash(bytes32([2] * 32), "xch")
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "mint",
+        FINGERPRINT_ARG,
+        "-i4",
+        "--hash",
+        "0x1234",
+        "--uris",
+        "https://example.com",
+        "--target-address",
+        target_addr,
+        "-m0.5",
+        "--reuse",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = ["NFT minted Successfully with spend bundle: spend bundle here"]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "get_nft_wallet_did": [(4,)],
+        "mint_nft": [
+            (
+                4,
+                None,
+                "xch1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqzc0j4g",
+                "0x1234",
+                ["https://example.com"],
+                "",
+                [],
+                "",
+                [],
+                1,
+                1,
+                500000000000,
+                0,
+                "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652",
+                True,
+            )
+        ],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTAddUriRpcClient(TestWalletRpcClient):
+        async def add_uri_to_nft(
+            self,
+            wallet_id: int,
+            nft_coin_id: str,
+            key: str,
+            uri: str,
+            fee: int,
+            reuse_puzhash: Optional[bool] = None,
+        ) -> dict[str, object]:
+            self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, reuse_puzhash))
+            return {"spend_bundle": "spend bundle here"}
+
+    inst_rpc_client = NFTAddUriRpcClient()  # pylint: disable=no-value-for-parameter
+    nft_coin_id = bytes32([2] * 32).hex()
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "add_uri",
+        FINGERPRINT_ARG,
+        "-i4",
+        "--nft-coin-id",
+        nft_coin_id,
+        "--uri",
+        "https://example.com/nft",
+        "-m0.5",
+        "--reuse",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = ["URI added successfully with spend bundle: spend bundle here"]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "add_uri_to_nft": [(4, nft_coin_id, "u", "https://example.com/nft", 500000000000, True)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTTransferRpcClient(TestWalletRpcClient):
+        async def transfer_nft(
+            self,
+            wallet_id: int,
+            nft_coin_id: str,
+            target_address: str,
+            fee: int,
+            reuse_puzhash: Optional[bool] = None,
+        ) -> dict[str, object]:
+            self.add_to_log("transfer_nft", (wallet_id, nft_coin_id, target_address, fee, reuse_puzhash))
+            return {"spend_bundle": "spend bundle here"}
+
+    inst_rpc_client = NFTTransferRpcClient()  # pylint: disable=no-value-for-parameter
+    nft_coin_id = bytes32([2] * 32).hex()
+    target_address = encode_puzzle_hash(bytes32([2] * 32), "xch")
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "transfer",
+        FINGERPRINT_ARG,
+        "-i4",
+        "--nft-coin-id",
+        nft_coin_id,
+        "--target-address",
+        target_address,
+        "-m0.5",
+        "--reuse",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = ["NFT transferred successfully with spend bundle: spend bundle here"]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "transfer_nft": [(4, nft_coin_id, target_address, 500000000000, True)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_list(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTListRpcClient(TestWalletRpcClient):
+        async def list_nfts(self, wallet_id: int, num: int = 50, start_index: int = 0) -> dict[str, object]:
+            self.add_to_log("list_nfts", (wallet_id, num, start_index))
+            nft_list = []
+            for i in range(start_index, start_index + num):
+                index_bytes = bytes32([i] * 32)
+                nft_list.append(
+                    NFTInfo(
+                        nft_id=encode_puzzle_hash(index_bytes, "nft"),
+                        launcher_id=bytes32([1] * 32),
+                        nft_coin_id=index_bytes,
+                        nft_coin_confirmation_height=uint32(2),
+                        owner_did=bytes32([2] * 32),
+                        royalty_percentage=uint16(1000),
+                        royalty_puzzle_hash=bytes32([3] * 32),
+                        data_uris=["https://example.com/data"],
+                        data_hash=bytes([4]),
+                        metadata_uris=["https://example.com/mdata"],
+                        metadata_hash=bytes([5]),
+                        license_uris=["https://example.com/license"],
+                        license_hash=bytes([6]),
+                        edition_total=uint64(10),
+                        edition_number=uint64(1),
+                        updater_puzhash=bytes32([7] * 32),
+                        chain_info="",
+                        mint_height=uint32(1),
+                        supports_did=True,
+                        p2_address=bytes32([8] * 32),
+                    ).to_json_dict()
+                )
+            return {"nft_list": nft_list}
+
+    inst_rpc_client = NFTListRpcClient()  # pylint: disable=no-value-for-parameter
+    launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "list",
+        FINGERPRINT_ARG,
+        "-i4",
+        "--num",
+        "10",
+        "--start-index",
+        "50",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = [
+        "https://example.com/data",
+        "did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
+    ] + launcher_ids
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "list_nfts": [(4, 10, 50)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class NFTSetDidRpcClient(TestWalletRpcClient):
+        async def set_nft_did(
+            self,
+            wallet_id: int,
+            did_id: str,
+            nft_coin_id: str,
+            fee: int,
+            reuse_puzhash: Optional[bool] = None,
+        ) -> dict[str, object]:
+            self.add_to_log("set_nft_did", (wallet_id, did_id, nft_coin_id, fee, reuse_puzhash))
+            return {"spend_bundle": "this is a spend bundle"}
+
+    inst_rpc_client = NFTSetDidRpcClient()  # pylint: disable=no-value-for-parameter
+    nft_coin_id = bytes32([2] * 32).hex()
+    did_id = encode_puzzle_hash(bytes32([3] * 32), "did:chia:")
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "set_did",
+        FINGERPRINT_ARG,
+        "-i4",
+        "--nft-coin-id",
+        nft_coin_id,
+        "--did-id",
+        did_id,
+        "-m0.5",
+        "--reuse",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = ["Transaction to set DID on NFT has been initiated with: this is a spend bundle"]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "set_nft_did": [(4, did_id, nft_coin_id, 500000000000, True)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_nft_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+
+    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    nft_coin_id = bytes32([2] * 32).hex()
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "nft",
+        "get_info",
+        FINGERPRINT_ARG,
+        "--nft-coin-id",
+        nft_coin_id,
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = [
+        f"Current NFT coin ID:       {nft_coin_id}",
+        "Owner DID:                 did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
+    ]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "get_nft_info": [(nft_coin_id, True)],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+# Coin Commands
+
+
+def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+
+    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = ["wallet", "coins", "list", FINGERPRINT_ARG, "-i1", "-u"]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = [
+        "There are a total of 3 coins in wallet 1.",
+        "2 confirmed coins.",
+        "1 unconfirmed additions.",
+        "1 unconfirmed removals.",
+    ]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "get_wallets": [(None,)],
+        "get_synced": [()],
+        "get_spendable_coins": [(1, None, 0, 0, [], ())],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class CoinsCombineRpcClient(TestWalletRpcClient):
+        async def select_coins(
+            self,
+            amount: int,
+            wallet_id: int,
+            excluded_coins: Optional[List[Coin]] = None,
+            min_coin_amount: uint64 = uint64(0),
+            max_coin_amount: uint64 = uint64(0),
+            excluded_amounts: Optional[List[uint64]] = None,
+        ) -> List[Coin]:
+            self.add_to_log(
+                "select_coins", (amount, wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts)
+            )
+            return [
+                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(100000000000)),
+                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(200000000000)),
+                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(300000000000)),
+            ]
+
+    inst_rpc_client = CoinsCombineRpcClient()  # pylint: disable=no-value-for-parameter
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    command_args = [
+        "wallet",
+        "coins",
+        "combine",
+        FINGERPRINT_ARG,
+        "--no-confirm",
+        "-i1",
+        "--largest-first",
+        "-m0.001",
+        "--min-amount",
+        "0.1",
+        "--max-amount",
+        "0.2",
+        "--exclude-amount",
+        "0.3",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    amount_success, amount_output = run_cli_command(capsys, root_dir, command_args + ["-a1"])
+    assert success and amount_success
+    # these are various things that should be in the output
+    assert_list = [
+        "Combining 2 coins.",
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{bytes32([2] * 32).hex()}",
+    ]
+    cli_assert_shortcut(output, assert_list)
+    amount_assert_list = [
+        "Combining 3 coins.",
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{bytes32([2] * 32).hex()}",
+    ]
+    cli_assert_shortcut(amount_output, amount_assert_list)
+    expected_calls: logType = {
+        "get_wallets": [(None,), (None,)],
+        "get_synced": [(), ()],
+        "get_spendable_coins": [(1, None, 100000000000, 200000000000, [300000000000], None)],
+        "select_coins": [(1001000000000, 1, None, 100000000000, 200000000000, [300000000000, 1000000000000])],
+        "get_next_address": [(1, False), (1, False)],
+        "send_transaction_multi": [
+            (
+                1,
+                [{"amount": 1469120000, "puzzle_hash": bytes32([0] * 32)}],
+                [
+                    Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
+                    Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
+                ],
+                1000000000,
+            ),
+            (
+                1,
+                [{"amount": 599000000000, "puzzle_hash": bytes32([1] * 32)}],
+                [
+                    Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(100000000000)),
+                    Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(200000000000)),
+                    Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(300000000000)),
+                ],
+                1000000000,
+            ),
+        ],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+
+def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+    test_rpc_clients, root_dir = get_test_cli_clients
+
+    # set RPC Client
+    class CoinsSplitRpcClient(TestWalletRpcClient):
+        async def get_coin_records_by_names(
+            self,
+            names: List[bytes32],
+            include_spent_coins: bool = True,
+            start_height: Optional[int] = None,
+            end_height: Optional[int] = None,
+        ) -> List[CoinRecord]:
+            self.add_to_log("get_coin_records_by_names", (names, include_spent_coins, start_height, end_height))
+            return [
+                CoinRecord(
+                    Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(100000000000)),
+                    uint32(123456),
+                    uint32(0),
+                    False,
+                    uint64(0),
+                ),
+            ]
+
+    inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
+    test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    target_coin_id = bytes32([1] * 32)
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        "-n10",
+        "-a0.0000001",
+        f"-t{target_coin_id.hex()}",
+    ]
+    success, output = run_cli_command(capsys, root_dir, command_args)
+    assert success
+    # these are various things that should be in the output
+    assert_list = [
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{bytes32([2] * 32).hex()}",
+        "WARNING: The amount per coin: 1E-7 is less than the dust threshold: 1e-06.",
+    ]
+    cli_assert_shortcut(output, assert_list)
+    expected_calls: logType = {
+        "get_wallets": [(None,)],
+        "get_synced": [()],
+        "get_coin_records_by_names": [([target_coin_id], True, None, None)],
+        "get_next_address": [(1, True) for i in range(10)],
+        "send_transaction_multi": [
+            (
+                1,
+                [{"amount": 100000, "puzzle_hash": bytes32([i] * 32)} for i in range(10)],
+                [Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(100000000000))],
+                1000000000,
+            )
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
