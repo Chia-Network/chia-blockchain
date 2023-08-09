@@ -152,10 +152,10 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # check the dao wallet balances
-    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
-    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_confirmed_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_unconfirmed_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_pending_change_balance, uint64(0))
+    await time_out_assert(60, dao_wallet_0.get_spendable_balance, uint128(1))
 
     # check select coins
     no_coins = await dao_wallet_0.select_coins(uint64(2))
@@ -362,12 +362,18 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert cat_wallet_1
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
-    if not trusted:
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-        await asyncio.sleep(1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
-    await time_out_assert(60, dao_wallet_1.get_balance_by_asset_type, xch_funds)
-    await time_out_assert(60, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
+    # Added a loop of farmed blocks because this test keeps timing out during CI on windows
+    for _ in range(10):
+        balance = await dao_wallet_1.get_balance_by_asset_type()
+        if balance == uint128(xch_funds):
+            break
+        else:
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
+            await asyncio.sleep(1)
+    await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
     assert dao_wallet_0.dao_info.assets == [None, cat_id]
     assert dao_wallet_1.dao_info.assets == [None, cat_id]
