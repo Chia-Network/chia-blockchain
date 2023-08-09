@@ -25,6 +25,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
 from tests.clvm.test_puzzles import secret_exponent_for_index
+from tests.conftest import ConsensusMode
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -91,8 +92,9 @@ async def do_spend(
 
 
 class TestCATLifecycle:
-    @pytest.mark.asyncio()
-    async def test_cat_mod(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_cat_mod(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
@@ -260,8 +262,9 @@ class TestCATLifecycle:
                 cost_log_msg="ACS burn + Cat Spend (Mint) + create one child (TAIL: ())",
             )
 
-    @pytest.mark.asyncio()
-    async def test_complex_spend(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_complex_spend(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
@@ -354,8 +357,9 @@ class TestCATLifecycle:
                 cost_log_msg="Cat Eve Spend x2 (mint & melt) + Cat Spend x2 (mint & melt) - one child each (TAIL: ())",
             )
 
-    @pytest.mark.asyncio()
-    async def test_genesis_by_id(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_genesis_by_id(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
@@ -395,8 +399,9 @@ class TestCATLifecycle:
                 cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_id)",
             )
 
-    @pytest.mark.asyncio()
-    async def test_genesis_by_puzhash(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_genesis_by_puzhash(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
@@ -436,8 +441,9 @@ class TestCATLifecycle:
                 cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_puzhash)",
             )
 
-    @pytest.mark.asyncio()
-    async def test_everything_with_signature(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_everything_with_signature(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
@@ -547,8 +553,9 @@ class TestCATLifecycle:
                 cost_log_msg="ACS Burn + Cat Spend (Mint) - create one child (TAIL: everything_with_signature)",
             )
 
-    @pytest.mark.asyncio()
-    async def test_delegated_tail(self, cost_logger):
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_delegated_tail(self, cost_logger, consensus_mode):
         async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
