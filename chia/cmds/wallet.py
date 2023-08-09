@@ -1567,7 +1567,7 @@ def revoke_vc_cmd(
 ) -> None:  # pragma: no cover
     from .wallet_funcs import revoke_vc
 
-    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, vc_id, parent_coin_id, Decimal(fee), reuse_puzhash))
+    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
 
 
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
@@ -1586,8 +1586,8 @@ def revoke_vc_cmd(
 @click.option(
     "-m", "--fee", type=str, default=0, show_default=True, help="Blockchain fee for approval transaction, in XCH"
 )
-@click.option("-ma", "--min-coin-amount", type=int, help="The minimum coin amount to select")
-@click.option("-l", "--max-coin-amount", type=int, help="The maximum coin amount to select")
+@click.option("-ma", "--min-coin-amount", type=Decimal, help="The minimum coin amount to select")
+@click.option("-l", "--max-coin-amount", type=Decimal, help="The maximum coin amount to select")
 @click.option(
     "--reuse",
     help="Reuse existing address for the change.",
@@ -1600,8 +1600,8 @@ def approve_r_cats_cmd(
     id: int,
     min_amount_to_claim: str,
     fee: str,
-    min_coin_amount: Optional[int],
-    max_coin_amount: Optional[int],
+    min_coin_amount: Optional[Decimal],
+    max_coin_amount: Optional[Decimal],
     reuse: bool,
 ) -> None:  # pragma: no cover
     from .wallet_funcs import approve_r_cats

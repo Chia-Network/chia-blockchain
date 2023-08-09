@@ -1526,7 +1526,7 @@ async def revoke_vc(
             if record is None:
                 print(f"Cannot find a VC with ID {vc_id}")
                 return
-            parent_id: bytes32 = record.vc.coin.parent_coin_info
+            parent_id: bytes32 = bytes32(record.vc.coin.parent_coin_info)
         else:
             parent_id = bytes32.from_hexstr(parent_coin_id)
         txs = await wallet_client.vc_revoke(
@@ -1554,8 +1554,8 @@ async def approve_r_cats(
     id: int,
     min_amount_to_claim: str,
     fee: Decimal,
-    min_coin_amount: Optional[int],
-    max_coin_amount: Optional[int],
+    min_coin_amount: Optional[Decimal],
+    max_coin_amount: Optional[Decimal],
     reuse: bool,
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
@@ -1565,8 +1565,8 @@ async def approve_r_cats(
             wallet_id=uint32(id),
             min_amount_to_claim=uint64(int(Decimal(min_amount_to_claim) * units["cat"])),
             fee=uint64(int(fee * units["chia"])),
-            min_coin_amount=uint64(min_coin_amount) if min_coin_amount is not None else None,
-            max_coin_amount=uint64(max_coin_amount) if max_coin_amount is not None else None,
+            min_coin_amount=uint64(int(min_coin_amount * units["chia"])) if min_coin_amount is not None else None,
+            max_coin_amount=uint64(int(max_coin_amount * units["chia"])) if max_coin_amount is not None else None,
             reuse_puzhash=reuse,
         )
 
