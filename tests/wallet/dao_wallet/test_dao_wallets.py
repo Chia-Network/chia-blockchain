@@ -337,7 +337,6 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert isinstance(cat_funding_sb, SpendBundle)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_funding_sb.name())
     await full_node_api.process_transaction_records(records=[cat_funding_tx])
-
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
@@ -363,8 +362,12 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert cat_wallet_1
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
-    await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, xch_funds)
-    await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
+    if untrusted:
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+        await asyncio.sleep(1)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
+    await time_out_assert(60, dao_wallet_1.get_balance_by_asset_type, xch_funds)
+    await time_out_assert(60, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
     assert dao_wallet_0.dao_info.assets == [None, cat_id]
     assert dao_wallet_1.dao_info.assets == [None, cat_id]
