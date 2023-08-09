@@ -12,6 +12,7 @@ from secrets import token_bytes
 from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element
+from chia_rs import ALLOW_BACKREFS
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -1322,8 +1323,12 @@ class FullNodeAPI:
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
         try:
+            flags = 0
+            if height >= self.full_node.constants.HARD_FORK_HEIGHT:
+                flags = ALLOW_BACKREFS
+
             spend_info = await asyncio.get_running_loop().run_in_executor(
-                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin, 0
+                self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin, flags
             )
         except ValueError:
             return reject_msg
