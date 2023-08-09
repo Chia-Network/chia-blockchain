@@ -1,6 +1,6 @@
 name: ⚡️ Benchmarks
 
-on: 
+on:
  workflow_dispatch:
  push:
    paths-ignore:
