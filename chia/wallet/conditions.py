@@ -1098,7 +1098,9 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         elif isinstance(condition, Timelock):
             timelock = condition
         else:
-            continue
+            # Something about python 3.9 makes this be not covered but on 3.10+ it is covered
+            # https://github.com/nedbat/coveragepy/issues/1530
+            continue  # pragma: no cover
 
         properties_left = properties.copy()
         min_not_max: bool = True
