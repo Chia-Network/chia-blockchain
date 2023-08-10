@@ -76,9 +76,7 @@ async def test_block_store(
                 # simulate an existing database, created before this column was
                 # added
                 async with db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute(
-                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block_record.header_hash,)
-                    )
+                    await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record.header_hash,))
 
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)

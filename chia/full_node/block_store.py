@@ -469,7 +469,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
                 f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                 header_hashes,
             ) as cursor:
@@ -554,7 +554,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block_record,plot_info.plot_filter_info "
-                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
                 "WHERE header_hash=?",
                 (header_hash,),
             ) as cursor:
@@ -602,7 +602,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
                 "WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
@@ -683,7 +683,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash, block_record,plot_info.plot_filter_info "
-                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
                 "WHERE height >= ?",
                 (peak[1] - blocks_n,),
             ) as cursor:
