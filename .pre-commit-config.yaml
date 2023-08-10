@@ -64,9 +64,9 @@ repos:
     hooks:
     -   id: isort
         name: isort
-        entry: ./activated.py isort .
+        entry: ./activated.py isort
         language: system
-        pass_filenames: false
+        types: [python]
 -   repo: local
     hooks:
     -   id: flake8
