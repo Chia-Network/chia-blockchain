@@ -81,7 +81,7 @@ class ConsensusConstants:
     # number of consecutive plot ids required to be distinct
     UNIQUE_PLOTS_WINDOW: uint8
 
-    def replace(self, **changes: object) -> "ConsensusConstants":
+    def replace(self, **changes: Any) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 
     def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
@@ -89,7 +89,7 @@ class ConsensusConstants:
         Overrides str (hex) values with bytes.
         """
 
-        filtered_changes = {}
+        filtered_changes: Any = {}
         for k, v in changes.items():
             if not hasattr(self, k):
                 # NETWORK_TYPE used to be present in default config, but has been removed
