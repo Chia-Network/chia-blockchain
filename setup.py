@@ -26,7 +26,7 @@ dependencies = [
     "cryptography==41.0.2",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "PyYAML==6.0",  # Used for config file format
+    "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
