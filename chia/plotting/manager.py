@@ -46,6 +46,7 @@ class PlotManager:
     _refresh_callback: Callable
     _initial: bool
     max_compression_level_allowed: int
+    context_count: int
 
     def __init__(
         self,
@@ -79,6 +80,7 @@ class PlotManager:
         self._refresh_callback = refresh_callback
         self._initial = True
         self.max_compression_level_allowed = 0
+        self.context_count = 0
 
     def __enter__(self):
         self._lock.acquire()
@@ -118,6 +120,7 @@ class PlotManager:
                 f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
             )
         self.max_compression_level_allowed = max_compression_level_allowed
+        self.context_count = context_count
         return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
@@ -341,6 +344,13 @@ class PlotManager:
                         log.warning(
                             f"Not farming plot {file_path}. Plot compression level: {level}, "
                             f"max compression level allowed: {self.max_compression_level_allowed}."
+                        )
+                        return None
+                    elif level > 0 and self.context_count == 0:
+                        log.warning(
+                            f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                            f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                            " to start harvesting compressed plots."
                         )
                         return None
 
