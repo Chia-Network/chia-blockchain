@@ -173,15 +173,13 @@ class BlockStore:
                 "is_fully_compactified tinyint,"
                 "in_main_chain tinyint,"
                 "block blob,"
-                "block_record blob,"
-                "plot_filter_info blob)"
+                "block_record blob)"
             )
 
             # for CHIP-13, we need cheap access to these fields
-            try:
-                await conn.execute("ALTER TABLE full_blocks ADD COLUMN plot_filter_info blob")
-            except sqlite3.OperationalError:
-                pass
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS plot_info (" "header_hash blob PRIMARY KEY," "plot_filter_info blob)"
+            )
 
             # This is a single-row table containing the hash of the current
             # peak. The "key" field is there to make update statements simple
@@ -272,7 +270,16 @@ class BlockStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO full_blocks "
+                "(header_hash, "
+                "prev_hash, "
+                "height, "
+                "sub_epoch_summary, "
+                "is_fully_compactified, "
+                "in_main_chain, "
+                "block, "
+                "block_record) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     header_hash,
                     block.prev_header_hash,
@@ -282,6 +289,13 @@ class BlockStore:
                     False,  # in_main_chain
                     self.compress(block),
                     bytes(block_record_db),
+                ),
+            )
+
+            await conn.execute(
+                "INSERT OR IGNORE INTO plot_info (header_hash, plot_filter_info) VALUES(?, ?)",
+                (
+                    header_hash,
                     bytes(plot_filter_info),
                 ),
             )
@@ -454,7 +468,8 @@ class BlockStore:
         all_blocks: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record,plot_filter_info FROM full_blocks "
+                "SELECT header_hash,block_record,plot_info.plot_filter_info "
+                "FROM full_blocks JOIN plot_info USING(header_hash) "
                 f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                 header_hashes,
             ) as cursor:
@@ -538,7 +553,9 @@ class BlockStore:
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block_record,plot_filter_info FROM full_blocks WHERE header_hash=?",
+                "SELECT block_record,plot_info.plot_filter_info "
+                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "WHERE header_hash=?",
                 (header_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
@@ -584,7 +601,9 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record,plot_filter_info FROM full_blocks WHERE height >= ? AND height <= ?",
+                "SELECT header_hash,block_record,plot_info.plot_filter_info "
+                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
                 for row in await cursor.fetchall():
@@ -663,7 +682,9 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record,plot_filter_info FROM full_blocks WHERE height >= ?",
+                "SELECT header_hash, block_record,plot_info.plot_filter_info "
+                "FROM full_blocks JOIN plot_info USING(header_hash) "
+                "WHERE height >= ?",
                 (peak[1] - blocks_n,),
             ) as cursor:
                 for row in await cursor.fetchall():

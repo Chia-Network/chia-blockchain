@@ -77,7 +77,7 @@ async def test_block_store(
                 # added
                 async with db_wrapper.writer_maybe_transaction() as conn:
                     await conn.execute(
-                        "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block_record.header_hash,)
+                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block_record.header_hash,)
                     )
 
             assert block == await store.get_full_block(block.header_hash)
@@ -438,7 +438,7 @@ async def test_get_plot_filer_info(
                 # added
                 async with db_wrapper.writer_maybe_transaction() as conn:
                     await conn.execute(
-                        "UPDATE full_blocks SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
+                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
                     )
 
             blocks.append(block)
