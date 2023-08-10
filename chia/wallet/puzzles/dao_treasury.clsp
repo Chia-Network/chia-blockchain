@@ -41,8 +41,6 @@
     )
   )
 
-  (defconst singleton_launcher_hash 0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9)
-
   (defun calculate_singleton_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
       inner_puzzle_hash

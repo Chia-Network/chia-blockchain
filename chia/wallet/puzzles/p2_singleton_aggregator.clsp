@@ -8,7 +8,7 @@
     my_puzhash
     my_amount
     list_of_parent_puzhash_amounts  ; list of (parent_id puzhash amount) for the merge
-    output_parent_amount
+    output_parent_amount  ; (parent_id amount) of the coin creating the output
   )
 
   (include condition_codes.clib)

@@ -48,7 +48,7 @@
   )
 
   (defun distinct_or_raise (L result)
-    ;; This is O(n^2). Don't use unless you're passing in a pre-sorted list.
+    ;; This checks each element of a list for duplicates. Returns the list or raises if duplicates are present
     ;; When called, pass in '()' as the result param.
     (if L
         (if (is_member (f L) result)
