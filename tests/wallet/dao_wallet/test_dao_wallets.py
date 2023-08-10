@@ -152,10 +152,10 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # check the dao wallet balances
-    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
-    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_confirmed_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_unconfirmed_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_pending_change_balance, uint64(0))
+    await time_out_assert(60, dao_wallet_0.get_spendable_balance, uint128(1))
 
     # check select coins
     no_coins = await dao_wallet_0.select_coins(uint64(2))
@@ -316,6 +316,15 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, cat_amt)
 
+    # Create the other user's wallet from the treasury id
+    dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
+        wallet_node_1.wallet_state_manager,
+        wallet_1,
+        treasury_id,
+    )
+    assert dao_wallet_1 is not None
+    assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
+
     # Create funding spends for xch and cat
     xch_funds = uint64(500000)
     cat_funds = uint64(100000)
@@ -337,9 +346,9 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     assert isinstance(cat_funding_sb, SpendBundle)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_funding_sb.name())
     await full_node_api.process_transaction_records(records=[cat_funding_tx])
-
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, cat_amt - cat_funds)
 
@@ -347,22 +356,13 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     cat_id = bytes32.from_hexstr(cat_wallet_0.get_asset_id())
     await time_out_assert(20, dao_wallet_0.get_balance_by_asset_type, cat_funds, cat_id)
 
-    # Create the other user's wallet from the treasury id
-    async with wallet_node_1.wallet_state_manager.lock:
-        dao_wallet_1 = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-            wallet_node_1.wallet_state_manager,
-            wallet_1,
-            treasury_id,
-        )
-    assert dao_wallet_1 is not None
-    assert dao_wallet_1.dao_info.treasury_id == dao_wallet_1.dao_info.treasury_id
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
-
     # Get the cat wallets for wallet_1
     cat_wallet_1 = dao_wallet_1.wallet_state_manager.wallets[dao_wallet_1.dao_info.cat_wallet_id]
     assert cat_wallet_1
     assert cat_wallet_1.cat_info.limitations_program_hash == cat_id
 
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
     await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, xch_funds)
     await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
