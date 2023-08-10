@@ -1379,9 +1379,7 @@ class DAOWallet(WalletProtocol):
                             )
                             coin_spends.append(CoinSpend(cat_launcher_coin, cat_launcher, solution))
                             eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
-                            tail_solution = Program.to(
-                                [treasury_inner_puzhash, cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount]
-                            )
+                            tail_solution = Program.to([cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(
                                 eve_coin,
