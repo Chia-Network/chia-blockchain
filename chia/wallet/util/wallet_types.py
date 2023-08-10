@@ -28,11 +28,14 @@ class WalletType(IntEnum):
     VC = 13
     DAO = 14
     DAO_CAT = 15
+    CRCAT = 57
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
+    CRCAT_PENDING = 2
+    CRCAT = 3
 
 
 class RemarkDataType(IntEnum):

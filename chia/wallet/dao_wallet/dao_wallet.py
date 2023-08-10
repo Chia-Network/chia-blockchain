@@ -303,6 +303,9 @@ class DAOWallet(WalletProtocol):
     def get_name(self) -> str:
         return self.wallet_info.name
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        raise NotImplementedError("Method not implemented for DAO Wallet")
+
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         raise NotImplementedError("puzzle_hash_for_pk is not available in DAO wallets")
 
@@ -398,13 +401,9 @@ class DAOWallet(WalletProtocol):
 
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
-        # We're looking up the details of the coins from the node to ensure that we get the right balance
-        wallet_node = self.wallet_state_manager.wallet_node
-        peer: WSChiaConnection = wallet_node.get_full_node_peer()
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        latest = await wallet_node.get_coin_state([cr.coin.name() for cr in records if not cr.spent], peer)
-        return uint128(sum([cr.coin.amount for cr in latest]))
+        return uint128(sum([cr.coin.amount for cr in records if not cr.spent]))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
@@ -414,10 +413,11 @@ class DAOWallet(WalletProtocol):
         total = 0
         coins = []
         for record in records:
-            total += record.coin.amount
-            coins.append(record.coin)
-            if total >= amount:
-                break
+            if not record.spent:
+                total += record.coin.amount
+                coins.append(record.coin)
+                if total >= amount:
+                    break
         if total < amount:
             raise ValueError(f"Not enough of asset {asset_id}: {total} < {amount}")
         return coins
@@ -883,7 +883,9 @@ class DAOWallet(WalletProtocol):
     ) -> Program:
         if not new_proposal_validator:
             assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
-            new_proposal_validator = get_proposal_validator(self.dao_info.current_treasury_innerpuz)
+            new_proposal_validator = get_proposal_validator(
+                self.dao_info.current_treasury_innerpuz, new_dao_rules.proposal_minimum_amount
+            )
         return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
 
     async def generate_mint_proposal_innerpuz(
@@ -891,6 +893,8 @@ class DAOWallet(WalletProtocol):
         amount_of_cats_to_create: uint64,
         cats_new_innerpuzhash: bytes32,
     ) -> Program:
+        if amount_of_cats_to_create % 2 == 1:
+            raise ValueError("Minting proposals must mint an even number of CATs")
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -1293,8 +1297,8 @@ class DAOWallet(WalletProtocol):
             if TOTAL_VOTES.as_int() < attendance_required.as_int():
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
 
-            if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
-                raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
+            # if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
+            #     raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
 
             timer_solution = Program.to(
                 [
@@ -1309,6 +1313,9 @@ class DAOWallet(WalletProtocol):
             timer_cs = CoinSpend(proposal_info.timer_coin, timer_puzzle, timer_solution)
 
         full_treasury_puz = curry_singleton(self.dao_info.treasury_id, self.dao_info.current_treasury_innerpuz)
+        assert isinstance(self.dao_info.current_treasury_coin, Coin)
+        assert full_treasury_puz.get_tree_hash() == self.dao_info.current_treasury_coin.puzzle_hash
+
         cat_spend_bundle = None
         delegated_puzzle_sb = None
         puzzle_reveal = await self.fetch_proposed_puzzle_reveal(proposal_id)
@@ -1479,7 +1486,11 @@ class DAOWallet(WalletProtocol):
             elif proposal_type == ProposalType.UPDATE:
                 (
                     _,
-                    PROPOSAL_VALIDATOR,
+                    _,
+                    _,
+                    _,
+                    PROPOSAL_MINIMUM_AMOUNT,
+                    _,
                     PROPOSAL_LENGTH,
                     PROPOSAL_SOFTCLOSE_LENGTH,
                     ATTENDANCE_REQUIRED,

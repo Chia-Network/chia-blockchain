@@ -102,6 +102,14 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit"):
         )
     ])
 
+if os.path.exists(f"{ROOT}/bladebit/bladebit_cuda"):
+    binaries.extend([
+        (
+            f"{ROOT}/bladebit/bladebit_cuda",
+            "bladebit"
+        )
+    ])
+
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
     dll_paths = pathlib.Path(sysconfig.get_path("platlib")) / "*.dll"
@@ -129,6 +137,10 @@ if THIS_IS_WINDOWS:
         ),
         (
             f"{ROOT}\\bladebit\\bladebit.exe",
+            "bladebit"
+        ),
+        (
+            f"{ROOT}\\bladebit\\bladebit_cuda.exe",
             "bladebit"
         ),
     ]

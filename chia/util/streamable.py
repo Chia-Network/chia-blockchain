@@ -86,7 +86,6 @@ size_hints = {
     "PrivateKey": PrivateKey.PRIVATE_KEY_SIZE,
     "G1Element": G1Element.SIZE,
     "G2Element": G2Element.SIZE,
-    "ConditionOpcode": 1,
 }
 unhashable_types = [
     "PrivateKey",
@@ -331,7 +330,7 @@ def recurse_jsonify(d: Any) -> Any:
         return d
     elif isinstance(d, int):
         return int(d)
-    elif d is None or type(d) == str:
+    elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
@@ -578,7 +577,6 @@ class Streamable:
     * BLS signatures serialized in bls format (96 bytes)
     * bool serialized into 1 byte (0x01 or 0x00)
     * bytes serialized as a 4 byte size prefix and then the bytes.
-    * ConditionOpcode is serialized as a 1 byte value.
     * str serialized as a 4 byte size prefix and then the utf-8 representation in bytes.
 
     An item is one of:

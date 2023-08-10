@@ -129,6 +129,10 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
 
+        # Test match_hinted_coin
+        selected_coin = list(await wallet.select_coins(uint64(0)))[0]
+        assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
@@ -1329,7 +1333,7 @@ class TestWalletSimulator:
             if compute_additions(cs) == []:
                 stolen_cs = cs
         # get a legit signature
-        stolen_sb = await wallet.sign_transaction([stolen_cs])
+        stolen_sb = await wallet_node.wallet_state_manager.sign_transaction([stolen_cs])
         now = uint64(int(time.time()))
         add_list = list(stolen_sb.additions())
         rem_list = list(stolen_sb.removals())

@@ -461,7 +461,7 @@ class DAOCATWallet:
         if push:
             for tx in txs:
                 await self.wallet_state_manager.add_pending_transaction(tx)
-                for coin in tx.spend_bundle.additions():
+                for coin in tx.additions:
                     if coin.puzzle_hash == cat_puzzle_hash:
                         new_cats.append(coin)
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle_hash], [self.id()])
@@ -718,6 +718,9 @@ class DAOCATWallet:
 
     def require_derivation_paths(self) -> bool:
         return True
+
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        raise NotImplementedError("Method not implemented for DAO CAT Wallet")
 
     async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
         result: List[WalletCoinRecord] = []

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import enum
-from typing import Any
 
 
 # See chia/wallet/puzzles/condition_codes.clib
@@ -67,11 +66,3 @@ class ConditionOpcode(bytes, enum.Enum):
 
     # A condition that is always true and always ignore all arguments
     REMARK = bytes([1])
-
-    def __bytes__(self) -> bytes:
-        return bytes(self.value)
-
-    @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:
-        assert len(blob) == 1
-        return cls(blob)

@@ -49,6 +49,7 @@
               (calculate_coin_id (f (f p2_singleton_list)) P2_SINGLETON_PUZHASH (f (r (f p2_singleton_list))))
               (r p2_singleton_list)
               (+ total (f (r (f p2_singleton_list))))
+              output
             )
             (c
               (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT) (list (f (r TREASURY_SINGLETON_STRUCT))))
@@ -130,7 +131,7 @@
             CONDITIONS_FOR_THIS_ASSET_TYPE
             P2_SINGLETON_PUZHASH
             p2_singleton_puzzle_hash
-            parent_amount_list
+            (r parent_amount_list)
             (+ total (f (r (f parent_amount_list))))
             create_coin_sum
             output
@@ -169,7 +170,7 @@
             )
             P2_SINGLETON_PUZHASH
             (wrap_in_cat_layer CAT_MOD_HASH (f (f p2_singleton_tailhash_parent_amount_list)) P2_SINGLETON_PUZHASH)  ; p2_singleton_puzzle_hash
-            (r (f p2_singleton_tailhash_parent_amount_list))  ; list of ((parent amount) (parent amount)...)
+            (f (r (f p2_singleton_tailhash_parent_amount_list)))  ; list of ((parent amount) (parent amount)...)
             0  ; current total - initialise as 0
             (sum_create_coins (f (r (f LIST_OF_TAILHASH_CONDITIONS))))
             output  ; add new conditions to previous calculated output conditions
