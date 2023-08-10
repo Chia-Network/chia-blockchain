@@ -82,7 +82,9 @@ elif [ "$(uname)" = "Linux" ] && type dnf || yum; then
 	echo "Found RedHat."
 
 	if [ "$INSTALL_PYTHON_DEV" ]; then
-		PYTHON_DEV_DEPENDENCY="$PYTHON_VERSION"-devel
+		yumcmd="sudo yum install "$PYTHON_VERSION"-devel gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
+  	else
+		yumcmd="sudo yum install gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
 	fi
 
 elif [ "$(uname)" = "Darwin" ]; then
@@ -109,8 +111,8 @@ else
 	elif [ -e venv/bin/python ] && test "$RHEL_BASED"; then
 		echo "Installing chiavdf dependencies on RedHat/CentOS/Fedora"
 		# Install remaining needed development tools - assumes venv and prior run of install.sh
-		echo "yum install gcc gcc-c++ gmp-devel $PYTHON_DEV_DEPENDENCY libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y" | tr -s ' '
-		sudo yum install gcc gcc-c++ gmp-devel "$PYTHON_DEV_DEPENDENCY" libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y | tr -s ' '
+		echo "$yumcmd"
+		${yumcmd}
 		echo "Installing chiavdf from source on RedHat/CentOS/Fedora"
 		echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
 		venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
