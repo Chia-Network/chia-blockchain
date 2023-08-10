@@ -68,7 +68,6 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "coins",
         "combine",
         FINGERPRINT_ARG,
-        "--no-confirm",
         "-i1",
         "--largest-first",
         "-m0.001",

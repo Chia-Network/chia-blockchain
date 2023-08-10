@@ -400,11 +400,17 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
             assert fingerprint is not None
             yield wallet_client, fingerprint, config
 
+    def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
+        return None
+
     # Monkey patches the functions into the module, the classes returned by these functions can be changed in the class.
     # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
-    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
     chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
+    chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
+    # Monkey patches the confirm function to not ask for confirmation
+    chia.cmds.cmds_util.cli_confirm = cli_confirm
+    chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]
 
 
 def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> str:

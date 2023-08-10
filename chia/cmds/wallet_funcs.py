@@ -10,7 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
+from chia.cmds.cmds_util import cli_confirm, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -401,7 +401,6 @@ async def make_offer(
     requests: Sequence[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
-    no_confirm: bool = False,
     no_file: bool = False,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -530,21 +529,14 @@ async def make_offer(
                         converted_amount = Decimal(requested_amount) / divisor
                         print(f"  - {converted_amount} {asset} ({requested_amount} mojos)")
 
-                    if not no_confirm:
-                        print()
-                        nft_confirmation = input(
-                            "Offers for NFTs will have royalties automatically added. "
-                            + "Are you sure you would like to continue? (y/n): "
-                        )
-                        if nft_confirmation not in ["y", "yes"]:
-                            print("Not creating offer...")
-                            return
+                    cli_confirm(
+                        "\nOffers for NFTs will have royalties automatically added. "
+                        "Are you sure you would like to continue? (y/n): ",
+                        "Not creating offer...",
+                    )
 
-                if not no_confirm:
-                    confirmation = input("Confirm (y/n): ")
-                    if confirmation not in ["y", "yes"]:
-                        print("Not creating offer...")
-                        return
+                cli_confirm("Confirm (y/n): ", "Not creating offer...")
+
                 offer, trade_record = await wallet_client.create_offer_for_ids(
                     offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
                 )
@@ -680,7 +672,6 @@ async def take_offer(
     d_fee: Decimal,
     file: str,
     examine_only: bool,
-    no_confirm: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
@@ -761,17 +752,14 @@ async def take_offer(
 
         if not examine_only:
             print()
-            if not no_confirm:
-                confirmation = input("Would you like to take this offer? (y/n): ")
-                if confirmation not in ["y", "yes"]:
-                    return
+            cli_confirm("Would you like to take this offer? (y/n): ")
             trade_record = await wallet_client.take_offer(offer, fee=fee)
             print(f"Accepted offer with ID {trade_record.trade_id}")
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
 
 async def cancel_offer(
-    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool, no_confirm: bool
+    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         offer_id = bytes32.from_hexstr(offer_id_hex)
@@ -780,10 +768,7 @@ async def cancel_offer(
         trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
-        if not no_confirm:
-            confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
-            if confirmation not in ["y", "yes"]:
-                return
+        cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
         await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
         print(f"Cancelled offer with ID {trade_record.trade_id}")
         if secure:

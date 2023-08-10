@@ -700,7 +700,6 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         FINGERPRINT_ARG,
         "--reuse",
         "-m1",
-        "--no-confirm",
         "--no-file",
         "--offer",
         "1:10",
@@ -888,7 +887,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
 
     inst_rpc_client = TakeOfferRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["wallet", "take_offer", test_offer_file_name, "--no-confirm", FINGERPRINT_ARG, "-m1", "--reuse"]
+    command_args = ["wallet", "take_offer", test_offer_file_name, FINGERPRINT_ARG, "-m1", "--reuse"]
     # these are various things that should be in the output
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
@@ -941,7 +940,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
 
     inst_rpc_client = CancelOfferRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["wallet", "cancel_offer", FINGERPRINT_ARG, "--no-confirm", "-m1", "--id", test_offer_id]
+    command_args = ["wallet", "cancel_offer", FINGERPRINT_ARG, "-m1", "--id", test_offer_id]
     # these are various things that should be in the output
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")

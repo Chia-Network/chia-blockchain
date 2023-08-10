@@ -4,7 +4,7 @@ import sys
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import get_wallet_client
+from chia.cmds.cmds_util import cli_confirm, get_wallet_client
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.types.blockchain_format.coin import Coin
@@ -126,7 +126,6 @@ async def async_combine(
     target_coin_amount: Decimal,
     target_coin_ids_str: Sequence[str],
     largest_first: bool,
-    no_confirm: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in target_coin_ids_str]
@@ -181,9 +180,7 @@ async def async_combine(
                 conf_coins = conf_coins[:number_of_coins]
             removals = [cr.coin for cr in conf_coins]
         print(f"Combining {len(removals)} coins.")
-        if not no_confirm:
-            if input("Would you like to Continue? (y/n): ") != "y":
-                return
+        cli_confirm("Would you like to Continue? (y/n): ")
         total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
         if is_xch and total_amount - final_fee <= 0:
             print("Total amount is less than 0 after fee, exiting.")
