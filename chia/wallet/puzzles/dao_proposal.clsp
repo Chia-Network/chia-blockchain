@@ -47,18 +47,6 @@
     )
   )
 
-  (defun distinct_or_raise (L result)
-    ;; This checks each element of a list for duplicates. Returns the list or raises if duplicates are present
-    ;; When called, pass in '()' as the result param.
-    (if L
-        (if (is_member (f L) result)
-            (x)
-            (distinct_or_raise (r L) (c (f L) result))
-        )
-        result
-    )
-  )
-
   (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
@@ -168,6 +156,7 @@
       sum
       output
       my_amount
+      distinct_ids
     )
     (if coin_id_list
         (if (> (f vote_amount_list) 0)
@@ -207,6 +196,7 @@
                   (+ (f vote_amount_list) sum)
                   output
                   my_amount
+                  (if (is_member (f coin_id_list) distinct_ids) (x "biff") (c (f coin_id_list) distinct_ids))
                 )
               )
             )
@@ -352,7 +342,7 @@
             YES_VOTES
             TOTAL_VOTES
             PROPOSED_PUZ_HASH
-            (distinct_or_raise vote_coin_ids_or_proposal_timelock_length ())
+            vote_coin_ids_or_proposal_timelock_length
             vote_amounts_or_proposal_validator_hash
             previous_votes_or_pass_margin
             lockup_innerpuzhashes_or_attendance_required
@@ -377,6 +367,7 @@
                 )
             )
             my_amount
+            ()
           )
       )
   )
