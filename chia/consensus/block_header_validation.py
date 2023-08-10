@@ -198,6 +198,8 @@ def validate_unfinished_header_block(
                         icc_iters_proof,
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                     )
+                    if icc_iters_committed is None:
+                        return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
                     if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
                         target_vdf_info,
                         number_of_iterations=icc_iters_committed,

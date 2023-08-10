@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any
+from typing import Any, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -80,7 +80,7 @@ class ConsensusConstants:
     # number of consecutive plot ids required to be distinct
     UNIQUE_PLOTS_WINDOW: uint8
 
-    def replace(self, **changes: object) -> "ConsensusConstants":
+    def replace(self, **changes: Any) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
 
     def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
@@ -88,7 +88,7 @@ class ConsensusConstants:
         Overrides str (hex) values with bytes.
         """
 
-        filtered_changes = {}
+        filtered_changes: Dict[str, Any] = {}
         for k, v in changes.items():
             if not hasattr(self, k):
                 # NETWORK_TYPE used to be present in default config, but has been removed
