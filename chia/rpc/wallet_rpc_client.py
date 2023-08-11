@@ -677,7 +677,7 @@ class WalletRpcClient(RpcClient):
     async def create_new_cat_and_wallet(self, amount: uint64) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "cat_wallet",
-            "mode": "new",
+            "mode": "new test",
             "amount": amount,
         }
         return await self.fetch("create_new_wallet", request)
