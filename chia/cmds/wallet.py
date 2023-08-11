@@ -580,7 +580,7 @@ def take_offer_cmd(
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, insecure))
+    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
