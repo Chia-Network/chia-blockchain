@@ -340,24 +340,28 @@ class PlotManager:
                                 "We assume the file is being copied."
                             )
                             return None
-                    elif level > self.max_compression_level_allowed:
-                        log.warning(
-                            f"Not farming plot {file_path}. Plot compression level: {level}, "
-                            f"max compression level allowed: {self.max_compression_level_allowed}."
-                        )
-                        return None
-                    elif level > 0 and self.context_count == 0:
-                        log.warning(
-                            f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
-                            f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
-                            " to start harvesting compressed plots."
-                        )
-                        return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
+
+                level = cache_entry.prover.get_compression_level()
+                if level > self.max_compression_level_allowed:
+                    log.warning(
+                        f"Not farming plot {file_path}. Plot compression level: {level}, "
+                        f"max compression level allowed: {self.max_compression_level_allowed}."
+                    )
+                    return None
+
+                if level > 0 and self.context_count == 0:
+                    log.warning(
+                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                        " to start harvesting compressed plots."
+                    )
+                    return None
+
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
                     log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")
