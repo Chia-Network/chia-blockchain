@@ -98,13 +98,9 @@ class TestHintStore:
                 cursor = await conn.execute("SELECT COUNT(*) FROM hints")
                 rows = await cursor.fetchall()
 
-            if db_wrapper.db_version == 2:
-                # even though we inserted the pair multiple times, there's only one
-                # entry in the DB
-                assert rows[0][0] == 1
-            else:
-                # we get one copy for each duplicate
-                assert rows[0][0] == 4
+            # even though we inserted the pair multiple times, there's only one
+            # entry in the DB
+            assert rows[0][0] == 1
 
     @pytest.mark.asyncio
     async def test_hints_in_blockchain(self, wallet_nodes):  # noqa: F811
