@@ -26,9 +26,7 @@ from chia.cmds.peer_funcs import peer_async
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
-@click.option(
-    "-j", "--json", "json_output", help="Output in JSON format", is_flag=True, type=bool, default=False
-)
+@click.option("-j", "--json", "json_output", help="Output in JSON format", is_flag=True, type=bool, default=False)
 @click.argument("node_type", type=click.Choice(list(NODE_TYPES.keys())), nargs=1, required=True)
 @click.pass_context
 def peer_cmd(

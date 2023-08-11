@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
 
-import json
 
 async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> None:
     if ":" not in add_connection:
@@ -49,10 +49,11 @@ async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) 
                 result_txt = f"NodeID {remove_connection}... not found"
     print(result_txt)
 
+
 def bytes_to_str(data):
     if isinstance(data, bytes):
         try:
-            return data.decode('utf-8')
+            return data.decode("utf-8")
         except UnicodeDecodeError:
             # If bytes cannot be decoded as UTF-8, return a representation of the bytes
             return data.hex()
@@ -61,6 +62,7 @@ def bytes_to_str(data):
     if isinstance(data, list):
         return [bytes_to_str(element) for element in data]
     return data
+
 
 async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any], json_output: bool = False) -> None:
     import time
@@ -75,12 +77,18 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
         print(json.dumps(connections, indent=4))
         return
     # Determine the width of each column
-    type_width = max(len(NodeType(con['type']).name) for con in connections) + 1
-    ip_width = max(len(con['peer_host']) for con in connections) + 1
+    type_width = max(len(NodeType(con["type"]).name) for con in connections) + 1
+    ip_width = max(len(con["peer_host"]) for con in connections) + 1
     port_width = max(len(f"{con['peer_port']}/{con['peer_server_port']}") for con in connections) + 1
     node_id_width = 10  # Fixed width for node ID
     last_connect_width = 20  # Fixed width for last connect
-    mib_up_down_width = max(len(f"{con['bytes_written'] / (1024 * 1024):.1f}/{con['bytes_read'] / (1024 * 1024):.1f}") for con in connections) + 1
+    mib_up_down_width = (
+        max(
+            len(f"{con['bytes_written'] / (1024 * 1024):.1f}/{con['bytes_read'] / (1024 * 1024):.1f}")
+            for con in connections
+        )
+        + 1
+    )
     height_width = max(len(str(con.get("peak_height", "No Info"))) for con in connections) + 1
     hash_width = 10  # Fixed width for peak hash
 
@@ -89,10 +97,45 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     table_width = len(header)
 
     # Print the table header
-    print("╭" + "─" * (type_width) + "┬" + "─" * (ip_width) + "┬" + "─" * (port_width) + "┬" + "─" * (node_id_width) + "┬" + "─" * (last_connect_width) + "┬" + "─" * (mib_up_down_width) + "┬" + "─" * (height_width) + "┬" + "─" * (hash_width) + "╮")
+    print(
+        "╭"
+        + "─" * (type_width)
+        + "┬"
+        + "─" * (ip_width)
+        + "┬"
+        + "─" * (port_width)
+        + "┬"
+        + "─" * (node_id_width)
+        + "┬"
+        + "─" * (last_connect_width)
+        + "┬"
+        + "─" * (mib_up_down_width)
+        + "┬"
+        + "─" * (height_width)
+        + "┬"
+        + "─" * (hash_width)
+        + "╮"
+    )
     print(f"│{header}│")
-    print("├" + "─" * (type_width) + "┼" + "─" * (ip_width) + "┼" + "─" * (port_width) + "┼" + "─" * (node_id_width) + "┼" + "─" * (last_connect_width) + "┼" + "─" * (mib_up_down_width) + "┼" + "─" * (height_width) + "┼" + "─" * (hash_width) + "┤")
-
+    print(
+        "├"
+        + "─" * (type_width)
+        + "┼"
+        + "─" * (ip_width)
+        + "┼"
+        + "─" * (port_width)
+        + "┼"
+        + "─" * (node_id_width)
+        + "┼"
+        + "─" * (last_connect_width)
+        + "┼"
+        + "─" * (mib_up_down_width)
+        + "┼"
+        + "─" * (height_width)
+        + "┼"
+        + "─" * (hash_width)
+        + "┤"
+    )
 
     # Print the table rows
     for con in connections:
@@ -104,12 +147,28 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
         if connection_peak_hash and connection_peak_hash.startswith(("0x", "0X")):
             connection_peak_hash = f"{connection_peak_hash[2:10]}…"
 
-        row_str = (
-            f"│{NodeType(con['type']).name:<{type_width}}│{con['peer_host']:<{ip_width}}│{ports_str:<{port_width}}│{con['node_id'][:8]}… │{last_connect:<{last_connect_width}}│{mib_up_down_str:<{mib_up_down_width}}│{peak_height:<{height_width}}│{connection_peak_hash:<{hash_width}}│"
-        )
+        row_str = f"│{NodeType(con['type']).name:<{type_width}}│{con['peer_host']:<{ip_width}}│{ports_str:<{port_width}}│{con['node_id'][:8]}… │{last_connect:<{last_connect_width}}│{mib_up_down_str:<{mib_up_down_width}}│{peak_height:<{height_width}}│{connection_peak_hash:<{hash_width}}│"
         print(row_str)
 
-    print("╰" + "─" * (type_width) + "┴" + "─" * (ip_width) + "┴" + "─" * (port_width) + "┴" + "─" * (node_id_width) + "┴" + "─" * (last_connect_width) + "┴" + "─" * (mib_up_down_width) + "┴" + "─" * (height_width) + "┴" + "─" * (hash_width) + "╯")
+    print(
+        "╰"
+        + "─" * (type_width)
+        + "┴"
+        + "─" * (ip_width)
+        + "┴"
+        + "─" * (port_width)
+        + "┴"
+        + "─" * (node_id_width)
+        + "┴"
+        + "─" * (last_connect_width)
+        + "┴"
+        + "─" * (mib_up_down_width)
+        + "┴"
+        + "─" * (height_width)
+        + "┴"
+        + "─" * (hash_width)
+        + "╯"
+    )
 
 
 async def peer_async(
