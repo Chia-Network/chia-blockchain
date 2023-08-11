@@ -136,10 +136,10 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     # Print the table rows
     for con in connections:
         last_connect = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(con["last_message_time"]))
-        peak_height = con.get("peak_height", "No Info")
+        peak_height = con.get("peak_height") or "No Info"
         mib_up_down_str = f"{con['bytes_written'] / (1024 * 1024):.1f}/{con['bytes_read'] / (1024 * 1024):.1f}"
         ports_str = f"{con['peer_port']}/{con['peer_server_port']}"
-        connection_peak_hash = con.get("peak_hash", "No Info")
+        connection_peak_hash = con.get("peak_hash") or "No Info"
         if connection_peak_hash and connection_peak_hash.startswith(("0x", "0X")):
             connection_peak_hash = f"{connection_peak_hash[2:10]}…"
 
