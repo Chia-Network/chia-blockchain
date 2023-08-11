@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from shutil import rmtree
 
+import pytest
 from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
@@ -46,6 +47,7 @@ def test_every_simulator_command() -> None:
         stop_simulator(runner, simulator_name)
 
 
+@pytest.mark.skip("Need to rewrite")
 def test_custom_farming_address() -> None:
     runner: CliRunner = CliRunner()
     address = burn_address

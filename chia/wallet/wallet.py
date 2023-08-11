@@ -7,16 +7,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from blspy import AugSchemeMPL, G1Element, G2Element
 from typing_extensions import Unpack
 
-from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -63,7 +59,6 @@ class Wallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_id: uint32
-    cost_of_single_tx: Optional[int]
 
     @staticmethod
     async def create(
@@ -75,8 +70,12 @@ class Wallet:
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
-        self.cost_of_single_tx = None
+
         return self
+
+    @property
+    def cost_of_single_tx(self) -> int:
+        return 11000000  # Estimate
 
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable: List[WalletCoinRecord] = list(
@@ -85,26 +84,6 @@ class Wallet:
         if len(spendable) == 0:
             return uint128(0)
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
-        if self.cost_of_single_tx is None:
-            coin = spendable[0].coin
-            tx = await self.generate_signed_transaction(
-                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
-            )
-            assert tx.spend_bundle is not None
-            program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
-            # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-            # we use height=0 here to not enable any soft-fork semantics. It
-            # will only matter once the wallet generates transactions relying on
-            # new conditions, and we can change this by then
-            result: NPCResult = get_name_puzzle_conditions(
-                program,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-                mempool_mode=True,
-                height=uint32(0),
-                constants=self.wallet_state_manager.constants,
-            )
-            self.cost_of_single_tx = result.cost
-            self.log.info(f"Cost of a single tx for standard wallet: {self.cost_of_single_tx}")
 
         max_cost = self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 5  # avoid full block TXs
         current_cost = 0

@@ -8,13 +8,15 @@ from pathlib import Path
 from time import monotonic
 from typing import List, Tuple
 
-from utils import rand_hash, rewards, setup_db
-
+from benchmarks.utils import rand_hash, rewards, setup_db
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
+
+# to run this benchmark:
+# python -m benchmarks.coin_store
 
 NUM_ITERS = 200
 
@@ -307,7 +309,5 @@ async def run_new_block_benchmark(version: int) -> None:
 
 
 if __name__ == "__main__":
-    print("version 1")
-    asyncio.run(run_new_block_benchmark(1))
     print("version 2")
     asyncio.run(run_new_block_benchmark(2))
