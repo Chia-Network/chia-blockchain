@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union
+from dataclasses import dataclass, replace
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element
 from clvm.casts import int_to_bytes
@@ -868,8 +868,46 @@ TIMELOCK_DRIVERS: Tuple[
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 )
+SECONDS_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertSecondsRelative,
+    AssertSecondsAbsolute,
+    AssertBeforeSecondsRelative,
+    AssertBeforeSecondsAbsolute,
+}
+HEIGHT_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertHeightRelative,
+    AssertHeightAbsolute,
+    AssertBeforeHeightRelative,
+    AssertBeforeHeightAbsolute,
+}
+AFTER_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertSecondsRelative,
+    AssertHeightRelative,
+    AssertSecondsAbsolute,
+    AssertHeightAbsolute,
+}
+BEFORE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertBeforeSecondsRelative,
+    AssertBeforeHeightRelative,
+    AssertBeforeSecondsAbsolute,
+    AssertBeforeHeightAbsolute,
+}
+RELATIVE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertSecondsRelative,
+    AssertHeightRelative,
+    AssertBeforeSecondsRelative,
+    AssertBeforeHeightRelative,
+}
+ABSOLUTE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+    AssertSecondsAbsolute,
+    AssertHeightAbsolute,
+    AssertBeforeSecondsAbsolute,
+    AssertBeforeHeightAbsolute,
+}
+TIMELOCK_DRIVERS_SET: Set[Type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
 
-TIMELOCK_OPCODES: List[bytes] = [
+
+TIMELOCK_OPCODES: Set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
@@ -878,7 +916,43 @@ TIMELOCK_OPCODES: List[bytes] = [
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
-]
+}
+SECONDS_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
+}
+HEIGHT_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
+}
+AFTER_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
+}
+BEFORE_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
+}
+RELATIVE_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
+}
+ABSOLUTE_TIMELOCK_OPCODES: Set[bytes] = {
+    ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
+    ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
+}
 
 
 @streamable
@@ -891,19 +965,21 @@ class Timelock(Condition):
 
     def to_program(self) -> Program:
         if self.after_not_before:
-            potential_drivers_4 = TIMELOCK_DRIVERS[0:4]
+            potential_drivers = TIMELOCK_DRIVERS_SET - BEFORE_TIMELOCK_DRIVERS
         else:
-            potential_drivers_4 = TIMELOCK_DRIVERS[4:]
+            potential_drivers = TIMELOCK_DRIVERS_SET - AFTER_TIMELOCK_DRIVERS
 
         if self.relative_not_absolute:
-            potential_drivers_2 = potential_drivers_4[0:2]
+            potential_drivers -= ABSOLUTE_TIMELOCK_DRIVERS
         else:
-            potential_drivers_2 = potential_drivers_4[2:]
+            potential_drivers -= RELATIVE_TIMELOCK_DRIVERS
 
         if self.seconds_not_height:
-            driver: Type[TIMELOCK_TYPES] = potential_drivers_2[0]
+            potential_drivers -= HEIGHT_TIMELOCK_DRIVERS
         else:
-            driver = potential_drivers_2[1]
+            potential_drivers -= SECONDS_TIMELOCK_DRIVERS
+
+        driver: Type[TIMELOCK_TYPES] = next(iter(potential_drivers))
 
         if self.seconds_not_height:
             # Semantics here mean that we're assuredly passing a uint64 to a class that expects it
@@ -915,22 +991,17 @@ class Timelock(Condition):
     @classmethod
     def from_program(cls: Type[Timelock], program: Program) -> Timelock:
         opcode: bytes = program.at("f").atom
-        remaining_opcodes: List[bytes]
-        if opcode in TIMELOCK_OPCODES[0:4]:
+        if opcode in AFTER_TIMELOCK_OPCODES:
             after_not_before = True
-            remaining_opcodes = TIMELOCK_OPCODES[0:4]
         else:
             after_not_before = False
-            remaining_opcodes = TIMELOCK_OPCODES[4:]
 
-        if opcode in remaining_opcodes[0:2]:
+        if opcode in RELATIVE_TIMELOCK_OPCODES:
             relative_not_absolute = True
-            remaining_opcodes = remaining_opcodes[0:2]
         else:
             relative_not_absolute = False
-            remaining_opcodes = remaining_opcodes[2:]
 
-        if opcode in remaining_opcodes[0]:
+        if opcode in SECONDS_TIMELOCK_OPCODES:
             seconds_not_height = True
         else:
             seconds_not_height = False
@@ -1089,9 +1160,24 @@ class ConditionValidTimes(Streamable):
         return final_condition_list
 
 
+# Properties of the dataclass above, grouped by their property
+SECONDS_PROPERTIES: Set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
+HEIGHT_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
+AFTER_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
+BEFORE_PROPERTIES: Set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
+RELATIVE_PROPERTIES: Set[str] = {
+    "min_blocks_since_created",
+    "min_secs_since_created",
+    "max_secs_after_created",
+    "max_blocks_after_created",
+}
+ABSOLUTE_PROPERTIES: Set[str] = {"min_time", "max_time", "min_height", "max_height"}
+ALL_PROPERTIES: Set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
+
+
 def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
-    properties: List[str] = [field.name for field in fields(valid_times)]
+    properties: Set[str] = ALL_PROPERTIES.copy()
     for condition in conditions:
         if isinstance(condition, TIMELOCK_DRIVERS):
             timelock: Timelock = Timelock.from_program(condition.to_program())
@@ -1106,21 +1192,22 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         min_not_max: bool = True
         if timelock.after_not_before:
             min_not_max = False
-            properties_left = properties_left[0:4]
+            properties_left -= BEFORE_PROPERTIES
         else:
-            properties_left = properties_left[4:]
+            properties_left -= AFTER_PROPERTIES
 
         if timelock.seconds_not_height:
-            properties_left = properties_left[0:2]
+            properties_left -= HEIGHT_PROPERTIES
         else:
-            properties_left = properties_left[2:]
+            properties_left -= SECONDS_PROPERTIES
 
         if timelock.relative_not_absolute:
-            properties_left = properties_left[0:1]
+            properties_left -= ABSOLUTE_PROPERTIES
         else:
-            properties_left = properties_left[1:]
+            properties_left -= RELATIVE_PROPERTIES
 
-        current_value: Optional[int] = getattr(valid_times, properties_left[0])
+        final_property: str = next(iter(properties_left))
+        current_value: Optional[int] = getattr(valid_times, final_property)
         if current_value is not None:
             if min_not_max:
                 new_value: int = min(current_value, timelock.timestamp)
@@ -1129,6 +1216,6 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         else:
             new_value = timelock.timestamp
 
-        valid_times = replace(valid_times, **{properties_left[0]: new_value})
+        valid_times = replace(valid_times, **{final_property: new_value})
 
     return valid_times
