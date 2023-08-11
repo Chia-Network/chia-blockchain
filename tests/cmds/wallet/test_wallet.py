@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 from blspy import G2Element
 from chia_rs import Coin
@@ -13,9 +13,8 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import NotarizedPayment, Offer
+from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -142,7 +141,6 @@ def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
         FINGERPRINT_ARG,
         WALLET_ID_ARG,
         "--no-paginate",
-        "--testing",
         "--reverse",
         "-o2",
         "-l2",
@@ -637,7 +635,7 @@ def test_add_token(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path], tmp_path: Path) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -657,21 +655,12 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                 "create_offer_for_ids",
                 (offer_dict, driver_dict, solver, fee, validate_only, min_coin_amount, max_coin_amount, reuse_puzhash),
             )
-            r_payments = {}
-            for id, amount in offer_dict.items():
-                if amount < 0:
-                    if id == 1:
-                        asset_id = None
-                    else:
-                        asset_id = bytes32([id] * 32)
-                    r_payments[asset_id] = [NotarizedPayment(get_bytes32(1), uint64(abs(amount)), [])]
-            assert driver_dict is not None
-            c_driver_dict: Dict[bytes32, PuzzleInfo] = {get_bytes32(3): PuzzleInfo(list(driver_dict.values())[0])}
-            created_offer: Offer = Offer(
-                requested_payments=r_payments,
-                _bundle=SpendBundle([], G2Element()),
-                driver_dict=c_driver_dict,
-            )
+
+            class FakeOffer:
+                def to_bech32(self) -> str:
+                    return "offer string"
+
+            created_offer = cast(Offer, FakeOffer())
             trade_offer: TradeRecord = TradeRecord(
                 confirmed_at_index=uint32(0),
                 accepted_at_time=None,
@@ -681,7 +670,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                 sent_to=[],
                 offer=bytes(SpendBundle([], G2Element())),
                 taken_offer=None,
-                coins_of_interest=created_offer.get_involved_coins(),
+                coins_of_interest=[],
                 trade_id=get_bytes32(2),
                 status=uint32(TradeStatus.PENDING_ACCEPT.value),
             )
@@ -698,9 +687,9 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "wallet",
         "make_offer",
         FINGERPRINT_ARG,
+        f"-p{str(tmp_path / 'test.offer')}",
         "--reuse",
         "-m1",
-        "--no-file",
         "--offer",
         "1:10",
         "--offer",

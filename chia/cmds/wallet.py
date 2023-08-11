@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from decimal import Decimal
 from typing import List, Optional, Sequence
 
@@ -101,7 +100,6 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     default=False,
     help="Only show clawback transactions",
 )
-@click.option("--testing", is_flag=True, default=False, hidden=True, help="Used by cli tests")
 def get_transactions_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -113,7 +111,6 @@ def get_transactions_cmd(
     sort_key: SortKey,
     reverse: bool,
     clawback: bool,
-    testing: bool,
 ) -> None:  # pragma: no cover
     from .wallet_funcs import get_transactions
 
@@ -131,15 +128,6 @@ def get_transactions_cmd(
             clawback=clawback,
         )
     )
-
-    if not testing:
-        # The flush/close avoids output like below when piping through `head -n 1`
-        # which will close stdout.
-        #
-        # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
-        # BrokenPipeError: [Errno 32] Broken pipe
-        sys.stdout.flush()
-        sys.stdout.close()
 
 
 @wallet_cmd.command("send", help="Send chia to another wallet")
@@ -461,25 +449,13 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     required=True,
     multiple=True,
 )
-@click.option(
-    "-p",
-    "--filepath",
-    help="The path to write the generated offer file to, required if --no-path flag is not set",
-    required=False,
-    default="",
-)
+@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
 @click.option(
     "--reuse",
     help="Reuse existing address for the offer.",
-    is_flag=True,
-    default=False,
-)
-@click.option(
-    "--no-file",
-    help="Do not write the offer file to disk.",
     is_flag=True,
     default=False,
 )
@@ -491,13 +467,9 @@ def make_offer_cmd(
     filepath: str,
     fee: str,
     reuse: bool,
-    no_file: bool,
 ) -> None:
     from .wallet_funcs import make_offer
 
-    if filepath == "" and not no_file:
-        print("Please provide a filepath or set the --no-file flag, to not save the offer file to disk.")
-        return
     asyncio.run(
         make_offer(
             wallet_rpc_port=wallet_rpc_port,
@@ -507,7 +479,6 @@ def make_offer_cmd(
             requests=request,
             filepath=filepath,
             reuse_puzhash=True if reuse else None,
-            no_file=no_file,
         )
     )
 

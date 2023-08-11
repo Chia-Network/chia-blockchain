@@ -401,7 +401,6 @@ async def make_offer(
     requests: Sequence[str],
     filepath: str,
     reuse_puzhash: Optional[bool],
-    no_file: bool = False,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
@@ -541,9 +540,8 @@ async def make_offer(
                     offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
                 )
                 if offer is not None:
-                    if not no_file:
-                        with open(pathlib.Path(filepath), "w") as file:
-                            file.write(offer.to_bech32())
+                    with open(pathlib.Path(filepath), "w") as file:
+                        file.write(offer.to_bech32())
                     print(f"Created offer with ID {trade_record.trade_id}")
                     print(
                         f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
