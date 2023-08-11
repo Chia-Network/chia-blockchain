@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, List, Dict, Optional
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
@@ -50,28 +50,20 @@ async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) 
     print(result_txt)
 
 
-def bytes_to_str(data):
-    if isinstance(data, bytes):
-        try:
-            return data.decode("utf-8")
-        except UnicodeDecodeError:
-            # If bytes cannot be decoded as UTF-8, return a representation of the bytes
-            return data.hex()
-    if isinstance(data, dict):
-        return {key: bytes_to_str(value) for key, value in data.items()}
-    if isinstance(data, list):
-        return [bytes_to_str(element) for element in data]
-    return data
+def bytes_to_str(data: List[Dict[Any, Any]]) -> List[Dict[Any, Any]]:
+    new_data = []
+    for item in data:
+        new_item = {key: value.hex() if isinstance(value, bytes) else value for key, value in item.items()}
+        new_data.append(new_item)
+    return new_data
 
 
 async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any], json_output: bool = False) -> None:
     import time
 
     from chia.server.outbound_message import NodeType
-    from chia.util.network import is_trusted_peer
 
-    connections = await rpc_client.get_connections()
-    connections = bytes_to_str(connections)
+    connections = bytes_to_str(await rpc_client.get_connections())
     if json_output:
         # Print the connections in JSON format
         print(json.dumps(connections, indent=4))
