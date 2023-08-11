@@ -66,7 +66,7 @@ async def validate_block_body(
     # from the database too (BlockStore). In `BlockHeaderValidation` we don't have access to the database,
     # just the cache. This check makes sure we retrieve blocks from the database and perform the check with them,
     # in case they were missing from the cache.
-    if height >= constants.SOFT_FORK3_HEIGHT:
+    if height >= constants.SOFT_FORK4_HEIGHT:
         curr_optional_block_record: Optional[BlockRecord] = await blocks.get_block_record_from_db(
             block.prev_header_hash
         )

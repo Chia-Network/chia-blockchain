@@ -101,6 +101,8 @@ bladebit_cuda_plotter_options = [
     Options.FARMERKEY,
     Options.POOLKEY,
     Options.POOLCONTRACT,
+    Options.TMP_DIR,
+    Options.TMP_DIR2,
     Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,

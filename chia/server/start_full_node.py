@@ -74,6 +74,8 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
     # these numbers are supposed to match initial-config.yaml
     if "SOFT_FORK3_HEIGHT" not in overrides:
         overrides["SOFT_FORK3_HEIGHT"] = 2997292
+    if "SOFT_FORK4_HEIGHT" not in overrides:
+        overrides["SOFT_FORK4_HEIGHT"] = 2997292
     if "HARD_FORK_HEIGHT" not in overrides:
         overrides["HARD_FORK_HEIGHT"] = 2997292
     if "PLOT_FILTER_128_HEIGHT" not in overrides:

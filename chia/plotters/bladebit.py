@@ -365,7 +365,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("--no-t2-direct")
     if "device" in args and str(args.device).isdigit():
         call_args.append("--device")
-        call_args.append(args.device)
+        call_args.append(str(args.device))
     if "no_direct_downloads" in args and args.no_direct_downloads is not None:
         call_args.append("--no-direct-downloads")
 

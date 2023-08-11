@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts
+    name: Test Install Scripts - ${{ matrix.development.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,11 @@ jobs:
       matrix:
         python-version: [3.9]
         os: [macOS-latest, ubuntu-latest]
+        development:
+          - name: Non-development
+            value: false
+          - name: Development
+            value: true
 
     steps:
     - name: Checkout Code
@@ -46,9 +51,13 @@ jobs:
     - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-        development: true
+        development: ${{ matrix.development.value }}
 
     - uses: chia-network/actions/activate-venv@main
+
+    - name: Run chia --help
+      run: |
+        chia --help
 
     - name: Run install-gui script
       run: |
