@@ -32,7 +32,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
@@ -1959,9 +1959,8 @@ async def test_clear_pending_roots(
         assert cleared_root == {"success": True, "root": pending_root.marshal()}
 
 
-# TODO: what should this be called?  test_deadlock_we_used_to_have()?
 @pytest.mark.asyncio
-async def test_stuff(
+async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
@@ -1999,12 +1998,17 @@ async def test_stuff(
         await full_node_api.wait_for_wallet_synced(wallet_node)
         assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
 
-        # get the value a bunch
+        # get the value a bunch through several periodic data management cycles
+        concurrent_requests = 10
+        time_per_request = 2
+        timeout = concurrent_requests * time_per_request
+
         duration = 10 * interval
         start = time.monotonic()
         end = start + duration
-        with anyio.fail_after(2 * duration):
-            while time.monotonic() < end:
+
+        while time.monotonic() < end:
+            with anyio.fail_after(adjusted_timeout(timeout)):
                 await asyncio.gather(
                     *(asyncio.create_task(data_layer.get_value(store_id=tree_id, key=key)) for _ in range(10))
                 )
