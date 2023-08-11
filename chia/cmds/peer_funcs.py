@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient
@@ -85,8 +85,12 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     hash_width = 10  # Fixed width for peak hash
 
     # Header definition
-    header = f"{'Type':<{type_width}}│{'IP':<{ip_width}}│{'Ports':<{port_width}}│{'NodeID':<{node_id_width}}│{'Last Connect':<{last_connect_width}}│{'MiB ↑/↓':<{mib_up_down_width}}│{'Height':<{height_width}}│{'Peak Hash':<{hash_width}}"
-    table_width = len(header)
+    header = (
+        f"{'Type':<{type_width}}│{'IP':<{ip_width}}│{'Ports':<{port_width}}│"
+        f"{'NodeID':<{node_id_width}}│{'Last Connect':<{last_connect_width}}│"
+        f"{'MiB ↑/↓':<{mib_up_down_width}}│{'Height':<{height_width}}│"
+        f"{'Peak Hash':<{hash_width}}"
+    )
 
     # Print the table header
     print(
@@ -139,7 +143,12 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
         if connection_peak_hash and connection_peak_hash.startswith(("0x", "0X")):
             connection_peak_hash = f"{connection_peak_hash[2:10]}…"
 
-        row_str = f"│{NodeType(con['type']).name:<{type_width}}│{con['peer_host']:<{ip_width}}│{ports_str:<{port_width}}│{con['node_id'][:8]}… │{last_connect:<{last_connect_width}}│{mib_up_down_str:<{mib_up_down_width}}│{peak_height:<{height_width}}│{connection_peak_hash:<{hash_width}}│"
+        row_str = (
+            f"│{NodeType(con['type']).name:<{type_width}}│{con['peer_host']:<{ip_width}}│{ports_str:<{port_width}}│"
+            f"{con['node_id'][:8]}… │{last_connect:<{last_connect_width}}│{mib_up_down_str:<{mib_up_down_width}}│"
+            f"{peak_height:<{height_width}}│{connection_peak_hash:<{hash_width}}│"
+        )
+
         print(row_str)
 
     print(
