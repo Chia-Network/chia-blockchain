@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import multiprocessing
 import os
+import random
 import sysconfig
 import tempfile
 from enum import Enum
@@ -32,6 +33,7 @@ from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
+from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -44,7 +46,7 @@ from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_timelord
+from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
@@ -872,9 +874,17 @@ async def timelord_service(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
-    async for service in setup_crawler(bt):
+async def crawler_service(
+    root_path_populated_with_config: Path, database_uri: str
+) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
+    async for service in setup_crawler(root_path_populated_with_config, database_uri):
         yield service
+
+
+@pytest_asyncio.fixture(scope="function")
+async def seeder_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[DNSServer]:
+    async for seeder in setup_seeder(root_path_populated_with_config, database_uri):
+        yield seeder
 
 
 @pytest.fixture(scope="function")
@@ -980,3 +990,8 @@ async def harvester_farmer_environment(
     harvester_rpc_cl.close()
     await farmer_rpc_cl.await_closed()
     await harvester_rpc_cl.await_closed()
+
+
+@pytest.fixture(name="database_uri")
+def database_uri_fixture() -> str:
+    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"

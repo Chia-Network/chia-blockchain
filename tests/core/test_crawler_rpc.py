@@ -9,7 +9,7 @@ from chia.seeder.crawler import Crawler
 class TestCrawlerRpc:
     @pytest.mark.asyncio
     async def test_get_ips_after_timestamp(self, bt):
-        crawler = Crawler(bt.config.get("seeder", {}), bt.root_path, consensus_constants=bt.constants)
+        crawler = Crawler(bt.config.get("seeder", {}), bt.root_path, constants=bt.constants)
         crawler_rpc_api = CrawlerRpcApi(crawler)
 
         # Should raise ValueError when `after` is not supplied
