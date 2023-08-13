@@ -20,6 +20,9 @@ from chia.cmds.peer_funcs import peer_async
     default=None,
 )
 @click.option(
+    "-w", "--wide", help="Display wide output with additional columns", is_flag=True, type=bool, default=False
+)
+@click.option(
     "-c", "--connections", help="List connections to the specified service", is_flag=True, type=bool, default=False
 )
 @click.option("-a", "--add-connection", help="Connect specified Chia service to ip:port", type=str, default="")
@@ -32,6 +35,7 @@ from chia.cmds.peer_funcs import peer_async
 def peer_cmd(
     ctx: click.Context,
     rpc_port: Optional[int],
+    wide: bool,
     connections: bool,
     add_connection: str,
     remove_connection: str,
@@ -49,5 +53,6 @@ def peer_cmd(
             add_connection,
             remove_connection,
             json_output,
+            wide,
         )
     )

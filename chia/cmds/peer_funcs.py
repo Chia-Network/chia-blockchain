@@ -58,16 +58,26 @@ def bytes_to_str(data: List[Dict[Any, Any]]) -> List[Dict[Any, Any]]:
     return new_data
 
 
-async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any], json_output: bool = False) -> None:
+async def print_connections(
+    rpc_client: RpcClient,
+    trusted_peers: Dict[str, Any],
+    json_output: bool = False,
+    show_wide: bool = False,
+) -> None:
     import time
 
     from chia.server.outbound_message import NodeType
 
     connections = bytes_to_str(await rpc_client.get_connections())
+
     if json_output:
-        # Print the connections in JSON format
         print(json.dumps(connections, indent=4))
         return
+
+    if not connections:
+        print("No connections available.")
+        return
+
     # Determine the width of each column
     type_width = max(len(NodeType(con["type"]).name) for con in connections) + 1
     ip_width = max(len(con["peer_host"]) for con in connections) + 1
@@ -84,92 +94,59 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
     height_width = max(len(str(con.get("peak_height", "No Info"))) for con in connections) + 1
     hash_width = 10  # Fixed width for peak hash
 
-    # Header definition
-    header = (
-        f"{'Type':<{type_width}}│{'IP':<{ip_width}}│{'Ports':<{port_width}}│"
-        f"{'NodeID':<{node_id_width}}│{'Last Connect':<{last_connect_width}}│"
-        f"{'MiB ↑/↓':<{mib_up_down_width}}│{'Height':<{height_width}}│"
-        f"{'Peak Hash':<{hash_width}}"
-    )
+    default_columns = [
+        f"{'Type':<{type_width}}",
+        f"{'IP':<{ip_width}}",
+        f"{'Ports':<{port_width}}",
+        f"{'MiB ↑/↓':<{mib_up_down_width}}",
+        f"{'Height':<{height_width}}",
+    ]
 
-    # Print the table header
-    print(
-        "╭"
-        + "─" * (type_width)
-        + "┬"
-        + "─" * (ip_width)
-        + "┬"
-        + "─" * (port_width)
-        + "┬"
-        + "─" * (node_id_width)
-        + "┬"
-        + "─" * (last_connect_width)
-        + "┬"
-        + "─" * (mib_up_down_width)
-        + "┬"
-        + "─" * (height_width)
-        + "┬"
-        + "─" * (hash_width)
-        + "╮"
-    )
-    print(f"│{header}│")
-    print(
-        "├"
-        + "─" * (type_width)
-        + "┼"
-        + "─" * (ip_width)
-        + "┼"
-        + "─" * (port_width)
-        + "┼"
-        + "─" * (node_id_width)
-        + "┼"
-        + "─" * (last_connect_width)
-        + "┼"
-        + "─" * (mib_up_down_width)
-        + "┼"
-        + "─" * (height_width)
-        + "┼"
-        + "─" * (hash_width)
-        + "┤"
-    )
+    wide_columns = []
+    if show_wide:
+        wide_columns = [
+            f"{'NodeID':<{node_id_width}}",
+            f"{'Last Connect':<{last_connect_width}}",
+            f"{'Peak Hash':<{hash_width}}",
+        ]
 
-    # Print the table rows
+    all_columns = default_columns + wide_columns
+
+    print("╭" + "┬".join("─" * len(col) for col in all_columns) + "╮")
+    print("│" + "│".join(all_columns) + "│")
+    print("├" + "┼".join("─" * len(col) for col in all_columns) + "┤")
+
     for con in connections:
-        last_connect = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(con["last_message_time"]))
-        peak_height = con.get("peak_height") or "No Info"
-        mib_up_down_str = f"{con['bytes_written'] / (1024 * 1024):.1f}/{con['bytes_read'] / (1024 * 1024):.1f}"
         ports_str = f"{con['peer_port']}/{con['peer_server_port']}"
-        connection_peak_hash = con.get("peak_hash") or "No Info"
-        if connection_peak_hash and connection_peak_hash.startswith(("0x", "0X")):
-            connection_peak_hash = f"{connection_peak_hash[2:10]}…"
+        ports_str = f"{ports_str:<{port_width}}"
+        peak_height = con.get("peak_height")
+        peak_height_str = f"{peak_height:<{height_width}}" if peak_height is not None else "No Info "
 
-        row_str = (
-            f"│{NodeType(con['type']).name:<{type_width}}│{con['peer_host']:<{ip_width}}│{ports_str:<{port_width}}│"
-            f"{con['node_id'][:8]}… │{last_connect:<{last_connect_width}}│{mib_up_down_str:<{mib_up_down_width}}│"
-            f"{peak_height:<{height_width}}│{connection_peak_hash:<{hash_width}}│"
+        connection_peak_hash = con.get("peak_hash")
+        connection_peak_hash_str = (
+            f"{connection_peak_hash[:8]}… "
+            if connection_peak_hash and connection_peak_hash.startswith(("0x", "0X"))
+            else "No Info   "
         )
 
-        print(row_str)
+        row = [
+            f"{NodeType(con['type']).name:<{type_width}}",
+            f"{con['peer_host']:<{ip_width}}",
+            ports_str,
+            f"{con['bytes_written'] / (1024 * 1024):.1f}/{con['bytes_read'] / (1024 * 1024):.1f} ",
+            peak_height_str,
+        ]
 
-    print(
-        "╰"
-        + "─" * (type_width)
-        + "┴"
-        + "─" * (ip_width)
-        + "┴"
-        + "─" * (port_width)
-        + "┴"
-        + "─" * (node_id_width)
-        + "┴"
-        + "─" * (last_connect_width)
-        + "┴"
-        + "─" * (mib_up_down_width)
-        + "┴"
-        + "─" * (height_width)
-        + "┴"
-        + "─" * (hash_width)
-        + "╯"
-    )
+        if show_wide:
+            row += [
+                f"{con['node_id'][:8]}… ",
+                f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(con['last_message_time'])):<{last_connect_width}}",
+                connection_peak_hash_str,
+            ]
+
+        print("│" + "│".join(row) + "│")
+
+    print("╰" + "┴".join("─" * len(col) for col in all_columns) + "╯")
 
 
 async def peer_async(
@@ -180,13 +157,14 @@ async def peer_async(
     add_connection: str,
     remove_connection: str,
     json_output: bool,
+    show_wide: bool,
 ) -> None:
     client_type = NODE_TYPES[node_type]
     async with get_any_service_client(client_type, rpc_port, root_path) as (rpc_client, config):
         # Check or edit node connections
         if show_connections:
             trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
-            await print_connections(rpc_client, trusted_peers, json_output)
+            await print_connections(rpc_client, trusted_peers, json_output, show_wide)
             # if called together with state, leave a blank line
         if add_connection:
             await add_node_connection(rpc_client, add_connection)
