@@ -9,15 +9,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.shared_protocol import Capability
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
+from tests.conftest import Mode
 from tests.core.node_height import node_height_between, node_height_exactly
 
 log = logging.getLogger(__name__)
@@ -365,7 +368,7 @@ class TestFullSync:
             peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
         )
         # sync using bad ses list
-        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
+        await full_node_2.full_node.sync_from_fork_point(0, peak1, summaries)
         # assert we failed somewhere between sub epoch 0 to sub epoch 1
         assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
@@ -412,3 +415,59 @@ class TestFullSync:
         assert res is None
         duration = time.time() - start
         assert duration > 5
+
+    @pytest.mark.asyncio
+    async def test_bad_peak_cache(
+        self, three_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode, bt
+    ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("Skipped test")
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        blocks = bt.get_consecutive_blocks(700, default_400_blocks)
+        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        for block in blocks:
+            await full_node_2.full_node.add_block(block)
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+        )
+        await time_out_assert(60, node_height_between, True, full_node_1, 380, 450)
+        await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, False)
+        # call peer has block to populate peer_to_peak
+        peak = full_node_2.full_node.blockchain.get_peak()
+        wp = await full_node_2.full_node.weight_proof_handler.get_proof_of_weight(peak.header_hash)
+        assert full_node_1.full_node.check_bad_peak_cache(wp) is False
+
+    @pytest.mark.asyncio
+    async def test_skip_bad_peak_validation(
+        self, three_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode, bt
+    ):
+        if consensus_mode != Mode.PLAIN:
+            pytest.skip("Skipped test")
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        blocks = bt.get_consecutive_blocks(700, default_400_blocks)
+        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        for block in blocks:
+            await full_node_2.full_node.add_block(block)
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+
+        peak = full_node_2.full_node.blockchain.get_peak()
+        full_node_1.full_node.add_to_bad_peak_cache(peak)
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+        )
+
+        await time_out_assert(60, has_peers_with_peak, True, full_node_1.full_node, peak.header_hash)
+
+        with pytest.raises(ValueError, match="Weight proof failed bad peak cache validation"):
+            await full_node_1.full_node.request_validate_wp(peak.header_hash, peak.height, peak.weight)
+
+
+def has_peers_with_peak(node: FullNode, header_hash: bytes32) -> bool:
+    return len(node.sync_store.get_peers_that_have_peak([header_hash])) > 0
