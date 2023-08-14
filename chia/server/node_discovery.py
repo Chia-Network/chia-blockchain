@@ -469,7 +469,7 @@ class FullNodeDiscovery:
                 async with self.address_manager.lock:
                     self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
 
-    def _peer_has_wrong_network_port(self, port: uint16):
+    def _peer_has_wrong_network_port(self, port: uint16) -> bool:
         # Check if the peer is having the default port of a network different than ours.
         return port in NETWORK_ID_DEFAULT_PORTS.values() and port != self.default_port
 
