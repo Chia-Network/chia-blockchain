@@ -196,7 +196,7 @@
                   (+ (f vote_amount_list) sum)
                   output
                   my_amount
-                  (if (is_member (f coin_id_list) distinct_ids) (x "biff") (c (f coin_id_list) distinct_ids))
+                  (if (is_member (f coin_id_list) distinct_ids) (x) (c (f coin_id_list) distinct_ids))
                 )
               )
             )
