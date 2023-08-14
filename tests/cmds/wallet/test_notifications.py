@@ -87,7 +87,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         "amount: 1000000000",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_notifications": [([get_bytes32(1)], (10, 10))]}
+    expected_calls: logType = {"get_notifications": [((get_bytes32(1),), (10, 10))]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
