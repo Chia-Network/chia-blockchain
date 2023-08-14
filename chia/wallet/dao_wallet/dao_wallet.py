@@ -856,13 +856,6 @@ class DAOWallet(WalletProtocol):
     ) -> Program:
         if len(recipient_puzhashes) != len(amounts) != len(asset_types):
             raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
-        conditions: Dict[Optional[bytes32], Any] = {None: []}
-        for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
-            conditions.setdefault(asset_type, []).append([51, recipient_puzhash, amount])
-        # puzzle = get_spend_p2_singleton_puzzle(
-        #     self.dao_info.treasury_id, Program.to(conditions.pop(None, [])), list(conditions.values())
-        # )
-        good_cond = Program.to(conditions.pop(None, []))
         xch_conds = []
         cat_conds = []
         for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
@@ -871,7 +864,6 @@ class DAOWallet(WalletProtocol):
             else:
                 xch_conds.append([51, recipient_puzhash, amount])
         puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conds), Program.to(cat_conds))
-        assert good_cond == Program.to(xch_conds)
         return puzzle
 
     async def generate_update_proposal_innerpuz(
