@@ -893,7 +893,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_2, 1)
 
     # Test a deprecated path
-    with pytest.raises(ValueError, match="deprecated"):
+    with pytest.raises(ValueError, match="dropped"):
         await client.fetch(
             "create_new_wallet",
             {
