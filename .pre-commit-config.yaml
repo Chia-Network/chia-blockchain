@@ -13,10 +13,13 @@ repos:
         entry: ./activated.py python3 tests/build-init-files.py -v --root .
         language: system
         pass_filenames: false
--   repo: https://github.com/psf/black
-    rev: 23.3.0
+-   repo: local
     hooks:
     -   id: black
+        name: black
+        entry: ./activated.py black
+        language: system
+        types: [python]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
     hooks:
@@ -61,9 +64,9 @@ repos:
     hooks:
     -   id: isort
         name: isort
-        entry: ./activated.py isort .
+        entry: ./activated.py isort
         language: system
-        pass_filenames: false
+        types: [python]
 -   repo: local
     hooks:
     -   id: flake8

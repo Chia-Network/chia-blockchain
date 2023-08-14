@@ -24,6 +24,7 @@ from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
+from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
@@ -32,15 +33,17 @@ from chia.server.start_introducer import create_introducer_service
 from chia.server.start_service import Service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
-from chia.simulator.block_tools import BlockTools
+from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.keyring import TempKeyring
+from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.simulator.start_simulator import create_full_node_simulator_service
+from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, lock_and_load_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
@@ -175,29 +178,59 @@ async def setup_full_node(
 
 
 async def setup_crawler(
-    bt: BlockTools,
+    root_path_populated_with_config: Path, database_uri: str
 ) -> AsyncGenerator[Service[Crawler, CrawlerAPI], None]:
-    config = bt.config
+    create_all_ssl(
+        root_path=root_path_populated_with_config,
+        private_ca_crt_and_key=get_next_private_ca_cert_and_key().collateral.cert_and_key,
+        node_certs_and_keys=get_next_nodes_certs_and_keys().collateral.certs_and_keys,
+    )
+    config = load_config(root_path_populated_with_config, "config.yaml")
     service_config = config["seeder"]
+
     service_config["selected_network"] = "testnet0"
     service_config["port"] = 0
-    service_config["start_rpc_server"] = False
+    service_config["crawler"]["start_rpc_server"] = False
+    service_config["other_peers_port"] = 58444
+    service_config["crawler_db_path"] = database_uri
+
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = bt.constants.replace_str_to_bytes(**overrides)
-    bt.change_config(config)
+    updated_constants = test_constants.replace_str_to_bytes(**overrides)
+
     service = create_full_node_crawler_service(
-        bt.root_path,
+        root_path_populated_with_config,
         config,
         updated_constants,
         connect_to_daemon=False,
     )
     await service.start()
 
+    if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
+        service._node.state_changed_callback = lambda x, y: None
+
     try:
         yield service
     finally:
         service.stop()
         await service.wait_closed()
+
+
+async def setup_seeder(root_path_populated_with_config: Path, database_uri: str) -> AsyncGenerator[DNSServer, None]:
+    config = load_config(root_path_populated_with_config, "config.yaml")
+    service_config = config["seeder"]
+
+    service_config["selected_network"] = "testnet0"
+    if service_config["domain_name"].endswith("."):  # remove the trailing . so that we can test that logic.
+        service_config["domain_name"] = service_config["domain_name"][:-1]
+    service_config["dns_port"] = 0
+    service_config["crawler_db_path"] = database_uri
+
+    service = create_dns_server_service(
+        config,
+        root_path_populated_with_config,
+    )
+    async with service.run():
+        yield service
 
 
 # Note: convert these setup functions to fixtures, or push it one layer up,

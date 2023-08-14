@@ -62,11 +62,14 @@ class CRCATWallet(CATWallet):
     wallet_info: WalletInfo
     info: CRCATInfo
     standard_wallet: Wallet
-    cost_of_single_tx: int
 
     @staticmethod
     def default_wallet_name_for_unknown_cat(limitations_program_hash_hex: str) -> str:
         return f"CAT {limitations_program_hash_hex[:16]}..."
+
+    @property
+    def cost_of_single_tx(self) -> int:
+        return 78000000  # Estimate measured in testing
 
     @staticmethod
     async def create_new_cat_wallet(
@@ -90,7 +93,6 @@ class CRCATWallet(CATWallet):
         if authorized_providers is None or proofs_checker is None:  # pragma: no cover
             raise ValueError("get_or_create_wallet_for_cat was call on CRCATWallet without proper arguments")
         self = CRCATWallet()
-        self.cost_of_single_tx = 78000000  # Measured in testing
         self.standard_wallet = wallet
         if name is None:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
@@ -145,7 +147,6 @@ class CRCATWallet(CATWallet):
         self = CRCATWallet()
 
         self.log = logging.getLogger(__name__)
-        self.cost_of_single_tx = 78000000
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.standard_wallet = wallet
@@ -160,7 +161,6 @@ class CRCATWallet(CATWallet):
         proofs_checker: ProofsChecker,
     ) -> None:
         replace_self = cls()
-        replace_self.cost_of_single_tx = 78000000  # Measured in testing
         replace_self.standard_wallet = cat_wallet.standard_wallet
         replace_self.log = logging.getLogger(cat_wallet.get_name())
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
