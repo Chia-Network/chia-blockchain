@@ -161,12 +161,6 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args.as_iter()
-    # proposal_timelock: uint64
-    # soft_close_length: uint64
-    # attendance_required: uint64
-    # pass_percentage: uint64
-    # self_destruct_length: uint64
-    # oracle_spend_delay: uint64
     curried_args = uncurry_proposal_validator(proposal_validator)
     (
         SINGLETON_STRUCT,

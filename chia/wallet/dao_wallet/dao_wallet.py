@@ -1772,16 +1772,6 @@ class DAOWallet(WalletProtocol):
                 return dictionary
         raise ValueError(f"Unable to find proposal with id: {proposal_id.hex()}")
 
-    async def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
-        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
-        if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_height:
-            return False
-        tip_height = await self.get_tip_created_height(proposal_info.proposal_id)
-        assert isinstance(tip_height, int)
-        if tip_height + dao_rules.soft_close_length < self.dao_info.current_height:
-            return False
-        return True
-
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.dao_info.parent_info.copy()

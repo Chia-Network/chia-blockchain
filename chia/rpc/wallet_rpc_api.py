@@ -753,31 +753,31 @@ class WalletRpcApi:
             else:  # undefined did_type
                 pass
         elif request["wallet_type"] == "dao_wallet":
-            name = None
-            if request["name"]:
-                name = request["name"]
-            if request["mode"] == "new":
-                if request["dao_rules"]:
-                    dao_rules = DAORules.from_json_dict(request["dao_rules"])
+            name = request.get("name", None)
+            mode = request.get("mode", None)
+            if mode == "new":
+                dao_rules_json = request.get("dao_rules", None)
+                if dao_rules_json:
+                    dao_rules = DAORules.from_json_dict(dao_rules_json)
                 else:
                     raise ValueError("DAO rules must be specified for wallet creation")
                 async with self.service.wallet_state_manager.lock:
                     dao_wallet = await DAOWallet.create_new_dao_and_wallet(
                         wallet_state_manager,
                         main_wallet,
-                        uint64(request["amount_of_cats"]),
+                        uint64(request.get("amount_of_cats", None)),
                         dao_rules,
-                        uint64(request["filter_amount"]),
+                        uint64(request.get("filter_amount", 1)),
                         name,
                         uint64(request.get("fee", 0)),
                     )
-            elif request["mode"] == "existing":
+            elif mode == "existing":
                 # async with self.service.wallet_state_manager.lock:
                 dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
                     wallet_state_manager,
                     main_wallet,
-                    bytes32.from_hexstr(request["treasury_id"]),
-                    uint64(request["filter_amount"]),
+                    bytes32.from_hexstr(request.get("treasury_id", None)),
+                    uint64(request.get("filter_amount", 1)),
                     name,
                 )
             return {
@@ -2612,10 +2612,7 @@ class WalletRpcApi:
         else:
             return {"success": False, "error": "Unknown proposal type."}
 
-        if "vote_amount" in request:
-            vote_amount = uint64(request["vote_amount"])
-        else:
-            vote_amount = None
+        vote_amount = request.get("vote_amount")
         fee = uint64(request.get("fee", 0))
         tx = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
