@@ -20,10 +20,12 @@ from chia.consensus.full_block_to_block_record import header_block_to_sub_block_
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
+from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
@@ -39,15 +41,37 @@ def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
+@pytest.fixture(scope="function", params=[True, False])
+def use_plot_filter_info(request: SubRequest) -> bool:
+    return cast(bool, request.param)
+
+
 @pytest.mark.asyncio
 async def test_block_store(
-    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool
+    tmp_dir: Path, db_version: int, bt: BlockTools, consensus_mode: Mode, use_cache: bool, use_plot_filter_info: bool
 ) -> None:
     if consensus_mode != Mode.PLAIN:
         pytest.skip("only run in PLAIN mode to save time")
 
     assert sqlite3.threadsafety >= 1
-    blocks = bt.get_consecutive_blocks(10)
+
+    blocks = bt.get_consecutive_blocks(
+        3,
+        guarantee_transaction_block=True,
+        farmer_reward_puzzle_hash=bt.pool_ph,
+        pool_reward_puzzle_hash=bt.pool_ph,
+        time_per_block=10,
+    )
+    wt: WalletTool = bt.get_pool_wallet_tool()
+    tx: SpendBundle = wt.generate_signed_transaction(
+        uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+    )
+    blocks = bt.get_consecutive_blocks(
+        10,
+        block_list_input=blocks,
+        guarantee_transaction_block=True,
+        transaction_data=tx,
+    )
 
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
@@ -65,6 +89,14 @@ async def test_block_store(
             block_record_hh = block_record.header_hash
             await store.add_full_block(block.header_hash, block, block_record)
             await store.add_full_block(block.header_hash, block, block_record)
+
+            if not use_plot_filter_info:
+                # in this test mode, erase the plot_filter_info column, to
+                # simulate an existing database, created before this column was
+                # added
+                async with db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record.header_hash,))
+
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)
             assert bytes(block) == await store.get_full_block_bytes(block.header_hash)
@@ -76,6 +108,18 @@ async def test_block_store(
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
             await store.set_peak(block_record.header_hash)
+
+            assert await store.get_full_block_bytes(block.header_hash) == bytes(block)
+            buf = await store.get_full_block_bytes(block.header_hash)
+            assert buf is not None
+            assert FullBlock.from_bytes(buf) == block
+
+            assert await store.get_full_blocks_at([block.height]) == [block]
+            if block.transactions_generator is not None:
+                assert await store.get_generators_at([block.height]) == [block.transactions_generator]
+            else:
+                with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
+                    await store.get_generators_at([block.height])
 
         assert len(await store.get_full_blocks_at([uint32(1)])) == 1
         assert len(await store.get_full_blocks_at([uint32(0)])) == 1
@@ -301,18 +345,17 @@ async def test_get_generator(bt: BlockTools, db_version: int, consensus_mode: Mo
             await store.set_peak(block_record.header_hash)
             new_blocks.append(block)
 
-        if db_version == 2:
-            expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
-            generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
-            assert generators == expected_generators
+        expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
+        generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
+        assert generators == expected_generators
 
-            # test out-of-order heights
-            expected_generators = list(map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]]))
-            generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
-            assert generators == expected_generators
+        # test out-of-order heights
+        expected_generators = list(map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]]))
+        generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
+        assert generators == expected_generators
 
-            with pytest.raises(KeyError):
-                await store.get_generators_at([uint32(100)])
+        with pytest.raises(KeyError):
+            await store.get_generators_at([uint32(100)])
 
         assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator
         assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
@@ -396,7 +439,12 @@ async def test_get_block_bytes_in_range(
 
 @pytest.mark.asyncio
 async def test_get_plot_filer_info(
-    default_400_blocks: List[FullBlock], tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool
+    default_400_blocks: List[FullBlock],
+    tmp_dir: Path,
+    db_version: int,
+    bt: BlockTools,
+    use_cache: bool,
+    use_plot_filter_info: bool,
 ) -> None:
     async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
         # Use a different file for the blockchain
@@ -411,6 +459,15 @@ async def test_get_plot_filer_info(
             await _validate_and_add_block(bc, block)
             block_record_to_add = bc.block_record(block.header_hash)
             await store.add_full_block(block.header_hash, block, block_record_to_add)
+
+            if not use_plot_filter_info:
+                # in this test mode, erase the plot_filter_info column, to
+                # simulate an existing database, created before this column was
+                # added
+                async with db_wrapper.writer_maybe_transaction() as conn:
+                    await conn.execute(
+                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
+                    )
 
             blocks.append(block)
             if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -454,3 +511,39 @@ async def test_unsupported_version(tmp_dir: Path, use_cache: bool) -> None:
     with pytest.raises(RuntimeError, match="BlockStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await BlockStore.create(db_wrapper, use_cache=use_cache)
+
+
+@pytest.mark.asyncio
+async def test_get_peak(tmp_dir: Path, db_version: int, use_cache: bool) -> None:
+    async with DBConnection(db_version) as db_wrapper:
+        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
+
+        assert await store.get_peak() is None
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            )
+
+        assert await store.get_peak() is None
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    b"00000000000000000000000000000000",
+                    1337,
+                    None,
+                    0,
+                    True,  # in_main_chain
+                    None,
+                    None,
+                ),
+            )
+
+        res = await store.get_peak()
+        assert res is not None
+        block_hash, height = res
+        assert block_hash == b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        assert height == 1337

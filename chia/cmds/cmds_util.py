@@ -115,7 +115,7 @@ async def get_any_service_client(
         await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, CliRpcConnectionError):
+        if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
             # CliRpcConnectionError will be handled by click.
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
@@ -230,6 +230,16 @@ async def get_wallet_client(
     ):
         new_fp = await get_wallet(root_path, wallet_client, fingerprint)
         yield wallet_client, new_fp, config
+
+
+def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
+    """
+    Raise a click.Abort if the user does not respond with 'y' or 'yes'
+    """
+    response = input(input_message).lower()
+    if response not in ["y", "yes"]:
+        print(abort_message)
+        raise click.Abort()
 
 
 def coin_selection_args(func: Callable[..., None]) -> Callable[..., None]:

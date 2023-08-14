@@ -9,6 +9,7 @@ def test_testnet10() -> None:
     overrides: Dict[str, Any] = {}
     update_testnet_overrides("testnet10", overrides)
     assert overrides == {
+        "SOFT_FORK2_HEIGHT": 3000000,
         "SOFT_FORK3_HEIGHT": 2997292,
         "SOFT_FORK4_HEIGHT": 2997292,
         "HARD_FORK_HEIGHT": 2997292,
@@ -29,6 +30,7 @@ def test_testnet10_existing() -> None:
     }
     update_testnet_overrides("testnet10", overrides)
     assert overrides == {
+        "SOFT_FORK2_HEIGHT": 3000000,
         "SOFT_FORK3_HEIGHT": 42,
         "SOFT_FORK4_HEIGHT": 45,
         "HARD_FORK_HEIGHT": 42,

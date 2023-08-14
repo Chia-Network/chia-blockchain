@@ -9,10 +9,10 @@ dependencies = [
     "aiofiles==23.1.0",  # Async IO for files
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
-    "boto3==1.26.161",  # AWS S3 for DL s3 plugin
+    "boto3==1.28.25",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.10",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
-    "chiapos==2.0.0rc1",  # proof of space
+    "chiapos==2.0.0",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.9",
@@ -23,10 +23,10 @@ dependencies = [
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.2",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==41.0.3",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "PyYAML==6.0",  # Used for config file format
+    "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
@@ -44,31 +44,30 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build",
-    # >=7.2.4 for https://github.com/nedbat/coveragepy/issues/1604
-    "coverage>=7.2.4",
-    "diff-cover",
-    "pre-commit",
-    "py3createtorrent",
-    "pylint",
-    "pytest",
-    "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
-    "pytest-cov",
-    "pytest-monitor; sys_platform == 'linux'",
-    "pytest-xdist",
-    "twine",
-    "isort",
-    "flake8",
-    "mypy",
+    "build==0.10.0",
+    "coverage==7.2.7",
+    "diff-cover==7.7.0",
+    "pre-commit==3.3.3",
+    "py3createtorrent==1.1.0",
+    "pylint==2.17.5",
+    "pytest==7.4.0",
+    "pytest-asyncio==0.21.1",
+    "pytest-cov==4.1.0",
+    "pytest-monitor==1.6.6; sys_platform == 'linux'",
+    "pytest-xdist==3.3.1",
+    "twine==4.0.2",
+    "isort==5.12.0",
+    "flake8==6.1.0",
+    "mypy==1.4.1",
     "black==23.7.0",
-    "aiohttp_cors",  # For blackd
-    "ipython",  # For asyncio debugging
+    "aiohttp_cors==0.7.0",  # For blackd
+    "ipython==8.12.2",  # For asyncio debugging
     "pyinstaller==5.13.0",
-    "types-aiofiles",
-    "types-cryptography",
-    "types-pkg_resources",
-    "types-pyyaml",
-    "types-setuptools",
+    "types-aiofiles==23.1.0.5",
+    "types-cryptography==3.3.23.2",
+    "types-pkg_resources==0.1.3",
+    "types-pyyaml==6.0.12.11",
+    "types-setuptools==68.0.0.3",
 ]
 
 legacy_keyring_dependencies = [

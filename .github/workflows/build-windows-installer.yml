@@ -164,55 +164,38 @@ jobs:
         gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot.exe
         gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot_k34.exe
 
-    - name: Get latest bladebit plotter for Full Release
-      if: "github.event.release && !github.event.release.prerelease"
+    - name: Fetch bladebit versions
+      shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
       run: |
+        # Fetch the latest version of each type
         LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        mkdir "$GITHUB_WORKSPACE\\bladebit"
-        cd "$GITHUB_WORKSPACE\\bladebit"
-        gh release download -R Chia-Network/bladebit "$LATEST_RELEASE" -p 'bladebit*windows-x86-64.zip'
-        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd "$OLDPWD"
-
-    - name: Get latest beta bladebit plotter
-      if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'beta'"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
-      run: |
         LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
-        mkdir "$GITHUB_WORKSPACE\\bladebit"
-        cd "$GITHUB_WORKSPACE\\bladebit"
-        gh release download -R Chia-Network/bladebit "$LATEST_BETA" -p 'bladebit*windows-x86-64.zip'
-        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd "$OLDPWD"
-
-    - name: Get latest RC bladebit plotter
-      if: "github.event.release && github.event.release.prerelease || env.TAG_TYPE == 'rc'"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
-      run: |
         LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
-        mkdir "$GITHUB_WORKSPACE\\bladebit"
-        cd "$GITHUB_WORKSPACE\\bladebit"
-        gh release download -R Chia-Network/bladebit "$LATEST_RC" -p 'bladebit*windows-x86-64.zip'
-        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd "$OLDPWD"
 
-    - name: Get latest bladebit plotter for Dev
-      if: "!github.event.release"
+        # Compare the versions and choose the newest that matches the requirements
+        if [[ "$TAG_TYPE" == "beta" || -z "${{ github.event.release.tag_name }}" ]]; then
+          # For beta or dev builds (indicated by the absence of a tag), use the latest version available
+          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+        elif [[ "$TAG_TYPE" == "rc" ]]; then
+          # For RC builds, use the latest RC or full release if it's newer
+          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+        else
+          # For full releases, use the latest full release
+          LATEST_VERSION="$LATEST_RELEASE"
+        fi
+        echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
+
+    - name: Get latest bladebit plotter
+      shell: bash
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
       run: |
-        LATEST_BLADEBIT=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-(beta|rc)[0-9]+$")))) | first | .tag_name')
+        # Download and extract the chosen version
         mkdir "$GITHUB_WORKSPACE\\bladebit"
         cd "$GITHUB_WORKSPACE\\bladebit"
-        gh release download -R Chia-Network/bladebit "$LATEST_BLADEBIT" -p 'bladebit*windows-x86-64.zip'
+        gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*windows-x86-64.zip'
         ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
         cd "$OLDPWD"
 
