@@ -64,7 +64,7 @@ class NotarizedPayment(Payment):
         return cls(puzzle_hash, amount, memos, nonce)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Offer:
     requested_payments: Dict[
         Optional[bytes32], List[NotarizedPayment]
@@ -74,9 +74,9 @@ class Offer:
 
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
-    _additions: Dict[Coin, List[Coin]] = field(init=False)
-    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
-    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
+    _additions: Dict[Coin, List[Coin]] = field(init=False, repr=False)
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False, repr=False)
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False, repr=False)
 
     @staticmethod
     def ph() -> bytes32:
