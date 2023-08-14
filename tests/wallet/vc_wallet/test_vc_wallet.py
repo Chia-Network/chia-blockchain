@@ -34,9 +34,9 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 async def is_transaction_confirmed(wallet_state_manager: WalletStateManager, tx_id: bytes32) -> bool:
     tr = await wallet_state_manager.get_transaction(tx_id)
     if tr is None:
-        return False
+        return False  # pragma: no cover
     elif not tr.confirmed:
-        return False
+        return False  # pragma: no cover
     else:
         return True
 
