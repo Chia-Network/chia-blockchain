@@ -189,12 +189,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COV_STATUS: ${{ env.COV_STATUS }}
+          BRANCH_REF: ${{ env.GITHUB_REF }}
         run: |
           if [[ $COV_STATUS != '0' ]]; then
-            # Add unique identifier to the comment file
+            branch_name=${BRANCH_REF##*/}
+            base_url="https://github.com/${{ github.repository }}/blob/$branch_name"
             PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
             coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
-            echo "<!-- COVERAGE_COMMENT_${PR_NUM} -->" > coverage-reports/diff-cover-md-table
+            # Add unique identifier to the comment file
+            echo "<!-- COVERAGE_COMMENT_${PR_NUM} -->" > coverage-reports/diff-cover-md-table-tmp
             # Transform diff-cover output into a markdown table
             awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
                 /.*\.py/ {
@@ -206,7 +209,35 @@ jobs:
                     split(a[2],b,":");
                     print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
                   }
-                }' coverage-reports/diff-cover-stdout >> coverage-reports/diff-cover-md-table
+                }' coverage-reports/diff-cover-stdout >> coverage-reports/diff-cover-md-table-tmp
+
+            while IFS= read -r line; do
+              # Skip header and lines with 100% coverage
+              if [[ "$line" != *"100%"* ]]; then
+                  # Extract the file name, coverage, and missing lines
+                  file=$(echo "$line" | awk '{print $1}')
+                  coverage=$(echo "$line" | awk '{print $3}')
+                  missing_lines=$(echo "$line" | awk '{$1=$2=$3=""; print substr($0, 4)}')
+
+                  # Convert missing lines into URLs
+                  IFS=',' read -ra missing_line_parts <<< "$missing_lines"
+                  missing_line_urls=""
+                  for part in "${missing_line_parts[@]}"; do
+                      if [[ "$part" == *"-"* ]]; then
+                          start_line="${part%-*}"
+                          end_line="${part#*-}"
+                          missing_line_urls+=",[$part]($base_url/$file#L$start_line-L$end_line)"
+                      else
+                          missing_line_urls+=",[$part]($base_url/$file#L$part)"
+                      fi
+                  done
+                  missing_line_urls="${missing_line_urls:1}"
+
+                  # Print the processed line
+                  echo "| $file | $coverage | $missing_line_urls |"
+              fi
+            done < coverage-reports/diff-cover-md-table-tmp >> coverage-reports/diff-cover-md-table
+
             cat coverage-reports/diff-cover-md-table >> "$GITHUB_STEP_SUMMARY"
             # Add comment to PR
             gh pr comment "$PR_NUM" -F coverage-reports/diff-cover-md-table
