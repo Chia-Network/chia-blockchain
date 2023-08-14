@@ -82,7 +82,7 @@ elif [ "$(uname)" = "Linux" ] && type dnf || yum; then
 	echo "Found RedHat."
 
 	if [ "$INSTALL_PYTHON_DEV" ]; then
-		yumcmd="sudo yum install "$PYTHON_VERSION"-devel gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
+		yumcmd="sudo yum install $PYTHON_VERSION-devel gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
   	else
 		yumcmd="sudo yum install gcc gcc-c++ gmp-devel libtool make autoconf automake openssl-devel libevent-devel boost-devel python3 cmake -y"
 	fi
