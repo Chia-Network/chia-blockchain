@@ -43,7 +43,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     generate_cat_tail,
     get_active_votes_from_lockup_puzzle,
     get_asset_id_from_puzzle,
-    get_curry_vals_from_proposal_puzzle,
     get_dao_rules_from_update_proposal,
     get_finished_state_inner_puzzle,
     get_finished_state_puzzle,
@@ -449,6 +448,7 @@ class DAOWallet(WalletProtocol):
                     new_asset_list.append(asset_id)
                     dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
                     await self.save_info(dao_info)
+                    await self.wallet_state_manager.add_interested_puzzle_hashes([coin.puzzle_hash], [self.id()])
         except Exception as e:
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
         return
@@ -848,18 +848,6 @@ class DAOWallet(WalletProtocol):
         await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
         return eve_spend_bundle
 
-    def get_proposal_curry_values(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
-        for prop in self.dao_info.proposals_list:
-            if prop.proposal_id == proposal_id:
-                return get_curry_vals_from_proposal_puzzle(prop.inner_puzzle)
-        raise ValueError("proposal not found")
-
-    def get_proposal_puzzle(self, proposal_id: bytes32) -> Tuple[Program, Program, Program]:
-        for prop in self.dao_info.proposals_list:
-            if prop.proposal_id == proposal_id:
-                return prop.inner_puzzle
-        raise ValueError("proposal not found")
-
     def generate_simple_proposal_innerpuz(
         self,
         recipient_puzhashes: List[bytes32],
@@ -871,9 +859,19 @@ class DAOWallet(WalletProtocol):
         conditions: Dict[Optional[bytes32], Any] = {None: []}
         for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
             conditions.setdefault(asset_type, []).append([51, recipient_puzhash, amount])
-        puzzle = get_spend_p2_singleton_puzzle(
-            self.dao_info.treasury_id, Program.to(conditions.pop(None, [])), list(conditions.values())
-        )
+        # puzzle = get_spend_p2_singleton_puzzle(
+        #     self.dao_info.treasury_id, Program.to(conditions.pop(None, [])), list(conditions.values())
+        # )
+        good_cond = Program.to(conditions.pop(None, []))
+        xch_conds = []
+        cat_conds = []
+        for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
+            if asset_type:
+                cat_conds.append([asset_type, [[51, recipient_puzhash, amount]]])
+            else:
+                xch_conds.append([51, recipient_puzhash, amount])
+        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conds), Program.to(cat_conds))
+        assert good_cond == Program.to(xch_conds)
         return puzzle
 
     async def generate_update_proposal_innerpuz(
@@ -1434,26 +1432,31 @@ class DAOWallet(WalletProtocol):
                         lineage_proof = await self.fetch_cat_lineage_proof(cat_coin)
                         if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
                             change_condition = Program.to(
-                                [51, p2_singleton_puzzle.get_tree_hash(), sum_of_coins - sum_of_conditions]
+                                [
+                                    51,
+                                    p2_singleton_puzzle.get_tree_hash(),
+                                    sum_of_coins - sum_of_conditions,
+                                    [self.dao_info.treasury_id],
+                                ]
                             )
                             delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
                             solution = Program.to(
                                 [
+                                    0,
                                     treasury_inner_puzhash,
                                     delegated_puzzle,
                                     0,
                                     cat_coin.name(),
-                                    0,
                                 ]
                             )
                         else:
                             solution = Program.to(
                                 [
+                                    0,
                                     treasury_inner_puzhash,
                                     0,
                                     0,
                                     cat_coin.name(),
-                                    0,
                                 ]
                             )
                         new_spendable_cat = SpendableCAT(
@@ -1769,16 +1772,6 @@ class DAOWallet(WalletProtocol):
                     }
                 return dictionary
         raise ValueError(f"Unable to find proposal with id: {proposal_id.hex()}")
-
-    async def is_proposal_closeable(self, proposal_info: ProposalInfo) -> bool:
-        dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
-        if proposal_info.singleton_block_height + dao_rules.proposal_timelock < self.dao_info.current_height:
-            return False
-        tip_height = await self.get_tip_created_height(proposal_info.proposal_id)
-        assert isinstance(tip_height, int)
-        if tip_height + dao_rules.soft_close_length < self.dao_info.current_height:
-            return False
-        return True
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
@@ -2217,7 +2210,7 @@ class DAOWallet(WalletProtocol):
             raise e
         if mod == DAO_TREASURY_MOD:
             await self.update_treasury_info(new_state, block_height)
-        elif mod == DAO_PROPOSAL_MOD:
+        elif (mod == DAO_PROPOSAL_MOD) or (mod.uncurry()[0] == DAO_PROPOSAL_MOD):
             await self.add_or_update_proposal_info(new_state, block_height)
         elif mod == DAO_FINISHED_STATE:
             await self.update_closed_proposal_coin(new_state, block_height)

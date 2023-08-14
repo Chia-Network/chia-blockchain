@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 from aiosqlite import Cursor
@@ -77,13 +77,6 @@ class CoinStore:
             return count
         return 0
 
-    def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:
-        assert isinstance(field, bytes)
-        return bytes32(field)
-
-    def maybe_to_hex(self, field: bytes) -> Any:
-        return field
-
     async def new_block(
         self,
         height: uint32,
@@ -145,7 +138,7 @@ class CoinStore:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE coin_name=?",
-                (self.maybe_to_hex(coin_name),),
+                (coin_name,),
             ) as cursor:
                 row = await cursor.fetchone()
                 if row is not None:
@@ -250,7 +243,7 @@ class CoinStore:
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash WHERE puzzle_hash=? "
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                (self.maybe_to_hex(puzzle_hash), start_height, end_height),
+                (puzzle_hash, start_height, end_height),
             ) as cursor:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
@@ -313,7 +306,7 @@ class CoinStore:
         return list(coins)
 
     def row_to_coin(self, row: sqlite3.Row) -> Coin:
-        return Coin(self.maybe_from_hex(row[4]), self.maybe_from_hex(row[3]), uint64.from_bytes(row[5]))
+        return Coin(bytes32(row[4]), bytes32(row[3]), uint64.from_bytes(row[5]))
 
     def row_to_coin_state(self, row: sqlite3.Row) -> CoinState:
         coin = self.row_to_coin(row)

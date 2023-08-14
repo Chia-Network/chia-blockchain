@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import sqlite3
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import typing_extensions
 import zstd
@@ -140,6 +140,20 @@ def plot_filter_from_block(block: FullBlock) -> PlotFilterInfo:
     return PlotFilterInfo(pos_cc_ss, cc_sp_hash)
 
 
+def decompress(block_bytes: bytes) -> FullBlock:
+    return FullBlock.from_bytes(zstd.decompress(block_bytes))
+
+
+def compress(block: FullBlock) -> bytes:
+    ret: bytes = zstd.compress(bytes(block))
+    return ret
+
+
+def decompress_blob(block_bytes: bytes) -> bytes:
+    ret: bytes = zstd.decompress(block_bytes)
+    return ret
+
+
 @typing_extensions.final
 @dataclasses.dataclass
 class BlockStore:
@@ -211,25 +225,6 @@ class BlockStore:
 
         return self
 
-    def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:
-        assert isinstance(field, bytes)
-        return bytes32(field)
-
-    def maybe_to_hex(self, field: bytes) -> Any:
-        return field
-
-    def compress(self, block: FullBlock) -> bytes:
-        ret: bytes = zstd.compress(bytes(block))
-        return ret
-
-    def maybe_decompress(self, block_bytes: bytes) -> FullBlock:
-        ret: FullBlock = FullBlock.from_bytes(zstd.decompress(block_bytes))
-        return ret
-
-    def maybe_decompress_blob(self, block_bytes: bytes) -> bytes:
-        ret: bytes = zstd.decompress(block_bytes)
-        return ret
-
     async def rollback(self, height: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,))
@@ -245,7 +240,7 @@ class BlockStore:
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
         assert header_hash == block.header_hash
 
-        block_bytes: bytes = self.compress(block)
+        block_bytes: bytes = compress(block)
 
         self.block_cache.put(header_hash, block)
 
@@ -255,7 +250,7 @@ class BlockStore:
                 (
                     block_bytes,
                     int(block.is_fully_compactified()),
-                    self.maybe_to_hex(header_hash),
+                    header_hash,
                 ),
             )
 
@@ -287,7 +282,7 @@ class BlockStore:
                     ses,
                     int(block.is_fully_compactified()),
                     False,  # in_main_chain
-                    self.compress(block),
+                    compress(block),
                     bytes(block_record_db),
                 ),
             )
@@ -306,7 +301,7 @@ class BlockStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "INSERT OR REPLACE INTO sub_epoch_segments_v3 VALUES(?, ?)",
-                (self.maybe_to_hex(ses_block_hash), bytes(SubEpochSegments(segments))),
+                (ses_block_hash, bytes(SubEpochSegments(segments))),
             )
 
     async def get_sub_epoch_challenge_segments(
@@ -320,7 +315,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?",
-                (self.maybe_to_hex(ses_block_hash),),
+                (ses_block_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
 
@@ -343,12 +338,10 @@ class BlockStore:
         if cached is not None:
             return cached
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
-            ) as cursor:
+            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
-            block = self.maybe_decompress(row[0])
+            block = decompress(row[0])
             self.block_cache.put(header_hash, block)
             return block
         return None
@@ -358,9 +351,7 @@ class BlockStore:
         if cached is not None:
             return bytes(cached)
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
-            ) as cursor:
+            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
             ret: bytes = zstd.decompress(row[0])
@@ -377,7 +368,7 @@ class BlockStore:
             async with conn.execute(formatted_str, heights) as cursor:
                 ret: List[FullBlock] = []
                 for row in await cursor.fetchall():
-                    ret.append(self.maybe_decompress(row[0]))
+                    ret.append(decompress(row[0]))
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
@@ -389,7 +380,7 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
             block_bytes = zstd.decompress(row[0])
@@ -413,7 +404,7 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
             block_bytes = zstd.decompress(row[0])
@@ -511,8 +502,8 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = self.maybe_from_hex(row[0])
-                    all_blocks[header_hash] = self.maybe_decompress_blob(row[1])
+                    header_hash = bytes32(row[0])
+                    all_blocks[header_hash] = decompress_blob(row[1])
 
         ret: List[bytes] = []
         for hh in header_hashes:
@@ -539,8 +530,8 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = self.maybe_from_hex(row[0])
-                    full_block: FullBlock = self.maybe_decompress(row[1])
+                    header_hash = bytes32(row[0])
+                    full_block: FullBlock = decompress(row[1])
                     all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
@@ -634,7 +625,6 @@ class BlockStore:
         if present.
         """
 
-        maybe_decompress_blob = self.maybe_decompress_blob
         assert self.db_wrapper.db_version == 2
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
@@ -644,28 +634,20 @@ class BlockStore:
                 rows: List[sqlite3.Row] = list(await cursor.fetchall())
                 if len(rows) != (stop - start) + 1:
                     raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
-                return [maybe_decompress_blob(row[0]) for row in rows]
+                return [decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
-        if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
-                    peak_row = await cursor.fetchone()
-            if peak_row is None:
-                return None
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],)) as cursor:
-                    peak_height = await cursor.fetchone()
-            if peak_height is None:
-                return None
-            return bytes32(peak_row[0]), uint32(peak_height[0])
-        else:
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT header_hash, height from block_records WHERE is_peak = 1") as cursor:
-                    peak_row = await cursor.fetchone()
-            if peak_row is None:
-                return None
-            return bytes32(bytes.fromhex(peak_row[0])), uint32(peak_row[1])
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
+                peak_row = await cursor.fetchone()
+        if peak_row is None:
+            return None
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],)) as cursor:
+                peak_height = await cursor.fetchone()
+        if peak_height is None:
+            return None
+        return bytes32(peak_row[0]), uint32(peak_height[0])
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
@@ -716,7 +698,7 @@ class BlockStore:
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
-                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
+                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash,)
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:

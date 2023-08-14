@@ -71,6 +71,7 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
+      SOFT_FORK2_HEIGHT: 3000000
       SOFT_FORK3_HEIGHT: 2997292
       SOFT_FORK4_HEIGHT: 2997292
       # planned 2.0 release is July 26, height 2965036 on testnet
@@ -139,6 +140,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
+  dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
@@ -154,7 +157,7 @@ seeder:
   nameserver: "example.com."
   ttl: 300
   soa:
-    rname: "hostmaster.example.com."
+    rname: "hostmaster.example.com" # all @ symbols need to be replaced with . in dns records.
     serial_number: 1619105223
     refresh: 10800
     retry: 10800
