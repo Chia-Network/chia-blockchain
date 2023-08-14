@@ -732,7 +732,7 @@ class DIDWallet:
             assert uncurried is not None
             p2_ph = uncurried[0].get_tree_hash()
         else:
-            p2_ph = await self.standard_wallet.get_puzzle_hash(new=False)
+            p2_ph = await self.standard_wallet.get_puzzle_hash(new=True)
             new_innerpuzzle_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
                 p2_ph,
                 self.did_info.backup_ids,
