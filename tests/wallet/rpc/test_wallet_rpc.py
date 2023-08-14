@@ -892,6 +892,16 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
+    # Test a deprecated path
+    with pytest.raises(ValueError, match="deprecated"):
+        await client.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": "cat_wallet",
+                "mode": "new",
+            },
+        )
+
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
     await client.create_new_cat_and_wallet(uint64(100))
     await time_out_assert(20, client.get_synced)
