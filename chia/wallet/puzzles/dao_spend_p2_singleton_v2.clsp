@@ -114,7 +114,7 @@
     )
     (if parent_amount_list
         (add_announcements_to_result
-          (sha256 (f (f parent_amount_list)) p2_singleton_puzzle_hash (f (r (f parent_amount_list))))
+          (calculate_coin_id (f (f parent_amount_list)) p2_singleton_puzzle_hash (f (r (f parent_amount_list))))
           (if
             (r parent_amount_list)  ; this is the delegated_puzhash
             (sha256tree 0)  ; most coins destroy themselves

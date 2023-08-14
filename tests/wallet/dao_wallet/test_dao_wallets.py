@@ -18,6 +18,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
@@ -32,7 +33,7 @@ async def get_proposal_state(wallet: DAOWallet, index: int) -> Tuple[Optional[bo
 async def rpc_state(
     timeout: float,
     async_function: Callable[[Any], Any],
-    params: List[Dict[str, Any]],
+    params: List[Union[int, Dict[str, Any]]],
     condition_func: Callable[[Dict[str, Any]], Any],
     result: Optional[Any] = None,
 ) -> Union[bool, Dict[str, Any]]:
@@ -1155,7 +1156,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
                     fee=fee,
                 )
             )
-    assert e_info.value.args[0] == f"DAO rules must be specified for wallet creation"
+    assert e_info.value.args[0] == "DAO rules must be specified for wallet creation"
 
     dao_wallet_0 = await api_0.create_new_wallet(
         dict(
@@ -1401,7 +1402,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
     # Test get_treasury_id
     resp = await api_0.dao_get_treasury_id({"wallet_id": dao_wallet_0_id})
     assert resp["treasury_id"] == treasury_id
-    
+
 
 @pytest.mark.parametrize(
     "trusted",
@@ -1535,8 +1536,15 @@ async def test_dao_rpc_client(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["xch"], xch_funds)
+        assert isinstance(new_cat_wallet, CATWallet)
         new_cat_asset_id = new_cat_wallet.cat_info.limitations_program_hash
-        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"][new_cat_asset_id.hex()], new_cat_amt)
+        await rpc_state(
+            20,
+            client_0.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"][new_cat_asset_id.hex()],
+            new_cat_amt,
+        )
 
         # send cats to wallet 1
         await client_0.cat_spend(
@@ -1568,7 +1576,7 @@ async def test_dao_rpc_client(
         # create a spend proposal
         additions = [
             {"puzzle_hash": ph_0.hex(), "amount": 1000},
-            {"puzzle_hash": ph_0.hex(), "amount": 10000, "asset_id": new_cat_asset_id.hex()}
+            {"puzzle_hash": ph_0.hex(), "amount": 10000, "asset_id": new_cat_asset_id.hex()},
         ]
         proposal = await client_0.dao_create_proposal(
             wallet_id=dao_id_0,
@@ -1635,13 +1643,25 @@ async def test_dao_rpc_client(
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
         await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][0]["closed"], True)
         # check treasury balances
-        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"][new_cat_asset_id.hex()], new_cat_amt - 10000)
-        await rpc_state(20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["xch"], xch_funds - 1000)
+        await rpc_state(
+            20,
+            client_0.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"][new_cat_asset_id.hex()],
+            new_cat_amt - 10000,
+        )
+        await rpc_state(
+            20, client_0.dao_get_treasury_balance, [dao_id_0], lambda x: x["balances"]["xch"], xch_funds - 1000
+        )
 
         # check wallet balances
-        await rpc_state(20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 10000)
+        await rpc_state(
+            20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 10000
+        )
         expected_xch = initial_funds - amount_of_cats - new_cat_amt - xch_funds - (2 * fee) - 2 - 10000
-        await rpc_state(20, client_0.get_wallet_balance, [wallet_0.id()], lambda x: x["confirmed_wallet_balance"], expected_xch)
+        await rpc_state(
+            20, client_0.get_wallet_balance, [wallet_0.id()], lambda x: x["confirmed_wallet_balance"], expected_xch
+        )
 
         # free locked cats from finished proposal
         new_cat_wallet_dict = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
