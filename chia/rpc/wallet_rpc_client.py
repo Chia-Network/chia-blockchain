@@ -674,11 +674,12 @@ class WalletRpcClient(RpcClient):
         )
 
     # CATS
-    async def create_new_cat_and_wallet(self, amount: uint64) -> Dict:
+    async def create_new_cat_and_wallet(self, amount: uint64, test: bool = False) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "cat_wallet",
             "mode": "new",
             "amount": amount,
+            "test": test,
         }
         return await self.fetch("create_new_wallet", request)
 
