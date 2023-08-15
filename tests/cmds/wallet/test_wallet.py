@@ -702,7 +702,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             (
                 {
                     "nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft": (
-                        "txch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps2d37ze",
+                        "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
                         1000,
                     )
                 },
@@ -866,7 +866,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
     assert_list = [
         "  OFFERED:\n"
-        "    - TXCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
+        "    - XCH (Wallet ID: 1): 10.0 (10000000000000 mojos)\n"
         f"    - {cat1.hex()}: 100.0 (100000 mojos)",
         "  REQUESTED:\n"
         f"    - {cat2.hex()}: 10.0 (10000 mojos)\n"

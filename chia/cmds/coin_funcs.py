@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
@@ -13,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
@@ -30,9 +28,8 @@ async def async_list(
     excluded_coin_ids: Sequence[str],
     show_unconfirmed: bool,
     paginate: Optional[bool],
-    root_path: Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint, root_path) as (wallet_client, _, config):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         addr_prefix = selected_network_address_prefix(config)
         if paginate is None:
             paginate = sys.stdout.isatty()
@@ -127,9 +124,8 @@ async def async_combine(
     target_coin_amount: Decimal,
     target_coin_ids_str: Sequence[str],
     largest_first: bool,
-    root_path: Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint, root_path) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in target_coin_ids_str]
         final_fee = uint64(int(fee * units["chia"]))
         if number_of_coins > 500:
@@ -206,9 +202,8 @@ async def async_split(
     amount_per_coin: Decimal,
     target_coin_id_str: str,
     # TODO: [add TXConfig args]
-    root_path: Path = DEFAULT_ROOT_PATH,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint, root_path) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         final_fee = uint64(int(fee * units["chia"]))
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
         if number_of_coins > 500:
