@@ -4,7 +4,10 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union, cast
+
+from blspy import G2Element
+from chia_rs import Coin
 
 import chia.cmds.wallet_funcs
 from chia.cmds.chia import cli as chia_cli
@@ -18,12 +21,23 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
+from chia.types.signing_mode import SigningMode
+from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.testing_classes import create_test_block_record
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
+
+logType = Dict[str, Optional[List[Tuple[Any, ...]]]]
 
 
 @dataclass
@@ -46,11 +60,11 @@ class TestRpcClient:
             self.rpc_log[method_name] = []
         self.rpc_log[method_name].append(args)
 
-    def check_log(self, expected_calls: Dict[str, Optional[List[Tuple[Any, ...]]]]) -> None:
+    def check_log(self, expected_calls: logType) -> None:
         for k, v in expected_calls.items():
-            assert k in self.rpc_log
+            assert k in self.rpc_log, f"key '{k}' not in rpc_log, rpc log's keys are: '{list(self.rpc_log.keys())}'"
             if v is not None:  # None means we don't care about the value used when calling the rpc.
-                assert self.rpc_log[k] == v
+                assert self.rpc_log[k] == v, f"for key '{k}'\n'{self.rpc_log[k]}'\n!=\n'{v}'"
         self.rpc_log = {}
 
 
@@ -63,6 +77,202 @@ class TestFarmerRpcClient(TestRpcClient):
 class TestWalletRpcClient(TestRpcClient):
     client_type: Type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
+    wallet_index: int = field(init=False, default=0)
+
+    async def get_sync_status(self) -> bool:
+        self.add_to_log("get_sync_status", ())
+        return False
+
+    async def get_synced(self) -> bool:
+        self.add_to_log("get_synced", ())
+        return True
+
+    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
+        self.add_to_log("get_wallets", (wallet_type,))
+        # we cant start with zero because ints cant have a leading zero
+        if wallet_type is not None:
+            w_type = wallet_type
+        elif str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
+            w_type = WalletType.STANDARD_WALLET
+        elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
+            w_type = WalletType.CAT
+        elif str(self.fingerprint).startswith(str(WalletType.NFT.value + 1)):
+            w_type = WalletType.NFT
+        elif str(self.fingerprint).startswith(str(WalletType.DECENTRALIZED_ID.value + 1)):
+            w_type = WalletType.DECENTRALIZED_ID
+        elif str(self.fingerprint).startswith(str(WalletType.POOLING_WALLET.value + 1)):
+            w_type = WalletType.POOLING_WALLET
+        else:
+            raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
+        return [{"id": 1, "type": w_type}]
+
+    async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+        self.add_to_log("get_transaction", (wallet_id, transaction_id))
+        return TransactionRecord(
+            confirmed_at_height=uint32(1),
+            created_at_time=uint64(1234),
+            to_puzzle_hash=bytes32([1] * 32),
+            amount=uint64(12345678),
+            fee_amount=uint64(1234567),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=SpendBundle([], G2Element()),
+            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+            wallet_id=uint32(1),
+            sent_to=[("aaaaa", uint8(1), None)],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32([2] * 32),
+            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+        )
+
+    async def get_cat_name(self, wallet_id: int) -> str:
+        self.add_to_log("get_cat_name", (wallet_id,))
+        return "test" + str(wallet_id)
+
+    async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str, str]:
+        self.add_to_log("sign_message_by_address", (address, message))
+        pubkey = bytes([3] * 48).hex()
+        signature = bytes([6] * 576).hex()
+        signing_mode = SigningMode.CHIP_0002.value
+        return pubkey, signature, signing_mode
+
+    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
+        self.add_to_log("sign_message_by_id", (id, message))
+        pubkey = bytes([4] * 48).hex()
+        signature = bytes([7] * 576).hex()
+        signing_mode = SigningMode.CHIP_0002.value
+        return pubkey, signature, signing_mode
+
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
+        """
+        if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
+        """
+        self.add_to_log("cat_asset_id_to_name", (asset_id,))
+        if asset_id == bytes32([1] * 32):
+            return uint32(2), "test1"
+        elif asset_id == bytes32([2] * 32):
+            return uint32(3), "test2"
+        else:
+            return None
+
+    async def get_nft_info(self, coin_id: str, latest: bool = True) -> Dict[str, Any]:
+        self.add_to_log("get_nft_info", (coin_id, latest))
+        coin_id_bytes = bytes32.fromhex(coin_id)
+        nft_info = NFTInfo(
+            nft_id=encode_puzzle_hash(coin_id_bytes, "nft"),
+            launcher_id=bytes32([1] * 32),
+            nft_coin_id=coin_id_bytes,
+            nft_coin_confirmation_height=uint32(2),
+            owner_did=bytes32([2] * 32),
+            royalty_percentage=uint16(1000),
+            royalty_puzzle_hash=bytes32([3] * 32),
+            data_uris=["https://example.com/data"],
+            data_hash=bytes([4]),
+            metadata_uris=["https://example.com/mdata"],
+            metadata_hash=bytes([5]),
+            license_uris=["https://example.com/license"],
+            license_hash=bytes([6]),
+            edition_total=uint64(10),
+            edition_number=uint64(1),
+            updater_puzhash=bytes32([7] * 32),
+            chain_info="",
+            mint_height=uint32(1),
+            supports_did=True,
+            p2_address=bytes32([8] * 32),
+        )
+        return {"nft_info": nft_info.to_json_dict()}
+
+    async def nft_calculate_royalties(
+        self,
+        royalty_assets_dict: Dict[Any, Tuple[Any, uint16]],
+        fungible_asset_dict: Dict[Any, uint64],
+    ) -> Dict[Any, List[Dict[str, Any]]]:
+        self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
+        return NFTWallet.royalty_calculation(
+            royalty_assets_dict=royalty_assets_dict,
+            fungible_asset_dict=fungible_asset_dict,
+        )
+
+    async def get_spendable_coins(
+        self,
+        wallet_id: int,
+        excluded_coins: Optional[List[Coin]] = None,
+        min_coin_amount: uint64 = uint64(0),
+        max_coin_amount: uint64 = uint64(0),
+        excluded_amounts: Optional[List[uint64]] = None,
+        excluded_coin_ids: Optional[Sequence[str]] = None,
+    ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
+        """
+        We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
+        """
+        self.add_to_log(
+            "get_spendable_coins",
+            (wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts, excluded_coin_ids),
+        )
+        confirmed_records = [
+            CoinRecord(
+                Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(1234560000)),
+                uint32(123456),
+                uint32(0),
+                False,
+                uint64(0),
+            ),
+            CoinRecord(
+                Coin(bytes32([3] * 32), bytes32([4] * 32), uint64(1234560000)),
+                uint32(123456),
+                uint32(0),
+                False,
+                uint64(0),
+            ),
+        ]
+        unconfirmed_removals = [
+            CoinRecord(
+                Coin(bytes32([5] * 32), bytes32([6] * 32), uint64(1234570000)),
+                uint32(123457),
+                uint32(0),
+                True,
+                uint64(0),
+            )
+        ]
+        unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
+        return confirmed_records, unconfirmed_removals, unconfirmed_additions
+
+    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
+        self.add_to_log("get_next_address", (wallet_id, new_address))
+        addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
+        self.wallet_index += 1
+        if self.wallet_index > 254:
+            self.wallet_index = 1
+        return addr
+
+    async def send_transaction_multi(
+        self,
+        wallet_id: int,
+        additions: List[Dict[str, object]],
+        coins: Optional[List[Coin]] = None,
+        fee: uint64 = uint64(0),
+    ) -> TransactionRecord:
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, coins, fee))
+        return TransactionRecord(
+            confirmed_at_height=uint32(1),
+            created_at_time=uint64(1234),
+            to_puzzle_hash=bytes32([1] * 32),
+            amount=uint64(12345678),
+            fee_amount=uint64(1234567),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=SpendBundle([], G2Element()),
+            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+            wallet_id=uint32(1),
+            sent_to=[("aaaaa", uint8(1), None)],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=bytes32([2] * 32),
+            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+        )
 
 
 @dataclass
@@ -190,32 +400,37 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
             assert fingerprint is not None
             yield wallet_client, fingerprint, config
 
+    def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Aborting.") -> None:
+        return None
+
     # Monkey patches the functions into the module, the classes returned by these functions can be changed in the class.
     # For more information, read the docstring of this function.
     chia.cmds.cmds_util.get_any_service_client = test_get_any_service_client
+    chia.cmds.cmds_util.get_wallet_client = test_get_wallet_client  # type: ignore[assignment]
     chia.cmds.wallet_funcs.get_wallet_client = test_get_wallet_client  # type: ignore[attr-defined]
+    # Monkey patches the confirm function to not ask for confirmation
+    chia.cmds.cmds_util.cli_confirm = cli_confirm
+    chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]
 
 
-def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> Tuple[bool, str]:
+def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> str:
     """
     This is just an easy way to run the chia CLI with the given command list.
     """
     # we don't use the real capsys object because its only accessible in a private part of the pytest module
+    exited_cleanly = True
     argv_temp = sys.argv
     try:
         sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
-        exited_cleanly = True
-        try:
-            chia_cli()  # pylint: disable=no-value-for-parameter
-        except SystemExit as e:
-            if e.code != 0:
-                exited_cleanly = False
-        output = capsys.readouterr()  # type: ignore[attr-defined]
+        chia_cli()  # pylint: disable=no-value-for-parameter
+    except SystemExit as e:
+        if e.code != 0:
+            exited_cleanly = False
     finally:  # always reset sys.argv
         sys.argv = argv_temp
-    if not exited_cleanly:  # so we can look at what went wrong
-        print(f"\n{output.out}\n{output.err}")
-    return exited_cleanly, output.out
+    output = capsys.readouterr()  # type: ignore[attr-defined]
+    assert exited_cleanly, f"\n{output.out}\n{output.err}"
+    return str(output.out)
 
 
 def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
@@ -223,4 +438,14 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
     Asserts that all the strings in strings_to_assert are in the output
     """
     for string_to_assert in strings_to_assert:
-        assert string_to_assert in output
+        assert string_to_assert in output, f"'{string_to_assert}' was not in\n'{output}'"
+
+
+def run_cli_command_and_assert(
+    capsys: object, chia_root: Path, command_list: List[str], strings_to_assert: Iterable[str]
+) -> None:
+    """
+    Runs the command and asserts that all the strings in strings_to_assert are in the output
+    """
+    output = run_cli_command(capsys, chia_root, command_list)
+    cli_assert_shortcut(output, strings_to_assert)

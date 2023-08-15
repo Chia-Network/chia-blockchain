@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from decimal import Decimal
 from typing import List, Optional, Sequence
 
@@ -129,14 +128,6 @@ def get_transactions_cmd(
             clawback=clawback,
         )
     )
-
-    # The flush/close avoids output like below when piping through `head -n 1`
-    # which will close stdout.
-    #
-    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
-    # BrokenPipeError: [Errno 32] Broken pipe
-    sys.stdout.flush()
-    sys.stdout.close()
 
 
 @wallet_cmd.command("send", help="Send chia to another wallet")
@@ -590,7 +581,7 @@ def take_offer_cmd(
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, insecure))
+    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
@@ -1522,7 +1513,7 @@ def revoke_vc_cmd(
 ) -> None:  # pragma: no cover
     from .wallet_funcs import revoke_vc
 
-    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, vc_id, parent_coin_id, Decimal(fee), reuse_puzhash))
+    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
 
 
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
@@ -1541,8 +1532,8 @@ def revoke_vc_cmd(
 @click.option(
     "-m", "--fee", type=str, default=0, show_default=True, help="Blockchain fee for approval transaction, in XCH"
 )
-@click.option("-ma", "--min-coin-amount", type=int, help="The minimum coin amount to select")
-@click.option("-l", "--max-coin-amount", type=int, help="The maximum coin amount to select")
+@click.option("-ma", "--min-coin-amount", type=Decimal, help="The minimum coin amount to select")
+@click.option("-l", "--max-coin-amount", type=Decimal, help="The maximum coin amount to select")
 @click.option(
     "--reuse",
     help="Reuse existing address for the change.",
@@ -1555,8 +1546,8 @@ def approve_r_cats_cmd(
     id: int,
     min_amount_to_claim: str,
     fee: str,
-    min_coin_amount: Optional[int],
-    max_coin_amount: Optional[int],
+    min_coin_amount: Optional[Decimal],
+    max_coin_amount: Optional[Decimal],
     reuse: bool,
 ) -> None:  # pragma: no cover
     from .wallet_funcs import approve_r_cats

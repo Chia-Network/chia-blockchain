@@ -127,7 +127,8 @@ if [ "$1" = "-h" ] || [ "$1" = "" ]; then
   exit 0
 fi
 
-DEFAULT_BLADEBIT_VERSION="v2.0.1"
+DEFAULT_BLADEBIT_VERSION="v3.0.0"
+DEFAULT_BLADEBIT_VERSION_FOR_MACOS="v2.0.1"
 DEFAULT_MADMAX_VERSION="0.0.2"
 VERSION=
 PLOTTER=$1
@@ -209,7 +210,11 @@ cd "${VIRTUAL_ENV}/bin"
 # Handle BladeBit and BladeBit CUDA binaries
 if [ "$PLOTTER" = "bladebit" ]; then
   if [ "$VERSION" = "" ]; then
-    VERSION="$DEFAULT_BLADEBIT_VERSION"
+    if [ "$OS" = "macos" ]; then
+      VERSION="$DEFAULT_BLADEBIT_VERSION_FOR_MACOS"
+    else
+      VERSION="$DEFAULT_BLADEBIT_VERSION"
+    fi
   fi
 
   echo -e "Installing bladebit $VERSION\n"
@@ -218,10 +223,13 @@ if [ "$PLOTTER" = "bladebit" ]; then
   url="$(get_bladebit_url "$VERSION" "$OS" "$ARCH")"
   bladebit_filename="$(get_bladebit_filename "$VERSION" "$OS" "$ARCH")"
   handle_binary "$url" "$bladebit_filename" "bladebit"
+
   # CUDA bladebit binary
-  url="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
-  bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
-  handle_binary "$url" "$bladebit_cuda_filename" "bladebit_cuda"
+  if [ "$OS" != "macos" ]; then
+    url="$(get_bladebit_cuda_url "$VERSION" "$OS" "$ARCH")"
+    bladebit_cuda_filename="$(get_bladebit_cuda_filename "$VERSION" "$OS" "$ARCH")"
+    handle_binary "$url" "$bladebit_cuda_filename" "bladebit_cuda"
+  fi
 
 # Handle MadMax binaries
 elif [ "$PLOTTER" = "madmax" ]; then

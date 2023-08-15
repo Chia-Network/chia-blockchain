@@ -10,7 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
+from chia.cmds.cmds_util import cli_confirm, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -528,32 +528,26 @@ async def make_offer(
                         converted_amount = Decimal(requested_amount) / divisor
                         print(f"  - {converted_amount} {asset} ({requested_amount} mojos)")
 
-                    print()
-                    nft_confirmation = input(
-                        "Offers for NFTs will have royalties automatically added. "
-                        + "Are you sure you would like to continue? (y/n): "
+                    cli_confirm(
+                        "\nOffers for NFTs will have royalties automatically added. "
+                        "Are you sure you would like to continue? (y/n): ",
+                        "Not creating offer...",
                     )
-                    if nft_confirmation not in ["y", "yes"]:
-                        print("Not creating offer...")
-                        return
 
-                confirmation = input("Confirm (y/n): ")
-                if confirmation not in ["y", "yes"]:
-                    print("Not creating offer...")
-                else:
+                cli_confirm("Confirm (y/n): ", "Not creating offer...")
+
+                offer, trade_record = await wallet_client.create_offer_for_ids(
+                    offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
+                )
+                if offer is not None:
                     with open(pathlib.Path(filepath), "w") as file:
-                        offer, trade_record = await wallet_client.create_offer_for_ids(
-                            offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
-                        )
-                        if offer is not None:
-                            file.write(offer.to_bech32())
-                            print(f"Created offer with ID {trade_record.trade_id}")
-                            print(
-                                f"Use chia wallet get_offers --id "
-                                f"{trade_record.trade_id} -f {fingerprint} to view status"
-                            )
-                        else:
-                            print("Error creating offer")
+                        file.write(offer.to_bech32())
+                    print(f"Created offer with ID {trade_record.trade_id}")
+                    print(
+                        f"Use chia wallet get_offers --id " f"{trade_record.trade_id} -f {fingerprint} to view status"
+                    )
+                else:
+                    print("Error creating offer")
 
 
 def timestamp_to_time(timestamp: int) -> str:
@@ -756,11 +750,10 @@ async def take_offer(
 
         if not examine_only:
             print()
-            confirmation = input("Would you like to take this offer? (y/n): ")
-            if confirmation in ["y", "yes"]:
-                trade_record = await wallet_client.take_offer(offer, fee=fee)
-                print(f"Accepted offer with ID {trade_record.trade_id}")
-                print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
+            cli_confirm("Would you like to take this offer? (y/n): ")
+            trade_record = await wallet_client.take_offer(offer, fee=fee)
+            print(f"Accepted offer with ID {trade_record.trade_id}")
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
 
 async def cancel_offer(
@@ -773,12 +766,11 @@ async def cancel_offer(
         trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
-        confirmation = input(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
-        if confirmation in ["y", "yes"]:
-            await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
-            print(f"Cancelled offer with ID {trade_record.trade_id}")
-            if secure:
-                print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
+        cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
+        await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
+        print(f"Cancelled offer with ID {trade_record.trade_id}")
+        if secure:
+            print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
 
 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  # pragma: no cover
@@ -1517,7 +1509,7 @@ async def revoke_vc(
             if record is None:
                 print(f"Cannot find a VC with ID {vc_id}")
                 return
-            parent_id: bytes32 = record.vc.coin.parent_coin_info
+            parent_id: bytes32 = bytes32(record.vc.coin.parent_coin_info)
         else:
             parent_id = bytes32.from_hexstr(parent_coin_id)
         txs = await wallet_client.vc_revoke(
@@ -1545,8 +1537,8 @@ async def approve_r_cats(
     id: int,
     min_amount_to_claim: str,
     fee: Decimal,
-    min_coin_amount: Optional[int],
-    max_coin_amount: Optional[int],
+    min_coin_amount: Optional[Decimal],
+    max_coin_amount: Optional[Decimal],
     reuse: bool,
 ) -> None:  # pragma: no cover
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
@@ -1556,8 +1548,8 @@ async def approve_r_cats(
             wallet_id=uint32(id),
             min_amount_to_claim=uint64(int(Decimal(min_amount_to_claim) * units["cat"])),
             fee=uint64(int(fee * units["chia"])),
-            min_coin_amount=uint64(min_coin_amount) if min_coin_amount is not None else None,
-            max_coin_amount=uint64(max_coin_amount) if max_coin_amount is not None else None,
+            min_coin_amount=uint64(int(min_coin_amount * units["chia"])) if min_coin_amount is not None else None,
+            max_coin_amount=uint64(int(max_coin_amount * units["chia"])) if max_coin_amount is not None else None,
             reuse_puzhash=reuse,
         )
 
