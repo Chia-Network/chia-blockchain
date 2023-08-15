@@ -188,7 +188,7 @@ jobs:
       - name: Add diff coverage report comment to PR
         if: always()
         env:
-          BRANCH_REF: ${{ env.GITHUB_REF }}
+          BRANCH_REF: ${{ env.GITHUB_BASE_REF }}
           COV_STATUS: ${{ env.COV_STATUS }}
           GH_TOKEN: ${{ github.token }}
           ORG_REPO: ${{ github.repository }}
@@ -229,8 +229,7 @@ jobs:
               fi
             done
             OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
-            COMMENT_PAYLOAD=$(jq -n --arg BODY "$OUTPUT" '{body: $BODY}')
-            gh pr comment "$PR_NUM" --body "$COMMENT_PAYLOAD"
+            gh pr comment "$PR_NUM" --body "$OUTPUT"
             if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --add-label "coverage-diff"
             fi
