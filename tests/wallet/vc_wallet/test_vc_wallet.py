@@ -442,6 +442,12 @@ async def test_self_revoke(
     new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert new_vc_record is not None
 
+    # Test a negative case real quick (mostly unrelated)
+    with pytest.raises(ValueError):
+        await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
+            new_vc_record.vc.coin.parent_coin_info, new_proof_hash=bytes32([0] * 32), self_revoke=True
+        )
+
     await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False)
     spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
     spend_bundle = spend_bundle_list[0].spend_bundle
