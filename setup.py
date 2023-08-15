@@ -61,7 +61,7 @@ dev_dependencies = [
     "mypy==1.4.1",
     "black==23.7.0",
     "aiohttp_cors==0.7.0",  # For blackd
-    "ipython==8.12.2",  # For asyncio debugging
+    "ipython==8.14.0",  # For asyncio debugging
     "pyinstaller==5.13.0",
     "types-aiofiles==23.1.0.5",
     "types-cryptography==3.3.23.2",
