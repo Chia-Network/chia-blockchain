@@ -111,6 +111,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
@@ -188,13 +193,12 @@ jobs:
       - name: Add diff coverage report comment to PR
         if: always()
         env:
-          BRANCH_REF: ${{ env.GITHUB_BASE_REF }}
+          BRANCH_NAME: ${{ env.GITHUB_BASE_REF }}
           COV_STATUS: ${{ env.COV_STATUS }}
           GH_TOKEN: ${{ github.token }}
           ORG_REPO: ${{ github.repository }}
         run: |
           if [[ $COV_STATUS != '0' ]]; then
-            BRANCH_NAME=${BRANCH_REF##*/}
             BASE_URL="https://github.com/${ORG_REPO}/blob/${BRANCH_NAME}"
             PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
             COVERAGE_LABEL=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
@@ -229,7 +233,8 @@ jobs:
               fi
             done
             OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
-            gh pr comment "$PR_NUM" --body "$OUTPUT"
+            echo -e "$OUTPUT" > temp_comment.txt
+            gh pr comment "$PR_NUM" -F temp_comment.txt
             if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --add-label "coverage-diff"
             fi
