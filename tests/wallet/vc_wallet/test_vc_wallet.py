@@ -393,6 +393,77 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     [True, False],
 )
 @pytest.mark.asyncio
+async def test_self_revoke(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: Any,
+    trusted: Any,
+) -> None:
+    num_blocks = 1
+    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
+    full_node_api: FullNodeSimulator = full_nodes[0]._api
+    full_node_server = full_node_api.full_node.server
+    wallet_service_0 = wallets[0]
+    wallet_node_0 = wallet_service_0._node
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+    client_0 = await WalletRpcClient.create(
+        bt.config["self_hostname"],
+        wallet_service_0.rpc_server.listen_port,
+        wallet_service_0.root_path,
+        wallet_service_0.config,
+    )
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
+    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
+    )
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+    did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
+    vc_record, txs = await client_0.vc_mint(did_id, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200))
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
+    assert len(vc_wallet) == 1
+    new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
+    assert new_vc_record is not None
+
+    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False)
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+
+    txs = await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, uint64(0))
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    vc_record_revoked: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
+    assert vc_record_revoked is None
+    assert (
+        len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
+    )
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
 async def test_cat_wallet_conversion(
     self_hostname: str,
     one_wallet_and_one_simulator_services: Any,

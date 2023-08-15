@@ -685,6 +685,20 @@ class VerifiedCredential(Streamable):
         )
         return magic_condition
 
+    def magic_condition_for_self_revoke(self) -> Program:
+        magic_condition: Program = Program.to(
+            [
+                -10,
+                self.eml_lineage_proof.to_program(),
+                [
+                    Program.to(self.eml_lineage_proof.parent_proof_hash),
+                    self.launcher_id,
+                ],
+                ACS_TRANSFER_PROGRAM.get_tree_hash(),
+            ]
+        )
+        return magic_condition
+
     def do_spend(
         self,
         inner_puzzle: Program,
