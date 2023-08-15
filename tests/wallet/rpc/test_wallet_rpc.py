@@ -479,7 +479,7 @@ async def test_create_signed_transaction(
     if is_cat:
         generated_funds = 10**9
 
-        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds))
+        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds), test=True)
         assert res["success"]
         wallet_id = res["wallet_id"]
 
@@ -892,11 +892,21 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
+    # Test a deprecated path
+    with pytest.raises(ValueError, match="dropped"):
+        await client.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": "cat_wallet",
+                "mode": "new",
+            },
+        )
+
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
     await time_out_assert(20, client.get_synced)
 
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_0_id = res["wallet_id"]
     asset_id = bytes32.fromhex(res["asset_id"])
@@ -1029,7 +1039,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
     # Creates a CAT wallet with 20 mojos
-    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
@@ -2292,10 +2302,10 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await time_out_assert(20, client.get_synced)
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
 
     await time_out_assert(20, client.get_synced)
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)
