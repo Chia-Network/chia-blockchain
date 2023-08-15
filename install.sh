@@ -20,7 +20,6 @@ usage() {
 
 PACMAN_AUTOMATED=
 EXTRAS=
-BLSPY_STUBS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 EDITABLE='-e'
@@ -31,7 +30,7 @@ do
     # automated
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
-    d) EXTRAS=${EXTRAS}dev,;BLSPY_STUBS=1;;
+    d) EXTRAS=${EXTRAS}dev,;;
     # non-editable
     i) EDITABLE='';;
     # legacy keyring
@@ -334,10 +333,6 @@ python -m pip install wheel
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
 python -m pip install ${EDITABLE} ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
-
-if [ -n "$BLSPY_STUBS" ]; then
-python -m pip install ${EDITABLE} ./blspy-stubs
-fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
