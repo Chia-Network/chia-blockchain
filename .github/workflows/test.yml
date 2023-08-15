@@ -193,7 +193,7 @@ jobs:
       - name: Add diff coverage report comment to PR
         if: always()
         env:
-          BRANCH_NAME: ${{ env.GITHUB_BASE_REF }}
+          BRANCH_NAME: ${{ github.base_ref }}
           COV_STATUS: ${{ env.COV_STATUS }}
           GH_TOKEN: ${{ github.token }}
           ORG_REPO: ${{ github.repository }}
