@@ -948,10 +948,7 @@ class FullNode:
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
 
-            peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([target_peak.header_hash])
-            peers_with_peak: List[WSChiaConnection] = [
-                c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids
-            ]
+            peers_with_peak = self.get_peers_with_peak(target_peak.header_hash)
 
             # Request weight proof from a random peer
             self.log.info(f"Total of {len(peers_with_peak)} peers with peak {target_peak.height}")
