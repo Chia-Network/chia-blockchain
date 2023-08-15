@@ -8,11 +8,9 @@ from typing import Any, Dict, Optional
 from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
-from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config, selected_network_address_prefix
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.wallet_types import WalletType
 
@@ -172,7 +170,7 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
     wallet_id = args["wallet_id"]
     proposal_id = args["proposal_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         res = await wallet_client.dao_parse_proposal(wallet_id, proposal_id)
         pd = res["proposal_dictionary"]
         blocks_needed = pd["state"]["blocks_needed"]
@@ -225,7 +223,6 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
 
         elif ptype == "mint":
             mint_amount = pd["mint_amount"]
-            config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
             prefix = selected_network_address_prefix(config)
             address = encode_puzzle_hash(bytes32.from_hexstr(pd["new_cat_puzhash"]), prefix)
             print("")
