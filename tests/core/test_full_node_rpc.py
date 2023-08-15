@@ -529,9 +529,8 @@ class TestRpc:
                 full_node_service.root_path,
                 full_node_service.config,
             )
-            with pytest.raises(ValueError) as exc_info:
+            with pytest.raises(ValueError, match="No coin_name in request"):
                 await client.fetch("get_mempool_items_by_coin_name", {})
-            assert "No coin_name in request" in str(exc_info.value)
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
