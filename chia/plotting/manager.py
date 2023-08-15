@@ -95,6 +95,7 @@ class PlotManager:
         use_gpu_harvesting: bool,
         gpu_index: int,
         enforce_gpu_index: bool,
+        decompressor_timeout: int,
     ) -> HarvestingMode:
         if max_compression_level_allowed > 7:
             log.error(
@@ -111,6 +112,7 @@ class PlotManager:
             use_gpu_harvesting,
             gpu_index,
             enforce_gpu_index,
+            decompressor_timeout,
         )
         if not is_using_gpu and use_gpu_harvesting:
             log.error(
