@@ -230,7 +230,7 @@ jobs:
             done
             OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
             COMMENT_PAYLOAD=$(jq -n --arg BODY "$OUTPUT" '{body: $BODY}')
-            gh pr comment "$PR_NUM" --json - <<< "$COMMENT_PAYLOAD"
+            gh pr comment "$PR_NUM" --body "$COMMENT_PAYLOAD"
             if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --add-label "coverage-diff"
             fi
