@@ -10,7 +10,8 @@ import pytest
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.transaction_record import TransactionRecord, TransactionType
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
 from tests.cmds.wallet.test_consts import FINGERPRINT_ARG
