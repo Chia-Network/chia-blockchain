@@ -1265,7 +1265,7 @@ class WalletRpcClient(RpcClient):
         asset_id: Optional[str] = None,
         cat_target_address: Optional[str] = None,
         vote_amount: Optional[int] = None,
-        new_dao_rules: Optional[Dict[str, uint64]] = None,
+        new_dao_rules: Optional[Dict[str, Optional[uint64]]] = None,
         fee: uint64 = uint64(0),
         reuse_puzhash: Optional[bool] = None,
     ) -> Dict:

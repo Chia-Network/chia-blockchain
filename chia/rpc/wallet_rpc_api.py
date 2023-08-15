@@ -2558,12 +2558,13 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
-        tx = await dao_cat_wallet.exit_vote_state(
+        spend_bundle = await dao_cat_wallet.exit_vote_state(
             coins,
             fee=fee,
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
-        return {"success": True, "tx_id": tx.name()}
+        assert spend_bundle is not None
+        return {"success": True, "spend_bundle_id": spend_bundle.name()}
 
     async def dao_create_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2657,7 +2658,7 @@ class WalletRpcApi:
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
         assert sb is not None
-        return {"success": True, "spend_bundle": sb}
+        return {"success": True, "spend_bundle_name": sb.name()}
 
     async def dao_parse_proposal(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2694,13 +2695,13 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        tx = await dao_wallet.free_coins_from_finished_proposals(
+        spend_bundle = await dao_wallet.free_coins_from_finished_proposals(
             fee=fee,
             reuse_puzhash=request.get("reuse_puzhash", None),
         )
-        assert tx is not None
+        assert spend_bundle is not None
 
-        return {"success": True, "spend_name": tx.name()}
+        return {"success": True, "spend_bundle_id": spend_bundle.name()}
 
     ##########################################################################################
     # NFT Wallet

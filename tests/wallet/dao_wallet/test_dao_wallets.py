@@ -1204,6 +1204,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
         dict(
             wallet_type="cat_wallet",
             name="CAT WALLET 1",
+            test=True,
             mode="new",
             amount=new_cat_amt,
         )
@@ -1505,7 +1506,7 @@ async def test_dao_rpc_client(
 
         # Create a new standard cat for treasury funds
         new_cat_amt = uint64(100000)
-        new_cat_wallet_dict = await client_0.create_new_cat_and_wallet(new_cat_amt)
+        new_cat_wallet_dict = await client_0.create_new_cat_and_wallet(new_cat_amt, test=True)
         new_cat_wallet_id = new_cat_wallet_dict["wallet_id"]
         new_cat_wallet = wallet_node_0.wallet_state_manager.wallets[new_cat_wallet_id]
 
@@ -1666,7 +1667,7 @@ async def test_dao_rpc_client(
         # free locked cats from finished proposal
         new_cat_wallet_dict = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert new_cat_wallet_dict["success"]
-        sb_name = bytes32.from_hexstr(new_cat_wallet_dict["spend_name"])
+        sb_name = bytes32.from_hexstr(new_cat_wallet_dict["spend_bundle_id"])
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
 
         for i in range(1, num_blocks):
@@ -2119,7 +2120,7 @@ async def test_dao_cat_exits(
         # free locked cats from finished proposal
         res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert res["success"]
-        sb_name = bytes32.from_hexstr(res["spend_name"])
+        sb_name = bytes32.from_hexstr(res["spend_bundle_id"])
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
 
         for i in range(1, num_blocks):
