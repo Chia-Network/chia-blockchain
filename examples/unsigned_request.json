@@ -1,0 +1,7 @@
+
+{
+"key_fingerprint": YOUR_INT_FINGERPRINT_HERE,
+"wallet_id": 1,
+"spend_amount": 22,
+"receiver_puzzlehash": "0b267e00169bbd2962623ba3820733048e15a5efbd15f17b81e4481e5ef8282e"
+}
