@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import logging
 from typing import List, Tuple
 
+import aiohttp
+import pkg_resources
 import pytest
 import pytest_asyncio
 
@@ -18,11 +23,15 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.ws_message import create_payload
 from chia.wallet.wallet_node import WalletNode
+from tests.core.node_height import node_height_at_least
+
+chiapos_version = pkg_resources.get_distribution("chiapos").version
 
 test_constants_modified = test_constants.replace(
     **{
@@ -441,3 +450,68 @@ class TestSimulation:
 
         with pytest.raises(Exception, match="Coins must have a positive value"):
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+
+    @pytest.mark.asyncio
+    async def test_daemon_simulation(self_hostname, daemon_simulation):
+        deamon_and_nodes, get_b_tools, bt = daemon_simulation
+        node1, node2, _, _, _, _, _, _, _, _, daemon1 = deamon_and_nodes
+        server1 = node1.full_node.server
+        node2_port = node2.full_node.server.get_port()
+        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+
+        async def num_connections():
+            count = len(node2.server.get_connections(NodeType.FULL_NODE))
+            return count
+
+        await time_out_assert_custom_interval(60, 1, num_connections, 1)
+
+        await time_out_assert(1500, node_height_at_least, True, node2, 1)
+
+        session = aiohttp.ClientSession()
+
+        log = logging.getLogger()
+        log.warning(f"Connecting to daemon on port {daemon1.daemon_port}")
+        ws = await session.ws_connect(
+            f"wss://127.0.0.1:{daemon1.daemon_port}",
+            autoclose=True,
+            autoping=True,
+            ssl_context=get_b_tools.get_daemon_ssl_context(),
+            max_msg_size=100 * 1024 * 1024,
+        )
+        service_name = "test_service_name"
+        data = {"service": service_name}
+        payload = create_payload("register_service", data, service_name, "daemon")
+        await ws.send_str(payload)
+        message_queue = asyncio.Queue()
+
+        async def reader(ws, queue):
+            while True:
+                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
+                msg = await ws.receive()
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    message = msg.data.strip()
+                    message = json.loads(message)
+                    await queue.put(message)
+                else:
+                    if msg.type == aiohttp.WSMsgType.ERROR:
+                        await ws.close()
+                    elif msg.type == aiohttp.WSMsgType.CLOSED:
+                        pass
+
+                    break
+
+        read_handler = asyncio.create_task(reader(ws, message_queue))
+        data = {}
+        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
+        await ws.send_str(payload)
+
+        await asyncio.sleep(5)
+        blockchain_state_found = False
+        while not message_queue.empty():
+            message = await message_queue.get()
+            if message["command"] == "get_blockchain_state":
+                blockchain_state_found = True
+
+        await ws.close()
+        read_handler.cancel()
+        assert blockchain_state_found
