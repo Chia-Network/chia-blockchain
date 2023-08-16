@@ -2412,7 +2412,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg proposal creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
