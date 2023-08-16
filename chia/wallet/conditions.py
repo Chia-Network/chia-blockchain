@@ -326,9 +326,7 @@ class CreateCoinAnnouncement(Condition):
         return condition
 
     @classmethod
-    def from_program(
-        cls, program: Program, coin_id: Optional[bytes32] = None
-    ) -> CreateCoinAnnouncement:
+    def from_program(cls, program: Program, coin_id: Optional[bytes32] = None) -> CreateCoinAnnouncement:
         return cls(
             program.at("rf").atom,
             coin_id,
@@ -397,9 +395,7 @@ class CreatePuzzleAnnouncement(Condition):
         return condition
 
     @classmethod
-    def from_program(
-        cls, program: Program, puzzle_hash: Optional[bytes32] = None
-    ) -> CreatePuzzleAnnouncement:
+    def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> CreatePuzzleAnnouncement:
         return cls(
             program.at("rf").atom,
             puzzle_hash,
@@ -797,9 +793,7 @@ class CreateAnnouncement(Condition):
             return CreatePuzzleAnnouncement(self.msg, self.origin_id).to_program()
 
     @classmethod
-    def from_program(
-        cls, program: Program, **kwargs: Optional[bytes32]
-    ) -> CreateAnnouncement:
+    def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> CreateAnnouncement:
         if program.at("f").atom == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[CreateCoinAnnouncement, CreatePuzzleAnnouncement] = CreateCoinAnnouncement.from_program(
@@ -853,9 +847,7 @@ class AssertAnnouncement(Condition):
             return CreateAnnouncement(self.asserted_msg, self.coin_not_puzzle, self.asserted_origin_id)
 
     @classmethod
-    def from_program(
-        cls, program: Program, **kwargs: Optional[bytes32]
-    ) -> AssertAnnouncement:
+    def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> AssertAnnouncement:
         if program.at("f").atom == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[AssertCoinAnnouncement, AssertPuzzleAnnouncement] = AssertCoinAnnouncement.from_program(
