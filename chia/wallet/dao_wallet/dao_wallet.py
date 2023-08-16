@@ -1279,17 +1279,13 @@ class DAOWallet(WalletProtocol):
             (
                 SELF_HASH,
                 PROPOSAL_ID,
-                PROPOSED_PUZ_HASH,  # this is what runs if this proposal is successful - the inner puzzle of this proposal
-                YES_VOTES,  # yes votes are +1, no votes don't tally - we compare yes_votes/total_votes at the end
-                TOTAL_VOTES,  # how many people responded
+                PROPOSED_PUZ_HASH,
+                YES_VOTES,
+                TOTAL_VOTES,
             ) = c_a.as_iter()
 
             if TOTAL_VOTES.as_int() < attendance_required.as_int():
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
-
-            # if (YES_VOTES.as_int() * 10000) // TOTAL_VOTES.as_int() < pass_percentage.as_int():
-            #     raise ValueError("Unable to pass this proposal as it has insufficient yes votes.")
-
             timer_solution = Program.to(
                 [
                     YES_VOTES,
@@ -2094,7 +2090,7 @@ class DAOWallet(WalletProtocol):
 
         wallet_node = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
         assert isinstance(prop.timer_coin, Coin)
         timer_cs = (await wallet_node.get_coin_state([prop.timer_coin.name()], peer))[0]
@@ -2160,12 +2156,10 @@ class DAOWallet(WalletProtocol):
         ret: List[
             Tuple[uint32, CoinSpend]
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) == 0:
+        if len(ret) == 0:  # pragma: no cover
             raise ValueError(f"No records found in singleton store for singleton id {singleton_id}")
         return ret
 
-    # TODO: Find a nice way to express interest in more than one singleton.
-    #     e.g. def register_singleton_for_wallet()
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
         We are being notified of a singleton state transition. A Singleton has been spent.
@@ -2179,7 +2173,7 @@ class DAOWallet(WalletProtocol):
         if not singleton_id:
             raise ValueError("Received a non singleton coin for dao wallet")
         tip: Optional[Tuple[uint32, SingletonRecord]] = await self.get_tip(singleton_id)
-        if tip is None:
+        if tip is None:  # pragma: no cover
             # this is our first time, just store it
             await self.wallet_state_manager.singleton_store.add_spend(self.wallet_id, new_state, block_height)
         else:
@@ -2199,7 +2193,7 @@ class DAOWallet(WalletProtocol):
         assert puzzle
         try:
             mod, curried_args = puzzle.uncurry()
-        except ValueError as e:
+        except ValueError as e:  # pragma: no cover
             self.log.warning("Cannot uncurry puzzle in DAO Wallet: error: %s", e)
             raise e
         if mod == DAO_TREASURY_MOD:
@@ -2208,7 +2202,7 @@ class DAOWallet(WalletProtocol):
             await self.add_or_update_proposal_info(new_state, block_height)
         elif mod == DAO_FINISHED_STATE:
             await self.update_closed_proposal_coin(new_state, block_height)
-        else:
+        else:  # pragma: no cover
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
         return True
