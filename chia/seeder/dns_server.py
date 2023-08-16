@@ -338,7 +338,7 @@ class DNSServer:
         self.udp_protocol_ipv6.start()  # start ipv6 udp transmit task
 
         # in case the port is 0, we get the real port
-        self.udp_dns_port = self.udp_transport_ipv6.get_extra_info("sockname")[1]  # get the port we binded to
+        self.udp_dns_port = self.udp_transport_ipv6.get_extra_info("sockname")[1]  # get the port we bound to
 
         if sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
             # Windows does not support dual stack sockets, so we need to create a new socket for ipv4.
