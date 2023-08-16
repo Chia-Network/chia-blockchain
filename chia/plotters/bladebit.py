@@ -201,7 +201,6 @@ progress_bladebit_cuda = {
     "Completed Phase 1 in ": 0.8,
     "Completed Phase 2 in ": 0.9,
     "Completed Phase 3 in ": 0.95,
-    "Completed writing plot in ": 0.98,
 }
 
 progress_bladebit_ram = {
