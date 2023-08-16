@@ -14,6 +14,7 @@ from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
+from chia.util.streamable import Streamable, streamable
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
@@ -325,8 +326,9 @@ def header_block_from_block(
     return header_block
 
 
+@streamable
 @dataclass(frozen=True)
-class PlotFilterInfo:
+class PlotFilterInfo(Streamable):
     pos_ss_cc_challenge_hash: bytes32
     cc_sp_hash: bytes32
 

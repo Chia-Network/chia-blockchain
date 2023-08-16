@@ -53,7 +53,6 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.7'
           - major_dot_minor: '3.8'
           - major_dot_minor: '3.9'
           - major_dot_minor: '3.10'
@@ -65,10 +64,6 @@ jobs:
               python manage-mypy.py build-mypy-ini
               mypy
         exclude:
-          - os:
-              matrix: macos
-            python:
-              major_dot_minor: '3.7'
           - os:
               matrix: macos
             arch:
@@ -191,7 +186,7 @@ jobs:
       run: |
         unset HAS_SECRET
         if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
+        echo HAS_SECRET=${HAS_SECRET} >> "$GITHUB_OUTPUT"
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
 

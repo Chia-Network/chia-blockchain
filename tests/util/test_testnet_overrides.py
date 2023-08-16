@@ -9,8 +9,9 @@ def test_testnet10() -> None:
     overrides: Dict[str, Any] = {}
     update_testnet_overrides("testnet10", overrides)
     assert overrides == {
-        "SOFT_FORK2_HEIGHT": 0,
-        "SOFT_FORK3_HEIGHT": 0,
+        "SOFT_FORK2_HEIGHT": 3000000,
+        "SOFT_FORK3_HEIGHT": 2997292,
+        "SOFT_FORK4_HEIGHT": 2997292,
         "HARD_FORK_HEIGHT": 2997292,
         "PLOT_FILTER_128_HEIGHT": 3061804,
         "PLOT_FILTER_64_HEIGHT": 8010796,
@@ -20,8 +21,8 @@ def test_testnet10() -> None:
 
 def test_testnet10_existing() -> None:
     overrides: Dict[str, Any] = {
-        "SOFT_FORK2_HEIGHT": 42,
         "SOFT_FORK3_HEIGHT": 42,
+        "SOFT_FORK4_HEIGHT": 45,
         "HARD_FORK_HEIGHT": 42,
         "PLOT_FILTER_128_HEIGHT": 42,
         "PLOT_FILTER_64_HEIGHT": 42,
@@ -29,8 +30,9 @@ def test_testnet10_existing() -> None:
     }
     update_testnet_overrides("testnet10", overrides)
     assert overrides == {
-        "SOFT_FORK2_HEIGHT": 42,
+        "SOFT_FORK2_HEIGHT": 3000000,
         "SOFT_FORK3_HEIGHT": 42,
+        "SOFT_FORK4_HEIGHT": 45,
         "HARD_FORK_HEIGHT": 42,
         "PLOT_FILTER_128_HEIGHT": 42,
         "PLOT_FILTER_64_HEIGHT": 42,

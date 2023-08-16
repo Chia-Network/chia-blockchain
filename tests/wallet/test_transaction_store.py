@@ -443,17 +443,21 @@ async def test_delete_unconfirmed() -> None:
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True)
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, wallet_id=2)
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
+        tr5 = dataclasses.replace(
+            tr1, name=token_bytes(32), wallet_id=2, type=uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE.value)
+        )
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
         await store.add_transaction_record(tr3)
         await store.add_transaction_record(tr4)
+        await store.add_transaction_record(tr5)
 
-        assert cmp(await store.get_all_transactions(), [tr1, tr2, tr3, tr4])
+        assert cmp(await store.get_all_transactions(), [tr1, tr2, tr3, tr4, tr5])
         await store.delete_unconfirmed_transactions(1)
-        assert cmp(await store.get_all_transactions(), [tr2, tr3, tr4])
+        assert cmp(await store.get_all_transactions(), [tr2, tr3, tr4, tr5])
         await store.delete_unconfirmed_transactions(2)
-        assert cmp(await store.get_all_transactions(), [tr2, tr3])
+        assert cmp(await store.get_all_transactions(), [tr2, tr3, tr5])
 
 
 @pytest.mark.asyncio
@@ -703,7 +707,10 @@ async def test_get_not_sent() -> None:
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [tr1, tr3, tr4])
 
-        # the 6th time we call this function, we don't get any unsent txs
+        not_sent = await store.get_not_sent()
+        assert cmp(not_sent, [tr1, tr3, tr4])
+
+        # the 7th time we call this function, we don't get any unsent txs
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [])
 

@@ -68,7 +68,7 @@ class CostLogger:
             program,
             INFINITE_COST,
             mempool_mode=True,
-            height=DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT,
+            height=DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
         self.cost_dict[descriptor] = npc_result.cost
@@ -152,7 +152,7 @@ class SpendSim:
         else:
             uri = f"file:{db_path}"
 
-        self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1)
+        self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1, db_version=2)
 
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
@@ -205,13 +205,13 @@ class SpendSim:
         coins = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
+                "SELECT puzzle_hash,coin_parent,amount from coin_record WHERE coinbase=0 AND spent_index==0 ",
             )
             rows = await cursor.fetchall()
 
             await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+            coin = Coin(bytes32(row[1]), bytes32(row[0]), uint64.from_bytes(row[2]))
             coins.add(coin)
         return list(coins)
 

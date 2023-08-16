@@ -65,6 +65,7 @@ class DataLayer:
     data_store: DataStore
     db_path: Path
     config: Dict[str, Any]
+    root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
     state_changed_callback: Optional[StateChangedProtocol] = None
@@ -100,17 +101,18 @@ class DataLayer:
             name = None
         self.initialized = False
         self.config = config
+        self.root_path = root_path
         self.connection = None
         self.wallet_rpc_init = wallet_rpc_init
         self.log = logging.getLogger(name if name is None else __name__)
         self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(root_path, db_path_replaced)
+        self.db_path = path_from_root(self.root_path, db_path_replaced)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
-        self.server_files_location = path_from_root(root_path, server_files_replaced)
+        self.server_files_location = path_from_root(self.root_path, server_files_replaced)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
@@ -131,7 +133,12 @@ class DataLayer:
         self._server = server
 
     async def _start(self) -> None:
-        self.data_store = await DataStore.create(database=self.db_path)
+        sql_log_path: Optional[Path] = None
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        self.data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
 
@@ -299,8 +306,6 @@ class DataLayer:
         async with self.data_store.transaction():
             try:
                 root = await self.data_store.get_tree_root(tree_id=tree_id)
-            except asyncio.CancelledError:
-                raise
             except Exception:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -419,8 +424,6 @@ class DataLayer:
                         f"Root hash saved: {singleton_record.root}."
                     )
                     break
-            except asyncio.CancelledError:
-                raise
             except aiohttp.client_exceptions.ClientConnectorError:
                 self.log.warning(f"Server {url} unavailable for {tree_id}.")
             except Exception as e:
@@ -575,8 +578,6 @@ class DataLayer:
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
-                except asyncio.CancelledError:
-                    raise
                 except Exception as e:
                     self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
@@ -586,10 +587,7 @@ class DataLayer:
             while time.monotonic() < delay_until:
                 if self._shut_down:
                     break
-                try:
-                    await asyncio.sleep(0.1)
-                except asyncio.CancelledError:
-                    raise
+                await asyncio.sleep(0.1)
 
         while not self._shut_down:
             async with self.subscription_lock:
@@ -602,8 +600,6 @@ class DataLayer:
                 if local_id not in subscription_tree_ids:
                     try:
                         await self.subscribe(local_id, [])
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
@@ -615,14 +611,10 @@ class DataLayer:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
-            try:
-                await asyncio.sleep(manage_data_interval)
-            except asyncio.CancelledError:
-                raise
+
+            await asyncio.sleep(manage_data_interval)
 
     async def build_offer_changelist(
         self,

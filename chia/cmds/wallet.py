@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from decimal import Decimal
 from typing import List, Optional, Sequence
 
@@ -129,14 +128,6 @@ def get_transactions_cmd(
             clawback=clawback,
         )
     )
-
-    # The flush/close avoids output like below when piping through `head -n 1`
-    # which will close stdout.
-    #
-    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
-    # BrokenPipeError: [Errno 32] Broken pipe
-    sys.stdout.flush()
-    sys.stdout.close()
 
 
 @wallet_cmd.command("send", help="Send chia to another wallet")
@@ -309,12 +300,22 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
 @click.option(
     "-m", "--fee", help="A fee to add to the offer when it gets taken, in XCH", default="0", show_default=True
 )
+@click.option(
+    "--force",
+    help="Force to push the spend bundle even it may be a double spend",
+    is_flag=True,
+    default=False,
+)
 def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str
+    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool
 ) -> None:  # pragma: no cover
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(spend_clawback(wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids))
+    asyncio.run(
+        spend_clawback(
+            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force
+        )
+    )
 
 
 @wallet_cmd.command("delete_unconfirmed_transactions", help="Deletes all unconfirmed transactions for this wallet ID")
@@ -580,7 +581,7 @@ def take_offer_cmd(
 def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, insecure))
+    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
@@ -1154,10 +1155,12 @@ def nft_transfer_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
-def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
+@click.option("--num", help="Number of NFTs to return", type=int, default=50)
+@click.option("--start-index", help="Which starting index to start listing NFTs from", type=int, default=0)
+def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num: int, start_index: int) -> None:
     from .wallet_funcs import list_nfts
 
-    asyncio.run(list_nfts(wallet_rpc_port, fingerprint, id))
+    asyncio.run(list_nfts(wallet_rpc_port, fingerprint, id, num, start_index))
 
 
 @nft_cmd.command("set_did", help="Set a DID on an NFT")
@@ -1510,4 +1513,47 @@ def revoke_vc_cmd(
 ) -> None:  # pragma: no cover
     from .wallet_funcs import revoke_vc
 
-    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, vc_id, parent_coin_id, Decimal(fee), reuse_puzhash))
+    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
+
+
+@vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet with the pending approval balance", type=int, required=True)
+@click.option(
+    "-a", "--min-amount-to-claim", help="The minimum amount to approve to move into the wallet", type=str, required=True
+)
+@click.option(
+    "-m", "--fee", type=str, default=0, show_default=True, help="Blockchain fee for approval transaction, in XCH"
+)
+@click.option("-ma", "--min-coin-amount", type=Decimal, help="The minimum coin amount to select")
+@click.option("-l", "--max-coin-amount", type=Decimal, help="The maximum coin amount to select")
+@click.option(
+    "--reuse",
+    help="Reuse existing address for the change.",
+    is_flag=True,
+    default=False,
+)
+def approve_r_cats_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    min_amount_to_claim: str,
+    fee: str,
+    min_coin_amount: Optional[Decimal],
+    max_coin_amount: Optional[Decimal],
+    reuse: bool,
+) -> None:  # pragma: no cover
+    from .wallet_funcs import approve_r_cats
+
+    asyncio.run(
+        approve_r_cats(
+            wallet_rpc_port, fingerprint, id, min_amount_to_claim, Decimal(fee), min_coin_amount, max_coin_amount, reuse
+        )
+    )

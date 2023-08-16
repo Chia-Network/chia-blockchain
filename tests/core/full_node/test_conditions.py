@@ -60,19 +60,14 @@ async def check_spend_bundle_validity(
     blocks: List[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
-    softfork2: bool = False,
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
-    if softfork2:
-        constants = bt.constants.replace(SOFT_FORK2_HEIGHT=0)
-    else:
-        constants = bt.constants
 
-    db_wrapper, blockchain = await create_ram_blockchain(constants)
+    db_wrapper, blockchain = await create_ram_blockchain(bt.constants)
     try:
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
@@ -111,7 +106,6 @@ async def check_conditions(
     condition_solution: Program,
     expected_err: Optional[Err] = None,
     spend_reward_index: int = -2,
-    softfork2: bool = False,
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
     coin = list(blocks[spend_reward_index].get_included_reward_coins())[0]
@@ -121,7 +115,7 @@ async def check_conditions(
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
-    return await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err, softfork2=softfork2)
+    return await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_err)
 
 
 co = ConditionOpcode
@@ -195,7 +189,6 @@ class TestConditions:
         assert new_block.transactions_info.cost - block_base_cost == expected_cost
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("softfork2", [True, False])
     @pytest.mark.parametrize(
         "opcode,value,expected",
         [
@@ -279,32 +272,9 @@ class TestConditions:
             (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 0x100000000, None),
         ],
     )
-    async def test_condition(self, opcode, value, expected, bt, softfork2):
+    async def test_condition(self, opcode, value, expected, bt):
         conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
-
-        # when soft fork 2 is not active, these conditions are also not active,
-        # and never constrain the block
-        if not softfork2 and opcode in [
-            co.ASSERT_MY_BIRTH_HEIGHT,
-            co.ASSERT_MY_BIRTH_SECONDS,
-            co.ASSERT_BEFORE_SECONDS_RELATIVE,
-            co.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-            co.ASSERT_BEFORE_HEIGHT_RELATIVE,
-            co.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-        ]:
-            expected = None
-
-        if not softfork2:
-            # before soft-fork 2, the timestamp we compared against was the
-            # current block's timestamp as opposed to the previous tx-block's
-            # timestamp. These conditions used to be valid, before the soft-fork
-            if opcode == ConditionOpcode.ASSERT_SECONDS_RELATIVE and value > 10 and value <= 20:
-                expected = None
-
-            if opcode == ConditionOpcode.ASSERT_SECONDS_ABSOLUTE and value > 10030 and value <= 10040:
-                expected = None
-
-        await check_conditions(bt, conditions, expected_err=expected, softfork2=softfork2)
+        await check_conditions(bt, conditions, expected_err=expected)
 
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, bt):
@@ -369,3 +339,68 @@ class TestConditions:
             )
         )
         await check_conditions(bt, conditions)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "prefix, condition, num, expect_err",
+        [
+            # CREATE_COIN_ANNOUNCEMENT
+            ("", "(60 'test')", 1024, None),
+            ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # CREATE_PUZZLE_ANNOUNCEMENT
+            ("", "(62 'test')", 1024, None),
+            ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_PUZZLE_ANNOUNCEMENT
+            ("(62 'test')", "(63 {pann})", 1023, None),
+            ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_COIN_ANNOUNCEMENT
+            ("(60 'test')", "(61 {cann})", 1023, None),
+            ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_SPEND
+            ("", "(64 {coin})", 1024, None),
+            ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+            # ASSERT_CONCURRENT_PUZZLE
+            ("", "(65 {ph})", 1024, None),
+            ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        ],
+    )
+    async def test_announce_conditions_limit(
+        self,
+        consensus_mode: Mode,
+        prefix: str,
+        condition: str,
+        num: int,
+        expect_err: Optional[Err],
+        bt: BlockTools,
+    ):
+        """
+        Test that the condition checker accepts more announcements than the new per puzzle limit
+        pre-v2-softfork, and rejects more than the announcement limit afterward.
+        """
+
+        if consensus_mode.value < Mode.SOFT_FORK3.value:
+            # before softfork 3, there was no limit on the number of
+            # announcements
+            expect_err = None
+
+        blocks = await initial_blocks(bt)
+        coin = list(blocks[-2].get_included_reward_coins())[0]
+        coin_announcement = Announcement(coin.name(), b"test")
+        puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+
+        conditions = b""
+        if prefix != "":
+            conditions += b"\xff" + assemble(prefix).as_bin()
+
+        cond = condition.format(
+            coin="0x" + coin.name().hex(),
+            ph="0x" + EASY_PUZZLE_HASH.hex(),
+            cann="0x" + coin_announcement.name().hex(),
+            pann="0x" + puzzle_announcement.name().hex(),
+        )
+
+        conditions += (b"\xff" + assemble(cond).as_bin()) * num
+        conditions += b"\x80"
+        conditions_program = Program.from_bytes(conditions)
+
+        await check_conditions(bt, conditions_program, expected_err=expect_err)

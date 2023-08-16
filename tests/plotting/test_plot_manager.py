@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, cast
 
 import pytest
 from blspy import G1Element
@@ -28,6 +28,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint16, uint32
 from chia.util.misc import VersionedBlob
+from tests.conftest import Mode
 from tests.plotting.util import get_test_plots
 
 log = logging.getLogger(__name__)
@@ -99,13 +100,13 @@ class PlotRefreshTester:
         for name in ["loaded", "removed", "processed", "remaining"]:
             try:
                 actual_value = refresh_result.__getattribute__(name)
-                if type(actual_value) == list:
+                if type(actual_value) is list:
                     expected_list = self.expected_result.__getattribute__(name)
                     if len(expected_list) != len(actual_value):
                         return
                     values_found = 0
                     for value in actual_value:
-                        if type(value) == PlotInfo:
+                        if type(value) is PlotInfo:
                             for plot_info in expected_list:
                                 if plot_info.prover.get_filename() == value.prover.get_filename():
                                     values_found += 1
@@ -170,7 +171,10 @@ def trigger_remove_plot(_: Path, plot_path: str):
 
 
 @pytest.mark.asyncio
-async def test_plot_refreshing(environment):
+async def test_plot_refreshing(environment, consensus_mode: Mode):
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("plot refreshing is not dependent on consensus. This test does not support parallel execution")
+
     env: Environment = environment
     expected_result = PlotRefreshResult()
     dir_duplicates: Directory = Directory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
@@ -186,7 +190,7 @@ async def test_plot_refreshing(environment):
         expected_directories: int,
         expect_total_plots: int,
     ):
-        expected_result.loaded = expect_loaded
+        expected_result.loaded = cast(List[PlotInfo], expect_loaded)
         expected_result.removed = expect_removed
         expected_result.processed = expect_processed
         trigger(env.root_path, str(test_path))
@@ -502,6 +506,7 @@ async def test_plot_info_caching(environment, bt):
         assert plot_manager.plots[path].prover.get_id() == plot_info.prover.get_id()
         assert plot_manager.plots[path].prover.get_memo() == plot_info.prover.get_memo()
         assert plot_manager.plots[path].prover.get_size() == plot_info.prover.get_size()
+        assert plot_manager.plots[path].prover.get_compression_level() == plot_info.prover.get_compression_level()
         assert plot_manager.plots[path].pool_public_key == plot_info.pool_public_key
         assert plot_manager.plots[path].pool_contract_puzzle_hash == plot_info.pool_contract_puzzle_hash
         assert plot_manager.plots[path].plot_public_key == plot_info.plot_public_key

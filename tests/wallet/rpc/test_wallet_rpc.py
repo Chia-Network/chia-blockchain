@@ -262,7 +262,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     expected_balance_dict["wallet_id"] = wallet.id()
     expected_balance_dict["wallet_type"] = wallet.type()
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
-    if wallet.type() == WalletType.CAT:
+    if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
         expected_balance_dict["asset_id"] = wallet.get_asset_id()
     assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
@@ -385,18 +385,20 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
-    result = await wallet_rpc_client.get_farmed_amount()
+    get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(2))
 
     expected_result = {
+        "blocks_won": 2,
         "farmed_amount": 4_000_000_000_000,
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 2,
+        "last_time_farmed": get_timestamp_for_height_result,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
-
-    assert result == expected_result
+    assert get_farmed_amount_result == expected_result
 
 
 @pytest.mark.asyncio
@@ -477,7 +479,7 @@ async def test_create_signed_transaction(
     if is_cat:
         generated_funds = 10**9
 
-        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds))
+        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds), test=True)
         assert res["success"]
         wallet_id = res["wallet_id"]
 
@@ -890,11 +892,21 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
+    # Test a deprecated path
+    with pytest.raises(ValueError, match="dropped"):
+        await client.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": "cat_wallet",
+                "mode": "new",
+            },
+        )
+
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
     await time_out_assert(20, client.get_synced)
 
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_0_id = res["wallet_id"]
     asset_id = bytes32.fromhex(res["asset_id"])
@@ -1027,7 +1039,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
     # Creates a CAT wallet with 20 mojos
-    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
@@ -1138,27 +1150,83 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len(all_offers) == 2
 
     ###
-    # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-    # There's also temp code in wallet_rpc_api.py and wallet_funcs.py
-    with pytest.raises(ValueError, match="CAT1s are no longer supported"):
+    # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+    # There's also temp code in wallet_rpc_api.py
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
         await wallet_1_rpc.fetch(
             "get_offer_summary",
             {
-                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8f"
-                "vtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m"
-                "7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7"
-                "jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u"
-                "2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdn"
-                "dmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm7"
-                "2hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank"
-                "88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cy"
-                "ga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7ue"
-                "gztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnye"
-                "kany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9"
-                "yc449jqxg4mfgx0sw3p9"
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "check_offer_validity",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "take_offer",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "get_offer_summary",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "check_offer_validity",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "take_offer",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
             },
         )
     ###
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(batch_size=1)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        driver_dict=driver_dict,
+    )
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(cancel_all=True)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(asset_id=bytes32([0] * 32))
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(asset_id=cat_asset_id)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
 
 
 @pytest.mark.asyncio
@@ -2234,10 +2302,10 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await time_out_assert(20, client.get_synced)
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
 
     await time_out_assert(20, client.get_synced)
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)

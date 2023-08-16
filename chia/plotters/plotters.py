@@ -49,6 +49,10 @@ class Options(Enum):
     BLADEBIT_ALTERNATE = 34
     BLADEBIT_NO_T1_DIRECT = 35
     BLADEBIT_NO_T2_DIRECT = 36
+    COMPRESSION = 37
+    BLADEBIT_DEVICE_INDEX = 38
+    BLADEBIT_NO_DIRECT_DOWNLOADS = 39
+    CUDA_TMP_DIR = 40
 
 
 chia_plotter_options = [
@@ -71,6 +75,7 @@ chia_plotter_options = [
     Options.EXCLUDE_FINAL_DIR,
     Options.CONNECT_TO_DAEMON,
     Options.FINAL_DIR,
+    Options.COMPRESSION,
 ]
 
 madmax_plotter_options = [
@@ -91,6 +96,26 @@ madmax_plotter_options = [
     Options.FINAL_DIR,
 ]
 
+bladebit_cuda_plotter_options = [
+    Options.NUM_THREADS,
+    Options.PLOT_COUNT,
+    Options.FARMERKEY,
+    Options.POOLKEY,
+    Options.POOLCONTRACT,
+    Options.CUDA_TMP_DIR,
+    Options.TMP_DIR2,
+    Options.ID,
+    Options.BLADEBIT_WARMSTART,
+    Options.BLADEBIT_NONUMA,
+    Options.BLADEBIT_NO_CPU_AFFINITY,
+    Options.VERBOSE,
+    Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
+    Options.COMPRESSION,
+    Options.BLADEBIT_DEVICE_INDEX,
+    Options.BLADEBIT_NO_DIRECT_DOWNLOADS,
+]
+
 bladebit_ram_plotter_options = [
     Options.NUM_THREADS,
     Options.PLOT_COUNT,
@@ -104,6 +129,7 @@ bladebit_ram_plotter_options = [
     Options.VERBOSE,
     Options.CONNECT_TO_DAEMON,
     Options.FINAL_DIR,
+    Options.COMPRESSION,
 ]
 
 bladebit_disk_plotter_options = [
@@ -132,6 +158,7 @@ bladebit_disk_plotter_options = [
     Options.MEMO,
     Options.BLADEBIT_NO_T1_DIRECT,
     Options.BLADEBIT_NO_T2_DIRECT,
+    Options.COMPRESSION,
 ]
 
 
@@ -166,6 +193,15 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 type=int,
                 help="Stripe size.",
                 default=0,
+            )
+        if option is Options.CUDA_TMP_DIR:
+            parser.add_argument(
+                "-t",
+                "--tmp_dir",
+                type=str,
+                dest="tmpdir",
+                help="Temporary directory 1.",
+                required=False,  # Unlike `Options.TMP_DIR`, this is not required
             )
         if option is Options.TMP_DIR:
             parser.add_argument(
@@ -416,6 +452,27 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="Disable direct I/O on the temp 2 directory",
                 default=False,
             )
+        if option is Options.COMPRESSION:
+            parser.add_argument(
+                "--compress",
+                type=int,
+                help="Compression level",
+                default=1,
+            )
+        if option is Options.BLADEBIT_DEVICE_INDEX:
+            parser.add_argument(
+                "--device",
+                type=int,
+                help="The CUDA device index",
+                default=0,
+            )
+        if option is Options.BLADEBIT_NO_DIRECT_DOWNLOADS:
+            parser.add_argument(
+                "--no-direct-downloads",
+                action="store_true",
+                help="Don't allocate host tables using pinned buffers",
+                default=False,
+            )
 
 
 def call_plotters(root_path: Path, args):
@@ -444,6 +501,7 @@ def call_plotters(root_path: Path, args):
 
     bladebit_parser = subparsers.add_parser("bladebit", help="Create a plot with bladebit")
     subparsers_bb = bladebit_parser.add_subparsers(dest="plot_type", required=True)
+    build_parser(subparsers_bb, root_path, bladebit_cuda_plotter_options, "cudaplot", "Creat a plot using CUDA")
     build_parser(subparsers_bb, root_path, bladebit_ram_plotter_options, "ramplot", "Create a plot using RAM")
     build_parser(subparsers_bb, root_path, bladebit_disk_plotter_options, "diskplot", "Create a plot using disk")
 
@@ -489,12 +547,8 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
 
     if chiapos is not None:
         plotters["chiapos"] = chiapos
-    if bladebit and bladebit.get("version") is not None:
-        bladebit_major_version = bladebit["version"].split(".")[0]
-        if bladebit_major_version == "2":
-            plotters["bladebit2"] = bladebit
-        else:
-            plotters["bladebit"] = bladebit
+    if bladebit is not None:
+        plotters["bladebit"] = bladebit
     if madmax is not None:
         plotters["madmax"] = madmax
 
@@ -506,8 +560,9 @@ def show_plotters_version(root_path: Path):
     if "chiapos" in info and "version" in info["chiapos"]:
         print(f"chiapos: {info['chiapos']['version']}")
     if "bladebit" in info and "version" in info["bladebit"]:
-        print(f"bladebit: {info['bladebit']['version']}")
-    if "bladebit2" in info and "version" in info["bladebit2"]:
-        print(f"bladebit: {info['bladebit2']['version']}")
+        if info["bladebit"]["cuda_support"]:
+            print(f"bladebit: {info['bladebit']['version']} (CUDA ready)")
+        else:
+            print(f"bladebit: {info['bladebit']['version']}")
     if "madmax" in info and "version" in info["madmax"]:
         print(f"madmax: {info['madmax']['version']}")

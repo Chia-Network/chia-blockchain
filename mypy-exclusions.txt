@@ -14,13 +14,7 @@ chia.pools.pool_wallet
 chia.pools.pool_wallet_info
 chia.rpc.rpc_client
 chia.rpc.util
-chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
-chia.seeder.crawl_store
-chia.seeder.crawler
-chia.seeder.dns_server
-chia.seeder.peer_record
-chia.seeder.start_crawler
 chia.simulator.full_node_simulator
 chia.simulator.keyring
 chia.simulator.setup_services
@@ -83,7 +77,6 @@ tests.clvm.test_chialisp_deserialization
 tests.clvm.test_program
 tests.clvm.test_puzzle_compression
 tests.clvm.test_puzzles
-tests.clvm.test_serialized_program
 tests.clvm.test_singletons
 tests.clvm.test_spend_sim
 tests.conftest

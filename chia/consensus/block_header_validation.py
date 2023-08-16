@@ -23,7 +23,12 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
+from chia.types.blockchain_format.proof_of_space import (
+    calculate_prefix_bits,
+    get_plot_id,
+    passes_plot_filter,
+    verify_and_get_quality_string,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -491,6 +496,30 @@ def validate_unfinished_header_block(
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)
 
+    # 5c. Check plot id is not present within last `NUM_DISTINCT_CONSECUTIVE_PLOT_IDS` blocks.
+    if height >= constants.SOFT_FORK4_HEIGHT:
+        curr_optional_block_record: Optional[BlockRecord] = prev_b
+        plot_id = get_plot_id(header_block.reward_chain_block.proof_of_space)
+        curr_sp = cc_sp_hash
+        sp_count = 1
+
+        while curr_optional_block_record is not None and sp_count < constants.UNIQUE_PLOTS_WINDOW:
+            prefix_bits = calculate_prefix_bits(constants, curr_optional_block_record.height)
+
+            if curr_optional_block_record.cc_sp_hash != curr_sp:
+                if passes_plot_filter(
+                    prefix_bits,
+                    plot_id,
+                    curr_optional_block_record.pos_ss_cc_challenge_hash,
+                    curr_optional_block_record.cc_sp_hash,
+                ):
+                    return None, ValidationError(Err.INVALID_POSPACE, f"Chip-13 Block Failed: {height}")
+
+                sp_count += 1
+                curr_sp = curr_optional_block_record.cc_sp_hash
+            if sp_count < constants.UNIQUE_PLOTS_WINDOW:
+                curr_optional_block_record = blocks.try_block_record(curr_optional_block_record.prev_hash)
+
     # 6. check signage point index
     # no need to check negative values as this is uint 8
     if header_block.reward_chain_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
@@ -815,11 +844,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
-        if height >= constants.SOFT_FORK2_HEIGHT:
-            max_future_time = constants.MAX_FUTURE_TIME2
-        else:
-            max_future_time = constants.MAX_FUTURE_TIME
-        if header_block.foliage_transaction_block.timestamp > int(time.time() + max_future_time):
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME2):
             return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
         if prev_b is not None:

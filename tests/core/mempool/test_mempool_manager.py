@@ -159,12 +159,20 @@ def make_test_conds(
             Spend(
                 spend_id,
                 IDENTITY_PUZZLE_HASH,
+                IDENTITY_PUZZLE_HASH,
+                TEST_COIN_AMOUNT,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
                 None if before_height_relative is None else uint32(before_height_relative),
                 None if before_seconds_relative is None else uint64(before_seconds_relative),
                 None if birth_height is None else uint32(birth_height),
                 None if birth_seconds is None else uint64(birth_seconds),
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
                 [],
                 [],
                 0,
@@ -550,7 +558,6 @@ mis = MempoolInclusionStatus
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("softfork2", [False, True])
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
@@ -609,28 +616,13 @@ async def test_ephemeral_timelock(
     lock_value: int,
     expected_status: MempoolInclusionStatus,
     expected_error: Optional[Err],
-    softfork2: bool,
 ) -> None:
-    if softfork2:
-        constants = DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0)
-    else:
-        constants = DEFAULT_CONSTANTS
-
     mempool_manager = await instantiate_mempool_manager(
         get_coin_record=get_coin_record_for_test_coins,
         block_height=uint32(5),
         block_timestamp=uint64(10050),
-        constants=constants,
+        constants=DEFAULT_CONSTANTS,
     )
-
-    if not softfork2 and opcode in [
-        co.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-        co.ASSERT_BEFORE_HEIGHT_RELATIVE,
-        co.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-        co.ASSERT_BEFORE_SECONDS_RELATIVE,
-    ]:
-        expected_error = Err.INVALID_CONDITION
-        expected_status = MempoolInclusionStatus.FAILED
 
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
@@ -1009,7 +1001,7 @@ async def test_assert_before_expiration(
         get_coin_record,
         block_height=uint32(10),
         block_timestamp=uint64(10000),
-        constants=DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0),
+        constants=DEFAULT_CONSTANTS,
     )
 
     bundle = spend_bundle_from_conditions(

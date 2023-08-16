@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from pathlib import Path
 from typing import Optional
 
 import pytest
@@ -33,62 +34,35 @@ async def new_block(
     ses: Optional[SubEpochSummary],
 ):
     async with db.writer_maybe_transaction() as conn:
-        if db.db_version == 2:
-            cursor = await conn.execute(
-                "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
-                (
-                    block_hash,
-                    parent,
-                    height,
-                    # sub epoch summary
-                    None if ses is None else bytes(ses),
-                ),
-            )
-            await cursor.close()
-            if is_peak:
-                cursor = await conn.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, block_hash))
-                await cursor.close()
-        else:
-            cursor = await conn.execute(
-                "INSERT INTO block_records VALUES(?, ?, ?, ?, ?)",
-                (
-                    block_hash.hex(),
-                    parent.hex(),
-                    height,
-                    # sub epoch summary
-                    None if ses is None else bytes(ses),
-                    is_peak,
-                ),
-            )
+        cursor = await conn.execute(
+            "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
+            (
+                block_hash,
+                parent,
+                height,
+                # sub epoch summary
+                None if ses is None else bytes(ses),
+            ),
+        )
+        await cursor.close()
+        if is_peak:
+            cursor = await conn.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, block_hash))
             await cursor.close()
 
 
 async def setup_db(db: DBWrapper2):
     async with db.writer_maybe_transaction() as conn:
-        if db.db_version == 2:
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS full_blocks("
-                "header_hash blob PRIMARY KEY,"
-                "prev_hash blob,"
-                "height bigint,"
-                "sub_epoch_summary blob)"
-            )
-            await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
+        await conn.execute(
+            "CREATE TABLE IF NOT EXISTS full_blocks("
+            "header_hash blob PRIMARY KEY,"
+            "prev_hash blob,"
+            "height bigint,"
+            "sub_epoch_summary blob)"
+        )
+        await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS hh on full_blocks(header_hash)")
-        else:
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS block_records("
-                "header_hash text PRIMARY KEY,"
-                "prev_hash text,"
-                "height bigint,"
-                "sub_epoch_summary blob,"
-                "is_peak tinyint)"
-            )
-            await conn.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS hh on block_records(header_hash)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
+        await conn.execute("CREATE INDEX IF NOT EXISTS hh on full_blocks(header_hash)")
 
 
 # if chain_id != 0, the last block in the chain won't be considered the peak,
@@ -171,10 +145,7 @@ class TestBlockHeightMap:
             # and sub epoch summary. In this test we have a sub epoch summary
             # every 20 blocks, so we generate the 30 last blocks only
             async with db_wrapper.writer_maybe_transaction() as conn:
-                if db_version == 2:
-                    await conn.execute("DROP TABLE full_blocks")
-                else:
-                    await conn.execute("DROP TABLE block_records")
+                await conn.execute("DROP TABLE full_blocks")
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
@@ -407,3 +378,44 @@ class TestBlockHeightMap:
             assert height_map.get_ses(6) == gen_ses(6)
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(8)
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="BlockHeightMap does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+
+@pytest.mark.asyncio
+async def test_empty_chain(tmp_dir, db_version):
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(0)
+
+        with pytest.raises(AssertionError) as _:
+            height_map.get_hash(0)
+
+
+@pytest.mark.asyncio
+async def test_peak_only_chain(tmp_dir, db_version):
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+            )
+            await cursor.close()
+
+        height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+        with pytest.raises(KeyError) as _:
+            height_map.get_ses(0)
+
+        with pytest.raises(AssertionError) as _:
+            height_map.get_hash(0)
