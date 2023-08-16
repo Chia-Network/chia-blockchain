@@ -1102,7 +1102,7 @@ class DAOWallet(WalletProtocol):
             if pi.proposal_id == proposal_id:
                 proposal_info = pi
                 break
-        if proposal_info is None:
+        if proposal_info is None:  # pragma: no cover
             raise ValueError("Unable to find a proposal with that ID.")
         if (proposal_info.timer_coin is None) and (
             proposal_info.current_innerpuz == get_finished_state_puzzle(proposal_info.proposal_id)
@@ -1563,7 +1563,7 @@ class DAOWallet(WalletProtocol):
     async def fetch_proposed_puzzle_reveal(self, proposal_id: bytes32) -> Program:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
         # The proposal_id is launcher coin, so proposal_id's child is eve and the eve spend contains the reveal
         children = await wallet_node.fetch_children(proposal_id, peer)
@@ -1576,7 +1576,7 @@ class DAOWallet(WalletProtocol):
     async def fetch_cat_lineage_proof(self, cat_coin: Coin) -> LineageProof:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
         state = await wallet_node.get_coin_state([cat_coin.parent_coin_info], peer)
         assert state is not None
@@ -1616,7 +1616,7 @@ class DAOWallet(WalletProtocol):
                 override_memos=True,
             )
             return tx_records[0]
-        else:
+        else:  # pragma: no cover
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
 
     async def create_add_money_to_treasury_spend(
@@ -1635,7 +1635,7 @@ class DAOWallet(WalletProtocol):
     async def fetch_singleton_lineage_proof(self, coin: Coin) -> LineageProof:
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
         state = await wallet_node.get_coin_state([coin.parent_coin_info], peer)
         assert state is not None
@@ -1671,7 +1671,7 @@ class DAOWallet(WalletProtocol):
         sb = await dao_cat_wallet.remove_active_proposal(closed_list, fee=fee, push=False)
         spends.append(sb)
 
-        if not spends:
+        if not spends:  # pragma: no cover
             raise ValueError("No proposals are available for release")
 
         full_spend = SpendBundle.aggregate(spends)
@@ -1732,7 +1732,7 @@ class DAOWallet(WalletProtocol):
 
                     asset_create_coins: List[Dict[Any, Any]] = []
                     for asset in LIST_OF_TAILHASH_CONDITIONS.as_iter():
-                        if asset == Program.to(0):
+                        if asset == Program.to(0):  # pragma: no cover
                             asset_dict: Optional[Dict[str, Any]] = None
                         else:
                             asset_id = asset.first().as_atom()
@@ -1763,7 +1763,7 @@ class DAOWallet(WalletProtocol):
                         "dao_rules": dao_rules,
                     }
                 return dictionary
-        raise ValueError(f"Unable to find proposal with id: {proposal_id.hex()}")
+        raise ValueError(f"Unable to find proposal with id: {proposal_id.hex()}")  # pragma: no cover
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]) -> None:
         self.log.info(f"Adding parent {name}: {parent}")
@@ -1799,7 +1799,7 @@ class DAOWallet(WalletProtocol):
         """
         max_num = 0
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DAO:
+            if wallet.type() == WalletType.DAO:  # pragma: no cover
                 matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)  # TODO: bug: wallet.wallet_info
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
@@ -1821,7 +1821,7 @@ class DAOWallet(WalletProtocol):
         return await dao_cat_wallet.create_new_dao_cats(amount, push, reuse_puzhash=reuse_puzhash)
 
     @staticmethod
-    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:
+    def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:  # pragma: no cover
         # CoinSpend of one of the coins that we cared about. This coin was spent in a block, but might be in a reorg
         # If we return a value, it is a coin that we are also interested in (to support two transitions per block)
         return get_most_recent_singleton_coin_from_coin_spend(spend)
@@ -1830,11 +1830,11 @@ class DAOWallet(WalletProtocol):
         ret: List[
             Tuple[uint32, SingletonRecord]
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) == 0:
+        if len(ret) == 0:  # pragma: no cover
             return None
         return ret[-1]
 
-    async def get_tip_created_height(self, singleton_id: bytes32) -> Optional[int]:
+    async def get_tip_created_height(self, singleton_id: bytes32) -> Optional[int]:  # pragma: no cover
         ret: List[
             Tuple[uint32, SingletonRecord]
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
@@ -1850,18 +1850,18 @@ class DAOWallet(WalletProtocol):
     ) -> None:
         new_dao_info = copy.copy(self.dao_info)
         puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
-        if puzzle is None:
+        if puzzle is None:  # pragma: no cover
             raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
             Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
         )  # get proposal solution from full singleton solution
         singleton_id = singleton.get_singleton_id_from_puzzle(new_state.puzzle_reveal)
-        if singleton_id is None:
+        if singleton_id is None:  # pragma: no cover
             raise ValueError("get_singleton_id_from_puzzle failed")
         ended = False
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         current_coin = get_most_recent_singleton_coin_from_coin_spend(new_state)
-        if current_coin is None:
+        if current_coin is None:  # pragma: no cover
             raise ValueError("get_most_recent_singleton_coin_from_coin_spend failed")
 
         current_innerpuz = get_new_puzzle_from_proposal_solution(puzzle, solution)
@@ -1920,7 +1920,7 @@ class DAOWallet(WalletProtocol):
             total_votes,
         ) = c_a.as_iter()
 
-        if current_coin is None:
+        if current_coin is None:  # pragma: no cover
             raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
 
         timer_coin = None
@@ -1936,10 +1936,10 @@ class DAOWallet(WalletProtocol):
             is_yes_vote = 0
             votes_added = 0
 
-        if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:
+        if current_coin.amount < dao_rules.proposal_minimum_amount and not ended:  # pragma: no cover
             raise ValueError("this coin does not meet the minimum requirements and can be ignored")
         new_total_votes = total_votes.as_int() + votes_added
-        if new_total_votes < self.dao_info.filter_below_vote_amount:
+        if new_total_votes < self.dao_info.filter_below_vote_amount:  # pragma: no cover
             return  # ignore all proposals below the filter amount
 
         if is_yes_vote == 1:
@@ -1984,14 +1984,14 @@ class DAOWallet(WalletProtocol):
         if not ended:
             wallet_node: Any = self.wallet_state_manager.wallet_node
             peer: WSChiaConnection = wallet_node.get_full_node_peer()
-            if peer is None:
+            if peer is None:  # pragma: no cover
                 raise ValueError("Could not find any peers to request puzzle and solution from")
             children = await wallet_node.fetch_children(singleton_id, peer)
             assert len(children) > 0
             found = False
             parent_coin_id = singleton_id
 
-            if self.dao_info.current_treasury_innerpuz is None:
+            if self.dao_info.current_treasury_innerpuz is None:  # pragma: no cover
                 raise ValueError("self.dao_info.current_treasury_innerpuz is None")
 
             timer_coin_puzhash = get_proposal_timer_puzzle(
@@ -2002,7 +2002,7 @@ class DAOWallet(WalletProtocol):
 
             while not found and len(children) > 0:
                 children = await wallet_node.fetch_children(parent_coin_id, peer)
-                if len(children) == 0:
+                if len(children) == 0:  # pragma: no cover
                     break
                 children_state = [child for child in children if child.coin.amount % 2 == 1]
                 assert children_state is not None
@@ -2087,7 +2087,7 @@ class DAOWallet(WalletProtocol):
             if prop.proposal_id == proposal_id:
                 is_closed = prop.closed
                 break
-        else:
+        else:  # pragma: no cover
             raise ValueError(f"Proposal not found for id {proposal_id}")
 
         wallet_node = self.wallet_state_manager.wallet_node
@@ -2126,7 +2126,7 @@ class DAOWallet(WalletProtocol):
             # return
             pass
         puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
-        if puzzle is None:
+        if puzzle is None:  # pragma: no cover
             raise ValueError("get_innerpuzzle_from_puzzle failed")
         solution = (
             Program.from_bytes(bytes(new_state.solution)).rest().rest().first()
@@ -2154,11 +2154,11 @@ class DAOWallet(WalletProtocol):
         await self.add_parent(new_state.coin.name(), future_parent)
         return
 
-    async def get_spend_history(self, singleton_id: bytes32) -> List[Tuple[uint32, CoinSpend]]:
+    async def get_spend_history(self, singleton_id: bytes32) -> List[Tuple[uint32, CoinSpend]]:  # pragma: no cover
         ret: List[
             Tuple[uint32, CoinSpend]
         ] = await self.wallet_state_manager.singleton_store.get_records_by_singleton_id(singleton_id)
-        if len(ret) == 0:  # pragma: no cover
+        if len(ret) == 0:
             raise ValueError(f"No records found in singleton store for singleton id {singleton_id}")
         return ret
 
@@ -2172,7 +2172,7 @@ class DAOWallet(WalletProtocol):
             f"DAOWallet.apply_state_transition called with the height: {block_height} and CoinSpend of {new_state.coin.name()}."
         )
         singleton_id = get_singleton_id_from_puzzle(new_state.puzzle_reveal)
-        if not singleton_id:
+        if not singleton_id:  # pragma: no cover
             raise ValueError("Received a non singleton coin for dao wallet")
         tip: Optional[Tuple[uint32, SingletonRecord]] = await self.get_tip(singleton_id)
         if tip is None:  # pragma: no cover

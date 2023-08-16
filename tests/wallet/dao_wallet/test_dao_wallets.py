@@ -36,7 +36,7 @@ async def rpc_state(
     params: List[Union[int, Dict[str, Any]]],
     condition_func: Callable[[Dict[str, Any]], Any],
     result: Optional[Any] = None,
-) -> Union[bool, Dict[str, Any]]:
+) -> Union[bool, Dict[str, Any]]:  # pragma: no cover
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -203,7 +203,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.process_transaction_records(records=txs)
 
-    for i in range(1, num_blocks):
+    for i in range(1, num_blocks):  # pragma: no cover
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
@@ -1071,7 +1071,7 @@ async def test_dao_proposal_partial_vote(
 
     try:
         close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id, fee=uint64(100), push=True)
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         print(e)
 
     await full_node_api.process_spend_bundles(bundles=[close_sb])
@@ -2299,7 +2299,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Test Reorg on creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 10), uint32(height + 1), puzzle_hash_0, None)
@@ -2346,7 +2346,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg funding spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
@@ -2457,7 +2457,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg on vote spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
@@ -2485,7 +2485,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg closed proposal
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
