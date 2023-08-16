@@ -985,7 +985,7 @@ class WalletStateManager:
                         )
                         self.state_changed("converted cat wallet to cr", wallet_info.id)
                         return WalletIdentifier(wallet_info.id, WalletType(WalletType.CRCAT))
-            if parent_data.tail_program_hash.hex()[2:] in self.default_cats or self.config.get(
+            if parent_data.tail_program_hash.hex() in self.default_cats or self.config.get(
                 "automatically_add_unknown_cats", False
             ):
                 if is_crcat:
@@ -998,7 +998,7 @@ class WalletStateManager:
                     )
                 else:
                     cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
-                        self, self.main_wallet, parent_data.tail_program_hash.hex()[2:]
+                        self, self.main_wallet, parent_data.tail_program_hash.hex()
                     )
                 return WalletIdentifier.create(cat_wallet)
             else:
