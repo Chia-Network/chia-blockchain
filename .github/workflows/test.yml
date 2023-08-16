@@ -111,6 +111,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
@@ -168,18 +173,19 @@ jobs:
         if: always()
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           COV_STATUS: ${{ env.COV_STATUS }}
+          GH_TOKEN: ${{ github.token }}
+          ORG_REPO: ${{ github.repository }}
         run: |
           PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
-          comments=$(gh api -X GET /repos/${{ github.repository }}/issues/${PR_NUM}/comments)
-          comment_id=$(echo "$comments" | jq '.[] | select(.user.login == "github-actions[bot]" and (.body | tostring | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->"))) | .id')
-          coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
-          if [[ -n "$comment_id" ]]; then
-            gh api -X DELETE /repos/${{ github.repository }}/issues/comments/"$comment_id"
+          COMMENTS=$(gh api -X GET /repos/"${ORG_REPO}"/issues/"${PR_NUM}"/comments)
+          COMMENT_ID=$(echo "$COMMENTS" | jq '.[] | select(.user.login == "github-actions[bot]" and (.body | tostring | contains("<!-- COVERAGE_COMMENT_'${PR_NUM}' -->"))) | .id')
+          COVERAGE_LABEL=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
+          if [[ -n "$COMMENT_ID" ]]; then
+            gh api -X DELETE /repos/"${ORG_REPO}"/issues/comments/"${COMMENT_ID}"
           fi
-          if [[ $COV_STATUS != '0' ]]; then
-            if [[ $coverage_label == "coverage-diff" ]]; then
+          if [[ "$COV_STATUS" != '0' ]]; then
+            if [[ "$COVERAGE_LABEL" == "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --remove-label "coverage-diff"
             fi
           fi
@@ -187,31 +193,49 @@ jobs:
       - name: Add diff coverage report comment to PR
         if: always()
         env:
-          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.base_ref }}
           COV_STATUS: ${{ env.COV_STATUS }}
+          GH_TOKEN: ${{ github.token }}
+          ORG_REPO: ${{ github.repository }}
         run: |
           if [[ $COV_STATUS != '0' ]]; then
-            # Add unique identifier to the comment file
+            BASE_URL="https://github.com/${ORG_REPO}/blob/${BRANCH_NAME}"
             PR_NUM=$(jq -r '.number' "$GITHUB_EVENT_PATH")
-            coverage_label=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
-            echo "<!-- COVERAGE_COMMENT_${PR_NUM} -->" > coverage-reports/diff-cover-md-table
-            # Transform diff-cover output into a markdown table
-            awk 'BEGIN{print "| File | Coverage | Missing Lines |"; print "|------|----------|---------------|"}
-                /.*\.py/ {
-                  split($0,a,"(");
-                  gsub(")","",a[2])
-                  if (index(a[2], ":") == 0) {
-                    print "| " a[1] " | " a[2] " | None |"
-                  } else {
-                    split(a[2],b,":");
-                    print "| " a[1] " | " b[1] " | " substr(b[2], 15) " |"
-                  }
-                }' coverage-reports/diff-cover-stdout >> coverage-reports/diff-cover-md-table
-            cat coverage-reports/diff-cover-md-table >> "$GITHUB_STEP_SUMMARY"
-            # Add comment to PR
-            gh pr comment "$PR_NUM" -F coverage-reports/diff-cover-md-table
-            # If label doesn't exist, add it
-            if [[ $coverage_label != "coverage-diff" ]]; then
+            COVERAGE_LABEL=$(gh pr view "$PR_NUM" --json labels --jq ' .labels[].name | select(. == "coverage-diff")')
+            CONTENT=$(<coverage-reports/diff-cover-stdout)
+            OUTPUT="<!-- COVERAGE_COMMENT_${PR_NUM} -->\n| File | Coverage | Missing Lines |\n|------|----------|---------------|\n"
+            TOTAL_LINES="Unknown"
+            MISSING_LINES="Unknown"
+            TOTAL_COVERAGE="Unknown"
+            IFS=$'\n'
+            for LINE in $CONTENT; do
+              if [[ $LINE =~ ^(.*\.py)\ \(([0-9\.]+%)\)\:\ Missing\ lines\ (.*)$ ]]; then
+                FILE="${BASH_REMATCH[1]}"
+                COVERAGE="${BASH_REMATCH[2]}"
+                MISSING="${BASH_REMATCH[3]}"
+                MISSING_TRANSFORMED="lines "
+                IFS=',' read -ra MISSING_PARTS <<< "$MISSING"
+                for PART in "${MISSING_PARTS[@]}"; do
+                  if [[ $PART =~ ^([0-9]+)\-([0-9]+)$ ]]; then
+                    MISSING_TRANSFORMED+="[${BASH_REMATCH[1]}-${BASH_REMATCH[2]}](${BASE_URL}/${FILE}#L${BASH_REMATCH[1]}-L${BASH_REMATCH[2]}), "
+                  else
+                    MISSING_TRANSFORMED+="[${PART}](${BASE_URL}/${FILE}#L${PART}), "
+                  fi
+                done
+                MISSING_TRANSFORMED=${MISSING_TRANSFORMED%, }
+                OUTPUT+="| [${FILE}](${BASE_URL}/${FILE}) | ${COVERAGE} | ${MISSING_TRANSFORMED} |\n"
+              elif [[ $LINE =~ ^Total:\ \ \ (.*)\ lines$ ]]; then
+                TOTAL_LINES="${BASH_REMATCH[1]} lines"
+              elif [[ $LINE =~ ^Missing:\ (.*)\ lines$ ]]; then
+                MISSING_LINES="${BASH_REMATCH[1]} lines"
+              elif [[ $LINE =~ ^Coverage:\ (.*)%$ ]]; then
+                TOTAL_COVERAGE="${BASH_REMATCH[1]}%"
+              fi
+            done
+            OUTPUT+="\n| Total | Missing | Coverage |\n|-------|---------|----------|\n| ${TOTAL_LINES} | ${MISSING_LINES} | ${TOTAL_COVERAGE} |\n"
+            echo -e "$OUTPUT" > temp_comment.txt
+            gh pr comment "$PR_NUM" -F temp_comment.txt
+            if [[ $COVERAGE_LABEL != "coverage-diff" ]]; then
               gh pr edit "$PR_NUM" --add-label "coverage-diff"
             fi
           fi
