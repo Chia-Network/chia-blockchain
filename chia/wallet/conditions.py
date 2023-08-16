@@ -222,8 +222,10 @@ class CreateCoin(Condition):
     memos: Optional[List[bytes]] = None
 
     def to_program(self) -> Program:
-        memo_base: Program = Program.to(None) if self.memos is None else Program.to((self.memos, None))
-        condition: Program = Program.to((ConditionOpcode.CREATE_COIN, (self.puzzle_hash, (self.amount, memo_base))))
+        condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
+        if self.memos is not None:
+            condition_args.append(self.memos)
+        condition: Program = Program.to(condition_args)
         return condition
 
     @classmethod
@@ -1088,7 +1090,10 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
 }
 
 
-def parse_conditions_non_consensus(conditions: Iterable[Program], abstractions: bool = True) -> List[Condition]:
+def parse_conditions_non_consensus(
+    conditions: Iterable[Program],
+    abstractions: bool = True,  # Use abstractions like *Announcement or Timelock instead of specific condition class
+) -> List[Condition]:
     driver_dictionary: Dict[bytes, Type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
@@ -1206,6 +1211,7 @@ def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
         else:
             properties_left -= RELATIVE_PROPERTIES
 
+        assert len(properties_left) == 1
         final_property: str = next(iter(properties_left))
         current_value: Optional[int] = getattr(valid_times, final_property)
         if current_value is not None:
