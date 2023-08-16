@@ -2613,10 +2613,8 @@ class WalletRpcApi:
         elif request["proposal_type"] == "mint":
             amount_of_cats = uint64(request["amount"])
             mint_address = decode_puzzle_hash(request["cat_target_address"])
-            # amount_of_cats_to_create: uint64,
-            # cats_new_innerpuzhash: bytes32,
             proposed_puzzle = await dao_wallet.generate_mint_proposal_innerpuz(amount_of_cats, mint_address)
-        else:
+        else:  # pragma: no cover
             return {"success": False, "error": "Unknown proposal type."}
 
         vote_amount = request.get("vote_amount")
@@ -2633,7 +2631,7 @@ class WalletRpcApi:
             if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 proposal_id = coin.name()
                 break
-        else:
+        else:  # pragma: no cover
             raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
@@ -2674,7 +2672,7 @@ class WalletRpcApi:
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         fee = uint64(request.get("fee", 0))
-        if "genesis_id" in request:
+        if "genesis_id" in request:  # pragma: no cover
             genesis_id = bytes32.from_hexstr(request["genesis_id"])
         else:
             genesis_id = None

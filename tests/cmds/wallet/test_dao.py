@@ -91,7 +91,10 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             return {"treasury_id": "0xCAFEF00D"}
 
         async def dao_get_treasury_balance(self, wallet_id: int) -> Dict[str, Union[str, bool, Dict[str, int]]]:
-            return {"success": True, "balances": {"xch": 1000000000000, "0xCAFEF00D": 10000000}}
+            if wallet_id == 2:
+                return {"success": True, "balances": {"xch": 1000000000000, "0xCAFEF00D": 10000000}}
+            else:
+                return {"success": True, "balances": {}}
 
         async def dao_add_funds_to_treasury(
             self,
@@ -133,6 +136,10 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     get_balance_args = ["dao", "get_balance", FINGERPRINT_ARG, "-i 2"]
     get_balance_asserts = ["XCH: 1.0", "0xCAFEF00D: 10000.0"]
     run_cli_command_and_assert(capsys, root_dir, get_balance_args, get_balance_asserts)
+
+    no_balance_args = ["dao", "get_balance", FINGERPRINT_ARG, "-i 3"]
+    no_balance_asserts = ["The DAO treasury currently has no funds"]
+    run_cli_command_and_assert(capsys, root_dir, no_balance_args, no_balance_asserts)
 
     add_funds_args = ["dao", "add_funds", FINGERPRINT_ARG, "-i 2", "-w 1", "-a", "10", "-m 0.1", "--reuse"]
     add_funds_asserts = [
@@ -178,13 +185,15 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         ) -> Dict[str, Union[bool, Dict[str, Any]]]:
             if proposal_id == "0xCAFEF00D":
                 proposal_details: Dict[str, Any] = {
-                    "proposal_type": "spend",
+                    "proposal_type": "s",
                     "xch_conditions": [{"puzzle_hash": "0xFEEDBEEF", "amount": 100}],
-                    "asset_conditions": [["0xDABBAD00", [{"puzzle_hash": "0xFEEDBEEF", "amount": 123}]]],
+                    "asset_conditions": [
+                        {"asset_id": "0xDABBAD00", "conditions": [{"puzzle_hash": "0xFEEDBEEF", "amount": 123}]}
+                    ],
                 }
             elif proposal_id == "0xFEEDBEEF":
                 proposal_details = {
-                    "proposal_type": "update",
+                    "proposal_type": "u",
                     "dao_rules": {
                         "proposal_timelock": 10,
                         "soft_close_length": 50,
@@ -192,7 +201,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
                 }
             else:
                 proposal_details = {
-                    "proposal_type": "spend",
+                    "proposal_type": "s",
                     "mint_amount": 1000,
                     "new_cat_puzhash": bytes32(b"x" * 32).hex(),
                 }
@@ -332,6 +341,26 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     ]
     proposal_asserts = ["Successfully created proposal", "Proposal ID: 0xCAFEF00D"]
     run_cli_command_and_assert(capsys, root_dir, spend_args, proposal_asserts)
+
+    bad_spend_args = [
+        "dao",
+        "create_proposal",
+        "spend",
+        FINGERPRINT_ARG,
+        "-i 2",
+        "-t",
+        address,
+        "-v",
+        "1000",
+        "-id",
+        "0xFEEDBEEF",
+        "-m 0.1",
+        "--reuse",
+    ]
+    proposal_asserts = ["Successfully created proposal", "Proposal ID: 0xCAFEF00D"]
+    with pytest.raises(ValueError) as e_info:
+        run_cli_command_and_assert(capsys, root_dir, bad_spend_args, proposal_asserts)
+    assert e_info.value.args[0] == "Must include a json specification or an address / amount pair."
 
     # Create an update proposal
     update_args = [

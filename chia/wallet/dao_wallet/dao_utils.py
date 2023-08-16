@@ -153,7 +153,11 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         raise ValueError("Not an update proposal.")
     (
         _,
-        proposal_validator,
+        _,
+        _,
+        _,
+        proposal_minimum_amount,
+        _,
         proposal_timelock,
         soft_close_length,
         attendance_required,
@@ -161,14 +165,6 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args.as_iter()
-    curried_args = uncurry_proposal_validator(proposal_validator)
-    (
-        SINGLETON_STRUCT,
-        PROPOSAL_SELF_HASH,
-        PROPOSAL_MINIMUM_AMOUNT,
-        PAYOUT_PUZHASH,
-    ) = curried_args.as_iter()
-
     dao_rules = DAORules(
         proposal_timelock.as_int(),
         soft_close_length.as_int(),
@@ -176,7 +172,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         pass_percentage.as_int(),
         self_destruct_length.as_int(),
         oracle_spend_delay.as_int(),
-        PROPOSAL_MINIMUM_AMOUNT.as_int(),
+        proposal_minimum_amount.as_int(),
     )
     return dao_rules
 

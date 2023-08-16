@@ -1739,17 +1739,17 @@ class DAOWallet(WalletProtocol):
                         else:
                             asset_id = asset.first().as_atom()
                             cc_list = []
-                            for cond in asset.rest().first():
+                            for cond in asset.rest().first().as_iter():
                                 if cond.first().as_int() == 51:
                                     asset_dict = {
                                         "puzzle_hash": cond.at("rf").as_atom(),
                                         "amount": cond.at("rrf").as_int(),
                                     }
-                                    cc_list.append(asset_dict)
-                            asset_create_coins.append({asset_id: cc_list})
+                                    cc_list.append([asset_id, asset_dict])
+                            asset_create_coins.append({"asset_id": asset_id, "conditions": cc_list})
                     dictionary: Dict[str, Any] = {
                         "state": state,
-                        "proposal_type": proposal_type,
+                        "proposal_type": proposal_type.value,
                         "proposed_puzzle_reveal": proposed_puzzle_reveal,
                         "xch_conditions": xch_created_coins,
                         "asset_conditions": asset_create_coins,
@@ -1761,7 +1761,7 @@ class DAOWallet(WalletProtocol):
                     dao_rules = get_dao_rules_from_update_proposal(proposed_puzzle_reveal)
                     dictionary = {
                         "state": state,
-                        "proposal_type": proposal_type,
+                        "proposal_type": proposal_type.value,
                         "dao_rules": dao_rules,
                     }
                 return dictionary
