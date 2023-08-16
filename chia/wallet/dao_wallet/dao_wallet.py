@@ -1670,7 +1670,7 @@ class DAOWallet(WalletProtocol):
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
                 spends.append(prop_sb)
 
-        sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, fee=fee, push=False)
         spends.append(sb)
 
         if not spends:

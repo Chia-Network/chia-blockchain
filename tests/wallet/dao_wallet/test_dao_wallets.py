@@ -167,6 +167,16 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
+    # Some dao_cat_wallet checks for coverage
+    dao_cat_wallet_0.get_name()
+    assert (await dao_cat_wallet_0.select_coins(uint64(1))) == set()
+    dao_cat_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
+    assert dao_cat_puzhash
+    dao_cat_inner = await dao_cat_wallet_0.get_new_inner_puzzle()
+    assert dao_cat_inner
+    dao_cat_inner_hash = await dao_cat_wallet_0.get_new_inner_hash()
+    assert dao_cat_inner_hash
+
     cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
     assert cat_wallet_0_bal == cat_amt * 2
 
@@ -230,6 +240,10 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     new_inner_puzhash = await dao_wallet_0.get_new_p2_inner_hash()
     assert isinstance(new_inner_puzhash, bytes32)
+
+    # run DAOCATwallet.create for coverage
+    create_from_info = await DAOCATWallet.create(wallet.wallet_state_manager, wallet, dao_cat_wallet_0.wallet_info)
+    assert create_from_info
 
 
 @pytest.mark.parametrize(
