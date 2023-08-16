@@ -16,6 +16,7 @@ from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     DEFAULT_DECOMPRESSOR_THREAD_COUNT,
+    DEFAULT_DECOMPRESSOR_TIMEOUT,
     DEFAULT_DISABLE_CPU_AFFINITY,
     DEFAULT_ENFORCE_GPU_INDEX,
     DEFAULT_GPU_INDEX,
@@ -103,6 +104,7 @@ class Harvester:
         use_gpu_harvesting = config.get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING)
         gpu_index = config.get("gpu_index", DEFAULT_GPU_INDEX)
         enforce_gpu_index = config.get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX)
+        decompressor_timeout = config.get("decompressor_timeout", DEFAULT_DECOMPRESSOR_TIMEOUT)
 
         try:
             self._mode = self.plot_manager.configure_decompressor(
@@ -113,6 +115,7 @@ class Harvester:
                 use_gpu_harvesting,
                 gpu_index,
                 enforce_gpu_index,
+                decompressor_timeout,
             )
         except Exception as e:
             self.log.error(f"{type(e)} {e} while configuring decompressor.")

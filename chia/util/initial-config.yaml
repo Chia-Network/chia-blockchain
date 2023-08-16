@@ -222,6 +222,8 @@ harvester:
   use_gpu_harvesting: False
   gpu_index: 0
   enforce_gpu_index: False
+  # If no decompressor is available after `decompressor_timeout` seconds, abort the current operation.
+  decompressor_timeout: 20
 
 pool:
   # Replace this with a real receive address
