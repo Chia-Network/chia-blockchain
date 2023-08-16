@@ -748,7 +748,10 @@ class WebSocketServer:
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
-            final_words = ["Finished plotting in"]
+            if "cudaplot" in config["command_args"]:
+                final_words = ["Completed writing plot"]
+            else:
+                final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
