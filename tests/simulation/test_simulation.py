@@ -452,7 +452,7 @@ class TestSimulation:
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
 
     @pytest.mark.asyncio
-    async def test_daemon_simulation(self_hostname, daemon_simulation):
+    async def test_daemon_simulation(self, self_hostname, daemon_simulation):
         deamon_and_nodes, get_b_tools, bt = daemon_simulation
         node1, node2, _, _, _, _, _, _, _, _, daemon1 = deamon_and_nodes
         server1 = node1.full_node.server
