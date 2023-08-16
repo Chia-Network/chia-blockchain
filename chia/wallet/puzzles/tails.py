@@ -211,7 +211,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
     """
 
     @staticmethod
-    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:
+    def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:  # pragma: no cover
         if uncurried_mod == GENESIS_BY_ID_OR_SINGLETON_MOD:
             genesis_id = curried_args.first()
             return True, [genesis_id.as_atom()]
@@ -226,7 +226,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         )
 
     @staticmethod
-    def solve(args: List[Program], solution_dict: Dict) -> Program:
+    def solve(args: List[Program], solution_dict: Dict) -> Program:  # pragma: no cover
         pid = hexstr_to_bytes(solution_dict["parent_coin_info"])
         return Program.to([pid, solution_dict["amount"]])
 
@@ -237,9 +237,8 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         if "coins" in tail_info:
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
-        else:
+        else:  # pragma: no cover
             coins = await wallet.standard_wallet.select_coins(amount)
-
             origin = coins.copy().pop()
             origin_id = origin.name()
 

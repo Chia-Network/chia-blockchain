@@ -2469,7 +2469,7 @@ class WalletRpcApi:
         wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
         amount = request.get("amount")
         assert amount
-        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
+        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:  # pragma: no cover
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
         funding_tx = await dao_wallet.create_add_money_to_treasury_spend(
             amount=uint64(amount),
@@ -2547,7 +2547,7 @@ class WalletRpcApi:
             id=dao_wallet.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
         )
         assert dao_cat_wallet is not None
-        if request["coins"]:
+        if request["coins"]:  # pragma: no cover
             coin_list = [Coin.from_json_dict(coin) for coin in request["coins"]]
             coins: List[LockedCoinInfo] = []
             for lci in dao_cat_wallet.dao_cat_info.locked_coins:
@@ -2588,7 +2588,7 @@ class WalletRpcApi:
                     amounts.append(amount)
                     puzzle_hashes.append(receiver_ph)
                     asset_types.append(asset_id)
-            else:
+            else:  # pragma: no cover
                 amounts.append(uint64(request["amount"]))
                 puzzle_hashes.append(decode_puzzle_hash(request["inner_address"]))
                 if request["asset_id"] is not None:

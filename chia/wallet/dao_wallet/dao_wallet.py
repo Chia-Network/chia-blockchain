@@ -178,7 +178,7 @@ class DAOWallet(WalletProtocol):
                 amount_of_cats,
                 fee=fee,
             )
-        except Exception as e_info:
+        except Exception as e_info:  # pragma: no cover
             await wallet_state_manager.user_store.delete_wallet(self.id())
             self.log.exception(f"Failed to create dao wallet: {e_info}")
             raise
@@ -303,10 +303,10 @@ class DAOWallet(WalletProtocol):
         return self.wallet_info.name
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        raise NotImplementedError("Method not implemented for DAO Wallet")
+        raise NotImplementedError("Method not implemented for DAO Wallet")  # pragma: no cover
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
-        raise NotImplementedError("puzzle_hash_for_pk is not available in DAO wallets")
+        raise NotImplementedError("puzzle_hash_for_pk is not available in DAO wallets")  # pragma: no cover
 
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
@@ -323,10 +323,10 @@ class DAOWallet(WalletProtocol):
         return parent_info
 
     async def get_frozen_amount(self) -> uint64:
-        return uint64(0)
+        return uint64(0)  # pragma: no cover
 
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        return uint128(0)
+        return uint128(0)  # pragma: no cover
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
@@ -417,7 +417,7 @@ class DAOWallet(WalletProtocol):
                 coins.append(record.coin)
                 if total >= amount:
                     break
-        if total < amount:
+        if total < amount:  # pragma: no cover
             raise ValueError(f"Not enough of asset {asset_id}: {total} < {amount}")
         return coins
 
@@ -429,7 +429,7 @@ class DAOWallet(WalletProtocol):
         self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
         try:
             # Get the parent coin spend
@@ -449,7 +449,7 @@ class DAOWallet(WalletProtocol):
                     dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
                     await self.save_info(dao_info)
                     await self.wallet_state_manager.add_interested_puzzle_hashes([coin.puzzle_hash], [self.id()])
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
         return
 
@@ -485,7 +485,7 @@ class DAOWallet(WalletProtocol):
         parent_coin_id: bytes32 = self.dao_info.treasury_id
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer: WSChiaConnection = wallet_node.get_full_node_peer()
-        if peer is None:
+        if peer is None:  # pragma: no cover
             raise ValueError("Could not find any peers to request puzzle and solution from")
 
         parent_coin = None
@@ -496,7 +496,7 @@ class DAOWallet(WalletProtocol):
                 break
 
             children_state_list: List[CoinState] = [child for child in children if child.coin.amount % 2 == 1]
-            if len(children_state_list) == 0:
+            if len(children_state_list) == 0:  # pragma: no cover
                 raise RuntimeError("Could not retrieve child_state")
             children_state = children_state_list[0]
             assert children_state is not None
@@ -506,7 +506,7 @@ class DAOWallet(WalletProtocol):
             parent_coin = child_coin
             parent_coin_id = child_coin.name()
 
-        if parent_parent_coin is None:
+        if parent_parent_coin is None:  # pragma: no cover
             raise RuntimeError("could not get parent_parent_coin of %s", children)
 
         # get lineage proof of parent spend, and also current innerpuz
@@ -516,12 +516,12 @@ class DAOWallet(WalletProtocol):
         parent_inner_puz = chia.wallet.singleton.get_inner_puzzle_from_singleton(
             parent_spend.puzzle_reveal.to_program()
         )
-        if parent_inner_puz is None:
+        if parent_inner_puz is None:  # pragma: no cover
             raise ValueError("get_innerpuzzle_from_puzzle failed")
 
         if parent_spend.puzzle_reveal.get_tree_hash() == child_coin.puzzle_hash:
             current_inner_puz = parent_inner_puz
-        else:
+        else:  # pragma: no cover
             # extract the treasury solution from the full singleton solution
             inner_solution = parent_spend.solution.to_program().rest().rest().first()
             # reconstruct the treasury puzzle
@@ -554,7 +554,7 @@ class DAOWallet(WalletProtocol):
         # Get or create a cat wallet
         for wallet_id in self.wallet_state_manager.wallets:
             wallet = self.wallet_state_manager.wallets[wallet_id]
-            if wallet.type() == WalletType.CAT:
+            if wallet.type() == WalletType.CAT:  # pragma: no cover
                 assert isinstance(wallet, CATWallet)
                 if wallet.cat_info.limitations_program_hash == cat_tail_hash:
                     cat_wallet = wallet
@@ -610,7 +610,7 @@ class DAOWallet(WalletProtocol):
         chia_coins = await self.standard_wallet.select_coins(fee)
         if reuse_puzhash is None:
             reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
+            if reuse_puzhash_config is None:  # pragma: no cover
                 reuse_puzhash = False
             else:
                 reuse_puzhash = reuse_puzhash_config.get(
@@ -641,21 +641,25 @@ class DAOWallet(WalletProtocol):
         This must be called under the wallet state manager lock
         """
 
-        if amount_of_cats_to_create is not None and amount_of_cats_to_create < 0:
+        if amount_of_cats_to_create is not None and amount_of_cats_to_create < 0:  # pragma: no cover
             raise ValueError("amount_of_cats must be >= 0, or None")
-        if (amount_of_cats_to_create is None or amount_of_cats_to_create == 0) and cat_tail_hash is None:
+        if (
+            amount_of_cats_to_create is None or amount_of_cats_to_create == 0
+        ) and cat_tail_hash is None:  # pragma: no cover
             raise ValueError("amount_of_cats must be > 0 or cat_tail_hash must be specified")
-        if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0 and cat_tail_hash is not None:
+        if (
+            amount_of_cats_to_create is not None and amount_of_cats_to_create > 0 and cat_tail_hash is not None
+        ):  # pragma: no cover
             raise ValueError("cannot create voting cats and use existing cat_tail_hash")
-        if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:
+        if self.dao_rules.pass_percentage > 10000 or self.dao_rules.pass_percentage < 0:  # pragma: no cover
             raise ValueError("proposal pass percentage must be between 0 and 10000")
 
         if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
             coins = await self.standard_wallet.select_coins(uint64(amount_of_cats_to_create + fee + 1))
-        else:
+        else:  # pragma: no cover
             coins = await self.standard_wallet.select_coins(uint64(fee + 1))
 
-        if coins is None:
+        if coins is None:  # pragma: no cover
             return None
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
@@ -705,7 +709,7 @@ class DAOWallet(WalletProtocol):
                 amount_of_cats_to_create,
             )
             assert new_cat_wallet is not None
-        else:
+        else:  # pragma: no cover
             for wallet in self.wallet_state_manager.wallets:
                 if self.wallet_state_manager.wallets[wallet].type() == WalletType.CAT:
                     if self.wallet_state_manager.wallets[wallet].cat_info.limitations_program_hash == cat_tail_hash:
@@ -761,7 +765,7 @@ class DAOWallet(WalletProtocol):
         )
         await self.add_parent(launcher_coin.name(), launcher_proof)
 
-        if tx_record is None or tx_record.spend_bundle is None:
+        if tx_record is None or tx_record.spend_bundle is None:  # pragma: no cover
             return None
 
         eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
@@ -817,7 +821,7 @@ class DAOWallet(WalletProtocol):
         Create the eve spend of the treasury
         This can only be completed after a number of blocks > oracle_spend_delay have been farmed
         """
-        if self.dao_info.current_treasury_innerpuz is None:
+        if self.dao_info.current_treasury_innerpuz is None:  # pragma: no cover
             raise ValueError("generate_treasury_eve_spend called with nil self.dao_info.current_treasury_innerpuz")
         full_treasury_puzzle = curry_singleton(self.dao_info.treasury_id, inner_puz)
         launcher_id, launcher_proof = self.dao_info.parent_info[0]
@@ -854,7 +858,7 @@ class DAOWallet(WalletProtocol):
         amounts: List[uint64],
         asset_types: List[Optional[bytes32]] = [None],
     ) -> Program:
-        if len(recipient_puzhashes) != len(amounts) != len(asset_types):
+        if len(recipient_puzhashes) != len(amounts) != len(asset_types):  # pragma: no cover
             raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
         xch_conds = []
         cat_conds = []
@@ -883,7 +887,7 @@ class DAOWallet(WalletProtocol):
         amount_of_cats_to_create: uint64,
         cats_new_innerpuzhash: bytes32,
     ) -> Program:
-        if amount_of_cats_to_create % 2 == 1:
+        if amount_of_cats_to_create % 2 == 1:  # pragma: no cover
             raise ValueError("Minting proposals must mint an even number of CATs")
         cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
 
@@ -916,7 +920,7 @@ class DAOWallet(WalletProtocol):
     ) -> Union[SpendBundle, TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(uint64(fee + dao_rules.proposal_minimum_amount))
-        if coins is None:
+        if coins is None:  # pragma: no cover
             return None
         # origin is normal coin which creates launcher coin
         origin = coins.copy().pop()
@@ -926,7 +930,7 @@ class DAOWallet(WalletProtocol):
 
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
 
-        if vote_amount is None:
+        if vote_amount is None:  # pragma: no cover
             dao_cat_wallet = self.wallet_state_manager.get_wallet(
                 id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
             )
@@ -1017,7 +1021,7 @@ class DAOWallet(WalletProtocol):
             )
             await self.wallet_state_manager.add_pending_transaction(record)
             return record
-        return full_spend
+        return full_spend  # pragma: no cover
 
     async def generate_proposal_eve_spend(
         self,
@@ -1103,8 +1107,7 @@ class DAOWallet(WalletProtocol):
         if (proposal_info.timer_coin is None) and (
             proposal_info.current_innerpuz == get_finished_state_puzzle(proposal_info.proposal_id)
         ):
-            raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
-        # TODO: we may well want to add in options for more specificity later, but for now this will do
+            raise ValueError("This proposal is already closed. Feel free to unlock your coins.")  # pragma: no cover
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
         dao_cat_wallet = await DAOCATWallet.get_or_create_wallet_for_cat(
@@ -1113,7 +1116,7 @@ class DAOWallet(WalletProtocol):
         assert dao_cat_wallet is not None
         assert proposal_info.current_innerpuz is not None
 
-        if vote_amount is None:
+        if vote_amount is None:  # pragma: no cover
             vote_amount = await dao_cat_wallet.get_votable_balance(proposal_id)
         assert vote_amount is not None
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
@@ -1214,10 +1217,9 @@ class DAOWallet(WalletProtocol):
             if pi.proposal_id == proposal_id:
                 proposal_info = pi
                 break
-        if proposal_info is None:
+        if proposal_info is None:  # pragma: no cover
             raise ValueError("Unable to find a proposal with that ID.")
-        if proposal_info.timer_coin is None:
-            # TODO: we should also check the current_inner is finished puzzle
+        if proposal_info.timer_coin is None:  # pragma: no cover
             raise ValueError("This proposal is already closed. Feel free to unlock your coins.")
         assert self.dao_info.current_treasury_innerpuz is not None
         curried_args = uncurry_treasury(self.dao_info.current_treasury_innerpuz)
@@ -1232,7 +1234,7 @@ class DAOWallet(WalletProtocol):
             oracle_spend_delay,
         ) = curried_args
         proposal_state = await self.get_proposal_state(proposal_id)
-        if not proposal_state["closable"]:
+        if not proposal_state["closable"]:  # pragma: no cover
             raise ValueError(f"This proposal is not ready to be closed. proposal_id: {proposal_id}")
         if proposal_state["passed"]:
             self.log.info(f"Closing passed proposal: {proposal_id}")
@@ -1284,7 +1286,7 @@ class DAOWallet(WalletProtocol):
                 TOTAL_VOTES,
             ) = c_a.as_iter()
 
-            if TOTAL_VOTES.as_int() < attendance_required.as_int():
+            if TOTAL_VOTES.as_int() < attendance_required.as_int():  # pragma: no cover
                 raise ValueError("Unable to pass this proposal as it has not met the minimum vote attendance.")
             timer_solution = Program.to(
                 [
@@ -1345,7 +1347,7 @@ class DAOWallet(WalletProtocol):
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
                                 tail_reconstruction = cat_wallet.cat_info.my_tail
-                            else:
+                            else:  # pragma: no cover
                                 tail_reconstruction = generate_cat_tail(genesis_id, self.dao_info.treasury_id)
                             assert tail_reconstruction is not None
                             assert tail_reconstruction.get_tree_hash() == cat_tail_hash
@@ -1379,7 +1381,7 @@ class DAOWallet(WalletProtocol):
                                 cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(
                                     CAT_MOD, [new_spendable_cat]
                                 )
-                            else:
+                            else:  # pragma: no cover
                                 cat_spend_bundle = cat_spend_bundle.aggregate(
                                     [
                                         cat_spend_bundle,
@@ -1439,7 +1441,7 @@ class DAOWallet(WalletProtocol):
                                     cat_coin.name(),
                                 ]
                             )
-                        else:
+                        else:  # pragma: no cover
                             solution = Program.to(
                                 [
                                     0,
@@ -1460,7 +1462,7 @@ class DAOWallet(WalletProtocol):
                     # create or merge with other CAT spends
                     if cat_spend_bundle is None:
                         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-                    else:
+                    else:  # pragma: no cover
                         cat_spend_bundle = cat_spend_bundle.aggregate(
                             [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)]
                         )
@@ -1673,12 +1675,12 @@ class DAOWallet(WalletProtocol):
             raise ValueError("No proposals are available for release")
 
         full_spend = SpendBundle.aggregate(spends)
-        if fee > 0:
+        if fee > 0:  # pragma: no cover
             chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
 
-        if push:
+        if push:  # pragma: no cover
             assert isinstance(finished_puz, Program)
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

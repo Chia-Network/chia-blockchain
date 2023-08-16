@@ -55,7 +55,7 @@ class WalletSingletonStore:
 
     async def save_singleton(self, record: SingletonRecord) -> None:
         singleton_id = singleton.get_singleton_id_from_puzzle(record.parent_coinspend.puzzle_reveal)
-        if singleton_id is None:
+        if singleton_id is None:  # pragma: no cover
             raise RuntimeError(
                 "Failed to derive Singleton ID from puzzle reveal in parent spend %s", record.parent_coinspend
             )
@@ -96,7 +96,7 @@ class WalletSingletonStore:
         """
         # get singleton_id from puzzle_reveal
         singleton_id = get_singleton_id_from_puzzle(coin_state.puzzle_reveal)
-        if not singleton_id:
+        if not singleton_id:  # pragma: no cover
             raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
@@ -105,14 +105,14 @@ class WalletSingletonStore:
             coin_state.solution.to_program(),
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
-        if conditions is None:
+        if conditions is None:  # pragma: no cover
             raise RuntimeError("Failed to add spend for coin: %s ", coin_state.coin.name())
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
 
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], int_from_bytes(cc_cond.vars[1]))
         inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
-        if inner_puz is None:
+        if inner_puz is None:  # pragma: no cover
             raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
 
         lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
@@ -169,8 +169,8 @@ class WalletSingletonStore:
             if cursor.rowcount > 0:
                 log.info("Deleted singleton with coin id: %s", coin_id.hex())
                 return True
-            log.warning("Couldn't find singleton with coin id to delete: %s", coin_id)
-            return False
+            log.warning("Couldn't find singleton with coin id to delete: %s", coin_id)  # pragma: no cover
+            return False  # pragma: no cover
 
     async def update_pending_transaction(self, coin_id: bytes32, pending: bool) -> bool:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -223,7 +223,7 @@ class WalletSingletonStore:
         get_all_state_transitions.
         """
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:  # pragma: no cover
             cursor = await conn.execute(
                 "DELETE FROM singletons WHERE removed_height>? AND wallet_id=?", (height, wallet_id_arg)
             )

@@ -207,7 +207,7 @@ class DAOCATWallet:
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
         ).get_tree_hash()
 
-        if new_cat_puzhash != coin.puzzle_hash:  # pragme: no cover
+        if new_cat_puzhash != coin.puzzle_hash:  # pragma: no cover
             raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))

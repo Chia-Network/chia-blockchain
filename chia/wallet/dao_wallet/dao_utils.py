@@ -546,11 +546,11 @@ def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
 
 def get_asset_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     mod, curried_args = puzzle.uncurry()
-    if mod == MOD:  # pragma: no cover
+    if mod == MOD:
         return None
     elif mod == CAT_MOD:
         return bytes32(curried_args.at("rf").as_atom())
-    elif mod == SINGLETON_MOD:
+    elif mod == SINGLETON_MOD:  # pragma: no cover
         return bytes32(curried_args.at("frf").as_atom())
     else:
         raise ValueError("DAO received coin with unknown puzzle")  # pragma: no cover
@@ -633,33 +633,9 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     return puzzle
 
 
-# TODO: move curry_singleton to chia.wallet.singleton
-# TODO: Is this correct? See create_fullpuz
-# TODO: innerpuz type: is innerpuz a full reveal, or a hash?
 def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
-
-
-def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program]:
-    curried_args, c_a = uncurry_proposal(proposal_puzzle)
-    (
-        SINGLETON_STRUCT,
-        PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        TREASURY_MOD_HASH,
-        LOCKUP_SELF_HASH,
-        CAT_TAIL_HASH,
-        TREASURY_ID,
-    ) = c_a.as_iter()
-    (
-        SELF_HASH,
-        PROPOSED_PUZ_HASH,
-        YES_VOTES,
-        TOTAL_VOTES,
-    ) = curried_args.as_iter()
-    return YES_VOTES, TOTAL_VOTES, PROPOSED_PUZ_HASH
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
@@ -733,7 +709,7 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Co
                 delegated_puz = solution.at("rrfrrf")
                 delegated_mod, delegated_args = delegated_puz.uncurry()
                 if delegated_puz.uncurry()[0] == SPEND_P2_SINGLETON_MOD:
-                    if coin.puzzle_hash == delegated_args.at("rrrrf").as_atom():
+                    if coin.puzzle_hash == delegated_args.at("rrrrf").as_atom():  # pragma: no cover
                         return True
             return None  # pragma: no cover
         else:

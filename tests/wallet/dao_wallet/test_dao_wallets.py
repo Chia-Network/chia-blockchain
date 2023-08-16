@@ -242,8 +242,12 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert isinstance(new_inner_puzhash, bytes32)
 
     # run DAOCATwallet.create for coverage
-    create_from_info = await DAOCATWallet.create(wallet.wallet_state_manager, wallet, dao_cat_wallet_0.wallet_info)
-    assert create_from_info
+    create_dao_cat_from_info = await DAOCATWallet.create(
+        wallet.wallet_state_manager, wallet, dao_cat_wallet_0.wallet_info
+    )
+    assert create_dao_cat_from_info
+    create_dao_wallet_from_info = await DAOWallet.create(wallet.wallet_state_manager, wallet, dao_wallet_0.wallet_info)
+    assert create_dao_wallet_from_info
 
 
 @pytest.mark.parametrize(
@@ -1738,6 +1742,12 @@ async def test_dao_rpc_client(
 
         exit = await client_0.dao_exit_lockup(dao_id_0)
         assert exit["success"]
+
+        # coverage tests for filter amount and get treasury id
+        treasury_id_resp = await client_0.dao_get_treasury_id(wallet_id=dao_id_0)
+        assert treasury_id_resp["treasury_id"] == treasury_id_hex
+        filter_amount_resp = await client_0.dao_adjust_filter_level(wallet_id=dao_id_0, filter_level=30)
+        assert filter_amount_resp["dao_info"]["filter_below_vote_amount"] == 30
 
     finally:
         client_0.close()
