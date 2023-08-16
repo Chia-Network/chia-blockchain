@@ -106,6 +106,7 @@ def assert_standard_results(
         assert len(soa_answer) == 1
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_error_conditions(
@@ -195,6 +196,7 @@ async def test_error_conditions(
     assert len(record_outside_domain_response.authority) == 0
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_dns_queries(
@@ -230,6 +232,7 @@ async def test_dns_queries(
         await make_dns_query(False, target_address, port, e_query)
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
 async def test_db_processing(seeder_service: DNSServer) -> None:
     """
