@@ -14,7 +14,6 @@ chia.pools.pool_wallet
 chia.pools.pool_wallet_info
 chia.rpc.rpc_client
 chia.rpc.util
-chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring
