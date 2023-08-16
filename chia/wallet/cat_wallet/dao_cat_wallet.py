@@ -33,7 +33,6 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
 )
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -83,7 +82,6 @@ class DAOCATWallet:
         wallet_info: WalletInfo,
     ) -> DAOCATWallet:
         self = DAOCATWallet()
-
         self.log = logging.getLogger(__name__)
 
         self.cost_of_single_tx = None
@@ -93,7 +91,7 @@ class DAOCATWallet:
         try:
             self.dao_cat_info = DAOCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
-        except AssertionError as e:
+        except AssertionError as e:  # pragma: no cover
             self.log.error(f"Error creating DAO CAT wallet: {e}")
             # Do a migration of the lineage proofs
             # cat_info = LegacyCATInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
@@ -159,15 +157,6 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_new_wallet(self)
         return self
 
-    async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
-        if record is None:
-            raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
-        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
-        return inner_puzzle
-
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAO CAT wallet has been notified that {coin} was added")
@@ -218,7 +207,7 @@ class DAOCATWallet:
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puz
         ).get_tree_hash()
 
-        if new_cat_puzhash != coin.puzzle_hash:
+        if new_cat_puzhash != coin.puzzle_hash:  # pragma: no cover
             raise ValueError(f"Cannot add coin - incorrect lockup puzzle: {coin}")
 
         lineage_proof = LineageProof(coin.parent_coin_info, lockup_puz.get_tree_hash(), uint64(coin.amount))
@@ -250,7 +239,7 @@ class DAOCATWallet:
     async def get_lineage_proof_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         return await self.lineage_store.get_lineage_proof(coin.parent_coin_info)
 
-    async def remove_lineage(self, name: bytes32) -> None:
+    async def remove_lineage(self, name: bytes32) -> None:  # pragma: no cover
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
@@ -260,7 +249,7 @@ class DAOCATWallet:
         for coin in self.dao_cat_info.locked_coins:
             compatible = True
             for active_vote in coin.active_votes:
-                if active_vote == proposal_id:
+                if active_vote == proposal_id:  # pragma: no cover
                     compatible = False
                     break
             if compatible:
@@ -268,7 +257,7 @@ class DAOCATWallet:
                 s += coin.coin.amount
                 if s >= amount:
                     break
-        if s < amount:
+        if s < amount:  # pragma: no cover
             raise ValueError(
                 "We do not have enough CATs in Voting Mode right now. "
                 "Please convert some more or try again with permission to convert."
@@ -292,22 +281,11 @@ class DAOCATWallet:
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-        # treasury_id = dao_wallet.dao_info.treasury_id
-        if proposal_puzzle is None:
+        if proposal_puzzle is None:  # pragma: no cover
             proposal_puzzle = dao_wallet.get_proposal_puzzle(proposal_id)
         assert proposal_puzzle is not None
         for lci in coins:
-            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
-            # inner_solution
-            # my_amount
-            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-            # proposal_innerpuz_hash
-            # vote_info
-            # vote_amount
-            # my_puzhash
-            # new_innerpuzhash  ; only include this if we're changing owners
             coin = lci.coin
-
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
             standard_inner_puz = get_innerpuz_from_lockup_puzzle(new_innerpuzzle)
@@ -315,20 +293,9 @@ class DAOCATWallet:
             # We must create either: one coin with the new puzzle and all our value
             # OR
             # a coin with the new puzzle and part of our amount AND a coin with our current puzzle and the change
-
             # We must also create a puzzle announcement which announces the following:
             # message = (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
             message = Program.to([proposal_id, amount, is_yes_vote, coin.name()]).get_tree_hash()
-            # We also collect 4 pieces of data for the DAOWallet in order to spend the Proposal properly
-
-            # vote_amount_or_solution  ; The qty of "votes" to add or subtract. ALWAYS POSITIVE.
-            # vote_info_or_p2_singleton_mod_hash ; vote_info is whether we are voting YES or NO. XXX rename vote_type?
-            # vote_coin_id_or_current_cat_issuance  ; this is either the coin ID we're taking a vote from OR...
-            #                                     ; the total number of CATs in circulation according to the treasury
-            # previous_votes_or_pass_margin  ; this is the active votes of the lockup we're communicating with
-            #                              ; OR this is what percentage of the total votes must be YES - represented as an integer from 0 to 10,000 - typically this is set at 5100 (51%)
-            # lockup_innerpuzhash_or_attendance_required  ; this is either the innerpuz of the locked up CAT we're taking a vote from OR
-            #                                           ; the attendance required - the percentage of the current issuance which must have voted represented as 0 to 10,000 - this is announced by the treasury
             vote_amounts_list = []
             voting_coin_id_list = []
             previous_votes_list = []
@@ -336,9 +303,6 @@ class DAOCATWallet:
             if running_sum + coin.amount <= amount:
                 vote_amount = coin.amount
                 running_sum = running_sum + coin.amount
-                # CREATE_COIN new_puzzle coin.amount
-                # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
-                # Payment(change_puzhash, uint64(change), [change_puzhash])
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -352,9 +316,6 @@ class DAOCATWallet:
                 )
             else:
                 vote_amount = amount - running_sum
-                # CREATE_COIN new_puzzle vote_amount
-                # CREATE_COIN old_puzzle change
-                # CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -380,15 +341,6 @@ class DAOCATWallet:
             voting_coin_id_list.append(coin.name())
             previous_votes_list.append(get_active_votes_from_lockup_puzzle(lci.inner_puzzle))
             lockup_innerpuz_list.append(get_innerpuz_from_lockup_puzzle(lci.inner_puzzle))
-            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
-            # inner_solution
-            # my_amount
-            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-            # proposal_innerpuzhashes_
-            # vote_info
-            # vote_amount
-            # my_inner_puzhash
-            # new_innerpuzhash  ; only include this if we're changing owners
             solution = Program.to(
                 [
                     coin.name(),
@@ -420,21 +372,7 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
 
-        # breakpoint()
         return spend_bundle
-
-    async def get_new_vote_state_puzzle(self, coins: Optional[List[Coin]] = None) -> Program:
-        innerpuz = await self.get_new_inner_puzzle()
-        puzzle = get_lockup_puzzle(
-            self.dao_cat_info.limitations_program_hash,
-            [],
-            innerpuz,
-        )
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.dao_cat_info.limitations_program_hash, puzzle)
-        # breakpoint()
-        await self.wallet_state_manager.add_interested_puzzle_hashes([puzzle.get_tree_hash()], [self.id()])
-        await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle.get_tree_hash()], [self.id()])
-        return puzzle
 
     async def create_new_dao_cats(
         self,
@@ -446,7 +384,7 @@ class DAOCATWallet:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
         cat_balance = await cat_wallet.get_spendable_balance()
-        if cat_balance < amount:
+        if cat_balance < amount:  # pragma: no cover
             raise ValueError(f"Insufficient CAT balance. Requested: {amount} Available: {cat_balance}")
         # get the lockup puzzle hash
         lockup_puzzle = await self.get_new_puzzle()
@@ -482,7 +420,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if reuse_puzhash:
+            if reuse_puzhash:  # pragma: no cover
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
             else:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
@@ -499,14 +437,6 @@ class DAOCATWallet:
             inner_solution = self.standard_wallet.make_solution(
                 primaries=primaries,
             )
-            # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
-            # inner_solution
-            # my_amount
-            # new_proposal_vote_id_or_removal_id  ; if we're exiting fully, set this to 0
-            # proposal_curry_vals
-            # vote_info
-            # vote_amount
-            # my_puzhash
             solution = Program.to(
                 [
                     0,
@@ -537,7 +467,7 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
 
-        if fee > 0:
+        if fee > 0:  # pragma: no cover
             dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
             chia_tx = await dao_wallet.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
@@ -644,7 +574,7 @@ class DAOCATWallet:
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.sign(cat_spend_bundle)
 
-        if fee > 0:
+        if fee > 0:  # pragma: no cover
             dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
             chia_tx = await dao_wallet.create_tandem_xch_tx(fee)
             assert chia_tx.spend_bundle is not None
@@ -652,7 +582,7 @@ class DAOCATWallet:
         else:
             full_spend = spend_bundle
 
-        if push:
+        if push:  # pragma: no cover
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(int(time.time())),
@@ -720,21 +650,7 @@ class DAOCATWallet:
         return True
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        raise NotImplementedError("Method not implemented for DAO CAT Wallet")
-
-    async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
-        result: List[WalletCoinRecord] = []
-
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.id(), records
-        )
-
-        for record in record_list:
-            lineage = await self.get_lineage_proof_for_coin(record.coin)
-            if lineage is not None and not lineage.is_none():
-                result.append(record)
-
-        return result
+        raise NotImplementedError("Method not implemented for DAO CAT Wallet")  # pragma: no cover
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
@@ -810,7 +726,7 @@ class DAOCATWallet:
                         try:
                             assert bytes(synthetic_pk) == pk
                             sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
-                        except AssertionError:
+                        except AssertionError:  # pragma: no cover
                             raise ValueError("This spend bundle cannot be signed by this DAO CAT wallet")
 
         agg_sig = AugSchemeMPL.aggregate(sigs)

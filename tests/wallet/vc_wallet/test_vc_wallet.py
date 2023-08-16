@@ -28,6 +28,17 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_state_manager import WalletStateManager
+
+
+async def is_transaction_confirmed(wallet_state_manager: WalletStateManager, tx_id: bytes32) -> bool:
+    tr = await wallet_state_manager.get_transaction(tx_id)
+    if tr is None:
+        return False  # pragma: no cover
+    elif not tr.confirmed:
+        return False  # pragma: no cover
+    else:
+        return True
 
 
 async def mint_cr_cat(
@@ -340,6 +351,8 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     )
     vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
+    for tx in txs:
+        await time_out_assert(15, is_transaction_confirmed, True, cr_cat_wallet_1.wallet_state_manager, tx.name)
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):

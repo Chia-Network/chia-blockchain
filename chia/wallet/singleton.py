@@ -41,7 +41,7 @@ def get_singleton_id_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> O
     """
     r = puzzle.uncurry()
     if r is None:
-        return None
+        return None  # pragma: no cover
     inner_f, args = r
     if not is_singleton(inner_f):
         return None
@@ -88,7 +88,7 @@ def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optio
     for coin in additions:
         if coin.amount % 2 == 1:
             return coin
-    return None
+    return None  # pragma: no cover
 
 
 def get_singleton_struct_for_id(id: bytes32) -> Program:

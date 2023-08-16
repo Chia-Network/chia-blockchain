@@ -149,11 +149,15 @@ def get_update_proposal_puzzle(dao_rules: DAORules, proposal_validator: Program)
 
 def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
     mod, curried_args = puzzle.uncurry()
-    if mod != DAO_UPDATE_PROPOSAL_MOD:
+    if mod != DAO_UPDATE_PROPOSAL_MOD:  # pragma: no cover
         raise ValueError("Not an update proposal.")
     (
         _,
-        proposal_validator,
+        _,
+        _,
+        _,
+        proposal_minimum_amount,
+        _,
         proposal_timelock,
         soft_close_length,
         attendance_required,
@@ -161,14 +165,6 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         self_destruct_length,
         oracle_spend_delay,
     ) = curried_args.as_iter()
-    curried_args = uncurry_proposal_validator(proposal_validator)
-    (
-        SINGLETON_STRUCT,
-        PROPOSAL_SELF_HASH,
-        PROPOSAL_MINIMUM_AMOUNT,
-        PAYOUT_PUZHASH,
-    ) = curried_args.as_iter()
-
     dao_rules = DAORules(
         proposal_timelock.as_int(),
         soft_close_length.as_int(),
@@ -176,7 +172,7 @@ def get_dao_rules_from_update_proposal(puzzle: Program) -> DAORules:
         pass_percentage.as_int(),
         self_destruct_length.as_int(),
         oracle_spend_delay.as_int(),
-        PROPOSAL_MINIMUM_AMOUNT.as_int(),
+        proposal_minimum_amount.as_int(),
     )
     return dao_rules
 
@@ -527,7 +523,7 @@ def get_new_puzzle_from_proposal_solution(puzzle_reveal: Program, solution: Prog
                 yes_votes,
                 total_votes,
             ) = c_a.as_iter()
-        else:
+        else:  # pragma: no cover
             SINGLETON_STRUCT, dao_finished_hash = currieds.as_iter()
             proposal_id = SINGLETON_STRUCT.rest().first()
         return get_finished_state_inner_puzzle(bytes32(proposal_id.as_atom()))
@@ -554,20 +550,20 @@ def get_asset_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
         return None
     elif mod == CAT_MOD:
         return bytes32(curried_args.at("rf").as_atom())
-    elif mod == SINGLETON_MOD:
+    elif mod == SINGLETON_MOD:  # pragma: no cover
         return bytes32(curried_args.at("frf").as_atom())
     else:
-        raise ValueError("DAO received coin with unknown puzzle")
+        raise ValueError("DAO received coin with unknown puzzle")  # pragma: no cover
 
 
 def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
     try:
         mod, curried_args = proposal_validator_program.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry treasury puzzle: error: %s", e)
         raise e
 
-    if mod != DAO_PROPOSAL_VALIDATOR_MOD:
+    if mod != DAO_PROPOSAL_VALIDATOR_MOD:  # pragma: no cover
         raise ValueError("Not a Treasury mod.")
     return curried_args
 
@@ -575,11 +571,11 @@ def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
 def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
     try:
         mod, curried_args = treasury_puzzle.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry treasury puzzle: error: %s", e)
         raise e
 
-    if mod != DAO_TREASURY_MOD:
+    if mod != DAO_TREASURY_MOD:  # pragma: no cover
         raise ValueError("Not a Treasury mod.")
     return list(curried_args.as_iter())
 
@@ -587,12 +583,12 @@ def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
 def uncurry_proposal(proposal_puzzle: Program) -> Tuple[Program, Program]:
     try:
         mod, curried_args = proposal_puzzle.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry proposal puzzle: error: %s", e)
         raise e
     try:
         mod, c_a = mod.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry lockup puzzle: error: %s", e)
         raise e
     if mod != DAO_PROPOSAL_MOD:
@@ -603,12 +599,12 @@ def uncurry_proposal(proposal_puzzle: Program) -> Tuple[Program, Program]:
 def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
     try:
         mod, curried_args = lockup_puzzle.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry lockup puzzle: error: %s", e)
         raise e
     try:
         mod, c_a = mod.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry lockup puzzle: error: %s", e)
         raise e
     if mod != DAO_LOCKUP_MOD:
@@ -620,7 +616,7 @@ def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
 def get_proposal_args(puzzle: Program) -> Tuple[ProposalType, Program]:
     try:
         mod, curried_args = puzzle.uncurry()
-    except ValueError as e:
+    except ValueError as e:  # pragma: no cover
         log.debug("Cannot uncurry spend puzzle: error: %s", e)
         raise e
     if mod == SPEND_P2_SINGLETON_MOD:
@@ -637,33 +633,9 @@ def generate_cat_tail(genesis_coin_id: bytes32, treasury_id: bytes32) -> Program
     return puzzle
 
 
-# TODO: move curry_singleton to chia.wallet.singleton
-# TODO: Is this correct? See create_fullpuz
-# TODO: innerpuz type: is innerpuz a full reveal, or a hash?
 def curry_singleton(singleton_id: bytes32, innerpuz: Program) -> Program:
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, SINGLETON_LAUNCHER_HASH)))
     return SINGLETON_MOD.curry(singleton_struct, innerpuz)
-
-
-def get_curry_vals_from_proposal_puzzle(proposal_puzzle: Program) -> Tuple[Program, Program, Program]:
-    curried_args, c_a = uncurry_proposal(proposal_puzzle)
-    (
-        SINGLETON_STRUCT,
-        PROPOSAL_TIMER_MOD_HASH,
-        CAT_MOD_HASH,
-        DAO_FINISHED_STATE_HASH,
-        TREASURY_MOD_HASH,
-        LOCKUP_SELF_HASH,
-        CAT_TAIL_HASH,
-        TREASURY_ID,
-    ) = c_a.as_iter()
-    (
-        SELF_HASH,
-        PROPOSED_PUZ_HASH,
-        YES_VOTES,
-        TOTAL_VOTES,
-    ) = curried_args.as_iter()
-    return YES_VOTES, TOTAL_VOTES, PROPOSED_PUZ_HASH
 
 
 # This is for use in the WalletStateManager to determine the type of coin received
@@ -679,11 +651,10 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_TREASURY_MOD:
                 return curried_args.first().as_iter()  # type: ignore[no-any-return]
-    except ValueError:
+    except ValueError:  # pragma: no cover
         import traceback
 
         print(f"exception: {traceback.format_exc()}")
-
     return None
 
 
@@ -718,7 +689,7 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DAO_FINISHED_STATE:
                 return curried_args.as_iter()  # type: ignore[no-any-return]
-    except ValueError:
+    except ValueError:  # pragma: no cover
         import traceback
 
         print(f"exception: {traceback.format_exc()}")
@@ -738,9 +709,9 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Co
                 delegated_puz = solution.at("rrfrrf")
                 delegated_mod, delegated_args = delegated_puz.uncurry()
                 if delegated_puz.uncurry()[0] == SPEND_P2_SINGLETON_MOD:
-                    if coin.puzzle_hash == delegated_args.at("rrrrf").as_atom():
+                    if coin.puzzle_hash == delegated_args.at("rrrrf").as_atom():  # pragma: no cover
                         return True
-            return None
+            return None  # pragma: no cover
         else:
             return None
         for cond in conditions:

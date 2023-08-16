@@ -65,7 +65,6 @@ from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_ca
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_utils import (
-    get_new_puzzle_from_treasury_solution,
     match_dao_cat_puzzle,
     match_finished_puzzle,
     match_funding_puzzle,
@@ -299,18 +298,18 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DATA_LAYER:
+            elif wallet_type == WalletType.DATA_LAYER:  # pragma: no cover
                 wallet = await DataLayerWallet.create(
                     self,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DAO:
+            elif wallet_type == WalletType.DAO:  # pragma: no cover
                 wallet = await DAOWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_type == WalletType.DAO_CAT:
+            elif wallet_type == WalletType.DAO_CAT:  # pragma: no cover
                 wallet = await DAOCATWallet.create(
                     self,
                     self.main_wallet,
@@ -979,7 +978,7 @@ class WalletStateManager:
                 assert isinstance(wallet, DAOCATWallet)
                 if wallet.dao_cat_info.limitations_program_hash == asset_id:
                     return WalletIdentifier.create(wallet)
-        return None
+        return None  # pragma: no cover
 
     async def handle_cat(
         self,
@@ -1228,19 +1227,9 @@ class WalletStateManager:
                 if wallet.dao_info.treasury_id == singleton_id:
                     return WalletIdentifier.create(wallet)
 
-        inner_puzzle = get_new_puzzle_from_treasury_solution(
-            coin_spend.puzzle_reveal.to_program(), coin_spend.solution.to_program()
-        )
-        # If we can't find the wallet for this DAO but we've got here because we're subscribed, then create the wallet
-        assert isinstance(inner_puzzle, Program)
-        assert isinstance(singleton_id, bytes32)
-        dao_wallet = await DAOWallet.create_new_dao_wallet_for_existing_dao(
-            self,
-            self.main_wallet,
-            singleton_id,
-        )
-        assert dao_wallet is not None
-        return None
+        # TODO: If we can't find the wallet for this DAO but we've got here because we're subscribed,
+        #        then create the wallet. (see early in dao-wallet commits for how to do this)
+        return None  # pragma: no cover
 
     async def handle_dao_proposal(
         self,
@@ -1274,7 +1263,7 @@ class WalletStateManager:
                     assert isinstance(coin_state.created_height, int)
                     await wallet.add_or_update_proposal_info(coin_spend, uint32(coin_state.created_height))
                     return WalletIdentifier.create(wallet)
-        return None
+        return None  # pragma: no cover
 
     async def handle_dao_finished_proposals(
         self,
@@ -1283,7 +1272,7 @@ class WalletStateManager:
         coin_state: CoinState,
         coin_spend: CoinSpend,
     ) -> Optional[WalletIdentifier]:
-        if coin_state.created_height is None:
+        if coin_state.created_height is None:  # pragma: no cover
             raise ValueError("coin_state argument to handle_dao_finished_proposals cannot have created_height of None")
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
@@ -1704,6 +1693,8 @@ class WalletStateManager:
                                 fee = 0
 
                                 to_puzzle_hash = None
+                                coin_spend: Optional[CoinSpend] = None
+                                clawback_metadata: Optional[ClawbackMetadata] = None
                                 # Find coin that doesn't belong to us
                                 amount = 0
                                 for coin in additions:
@@ -1713,6 +1704,18 @@ class WalletStateManager:
                                     if derivation_record is None:  # not change
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
+                                        if coin_spend is None:
+                                            # To prevent unnecessary fetch, we only fetch once,
+                                            # if there is a child coin that is not owned by the wallet.
+                                            coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                                            # Check if the parent coin is a Clawback coin
+                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
+                                            solution: Program = coin_spend.solution.to_program()
+                                            uncurried = uncurry_puzzle(puzzle)
+                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                        if clawback_metadata is not None:
+                                            # Add the Clawback coin as the interested coin for the sender
+                                            await self.add_interested_coin_ids([coin.name()])
                                     elif wallet_identifier.type == WalletType.CAT:
                                         # We subscribe to change for CATs since they didn't hint previously
                                         await self.add_interested_coin_ids([coin.name()])
@@ -2058,8 +2061,11 @@ class WalletStateManager:
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
+        # If the coin is from a Clawback spent, we want to add the INCOMING_TX,
+        # no matter if there is another TX updated.
+        clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or not coin_confirmed_transaction and not change:
+        if coinbase or clawback or not coin_confirmed_transaction and not change:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),

@@ -204,7 +204,7 @@ def dao_create_cmd(
 # TREASURY INFO
 
 
-@dao_cmd.command("get-id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
+@dao_cmd.command("get_id", short_help="Get the Treasury ID of a DAO", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -227,7 +227,7 @@ def dao_get_id_cmd(
     asyncio.run(get_treasury_id(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("add-funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
+@dao_cmd.command("add_funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -238,7 +238,7 @@ def dao_get_id_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--wallet-id", help="ID of the DAO wallet which will receive the funds", type=int, required=True)
 @click.option(
-    "-f",
+    "-w",
     "--funding-wallet-id",
     help="ID of the wallet to send funds from",
     type=int,
@@ -287,7 +287,7 @@ def dao_add_funds_cmd(
     asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("get-balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
+@dao_cmd.command("get_balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -314,7 +314,7 @@ def dao_get_balance_cmd(
 # LIST/SHOW PROPOSALS
 
 
-@dao_cmd.command("list-proposals", short_help="List proposals for the DAO", no_args_is_help=True)
+@dao_cmd.command("list_proposals", short_help="List proposals for the DAO", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -348,7 +348,7 @@ def dao_list_proposals_cmd(
     asyncio.run(list_proposals(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("show-proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
+@dao_cmd.command("show_proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -458,7 +458,7 @@ def dao_vote_cmd(
 # CLOSE PROPOSALS
 
 
-@dao_cmd.command("close-proposal", short_help="Close a DAO proposal", no_args_is_help=True)
+@dao_cmd.command("close_proposal", short_help="Close a DAO proposal", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -522,7 +522,7 @@ def dao_close_proposal_cmd(
 # LOCKUP COINS
 
 
-@dao_cmd.command("lockup-coins", short_help="Lock DAO CATs for voting", no_args_is_help=True)
+@dao_cmd.command("lockup_coins", short_help="Lock DAO CATs for voting", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -573,7 +573,7 @@ def dao_lockup_coins_cmd(
     asyncio.run(lockup_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("release-coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
+@dao_cmd.command("release_coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -615,7 +615,7 @@ def dao_release_coins_cmd(
     asyncio.run(release_coins(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("exit-lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
+@dao_cmd.command("exit_lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -661,7 +661,7 @@ def dao_exit_lockup_cmd(
 # CREATE PROPOSALS
 
 
-@dao_cmd.group("create-proposal", short_help="Create and add a proposal to a DAO", no_args_is_help=True)
+@dao_cmd.group("create_proposal", short_help="Create and add a proposal to a DAO", no_args_is_help=True)
 @click.pass_context
 def dao_proposal(ctx: click.Context) -> None:
     pass
@@ -737,7 +737,7 @@ def dao_create_spend_proposal_cmd(
     wallet_id: int,
     vote_amount: int,
     to_address: Optional[str],
-    amount: Optional[float],
+    amount: Optional[str],
     asset_id: Optional[str],
     from_json: Optional[str],
     fee: str,

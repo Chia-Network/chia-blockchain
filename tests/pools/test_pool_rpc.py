@@ -364,7 +364,7 @@ class TestPoolWalletRpc:
 
         for i in range(5):
             await time_out_assert(10, mempool_empty)
-            res = await client.create_new_cat_and_wallet(uint64(20))
+            res = await client.create_new_cat_and_wallet(uint64(20), test=True)
             assert res["success"]
             cat_0_id = res["wallet_id"]
             asset_id = bytes.fromhex(res["asset_id"])

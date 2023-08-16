@@ -36,7 +36,7 @@ async def rpc_state(
     params: List[Union[int, Dict[str, Any]]],
     condition_func: Callable[[Dict[str, Any]], Any],
     result: Optional[Any] = None,
-) -> Union[bool, Dict[str, Any]]:
+) -> Union[bool, Dict[str, Any]]:  # pragma: no cover
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -167,6 +167,16 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
+    # Some dao_cat_wallet checks for coverage
+    dao_cat_wallet_0.get_name()
+    assert (await dao_cat_wallet_0.select_coins(uint64(1))) == set()
+    dao_cat_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
+    assert dao_cat_puzhash
+    dao_cat_inner = await dao_cat_wallet_0.get_new_inner_puzzle()
+    assert dao_cat_inner
+    dao_cat_inner_hash = await dao_cat_wallet_0.get_new_inner_hash()
+    assert dao_cat_inner_hash
+
     cat_wallet_0_bal = await cat_wallet_0.get_confirmed_balance()
     assert cat_wallet_0_bal == cat_amt * 2
 
@@ -193,7 +203,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.process_transaction_records(records=txs)
 
-    for i in range(1, num_blocks):
+    for i in range(1, num_blocks):  # pragma: no cover
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
@@ -230,6 +240,14 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
 
     new_inner_puzhash = await dao_wallet_0.get_new_p2_inner_hash()
     assert isinstance(new_inner_puzhash, bytes32)
+
+    # run DAOCATwallet.create for coverage
+    create_dao_cat_from_info = await DAOCATWallet.create(
+        wallet.wallet_state_manager, wallet, dao_cat_wallet_0.wallet_info
+    )
+    assert create_dao_cat_from_info
+    create_dao_wallet_from_info = await DAOWallet.create(wallet.wallet_state_manager, wallet, dao_wallet_0.wallet_info)
+    assert create_dao_wallet_from_info
 
 
 @pytest.mark.parametrize(
@@ -1053,7 +1071,7 @@ async def test_dao_proposal_partial_vote(
 
     try:
         close_sb = await dao_wallet_0.create_proposal_close_spend(prop.proposal_id, fee=uint64(100), push=True)
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         print(e)
 
     await full_node_api.process_spend_bundles(bundles=[close_sb])
@@ -1204,6 +1222,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
         dict(
             wallet_type="cat_wallet",
             name="CAT WALLET 1",
+            test=True,
             mode="new",
             amount=new_cat_amt,
         )
@@ -1505,7 +1524,7 @@ async def test_dao_rpc_client(
 
         # Create a new standard cat for treasury funds
         new_cat_amt = uint64(100000)
-        new_cat_wallet_dict = await client_0.create_new_cat_and_wallet(new_cat_amt)
+        new_cat_wallet_dict = await client_0.create_new_cat_and_wallet(new_cat_amt, test=True)
         new_cat_wallet_id = new_cat_wallet_dict["wallet_id"]
         new_cat_wallet = wallet_node_0.wallet_state_manager.wallets[new_cat_wallet_id]
 
@@ -1597,6 +1616,38 @@ async def test_dao_rpc_client(
         props = await client_1.dao_get_proposals(dao_id_1)
         proposal_id_hex = props["proposals"][0]["proposal_id"]
 
+        # create an update proposal
+        update_proposal = await client_1.dao_create_proposal(
+            wallet_id=dao_id_1,
+            proposal_type="update",
+            vote_amount=cat_amt,
+            new_dao_rules={"proposal_timelock": uint64(10)},
+            fee=fee,
+        )
+        assert update_proposal["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
+
+        # create a mint proposal
+        mint_addr = await client_1.get_next_address(wallet_id=wallet_1.id(), new_address=False)
+        mint_proposal = await client_1.dao_create_proposal(
+            wallet_id=dao_id_1,
+            proposal_type="mint",
+            vote_amount=cat_amt,
+            amount=uint64(100),
+            cat_target_address=mint_addr,
+            fee=fee,
+        )
+        assert mint_proposal["success"]
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+            await asyncio.sleep(0.5)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
+
         # vote spend
         vote = await client_1.dao_vote_on_proposal(
             wallet_id=dao_id_1, proposal_id=proposal_id_hex, vote_amount=cat_amt, is_yes_vote=True, fee=fee
@@ -1628,20 +1679,31 @@ async def test_dao_rpc_client(
         assert state["success"]
         assert state["state"]["closable"]
 
+        # check proposal parsing
+        props = await client_0.dao_get_proposals(dao_id_0)
+        proposal_2_hex = props["proposals"][1]["proposal_id"]
+        proposal_3_hex = props["proposals"][2]["proposal_id"]
+        parsed_1 = await client_0.dao_parse_proposal(wallet_id=dao_id_0, proposal_id=proposal_id_hex)
+        assert parsed_1["success"]
+        parsed_2 = await client_0.dao_parse_proposal(wallet_id=dao_id_0, proposal_id=proposal_2_hex)
+        assert parsed_2["success"]
+        parsed_3 = await client_0.dao_parse_proposal(wallet_id=dao_id_0, proposal_id=proposal_3_hex)
+        assert parsed_3["success"]
+
         # close the proposal
         close = await client_0.dao_close_proposal(
             wallet_id=dao_id_0, proposal_id=proposal_id_hex, self_destruct=False, fee=fee
         )
         assert close["success"]
 
-        for i in range(1, num_blocks):
+        for i in range(1, 10):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
             await asyncio.sleep(0.5)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
         # check proposal is closed
-        await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
         await rpc_state(20, client_0.dao_get_proposals, [dao_id_0], lambda x: x["proposals"][0]["closed"], True)
+        await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][0]["closed"], True)
         # check treasury balances
         await rpc_state(
             20,
@@ -1666,7 +1728,7 @@ async def test_dao_rpc_client(
         # free locked cats from finished proposal
         new_cat_wallet_dict = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert new_cat_wallet_dict["success"]
-        sb_name = bytes32.from_hexstr(new_cat_wallet_dict["spend_name"])
+        sb_name = bytes32.from_hexstr(new_cat_wallet_dict["spend_bundle_id"])
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
 
         for i in range(1, num_blocks):
@@ -1680,6 +1742,12 @@ async def test_dao_rpc_client(
 
         exit = await client_0.dao_exit_lockup(dao_id_0)
         assert exit["success"]
+
+        # coverage tests for filter amount and get treasury id
+        treasury_id_resp = await client_0.dao_get_treasury_id(wallet_id=dao_id_0)
+        assert treasury_id_resp["treasury_id"] == treasury_id_hex
+        filter_amount_resp = await client_0.dao_adjust_filter_level(wallet_id=dao_id_0, filter_level=30)
+        assert filter_amount_resp["dao_info"]["filter_below_vote_amount"] == 30
 
     finally:
         client_0.close()
@@ -2119,7 +2187,7 @@ async def test_dao_cat_exits(
         # free locked cats from finished proposal
         res = await client_0.dao_free_coins_from_finished_proposals(wallet_id=dao_id_0)
         assert res["success"]
-        sb_name = bytes32.from_hexstr(res["spend_name"])
+        sb_name = bytes32.from_hexstr(res["spend_bundle_id"])
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb_name)
 
         for i in range(1, num_blocks):
@@ -2231,7 +2299,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Test Reorg on creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 10), uint32(height + 1), puzzle_hash_0, None)
@@ -2278,7 +2346,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg funding spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
@@ -2344,7 +2412,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg proposal creation
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
@@ -2389,7 +2457,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg on vote spend
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)
@@ -2417,7 +2485,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Reorg closed proposal
     height = full_node_api.full_node.blockchain.get_peak_height()
-    if height is None:
+    if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), puzzle_hash_0, None)

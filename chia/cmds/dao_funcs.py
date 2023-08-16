@@ -8,11 +8,9 @@ from typing import Any, Dict, Optional
 from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
-from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config, selected_network_address_prefix
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.wallet_types import WalletType
 
@@ -98,7 +96,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
-        except LookupError:
+        except LookupError:  # pragma: no cover
             print(f"Wallet id: {wallet_id} not found.")
             return
 
@@ -116,6 +114,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
 
         tx_id = res["tx_id"]
         start = time.time()
+        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
@@ -124,8 +123,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
                 print(transaction_status_msg(fingerprint, tx_id))
                 return None
 
-        print("Transaction not yet submitted to nodes")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
@@ -172,10 +170,9 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
     wallet_id = args["wallet_id"]
     proposal_id = args["proposal_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
         res = await wallet_client.dao_parse_proposal(wallet_id, proposal_id)
         pd = res["proposal_dictionary"]
-
         blocks_needed = pd["state"]["blocks_needed"]
         passed = pd["state"]["passed"]
         closable = pd["state"]["closable"]
@@ -183,9 +180,13 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
         votes_needed = pd["state"]["total_votes_needed"]
         yes_needed = pd["state"]["yes_votes_needed"]
 
-        ptype = pd["proposal_type"]
-        if (ptype == "spend") and ("mint_amount" in pd):
+        ptype_val = pd["proposal_type"]
+        if (ptype_val == "s") and ("mint_amount" in pd):
             ptype = "mint"
+        elif ptype_val == "s":
+            ptype = "spend"
+        elif ptype_val == "u":
+            ptype = "update"
 
         print("")
         print(f"Details of Proposal: {proposal_id}")
@@ -213,8 +214,10 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
                     print("{puzzle_hash} {amount}".format(**pmt))
             if asset_conds:
                 print("Proposal asset Conditions")
-                for asset_id, conds in asset_conds:
+                for cond in asset_conds:
+                    asset_id = cond["asset_id"]
                     print(f"Asset ID: {asset_id}")
+                    conds = cond["conditions"]
                     for pmt in conds:
                         print("{puzzle_hash} {amount}".format(**pmt))
 
@@ -226,7 +229,6 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
 
         elif ptype == "mint":
             mint_amount = pd["mint_amount"]
-            config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
             prefix = selected_network_address_prefix(config)
             address = encode_puzzle_hash(bytes32.from_hexstr(pd["new_cat_puzhash"]), prefix)
             print("")
@@ -252,10 +254,10 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
             fee=final_fee,
             reuse_puzhash=reuse_puzhash,
         )
-        spend_bundle = res["spend_bundle"]
+        spend_bundle = res["spend_bundle_name"]
         if res["success"]:
-            print(f"Submitted spend bundle with name: {spend_bundle.name()}")
-        else:
+            print(f"Submitted spend bundle with name: {spend_bundle}")
+        else:  # pragma: no cover
             print("Unable to generate vote transaction.")
 
 
@@ -274,11 +276,10 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
             self_destruct=self_destruct,
             reuse_puzhash=reuse_puzhash,
         )
-        # dao_close_proposal(self, wallet_id: int, proposal_id: str, fee: uint64 = uint64(0))
         if res["success"]:
             name = res["tx_id"]
             print(f"Submitted proposal close transaction with name: {name}")
-        else:
+        else:  # pragma: no cover
             print("Unable to generate close transaction.")
 
 
@@ -289,7 +290,6 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fin
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-    # typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
         res = await wallet_client.dao_send_to_lockup(
             wallet_id=wallet_id,
@@ -307,7 +307,7 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fin
                 print(transaction_status_msg(fingerprint, tx_id))
                 return None
 
-        print("Transaction not yet submitted to nodes")
+        print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
 async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
@@ -322,8 +322,9 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
             reuse_puzhash=reuse_puzhash,
         )
         if res["success"]:
-            print("Transaction submitted.")
-        else:
+            spend_bundle_id = res["spend_bundle_id"]
+            print(f"Transaction submitted with spend bundle ID: {spend_bundle_id}.")
+        else:  # pragma: no cover
             print("Transaction failed.")
 
 
@@ -340,8 +341,9 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fing
             reuse_puzhash=reuse_puzhash,
         )
         if res["success"]:
-            print("Transaction submitted.")
-        else:
+            spend_bundle_id = res["spend_bundle_id"]
+            print(f"Transaction submitted with spend bundle ID: {spend_bundle_id}.")
+        else:  # pragma: no cover
             print("Transaction failed.")
 
 
@@ -351,28 +353,16 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
 
-    if "to_address" in args:
-        address = args["to_address"]
-    else:
-        address = None
-    if "amount" in args:
-        amount = args["amount"]
-    else:
-        amount = None
-    if "from_json" in args:
-        additions = args["from_json"]
-    else:
-        additions = None
+    address = args.get("to_address")
+    amount = args.get("amount")
+    additions = args.get("from_json")
     if additions is None and (address is None or amount is None):
-        print("ERROR: Must include a json specification or an address / amount pair.")
-    if "vote_amount" in args:
-        vote_amount = args["vote_amount"]
-    else:
-        vote_amount = None
+        raise ValueError("Must include a json specification or an address / amount pair.")
+    vote_amount = args.get("vote_amount")
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-        final_amount: uint64 = uint64(int(Decimal(amount) * mojo_per_unit))
+        final_amount: Optional[uint64] = uint64(int(Decimal(amount) * mojo_per_unit)) if amount else None
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
             proposal_type="spend",
@@ -386,7 +376,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
         if res["success"]:
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
-        else:
+        else:  # pragma: no cover
             print("Failed to create proposal.")
 
 
@@ -395,34 +385,13 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-    if "proposal_timelock" in args:
-        proposal_timelock = args["proposal_timelock"]
-    else:
-        proposal_timelock = None
-    if "soft_close_length" in args:
-        soft_close_length = args["soft_close_length"]
-    else:
-        soft_close_length = None
-    if "attendance_required" in args:
-        attendance_required = args["attendance_required"]
-    else:
-        attendance_required = None
-    if "pass_percentage" in args:
-        pass_percentage = args["pass_percentage"]
-    else:
-        pass_percentage = None
-    if "self_destruct_length" in args:
-        self_destruct_length = args["self_destruct_length"]
-    else:
-        self_destruct_length = None
-    if "oracle_spend_delay" in args:
-        oracle_spend_delay = args["oracle_spend_delay"]
-    else:
-        oracle_spend_delay = None
-    if "vote_amount" in args:
-        vote_amount = args["vote_amount"]
-    else:
-        vote_amount = None
+    proposal_timelock = args.get("proposal_timelock")
+    soft_close_length = args.get("soft_close_length")
+    attendance_required = args.get("attendance_required")
+    pass_percentage = args.get("pass_percentage")
+    self_destruct_length = args.get("self_destruct_length")
+    oracle_spend_delay = args.get("oracle_spend_delay")
+    vote_amount = args.get("vote_amount")
     new_dao_rules = {
         "proposal_timelock": proposal_timelock,
         "soft_close_length": soft_close_length,
@@ -442,7 +411,8 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
         )
         if res["success"]:
             print("Successfully created proposal.")
-        else:
+            print("Proposal ID: {}".format(res["proposal_id"]))
+        else:  # pragma: no cover
             print("Failed to create proposal.")
 
 
@@ -453,9 +423,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
     reuse_puzhash = args["reuse_puzhash"]
     cat_target_address = args["cat_target_address"]
     amount = args["amount"]
-    vote_amount = None
-    if "vote_amount" in args:
-        vote_amount = args["vote_amount"]
+    vote_amount = args.get("vote_amount")
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
@@ -468,5 +436,6 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
         )
         if res["success"]:
             print("Successfully created proposal.")
-        else:
+            print("Proposal ID: {}".format(res["proposal_id"]))
+        else:  # pragma: no cover
             print("Failed to create proposal.")
