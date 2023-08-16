@@ -440,7 +440,7 @@ class TestCATLifecycle:
     async def test_everything_with_signature(self, cost_logger):
         async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-            tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
+            tail: Program = EverythingWithSig.construct([Program.to(bytes(sk.get_g1()))])
             checker_solution: Program = EverythingWithSig.solve([], {})
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
             cat_ph: bytes32 = cat_puzzle.get_tree_hash()
@@ -556,7 +556,7 @@ class TestCATLifecycle:
 
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(standard_acs_ph))[0].coin
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-            tail: Program = DelegatedLimitations.construct([Program.to(sk.get_g1())])
+            tail: Program = DelegatedLimitations.construct([Program.to(bytes(sk.get_g1()))])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
             cat_ph: bytes32 = cat_puzzle.get_tree_hash()
 

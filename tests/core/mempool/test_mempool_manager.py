@@ -503,9 +503,9 @@ async def test_same_sb_twice_with_eligible_coin() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
     sb1 = spend_bundle_from_conditions(sb1_conditions)
-    sb2_conditions = [
+    sb2_conditions: List[List[object]] = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3],
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+        [ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH],
     ]
     sb2 = spend_bundle_from_conditions(sb2_conditions, TEST_COIN2)
     sb = SpendBundle.aggregate([sb1, sb2])
@@ -527,12 +527,12 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 2],
     ]
     sb1 = spend_bundle_from_conditions(sb1_conditions)
-    sb2_conditions = [
+    sb2_conditions: List[List[object]] = [
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 3],
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+        [ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH],
     ]
     sb2 = spend_bundle_from_conditions(sb2_conditions, TEST_COIN2)
-    sb3_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
+    sb3_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH]]
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)
     sb = SpendBundle.aggregate([sb1, sb2, sb3])
     sb_name = sb.name()
@@ -945,10 +945,10 @@ async def test_create_bundle_from_mempool_on_max_cost() -> None:
     # This test exercises the path where an item's inclusion would exceed the
     # maximum cumulative cost, so it gets skipped as a result
     async def make_and_send_big_cost_sb(coin: Coin) -> None:
-        conditions = []
+        conditions: List[List[object]] = []
         g1 = G1Element()
         for _ in range(2436):
-            conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
+            conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), IDENTITY_PUZZLE_HASH])
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 1])
         # Create a spend bundle with a big enough cost that gets it close to the limit
         _, _, res = await generate_and_add_spendbundle(mempool_manager, conditions, coin)
@@ -1036,7 +1036,7 @@ async def test_assert_before_expiration(
 def make_test_spendbundle(coin: Coin, *, fee: int = 0, eligible_spend: bool = False) -> SpendBundle:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, uint64(coin.amount - fee)]]
     if not eligible_spend:
-        conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH])
+        conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH])
     return spend_bundle_from_conditions(conditions, coin)
 
 
@@ -1209,8 +1209,8 @@ def test_run_for_cost_max_cost() -> None:
 
 def test_dedup_info_nothing_to_do() -> None:
     # No eligible coins, nothing to deduplicate, item gets considered normally
-    conditions = [
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    conditions: List[List[object]] = [
+        [ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1],
     ]
     sb = spend_bundle_from_conditions(conditions, TEST_COIN)
@@ -1315,8 +1315,8 @@ def test_dedup_info_eligible_3rd_time_another_2nd_time_and_one_non_eligible() ->
     )
     sb1 = spend_bundle_from_conditions(initial_conditions, TEST_COIN)
     sb2 = spend_bundle_from_conditions(second_conditions, TEST_COIN2)
-    sb3_conditions = [
-        [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+    sb3_conditions: List[List[object]] = [
+        [ConditionOpcode.AGG_SIG_UNSAFE, bytes(G1Element()), IDENTITY_PUZZLE_HASH],
         [ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 4],
     ]
     sb3 = spend_bundle_from_conditions(sb3_conditions, TEST_COIN3)

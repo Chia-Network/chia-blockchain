@@ -194,7 +194,7 @@ class TestPuzzles(TestCase):
             G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
         )
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
-            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
+            hidden_public_key, hidden_puzzle, Program.to(0)
         )
 
         do_test_spend(puzzle, solution, payments, key_lookup)

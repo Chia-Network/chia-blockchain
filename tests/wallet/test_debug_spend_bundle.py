@@ -27,7 +27,7 @@ def test_debug_spend_bundle() -> None:
     coin_bad_reveal: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), 0)
     solution = Program.to(
         [
-            [ConditionOpcode.AGG_SIG_UNSAFE, pk, msg],
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(pk), msg],
             [ConditionOpcode.REMARK],
             [ConditionOpcode.CREATE_COIN, ACS_PH, 0],
             [ConditionOpcode.CREATE_COIN, bytes32([0] * 32), 1],
