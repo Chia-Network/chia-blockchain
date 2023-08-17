@@ -37,6 +37,16 @@
 
   (defconstant TEN_THOUSAND 10000)
 
+  (defun is_member (e L)
+    (if L
+        (if (= e (f L))
+            1
+            (is_member e (r L))
+        )
+        0
+    )
+  )
+
   (defun-inline calculate_win_percentage (TOTAL PERCENTAGE)
     (f (divmod (* TOTAL PERCENTAGE) TEN_THOUSAND))
   )
@@ -146,6 +156,7 @@
       sum
       output
       my_amount
+      distinct_ids
     )
     (if coin_id_list
         (if (> (f vote_amount_list) 0)
@@ -179,12 +190,13 @@
                   PROPOSED_PUZ_HASH
                   (r coin_id_list)
                   (r vote_amount_list)
-                  (r previous_votes)
-                  (r lockup_innerpuzhashes)
+                  previous_votes
+                  lockup_innerpuzhashes
                   vote_info
                   (+ (f vote_amount_list) sum)
                   output
                   my_amount
+                  (if (is_member (f coin_id_list) distinct_ids) (x) (c (f coin_id_list) distinct_ids))
                 )
               )
             )
@@ -355,6 +367,7 @@
                 )
             )
             my_amount
+            ()
           )
       )
   )

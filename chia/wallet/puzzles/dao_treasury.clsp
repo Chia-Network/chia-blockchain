@@ -52,11 +52,14 @@
     (c
       (if singleton_struct
           (list ASSERT_MY_COIN_ID
-            (sha256
+            (calculate_coin_id
               (f (r singleton_struct))
               (calculate_singleton_puzzle_hash singleton_struct my_inner_puzhash)
               ONE
             )
+            ;; TODO: When the new condition codes are available, use ASSERT_EPHEMERAL to ensure this
+            ;; spend path is only used in the eve spend.
+            ;; (list ASSERT_EPHEMERAL)
           )
           (list ASSERT_HEIGHT_RELATIVE ORACLE_SPEND_DELAY)
       )

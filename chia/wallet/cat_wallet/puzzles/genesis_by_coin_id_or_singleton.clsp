@@ -12,7 +12,6 @@
     delta
     inner_conditions
     (  ; solution
-      singleton_inner_puzhash
       parent_parent_id
       parent_amount
     )
