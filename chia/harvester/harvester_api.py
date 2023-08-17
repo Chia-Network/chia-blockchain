@@ -250,9 +250,9 @@ class HarvesterAPI:
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.time() - start
-            if time_taken > 5:
+            if time_taken > 8:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:
