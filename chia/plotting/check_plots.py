@@ -172,9 +172,9 @@ def check_plots(
                     quality_start_time = int(round(time() * 1000))
                     for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                         quality_spent_time = int(round(time() * 1000)) - quality_start_time
-                        if quality_spent_time > 5000:
+                        if quality_spent_time > 8000:
                             log.warning(
-                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 5 seconds "
+                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:
