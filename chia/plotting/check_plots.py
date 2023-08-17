@@ -64,6 +64,7 @@ def check_plots(
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
     gpu_index = config["harvester"].get("gpu_index", 0)
     enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
+    decompressor_timeout = config["harvester"].get("decompressor_timeout", 20)
 
     plot_manager.configure_decompressor(
         context_count,
@@ -73,6 +74,7 @@ def check_plots(
         use_gpu_harvesting,
         gpu_index,
         enforce_gpu_index,
+        decompressor_timeout,
     )
 
     if num is not None:
