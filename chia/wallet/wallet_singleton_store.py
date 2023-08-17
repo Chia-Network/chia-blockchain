@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Type, TypeVar
+from typing import List, Optional, Type, TypeVar, Union
 
 from clvm.casts import int_from_bytes
 
@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32
 from chia.wallet import singleton
 from chia.wallet.lineage_proof import LineageProof
@@ -96,7 +96,7 @@ class WalletSingletonStore:
         """
         # get singleton_id from puzzle_reveal
         singleton_id = get_singleton_id_from_puzzle(coin_state.puzzle_reveal)
-        if not singleton_id:  # pragma: no cover
+        if not singleton_id:
             raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
@@ -105,8 +105,6 @@ class WalletSingletonStore:
             coin_state.solution.to_program(),
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
         )
-        if conditions is None:  # pragma: no cover
-            raise RuntimeError("Failed to add spend for coin: %s ", coin_state.coin.name())
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
 
@@ -150,11 +148,14 @@ class WalletSingletonStore:
         This is due to how re-org works
         Returns `True` if singleton was found and marked deleted or `False` if not."""
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Remove NFT in the users_nfts table
             cursor = await conn.execute(
                 "UPDATE singletons SET removed_height=? WHERE singleton_id=?", (int(height), singleton_id.hex())
             )
-            return cursor.rowcount > 0
+            if cursor.rowcount > 0:
+                log.info("Deleted singleton with singleton id: %s", singleton_id.hex())
+                return True
+            log.warning("Couldn't find singleton with singleton id to delete: %s", singleton_id.hex())
+            return False
 
     async def delete_singleton_by_coin_id(self, coin_id: bytes32, height: uint32) -> bool:
         """Tries to mark a given singleton as deleted at specific height
@@ -162,15 +163,19 @@ class WalletSingletonStore:
         This is due to how re-org works
         Returns `True` if singleton was found and marked deleted or `False` if not."""
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Remove NFT in the users_nfts table
             cursor = await conn.execute(
                 "UPDATE singletons SET removed_height=? WHERE coin_id=?", (int(height), coin_id.hex())
             )
             if cursor.rowcount > 0:
                 log.info("Deleted singleton with coin id: %s", coin_id.hex())
                 return True
-            log.warning("Couldn't find singleton with coin id to delete: %s", coin_id)  # pragma: no cover
-            return False  # pragma: no cover
+            log.warning("Couldn't find singleton with coin id to delete: %s", coin_id.hex())
+            return False
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM singletons WHERE wallet_id=?", (wallet_id,))
+            await cursor.close()
 
     async def update_pending_transaction(self, coin_id: bytes32, pending: bool) -> bool:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -223,8 +228,33 @@ class WalletSingletonStore:
         get_all_state_transitions.
         """
 
-        async with self.db_wrapper.writer_maybe_transaction() as conn:  # pragma: no cover
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "DELETE FROM singletons WHERE removed_height>? AND wallet_id=?", (height, wallet_id_arg)
             )
             await cursor.close()
+
+    async def count(self, wallet_id: Optional[uint32] = None) -> int:
+        sql = "SELECT COUNT(singleton_id) FROM singletons WHERE removed_height=0"
+        params: List[uint32] = []
+        if wallet_id is not None:
+            sql += " AND wallet_id=?"
+            params.append(wallet_id)
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            count_row = await execute_fetchone(conn, sql, params)
+            if count_row:
+                return int(count_row[0])
+        return -1  # pragma: no cover
+
+    async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
+        sql = "SELECT 1 FROM singletons WHERE removed_height=0"
+        params: List[Union[uint32, bytes32]] = []
+        if wallet_id is not None:
+            sql += " AND wallet_id=?"
+            params.append(wallet_id)
+        sql += " LIMIT 1"
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            count_row = await execute_fetchone(conn, sql, params)
+            if count_row:
+                return False
+        return True
