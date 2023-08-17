@@ -227,6 +227,7 @@ class VCWallet:
             "new_proof_hash", None
         )  # Requires that this key posesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
+        self_revoke: Optional[bool] = kwargs.get("self_revoke", False)
         """
         Entry point for two standard actions:
          - Cycle the singleton and make an announcement authorizing something
@@ -273,6 +274,8 @@ class VCWallet:
         else:
             chia_tx = None
         if new_proof_hash is not None:
+            if self_revoke:
+                raise ValueError("Cannot add new proofs and revoke at the same time")
             if provider_inner_puzhash is None:
                 for _, wallet in self.wallet_state_manager.wallets.items():
                     if wallet.type() == WalletType.DECENTRALIZED_ID:
@@ -286,6 +289,8 @@ class VCWallet:
                 else:
                     raise ValueError("VC could not be updated with specified DID info")  # pragma: no cover
             magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
+        elif self_revoke:
+            magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
         innersol: Program = self.standard_wallet.make_solution(
@@ -363,7 +368,12 @@ class VCWallet:
                     did_wallet = wallet
                     break
         else:
-            raise ValueError(f"You don't own the DID {vc.proof_provider.hex()}")  # pragma: no cover
+            return await self.generate_signed_transaction(
+                vc.launcher_id,
+                fee,
+                reuse_puzhash=reuse_puzhash,
+                self_revoke=True,
+            )
 
         recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
         if recovery_info is None:
