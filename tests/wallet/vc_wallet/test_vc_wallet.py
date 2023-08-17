@@ -228,6 +228,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
 
     # Add proofs to DB
     await client_0.vc_add_proofs(proofs.key_value_pairs)
+    await client_0.vc_add_proofs(proofs.key_value_pairs)  # Doing it again just to make sure it doesn't care
     assert await client_0.vc_get_proofs_for_root(proof_root) == proofs.key_value_pairs
     vc_records, fetched_proofs = await client_0.vc_get_list()
     assert len(vc_records) == 1
