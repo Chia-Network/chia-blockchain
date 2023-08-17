@@ -252,7 +252,7 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > 8:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:
