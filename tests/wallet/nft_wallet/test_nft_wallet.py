@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Awaitable, Callable, Dict, List
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -27,6 +27,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -66,12 +67,16 @@ async def wait_rpc_state_condition(
         await asyncio.sleep(0.3)
 
 
-async def make_new_block_with(resp: Dict, full_node_api: FullNodeSimulator, ph: bytes32) -> SpendBundle:
+async def make_new_block_with(
+    resp: Dict, full_node_api: FullNodeSimulator, ph: bytes32, node_to_sync: Optional[WalletNode] = None
+) -> SpendBundle:
     assert resp.get("success")
     sb = resp["spend_bundle"]
     assert isinstance(sb, SpendBundle)
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+    if node_to_sync is not None:
+        await full_node_api.wait_for_wallet_synced(wallet_node=node_to_sync, timeout=30)
     return sb
 
 
@@ -1271,7 +1276,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
             "did_id": hmr_did_id,
         }
     )
-    sb = await make_new_block_with(resp, full_node_api, ph)
+    sb = await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     # ensure hints are generated
     assert compute_memos(sb)
     await wait_rpc_state_condition(
@@ -1287,7 +1292,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
             "did_id": hmr_did_id,
         }
     )
-    sb = await make_new_block_with(resp, full_node_api, ph)
+    sb = await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
@@ -1302,7 +1307,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
             "did_id": "",
         }
     )
-    sb = await make_new_block_with(resp, full_node_api, ph)
+    sb = await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     # ensure hints are generated
     assert compute_memos(sb)
 
@@ -1339,7 +1344,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: Any, trust
     coins = coins_response["nft_list"]
     assert coins[0].pending_transaction
     assert coins[1].pending_transaction
-    await make_new_block_with(resp, full_node_api, ph)
+    await make_new_block_with(resp, full_node_api, ph, wallet_node_0)
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
