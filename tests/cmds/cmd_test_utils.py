@@ -279,6 +279,13 @@ class TestWalletRpcClient(TestRpcClient):
 class TestFullNodeRpcClient(TestRpcClient):
     client_type: Type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
 
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Dict[str, Any]:
+        return {}
+
     async def get_blockchain_state(self) -> Dict[str, Any]:
         response: Dict[str, Any] = {
             "peak": cast(BlockRecord, create_test_block_record()),
