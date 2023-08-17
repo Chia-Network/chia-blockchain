@@ -743,5 +743,6 @@ def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, s
         return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
     else:
         ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
-        assert ret is not None
+        if ret is None:
+            raise ValueError("Abort. No private key")
         return ret
