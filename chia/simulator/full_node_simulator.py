@@ -27,6 +27,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -616,6 +617,7 @@ class FullNodeSimulator(FullNodeAPI):
                         tx = await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
+                            tx_config=DEFAULT_TX_CONFIG,
                             primaries=outputs_group[1:],
                         )
                     await wallet.push_transaction(tx=tx)

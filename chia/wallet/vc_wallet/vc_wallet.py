@@ -29,6 +29,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -150,6 +151,7 @@ class VCWallet:
     async def launch_new_vc(
         self,
         provider_did: bytes32,
+        tx_config: TXConfig,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
@@ -169,11 +171,11 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = await self.standard_wallet.select_coins(uint64(1 + fee), min_coin_amount=uint64(1 + fee))
+        coins = await self.standard_wallet.select_coins(uint64(1 + fee), tx_config.coin_selection_config)
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
-        if inner_puzzle_hash is None:
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=False)  # pragma: no cover
+        if inner_puzzle_hash is None:  # pragma: no cover
+            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
         original_coin = coins.pop()
         dpuz, coin_spends, vc = VerifiedCredential.launch(
             original_coin,
@@ -214,13 +216,13 @@ class VCWallet:
     async def generate_signed_transaction(
         self,
         vc_id: bytes32,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        reuse_puzhash: Optional[bool] = None,
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         new_proof_hash: Optional[bytes32] = kwargs.get(
@@ -265,7 +267,7 @@ class VCWallet:
         if fee > 0:
             announcement_to_make = vc_record.vc.coin.name()
             chia_tx = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
+                fee, tx_config, Announcement(vc_record.vc.coin.name(), announcement_to_make)
             )
             if coin_announcements is None:
                 coin_announcements = set((announcement_to_make,))
@@ -310,7 +312,9 @@ class VCWallet:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        did_bundle = await wallet.create_message_spend(puzzle_announcements={bytes(did_announcement)})
+                        did_bundle = await wallet.create_message_spend(
+                            tx_config, puzzle_announcements={bytes(did_announcement)}
+                        )
                         spend_bundles.append(did_bundle)
                         break
             else:
@@ -348,7 +352,11 @@ class VCWallet:
         return tx_list
 
     async def revoke_vc(
-        self, parent_id: bytes32, peer: WSChiaConnection, fee: uint64 = uint64(0), reuse_puzhash: Optional[bool] = None
+        self,
+        parent_id: bytes32,
+        peer: WSChiaConnection,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
     ) -> List[TransactionRecord]:
         vc_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [parent_id], peer=peer
@@ -384,7 +392,7 @@ class VCWallet:
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
-            coins.update(await self.standard_wallet.select_coins(fee))
+            coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
@@ -393,6 +401,7 @@ class VCWallet:
         # Assemble final bundle
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
         did_spend: SpendBundle = await did_wallet.create_message_spend(
+            tx_config,
             puzzle_announcements={expected_did_announcement},
             coin_announcements_to_assert={vc_announcement},
         )
@@ -417,7 +426,7 @@ class VCWallet:
         )
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, vc_announcement, reuse_puzhash
+                fee, tx_config, vc_announcement
             )
             assert tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
@@ -427,9 +436,7 @@ class VCWallet:
         else:
             return [tx]  # pragma: no cover
 
-    async def add_vc_authorization(
-        self, offer: Offer, solver: Solver, reuse_puzhash: Optional[bool] = None
-    ) -> Tuple[Offer, Solver]:
+    async def add_vc_authorization(self, offer: Offer, solver: Solver, tx_config: TXConfig) -> Tuple[Offer, Solver]:
         """
         This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
         The only coins types that it looks for to approve are CR-CATs at the moment.
@@ -442,14 +449,6 @@ class VCWallet:
         Note that the second requirement above means that to make a valid offer of CR-CATs for something else, you must
         send the change back to it's original puzzle hash or else a taker wallet will not approve it.
         """
-        if reuse_puzhash is None:
-            reuse_puzhash_config = self.wallet_state_manager.config.get("reuse_public_key_for_change", None)
-            if reuse_puzhash_config is None:
-                reuse_puzhash = False  # pragma: no cover
-            else:
-                reuse_puzhash = reuse_puzhash_config.get(
-                    str(self.wallet_state_manager.wallet_node.logged_in_fingerprint), False
-                )
         # Gather all of the CRCATs being spent and the CRCATs that each creates
         crcat_spends: List[CRCATSpend] = []
         other_spends: List[CoinSpend] = []
@@ -565,9 +564,9 @@ class VCWallet:
                         for tx in (
                             await self.generate_signed_transaction(
                                 launcher_id,
+                                tx_config,
                                 puzzle_announcements=set(announcements_to_make[launcher_id]),
                                 coin_announcements_to_consume=set(announcements_to_assert[launcher_id]),
-                                reuse_puzhash=reuse_puzhash,
                             )
                         )
                         if tx.spend_bundle is not None
@@ -621,10 +620,7 @@ class VCWallet:
     async def select_coins(
         self,
         amount: uint64,
-        exclude: Optional[List[Coin]] = None,
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 

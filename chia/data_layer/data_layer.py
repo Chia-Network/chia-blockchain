@@ -47,6 +47,7 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
@@ -733,6 +734,9 @@ class DataLayer:
                 driver_dict={},
                 fee=fee,
                 validate_only=False,
+                # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+                # This is not a change in behavior, the default was already implicit.
+                tx_config=DEFAULT_TX_CONFIG,
             )
             if wallet_offer is None:
                 raise Exception("offer is None despite validate_only=False")
@@ -817,6 +821,9 @@ class DataLayer:
             offer=offer,
             solver=solver,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         return trade_record
@@ -834,6 +841,9 @@ class DataLayer:
             trade_id=trade_id,
             secure=secure,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         if not secure:

@@ -4,7 +4,7 @@ import sys
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union, cast
+from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
 from blspy import G2Element
 from chia_rs import Coin
@@ -31,6 +31,7 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.testing_classes import create_test_block_record
 
@@ -198,18 +199,14 @@ class TestWalletRpcClient(TestRpcClient):
     async def get_spendable_coins(
         self,
         wallet_id: int,
-        excluded_coins: Optional[List[Coin]] = None,
-        min_coin_amount: uint64 = uint64(0),
-        max_coin_amount: uint64 = uint64(0),
-        excluded_amounts: Optional[List[uint64]] = None,
-        excluded_coin_ids: Optional[Sequence[str]] = None,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
         """
         self.add_to_log(
             "get_spendable_coins",
-            (wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts, excluded_coin_ids),
+            (wallet_id, coin_selection_config),
         )
         confirmed_records = [
             CoinRecord(
@@ -251,10 +248,11 @@ class TestWalletRpcClient(TestRpcClient):
         self,
         wallet_id: int,
         additions: List[Dict[str, object]],
+        tx_config: TXConfig,
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
     ) -> TransactionRecord:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, coins, fee))
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee))
         return TransactionRecord(
             confirmed_at_height=uint32(1),
             created_at_time=uint64(1234),

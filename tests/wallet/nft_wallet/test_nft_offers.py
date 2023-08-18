@@ -21,6 +21,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.debug_spend_bundle import disassemble
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 
 
@@ -46,6 +47,8 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     wallet_node_1, server_1 = wallets[1]
     wallet_maker = wallet_node_0.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_1.wallet_state_manager.main_wallet
+
+    tx_config = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
@@ -96,7 +99,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    sb = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
     assert sb
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -126,7 +129,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     ).index
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_xch, driver_dict, fee=maker_fee, reuse_puzhash=reuse_puzhash
+        offer_nft_for_xch, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -138,8 +141,8 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
+        tx_config,
         fee=taker_fee,
-        reuse_puzhash=reuse_puzhash,
     )
     assert trade_take is not None
     assert tx_records is not None
@@ -197,7 +200,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     offer_xch_for_nft = {wallet_maker.id(): -xch_offered, nft_to_buy_asset_id: 1}
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_xch_for_nft, driver_dict_to_buy, fee=maker_fee
+        offer_xch_for_nft, tx_config, driver_dict_to_buy, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -206,7 +209,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     taker_fee = uint64(1)
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, tx_config, fee=taker_fee
     )
 
     assert trade_take is not None
@@ -286,7 +289,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -309,7 +312,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
     offer_nft_for_xch = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_xch, driver_dict, fee=maker_fee
+        offer_nft_for_xch, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -320,7 +323,9 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     cancel_fee = uint64(10)
 
-    txs = await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], fee=cancel_fee, secure=True)
+    txs = await trade_manager_maker.cancel_pending_offers(
+        [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=cancel_fee, secure=True
+    )
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node_api.process_transaction_records(records=txs)
@@ -399,7 +404,7 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -414,7 +419,9 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
     url_to_add = "https://new_url.com"
     key = "mu"
     fee_for_update = uint64(10)
-    update_sb = await nft_wallet_maker.update_metadata(nft_to_update, key, url_to_add, fee=fee_for_update)
+    update_sb = await nft_wallet_maker.update_metadata(
+        nft_to_update, key, url_to_add, DEFAULT_TX_CONFIG, fee=fee_for_update
+    )
     mempool_mgr = full_node_api.full_node.mempool_manager
     await time_out_assert_not_none(20, mempool_mgr.get_spendbundle, update_sb.name())  # type: ignore
 
@@ -441,7 +448,7 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
     offer_nft_for_xch = {wallet_maker.id(): xch_request, nft_asset_id: -1}
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_xch, driver_dict, fee=maker_fee
+        offer_nft_for_xch, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -451,7 +458,7 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
 
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=taker_fee
     )
 
     assert trade_take is not None
@@ -522,6 +529,8 @@ async def test_nft_offer_nft_for_cat(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
+    tx_config = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
+
     # Create NFT wallets and nfts for maker and taker
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_maker, name="NFT WALLET 1"
@@ -541,7 +550,7 @@ async def test_nft_offer_nft_for_cat(
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    sb = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
     assert sb
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -555,7 +564,11 @@ async def test_nft_offer_nft_for_cat(
     cats_to_mint = 10000
     async with wallet_node_0.wallet_state_manager.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_0.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
+            wallet_node_0.wallet_state_manager,
+            wallet_maker,
+            {"identifier": "genesis_by_id"},
+            uint64(cats_to_mint),
+            tx_config,
         )
         await time_out_assert(20, mempool_not_empty, True, full_node_api)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
@@ -563,7 +576,11 @@ async def test_nft_offer_nft_for_cat(
 
     async with wallet_node_1.wallet_state_manager.lock:
         cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node_1.wallet_state_manager, wallet_taker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
+            wallet_node_1.wallet_state_manager,
+            wallet_taker,
+            {"identifier": "genesis_by_id"},
+            uint64(cats_to_mint),
+            tx_config,
         )
         await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -606,7 +623,7 @@ async def test_nft_offer_nft_for_cat(
     ).index
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_cat, driver_dict, fee=maker_fee, reuse_puzhash=reuse_puzhash
+        offer_nft_for_cat, tx_config, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -618,8 +635,8 @@ async def test_nft_offer_nft_for_cat(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
+        tx_config,
         fee=taker_fee,
-        reuse_puzhash=reuse_puzhash,
     )
 
     assert trade_take is not None
@@ -690,7 +707,7 @@ async def test_nft_offer_nft_for_cat(
     }
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_multi_cats_for_nft, driver_dict_to_buy, fee=maker_fee
+        offer_multi_cats_for_nft, tx_config, driver_dict_to_buy, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -699,7 +716,7 @@ async def test_nft_offer_nft_for_cat(
     taker_fee = uint64(1)
 
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, tx_config, fee=taker_fee
     )
 
     assert trade_take is not None
@@ -787,7 +804,7 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata)
+    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -797,7 +814,7 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F183"),
         ]
     )
-    sb_2 = await nft_wallet_taker.generate_new_nft(metadata_2)
+    sb_2 = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG)
     assert sb_2
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb_2.name())
 
@@ -829,7 +846,7 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
     offer_nft_for_nft = {nft_to_take_asset_id: 1, nft_to_offer_asset_id: -1}
 
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-        offer_nft_for_nft, driver_dict, fee=maker_fee
+        offer_nft_for_nft, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
     assert error is None
@@ -839,7 +856,7 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
 
     peer = wallet_node_1.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=taker_fee
     )
 
     assert trade_take is not None
