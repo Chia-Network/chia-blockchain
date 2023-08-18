@@ -379,8 +379,8 @@ class VCWallet:
         else:
             return await self.generate_signed_transaction(
                 vc.launcher_id,
+                tx_config,
                 fee,
-                reuse_puzhash=reuse_puzhash,
                 self_revoke=True,
             )
 
