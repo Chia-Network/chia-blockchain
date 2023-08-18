@@ -17,6 +17,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
+from chia.wallet.conditions import Condition
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -202,11 +203,11 @@ class Wallet:
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
-        magic_conditions: Optional[List[Any]] = None,
+        conditions: List[Condition] = [],
         fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
-        condition_list = []
+        condition_list: List[Any] = [condition.to_program() for condition in conditions]
         if len(primaries) > 0:
             for primary in primaries:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
@@ -224,8 +225,6 @@ class Wallet:
         if puzzle_announcements_to_assert:
             for announcement_hash in puzzle_announcements_to_assert:
                 condition_list.append(make_assert_puzzle_announcement(announcement_hash))
-        if magic_conditions is not None:
-            condition_list.extend(magic_conditions)
         return solution_for_conditions(condition_list)
 
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
