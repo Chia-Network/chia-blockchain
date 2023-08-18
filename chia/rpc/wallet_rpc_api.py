@@ -2284,7 +2284,7 @@ class WalletRpcApi:
                 pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             else:
                 assert wallet.did_info.temp_pubkey is not None
-                pubkey = wallet.did_info.temp_pubkey
+                pubkey = G1Element.from_bytes(wallet.did_info.temp_pubkey)
 
             if "puzhash" in request:
                 puzhash = bytes32.from_hexstr(request["puzhash"])

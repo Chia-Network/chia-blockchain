@@ -1522,11 +1522,13 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     # Add in reward addresses into farmer and pool for testing delete key checks
     # set farmer to first private key
     sk = await wallet_node.get_key_for_fingerprint(pks[0])
+    assert sk is not None
     test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         # set pool to second private key
         sk = await wallet_node.get_key_for_fingerprint(pks[1])
+        assert sk is not None
         test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
         test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         save_config(wallet_node.root_path, "config.yaml", test_config)
@@ -1552,11 +1554,13 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     # Add in observer reward addresses into farmer and pool for testing delete key checks
     # set farmer to first private key
     sk = await wallet_node.get_key_for_fingerprint(pks[0])
+    assert sk is not None
     test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         # set pool to second private key
         sk = await wallet_node.get_key_for_fingerprint(pks[1])
+        assert sk is not None
         test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
         test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         save_config(wallet_node.root_path, "config.yaml", test_config)

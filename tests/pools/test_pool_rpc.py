@@ -402,7 +402,7 @@ class TestPoolWalletRpc:
                                 [some_wallet.wallet_state_manager.private_key], status.current.owner_pubkey
                             )
                             assert owner_sk is not None
-                            assert owner_sk != auth_sk
+                            assert owner_sk[0] != auth_sk
 
     @pytest.mark.asyncio
     async def test_absorb_self(
