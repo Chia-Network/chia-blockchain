@@ -14,11 +14,11 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
 
 
-async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
+async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str], verbose: bool) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
-        res = await client.create_data_store(fee=final_fee)
-        print(res)
+        res = await client.create_data_store(fee=final_fee, verbose=verbose)
+        print(json.dumps(res))
 
 
 async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_hash: Optional[str]) -> None:
