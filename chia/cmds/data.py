@@ -108,7 +108,7 @@ def create_fee_option() -> Callable[[FC], FC]:
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
-@click.option('--verbose', is_flag=True, help='Enable verbose output.')
+@click.option("--verbose", is_flag=True, help="Enable verbose output.")
 def create_data_store(
     data_rpc_port: int,
     fee: Optional[str],
