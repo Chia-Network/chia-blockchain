@@ -14,7 +14,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
-_T_ConditionSubclass = TypeVar("_T_ConditionSubclass")
+_T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 
 class Condition(Streamable, ABC):
@@ -24,7 +24,7 @@ class Condition(Streamable, ABC):
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_ConditionSubclass], program: Program) -> _T_ConditionSubclass:
+    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition:
         ...
 
 
