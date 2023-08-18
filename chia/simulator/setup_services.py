@@ -444,6 +444,9 @@ async def setup_vdf_clients(
 
     yield vdf_task_1, vdf_task_2, vdf_task_3
 
+    vdf_task_1.cancel()
+    vdf_task_2.cancel()
+    vdf_task_3.cancel()
     await kill_processes(lock)
 
 
