@@ -6,6 +6,8 @@ from typing import Optional, Sequence
 
 import click
 
+from chia.cmds import options
+
 
 @click.group("coins", help="Manage your wallets coins")
 @click.pass_context
@@ -21,7 +23,7 @@ def coins_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
@@ -91,7 +93,7 @@ def list_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-a",
@@ -188,7 +190,7 @@ def combine_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-n",
