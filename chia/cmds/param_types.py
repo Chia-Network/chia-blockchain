@@ -37,7 +37,7 @@ class TransactionFeeParamType(click.ParamType):
                 self.fail("Fee can not be negative", param, ctx)
             if self.value_limit != Decimal(0) and d_value > self.value_limit:
                 self.fail(f"Fee must be in the range 0 to {self.value_limit}", param, ctx)
-            return uint64(int(d_value * units["chia"]))
+            return uint64(d_value * units["chia"])
         except InvalidOperation:  # won't ever be value error because of the fee limit check
             self.fail("Fee must be decimal dotted value in XCH (e.g. 0.00005)", param, ctx)
 
