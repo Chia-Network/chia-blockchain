@@ -712,7 +712,7 @@ async def offer_setup_fixture(
             )
             data_rpc_api = DataLayerRpcApi(data_layer)
 
-            create_response = await data_rpc_api.create_data_store({})
+            create_response = await data_rpc_api.create_data_store({"verbose": True})
             await full_node_api.process_transaction_records(records=create_response["txs"])
 
             store_setups.append(
