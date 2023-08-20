@@ -24,6 +24,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -132,7 +133,7 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
         ]
     )
 
-    sb = await nft_wallet_0.generate_new_nft(metadata)
+    sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
@@ -143,7 +144,9 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 1, "nft not generated"
 
-    txs = await nft_wallet_0.generate_signed_transaction([uint64(coins[0].coin.amount)], [ph1], coins={coins[0].coin})
+    txs = await nft_wallet_0.generate_signed_transaction(
+        [uint64(coins[0].coin.amount)], [ph1], DEFAULT_TX_CONFIG, coins={coins[0].coin}
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_0.wallet_state_manager.add_pending_transaction(txs[0])
@@ -227,7 +230,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, 2000000000000)
     await time_out_assert(30, wallet_0.get_confirmed_balance, 2000000000000)
-    sb = await nft_wallet_0.generate_new_nft(metadata)
+    sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     # ensure hints are generated
     assert compute_memos(sb)
@@ -261,7 +264,7 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
     await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000)
 
-    sb = await nft_wallet_0.generate_new_nft(metadata)
+    sb = await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
     assert sb
     # ensure hints are generated
     assert compute_memos(sb)
@@ -278,7 +281,9 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
-    txs = await nft_wallet_0.generate_signed_transaction([uint64(coins[1].coin.amount)], [ph1], coins={coins[1].coin})
+    txs = await nft_wallet_0.generate_signed_transaction(
+        [uint64(coins[1].coin.amount)], [ph1], DEFAULT_TX_CONFIG, coins={coins[1].coin}
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_0.wallet_state_manager.add_pending_transaction(txs[0])
@@ -298,7 +303,9 @@ async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_n
     await time_out_assert(30, wallet_1.get_pending_change_balance, 0)
 
     # Send it back to original owner
-    txs = await nft_wallet_1.generate_signed_transaction([uint64(coins[0].coin.amount)], [ph], coins={coins[0].coin})
+    txs = await nft_wallet_1.generate_signed_transaction(
+        [uint64(coins[0].coin.amount)], [ph], DEFAULT_TX_CONFIG, coins={coins[0].coin}
+    )
     assert len(txs) == 1
     assert txs[0].spend_bundle is not None
     await wallet_node_1.wallet_state_manager.add_pending_transaction(txs[0])
@@ -988,7 +995,7 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     assert len(wallet_1.wallet_state_manager.wallets) == 1, "NFT wallet shouldn't exist yet"
     assert len(wallet_0.wallet_state_manager.wallets) == 3
     # transfer DID to the other wallet
-    tx = await did_wallet.transfer_did(ph1, uint64(0), True)
+    tx = await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG)
     assert tx
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))

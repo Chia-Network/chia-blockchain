@@ -9,7 +9,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint32, uint64
-from tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, cli_assert_shortcut, run_cli_command
+from tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, run_cli_command_and_assert
 from tests.cmds.testing_classes import hash_to_height, height_hash
 from tests.util.test_full_block_utils import get_foliage, get_reward_chain_block, get_transactions_info, vdf_proof
 
@@ -95,8 +95,6 @@ def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
         "10",
         "-b0x000000000000000000000000000000000000000000000000000000000000000b",
     ]
-    success, output = run_cli_command(capsys, root_dir, command_args)
-    assert success
     # these are various things that should be in the output
     assert_list = [
         "Current Blockchain Status: Full Node Synced",
@@ -107,7 +105,7 @@ def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
         "Weight                 10000",
         "Is a Transaction Block?True",
     ]
-    cli_assert_shortcut(output, assert_list)
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: dict[str, Optional[List[tuple[Any, ...]]]] = {  # name of rpc: (args)
         "get_blockchain_state": None,
         "get_block_record": [(height_hash(height),) for height in [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 10]],

@@ -30,6 +30,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
@@ -538,7 +539,9 @@ class TestWalletSync:
             payees.append(Payment(payee_ph, uint64(i + 100)))
             payees.append(Payment(payee_ph, uint64(i + 200)))
 
-        tx: TransactionRecord = await wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -688,7 +691,7 @@ class TestWalletSync:
             (10, 10000000000, 1),  # everything is dust
             (10, 10000000000, 10000000000),  # max dust threshold, dust is same size so not filtered
             # Test with more coins
-            (100, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
+            (105, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
         ],
     )
     async def test_dusted_wallet(
@@ -749,7 +752,9 @@ class TestWalletSync:
         payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -779,7 +784,7 @@ class TestWalletSync:
         log.info(f"all_unspent is {all_unspent}")
         small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance, DEFAULT_COIN_SELECTION_CONFIG))
 
         log.info(f"Small coin count is {small_unspent_count}")
         log.info(f"Wallet balance is {balance}")
@@ -809,7 +814,9 @@ class TestWalletSync:
             # This greatly speeds up the overall process
             if dust_remaining % 100 == 0 and dust_remaining != new_dust:
                 # construct and send tx
-                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+                )
                 await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
                 last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
@@ -822,7 +829,9 @@ class TestWalletSync:
         # Only need to create tx if there was new dust to be added
         if new_dust >= 1:
             # construct and send tx
-            tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+            tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+            )
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
             # advance the chain and sync both wallets
@@ -869,7 +878,9 @@ class TestWalletSync:
             payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -908,7 +919,9 @@ class TestWalletSync:
         payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -967,7 +980,9 @@ class TestWalletSync:
                 large_dust_balance += dust_value
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -1003,7 +1018,9 @@ class TestWalletSync:
         payees = [Payment(payee_ph, uint64(balance))]
 
         # construct and send tx
-        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -1046,7 +1063,9 @@ class TestWalletSync:
             # This greatly speeds up the overall process
             if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
                 # construct and send tx
-                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+                )
                 await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
                 last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
@@ -1057,7 +1076,9 @@ class TestWalletSync:
             coins_remaining -= 1
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -1086,7 +1107,9 @@ class TestWalletSync:
         payees = [Payment(payee_ph, uint64(1))]
 
         # construct and send tx
-        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
@@ -1134,7 +1157,7 @@ class TestWalletSync:
                 ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
-        farm_sb = await farm_nft_wallet.generate_new_nft(metadata)
+        farm_sb = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
         assert farm_sb
 
         # ensure hints are generated
@@ -1162,6 +1185,7 @@ class TestWalletSync:
         txs = await farm_nft_wallet.generate_signed_transaction(
             [uint64(nft_coins[0].coin.amount)],
             [dust_ph],
+            DEFAULT_TX_CONFIG,
             coins={nft_coins[0].coin},
         )
         assert len(txs) == 1
@@ -1298,7 +1322,9 @@ class TestWalletSync:
 
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
-            tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
+            tx = await wallet.generate_signed_transaction(
+                1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
+            )
             await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
             async def tx_in_mempool():

@@ -7,10 +7,12 @@ import enum
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
+import anyio
 import pytest
 import pytest_asyncio
 
@@ -30,12 +32,12 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
@@ -1959,3 +1961,58 @@ async def test_clear_pending_roots(
             assert False, "unhandled parametrization"
 
         assert cleared_root == {"success": True, "root": pending_root.marshal()}
+
+
+@pytest.mark.asyncio
+async def test_issue_15955_deadlock(
+    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+
+    wallet_node = wallet_rpc_api.service
+    wallet = wallet_node.wallet_state_manager.main_wallet
+
+    interval = 1
+    config = bt.config
+    config["data_layer"]["manage_data_interval"] = interval
+    bt.change_config(new_config=config)
+
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        # get some xch
+        await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet)
+        await full_node_api.wait_for_wallet_synced(wallet_node)
+
+        # create a store
+        transaction_records, tree_id = await data_layer.create_store(fee=uint64(0))
+        await full_node_api.process_transaction_records(records=transaction_records)
+        await full_node_api.wait_for_wallet_synced(wallet_node)
+        assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
+
+        # insert a key and value
+        key = b"\x00"
+        value = b"\x01" * 10_000
+        transaction_record = await data_layer.batch_update(
+            tree_id=tree_id,
+            changelist=[{"action": "insert", "key": key, "value": value}],
+            fee=uint64(0),
+        )
+        await full_node_api.process_transaction_records(records=[transaction_record])
+        await full_node_api.wait_for_wallet_synced(wallet_node)
+        assert await check_singleton_confirmed(dl=data_layer, tree_id=tree_id)
+
+        # get the value a bunch through several periodic data management cycles
+        concurrent_requests = 10
+        time_per_request = 2
+        timeout = concurrent_requests * time_per_request
+
+        duration = 10 * interval
+        start = time.monotonic()
+        end = start + duration
+
+        while time.monotonic() < end:
+            with anyio.fail_after(adjusted_timeout(timeout)):
+                await asyncio.gather(
+                    *(asyncio.create_task(data_layer.get_value(store_id=tree_id, key=key)) for _ in range(10))
+                )
