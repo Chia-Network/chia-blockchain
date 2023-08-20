@@ -335,7 +335,7 @@ jobs:
         gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
     - name: Mark installer complete
-      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.RELEASE == 'true'
       run: |
         $headers = @{
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
