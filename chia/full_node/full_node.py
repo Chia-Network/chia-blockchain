@@ -978,7 +978,7 @@ class FullNode:
         self.log.info(f"Total of {len(peers_with_peak)} peers with peak {peak_height}")
         weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
         self.log.info(
-            f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} " f"up to height {peak_height}"
+            f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
         )
         cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if cur_peak is not None and peak_weight <= cur_peak.weight:
@@ -999,7 +999,7 @@ class FullNode:
         if response.wp.recent_chain_data[-1].reward_chain_block.weight != peak_weight:
             await weight_proof_peer.close(600)
             raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_info.host}")
-        if not self.check_bad_peak_cache(response.wp):
+        if self.in_bad_peak_cache(response.wp):
             raise ValueError("Weight proof failed bad peak cache validation")
         # dont sync to wp if local peak is heavier,
         # dont ban peer, we asked for this peak
@@ -2487,11 +2487,11 @@ class FullNode:
         if self._server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-    def check_bad_peak_cache(self, wp: WeightProof) -> bool:
+    def in_bad_peak_cache(self, wp: WeightProof) -> bool:
         for block in wp.recent_chain_data:
             if block.header_hash in self.bad_peak_cache.keys():
-                return False
-        return True
+                return True
+        return False
 
     def add_to_bad_peak_cache(self, peak_header_hash: bytes32, peak_height: uint32) -> None:
         curr_height = self.blockchain.get_peak_height()
