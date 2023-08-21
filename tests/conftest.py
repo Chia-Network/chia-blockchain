@@ -702,7 +702,7 @@ async def get_b_tools(get_temp_keyring):
 async def daemon_connection_and_temp_keychain(
     get_b_tools: BlockTools,
 ) -> AsyncIterator[Tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
-    async for daemon in setup_daemon(btools=get_b_tools):
+    async with setup_daemon(btools=get_b_tools) as daemon:
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
@@ -837,7 +837,7 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
 
 @pytest_asyncio.fixture(scope="function")
 async def introducer(bt):
-    async for service in setup_introducer(bt, 0):
+    async with setup_introducer(bt, 0) as service:
         yield service._api, service._node.server
 
 
@@ -849,7 +849,7 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
+    async with setup_timelord(uint16(0), False, bt.constants, bt) as service:
         yield service._api, service._node.server
 
 
@@ -863,13 +863,13 @@ async def timelord_service(bt):
 async def crawler_service(
     root_path_populated_with_config: Path, database_uri: str
 ) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
-    async for service in setup_crawler(root_path_populated_with_config, database_uri):
+    async with setup_crawler(root_path_populated_with_config, database_uri) as service:
         yield service
 
 
 @pytest_asyncio.fixture(scope="function")
 async def seeder_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[DNSServer]:
-    async for seeder in setup_seeder(root_path_populated_with_config, database_uri):
+    async with setup_seeder(root_path_populated_with_config, database_uri) as seeder:
         yield seeder
 
 

@@ -1145,42 +1145,6 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_0.get_unconfirmed_balance, expected_confirmed_balance)
         await time_out_assert(20, wallet_1.get_confirmed_balance, 5)
 
-    # @pytest.mark.asyncio
-    # async def test_wallet_finds_full_node(self):
-    #     node_iters = [
-    #         setup_full_node(
-    #             test_constants,
-    #             "blockchain_test.db",
-    #             11234,
-    #             introducer_port=11236,
-    #             simulator=False,
-    #         ),
-    #         setup_wallet_node(
-    #             11235,
-    #             test_constants,
-    #             None,
-    #             introducer_port=11236,
-    #         ),
-    #         setup_introducer(11236),
-    #     ]
-    #
-    #     full_node_api = await node_iters[0].__anext__()
-    #     wallet, wallet_server = await node_iters[1].__anext__()
-    #     introducer, introducer_server = await node_iters[2].__anext__()
-    #
-    #     async def has_full_node():
-    #         outbound: List[WSChiaConnection] = wallet.server.get_outgoing_connections()
-    #         for connection in outbound:
-    #             if connection.connection_type is NodeType.FULL_NODE:
-    #                 return True
-    #         return False
-    #
-    #     await time_out_assert(
-    #         2 * 60,
-    #         has_full_node,
-    #         True,
-    #     )
-    #     await _teardown_nodes(node_iters)
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
