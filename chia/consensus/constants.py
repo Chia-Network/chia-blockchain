@@ -82,6 +82,7 @@ class ConsensusConstants:
 
     # number of consecutive plot ids required to be distinct
     UNIQUE_PLOTS_WINDOW: uint8
+    BAD_PEAK_CACHE_SIZE: uint32
 
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)

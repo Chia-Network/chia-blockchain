@@ -2508,11 +2508,18 @@ class FullNode:
         new_cache = {}
         self.log.info(f"add bad peak {peak_header_hash} to cache")
         new_cache[peak_header_hash] = peak_height
+        min_height = peak_height
+        min_block = peak_header_hash
         for header_hash, height in self.bad_peak_cache.items():
             if height < minimum_cache_height:
                 self.log.debug(f"remove bad peak {peak_header_hash} from cache")
                 continue
+            if height < min_height:
+                min_block = header_hash
             new_cache[header_hash] = height
+
+        if len(self.bad_peak_cache.items()) > self.constants.BAD_PEAK_CACHE_SIZE:
+            del new_cache[min_block]
 
         self.bad_peak_cache = new_cache
 
