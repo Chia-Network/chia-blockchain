@@ -2518,7 +2518,7 @@ class FullNode:
                 min_block = header_hash
             new_cache[header_hash] = height
 
-        if len(self.bad_peak_cache.items()) > self.constants.BAD_PEAK_CACHE_SIZE:
+        if len(new_cache) >= self.constants.BAD_PEAK_CACHE_SIZE:
             del new_cache[min_block]
 
         self.bad_peak_cache = new_cache

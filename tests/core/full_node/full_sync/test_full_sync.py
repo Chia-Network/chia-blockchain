@@ -368,7 +368,7 @@ class TestFullSync:
             peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
         )
         # sync using bad ses list
-        await full_node_2.full_node.sync_from_fork_point(0, peak1, summaries)
+        await full_node_2.full_node.sync_from_fork_point(0, peak1.height, peak1.header_hash, summaries)
         # assert we failed somewhere between sub epoch 0 to sub epoch 1
         assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
@@ -464,6 +464,32 @@ class TestFullSync:
 
         with pytest.raises(ValueError, match="Weight proof failed bad peak cache validation"):
             await full_node_1.full_node.request_validate_wp(peak.header_hash, peak.height, peak.weight)
+
+    @pytest.mark.asyncio
+    async def test_bad_peak_cache_invalidation(
+        self, two_nodes, default_1000_blocks, blockchain_constants, consensus_mode
+    ):
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
+
+        for block in default_1000_blocks[:-500]:
+            await full_node_1.full_node.add_block(block)
+
+        for x in range(blockchain_constants.BAD_PEAK_CACHE_SIZE + 10):
+            blocks = bt.get_consecutive_blocks(
+                num_blocks=1, block_list_input=default_1000_blocks[:-500], seed=x.to_bytes(2, "big")
+            )
+            block = blocks[-1]
+            full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
+
+        assert len(full_node_1.full_node.bad_peak_cache) == blockchain_constants.BAD_PEAK_CACHE_SIZE
+
+        for block in default_1000_blocks[500:]:
+            await full_node_1.full_node.add_block(block)
+
+        blocks = bt.get_consecutive_blocks(num_blocks=1, block_list_input=default_1000_blocks[:-1])
+        block = blocks[-1]
+        full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
+        assert len(full_node_1.full_node.bad_peak_cache) == 1
 
 
 def has_peers_with_peak(node: FullNode, header_hash: bytes32) -> bool:
