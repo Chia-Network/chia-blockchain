@@ -668,8 +668,6 @@ async def farmer_three_harvester_not_started(
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
 async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -951,8 +949,8 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 @pytest_asyncio.fixture(scope="function")
 async def simulation(consensus_mode, bt):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
+    #    if consensus_mode != Mode.PLAIN:
+    #        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 
