@@ -969,7 +969,7 @@ class FullNode:
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
     ) -> Tuple[uint32, List[SubEpochSummary]]:
         if self.weight_proof_handler is None:
-            raise RuntimeError(f"Weight proof handler is None")
+            raise RuntimeError("Weight proof handler is None")
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_header_hash])
         peers_with_peak: List[WSChiaConnection] = [
             c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids
