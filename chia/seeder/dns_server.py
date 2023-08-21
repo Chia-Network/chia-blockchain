@@ -276,7 +276,8 @@ class DNSServer:
     # TODO: After 3.10 is dropped change to asyncio.Server
     tcp_server: Optional[asyncio.base_events.Server] = field(init=False, default=None)
     # these are all set in __post_init__
-    dns_port: int = field(init=False)
+    tcp_dns_port: int = field(init=False)
+    udp_dns_port: int = field(init=False)
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
     ns1: DomainName = field(init=False)
@@ -292,13 +293,15 @@ class DNSServer:
         """
         We initialize all the variables set to field(init=False) here.
         """
-        # From Config
-        self.dns_port: int = self.config.get("dns_port", 53)
-        # DB Path
+        # From Config:
+        # The dns ports should only really be different if testing.
+        self.tcp_dns_port: int = self.config.get("dns_port", 53)
+        self.udp_dns_port: int = self.config.get("dns_port", 53)
+        # DB Path:
         crawler_db_path: str = self.config.get("crawler_db_path", "crawler.db")
         self.db_path: Path = path_from_root(self.root_path, crawler_db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        # DNS info
+        # DNS info:
         self.domain: DomainName = DomainName(self.config["domain_name"])
         if not self.domain.endswith("."):
             self.domain = DomainName(self.domain + ".")  # Make sure the domain ends with a period, as per RFC 1035.
@@ -330,23 +333,23 @@ class DNSServer:
 
         # One protocol instance will be created for each udp transport, so that we can accept ipv4 and ipv6
         self.udp_transport_ipv6, self.udp_protocol_ipv6 = await loop.create_datagram_endpoint(
-            lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.dns_port)
+            lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("::0", self.udp_dns_port)
         )
         self.udp_protocol_ipv6.start()  # start ipv6 udp transmit task
 
-        # in case the port is 0 we need all protocols on the same port.
-        self.dns_port = self.udp_transport_ipv6.get_extra_info("sockname")[1]  # get the actual port we are listening to
+        # in case the port is 0, we get the real port
+        self.udp_dns_port = self.udp_transport_ipv6.get_extra_info("sockname")[1]  # get the port we bound to
 
         if sys.platform.startswith("win32") or sys.platform.startswith("cygwin"):
             # Windows does not support dual stack sockets, so we need to create a new socket for ipv4.
             self.udp_transport_ipv4, self.udp_protocol_ipv4 = await loop.create_datagram_endpoint(
-                lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("0.0.0.0", self.dns_port)
+                lambda: UDPDNSServerProtocol(self.dns_response), local_addr=("0.0.0.0", self.udp_dns_port)
             )
             self.udp_protocol_ipv4.start()  # start ipv4 udp transmit task
 
         # One tcp server will handle both ipv4 and ipv6 on both linux and windows.
         self.tcp_server = await loop.create_server(
-            lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.dns_port
+            lambda: TCPDNSServerProtocol(self.dns_response), ["::0", "0.0.0.0"], self.tcp_dns_port
         )
 
         log.info("DNS server started.")

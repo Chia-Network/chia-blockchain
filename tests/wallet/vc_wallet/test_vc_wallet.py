@@ -22,6 +22,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker, construct_cr_layer
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
@@ -67,6 +68,7 @@ async def mint_cr_cat(
                 "amount": CAT_AMOUNT_0,
             }
         ],
+        DEFAULT_TX_CONFIG,
         wallet_id=1,
     )
     spend_bundle = tx.spend_bundle
@@ -175,7 +177,9 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
-    vc_record, txs = await client_0.vc_mint(did_id, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200))
+    vc_record, txs = await client_0.vc_mint(
+        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    )
     confirmed_balance -= 1
     confirmed_balance -= 200
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
@@ -192,6 +196,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     proof_root: bytes32 = proofs.root()
     txs = await client_0.vc_spend(
         vc_record.vc.launcher_id,
+        DEFAULT_TX_CONFIG,
         new_proof_hash=proof_root,
         fee=uint64(100),
     )
@@ -205,7 +210,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    txs = await client_0.vc_spend(vc_record.vc.launcher_id)
+    txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -228,6 +233,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
 
     # Add proofs to DB
     await client_0.vc_add_proofs(proofs.key_value_pairs)
+    await client_0.vc_add_proofs(proofs.key_value_pairs)  # Doing it again just to make sure it doesn't care
     assert await client_0.vc_get_proofs_for_root(proof_root) == proofs.key_value_pairs
     vc_records, fetched_proofs = await client_0.vc_get_list()
     assert len(vc_records) == 1
@@ -264,6 +270,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     wallet_1_addr = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
+        DEFAULT_TX_CONFIG,
         uint64(90),
         wallet_1_addr,
         uint64(2000000000),
@@ -321,7 +328,9 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs
-    txs = await client_0.vc_spend(vc_record.vc.launcher_id, new_puzhash=await wallet_1.get_new_puzzlehash())
+    txs = await client_0.vc_spend(
+        vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
+    )
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
@@ -334,6 +343,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     txs = await client_1.crcat_approve_pending(
         uint32(cr_cat_wallet_id_1),
         uint64(90),
+        DEFAULT_TX_CONFIG,
         fee=uint64(90),
     )
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
@@ -358,6 +368,7 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     with pytest.raises(ValueError):
         tx = await client_0.cat_spend(
             cr_cat_wallet_0.id(),
+            DEFAULT_TX_CONFIG,
             uint64(10),
             wallet_1_addr,
         )
@@ -365,11 +376,11 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     # Test melting a CRCAT
     tx = await client_1.cat_spend(
         cr_cat_wallet_id_1,
+        DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
         uint64(20),
         wallet_1_addr,
         uint64(0),
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
-        reuse_puzhash=True,
     )
     await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
     assert tx.spend_bundle is not None
@@ -388,13 +399,92 @@ async def test_vc_lifecycle(self_hostname: str, two_wallet_nodes_services: Any, 
     )
     vc_record_updated = await client_1.vc_get(vc_record_updated.vc.launcher_id)
     assert vc_record_updated is not None
-    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, uint64(1))
+    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
     confirmed_balance -= 1
     spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     vc_record_revoked: Optional[VCRecord] = await client_1.vc_get(vc_record.vc.launcher_id)
+    assert vc_record_revoked is None
+    assert (
+        len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
+    )
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_self_revoke(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: Any,
+    trusted: Any,
+) -> None:
+    num_blocks = 1
+    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
+    full_node_api: FullNodeSimulator = full_nodes[0]._api
+    full_node_server = full_node_api.full_node.server
+    wallet_service_0 = wallets[0]
+    wallet_node_0 = wallet_service_0._node
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+
+    client_0 = await WalletRpcClient.create(
+        bt.config["self_hostname"],
+        wallet_service_0.rpc_server.listen_port,
+        wallet_service_0.root_path,
+        wallet_service_0.config,
+    )
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+
+    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
+    )
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+    did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
+    vc_record, txs = await client_0.vc_mint(
+        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+    )
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
+    assert len(vc_wallet) == 1
+    new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
+    assert new_vc_record is not None
+
+    # Test a negative case real quick (mostly unrelated)
+    with pytest.raises(ValueError, match="at the same time"):
+        await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
+            new_vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_proof_hash=bytes32([0] * 32), self_revoke=True
+        )
+
+    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+
+    txs = await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(0))
+    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
+    vc_record_revoked: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0

@@ -30,6 +30,7 @@ def get_pairings(
 
     # G1Element.from_bytes can be expensive due to subgroup check, so we avoid recomputing it with this cache
     pk_bytes_to_g1: Dict[bytes48, G1Element] = {}
+    ret: List[GTElement] = []
     for i, pairing in enumerate(pairings):
         if pairing is None:
             aug_msg = pks[i] + msgs[i]
@@ -42,12 +43,14 @@ def get_pairings(
                 pk_parsed = G1Element.from_bytes(pks[i])
                 pk_bytes_to_g1[pks[i]] = pk_parsed
 
-            pairing = pk_parsed.pair(aug_hash)
+            pairing = aug_hash.pair(pk_parsed)
 
             h = std_hash(aug_msg)
             cache.put(h, pairing)
-            pairings[i] = pairing
-    return pairings
+            ret.append(pairing)
+        else:
+            ret.append(pairing)
+    return ret
 
 
 # Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.

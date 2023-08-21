@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final
 
 from blspy import G1Element
 from clvm.casts import int_to_bytes
@@ -14,7 +14,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
-_T_ConditionSubclass = TypeVar("_T_ConditionSubclass")
+_T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 
 class Condition(Streamable, ABC):
@@ -24,10 +24,11 @@ class Condition(Streamable, ABC):
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_ConditionSubclass], program: Program) -> _T_ConditionSubclass:
+    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition:
         ...
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigParent(Condition):
@@ -40,7 +41,7 @@ class AggSigParent(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AggSigParent], program: Program, parent_id: Optional[bytes32] = None) -> AggSigParent:
+    def from_program(cls, program: Program, parent_id: Optional[bytes32] = None) -> AggSigParent:
         return cls(
             G1Element.from_bytes(program.at("rf").atom),
             program.at("rrf").atom,
@@ -48,6 +49,7 @@ class AggSigParent(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigPuzzle(Condition):
@@ -60,7 +62,7 @@ class AggSigPuzzle(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AggSigPuzzle], program: Program, puzzle_hash: Optional[bytes32] = None) -> AggSigPuzzle:
+    def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> AggSigPuzzle:
         return cls(
             G1Element.from_bytes(program.at("rf").atom),
             program.at("rrf").atom,
@@ -68,6 +70,7 @@ class AggSigPuzzle(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigAmount(Condition):
@@ -80,7 +83,7 @@ class AggSigAmount(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AggSigAmount], program: Program, amount: Optional[uint64] = None) -> AggSigAmount:
+    def from_program(cls, program: Program, amount: Optional[uint64] = None) -> AggSigAmount:
         return cls(
             G1Element.from_bytes(program.at("rf").atom),
             program.at("rrf").atom,
@@ -88,6 +91,7 @@ class AggSigAmount(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigPuzzleAmount(Condition):
@@ -102,7 +106,7 @@ class AggSigPuzzleAmount(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AggSigPuzzleAmount],
+        cls,
         program: Program,
         puzzle_hash: Optional[bytes32] = None,
         amount: Optional[uint64] = None,
@@ -115,6 +119,7 @@ class AggSigPuzzleAmount(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigParentAmount(Condition):
@@ -129,7 +134,7 @@ class AggSigParentAmount(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AggSigParentAmount],
+        cls,
         program: Program,
         parent_id: Optional[bytes32] = None,
         amount: Optional[uint64] = None,
@@ -142,6 +147,7 @@ class AggSigParentAmount(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigParentPuzzle(Condition):
@@ -156,7 +162,7 @@ class AggSigParentPuzzle(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AggSigParentPuzzle],
+        cls,
         program: Program,
         parent_id: Optional[bytes32] = None,
         puzzle_hash: Optional[bytes32] = None,
@@ -169,6 +175,7 @@ class AggSigParentPuzzle(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigUnsafe(Condition):
@@ -180,13 +187,14 @@ class AggSigUnsafe(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AggSigUnsafe], program: Program) -> AggSigUnsafe:
+    def from_program(cls, program: Program) -> AggSigUnsafe:
         return cls(
             G1Element.from_bytes(program.at("rf").atom),
             program.at("rrf").atom,
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSigMe(Condition):
@@ -201,7 +209,7 @@ class AggSigMe(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AggSigMe],
+        cls,
         program: Program,
         coin_id: Optional[bytes32] = None,
         additional_data: Optional[bytes32] = None,
@@ -214,6 +222,7 @@ class AggSigMe(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class CreateCoin(Condition):
@@ -229,7 +238,7 @@ class CreateCoin(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[CreateCoin], program: Program) -> CreateCoin:
+    def from_program(cls, program: Program) -> CreateCoin:
         potential_memos: Program = program.at("rrr")
         return cls(
             bytes32(program.at("rf").atom),
@@ -238,6 +247,7 @@ class CreateCoin(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class ReserveFee(Condition):
@@ -248,12 +258,13 @@ class ReserveFee(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[ReserveFee], program: Program) -> ReserveFee:
+    def from_program(cls, program: Program) -> ReserveFee:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertCoinAnnouncement(Condition):
@@ -285,7 +296,7 @@ class AssertCoinAnnouncement(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AssertCoinAnnouncement],
+        cls,
         program: Program,
         asserted_id: Optional[bytes32] = None,
         asserted_msg: Optional[bytes] = None,
@@ -297,6 +308,7 @@ class AssertCoinAnnouncement(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class CreateCoinAnnouncement(Condition):
@@ -314,15 +326,14 @@ class CreateCoinAnnouncement(Condition):
         return condition
 
     @classmethod
-    def from_program(
-        cls: Type[CreateCoinAnnouncement], program: Program, coin_id: Optional[bytes32] = None
-    ) -> CreateCoinAnnouncement:
+    def from_program(cls, program: Program, coin_id: Optional[bytes32] = None) -> CreateCoinAnnouncement:
         return cls(
             program.at("rf").atom,
             coin_id,
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertPuzzleAnnouncement(Condition):
@@ -354,7 +365,7 @@ class AssertPuzzleAnnouncement(Condition):
 
     @classmethod
     def from_program(
-        cls: Type[AssertPuzzleAnnouncement],
+        cls,
         program: Program,
         asserted_ph: Optional[bytes32] = None,
         asserted_msg: Optional[bytes] = None,
@@ -366,6 +377,7 @@ class AssertPuzzleAnnouncement(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class CreatePuzzleAnnouncement(Condition):
@@ -383,15 +395,14 @@ class CreatePuzzleAnnouncement(Condition):
         return condition
 
     @classmethod
-    def from_program(
-        cls: Type[CreatePuzzleAnnouncement], program: Program, puzzle_hash: Optional[bytes32] = None
-    ) -> CreatePuzzleAnnouncement:
+    def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> CreatePuzzleAnnouncement:
         return cls(
             program.at("rf").atom,
             puzzle_hash,
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertConcurrentSpend(Condition):
@@ -402,12 +413,13 @@ class AssertConcurrentSpend(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertConcurrentSpend], program: Program) -> AssertConcurrentSpend:
+    def from_program(cls, program: Program) -> AssertConcurrentSpend:
         return cls(
             bytes32(program.at("rf").atom),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertConcurrentPuzzle(Condition):
@@ -418,12 +430,13 @@ class AssertConcurrentPuzzle(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertConcurrentPuzzle], program: Program) -> AssertConcurrentPuzzle:
+    def from_program(cls, program: Program) -> AssertConcurrentPuzzle:
         return cls(
             bytes32(program.at("rf").atom),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyCoinID(Condition):
@@ -434,12 +447,13 @@ class AssertMyCoinID(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyCoinID], program: Program) -> AssertMyCoinID:
+    def from_program(cls, program: Program) -> AssertMyCoinID:
         return cls(
             bytes32(program.at("rf").atom),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyParentID(Condition):
@@ -450,12 +464,13 @@ class AssertMyParentID(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyParentID], program: Program) -> AssertMyParentID:
+    def from_program(cls, program: Program) -> AssertMyParentID:
         return cls(
             bytes32(program.at("rf").atom),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyPuzzleHash(Condition):
@@ -466,12 +481,13 @@ class AssertMyPuzzleHash(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyPuzzleHash], program: Program) -> AssertMyPuzzleHash:
+    def from_program(cls, program: Program) -> AssertMyPuzzleHash:
         return cls(
             bytes32(program.at("rf").atom),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyAmount(Condition):
@@ -482,12 +498,13 @@ class AssertMyAmount(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyAmount], program: Program) -> AssertMyAmount:
+    def from_program(cls, program: Program) -> AssertMyAmount:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyBirthSeconds(Condition):
@@ -498,12 +515,13 @@ class AssertMyBirthSeconds(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyBirthSeconds], program: Program) -> AssertMyBirthSeconds:
+    def from_program(cls, program: Program) -> AssertMyBirthSeconds:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertMyBirthHeight(Condition):
@@ -514,12 +532,13 @@ class AssertMyBirthHeight(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertMyBirthHeight], program: Program) -> AssertMyBirthHeight:
+    def from_program(cls, program: Program) -> AssertMyBirthHeight:
         return cls(
             uint32(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertEphemeral(Condition):
@@ -528,10 +547,11 @@ class AssertEphemeral(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertEphemeral], program: Program) -> AssertEphemeral:
+    def from_program(cls, program: Program) -> AssertEphemeral:
         return cls()
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertSecondsRelative(Condition):
@@ -542,12 +562,13 @@ class AssertSecondsRelative(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertSecondsRelative], program: Program) -> AssertSecondsRelative:
+    def from_program(cls, program: Program) -> AssertSecondsRelative:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertSecondsAbsolute(Condition):
@@ -558,12 +579,13 @@ class AssertSecondsAbsolute(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertSecondsAbsolute], program: Program) -> AssertSecondsAbsolute:
+    def from_program(cls, program: Program) -> AssertSecondsAbsolute:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertHeightRelative(Condition):
@@ -574,12 +596,13 @@ class AssertHeightRelative(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertHeightRelative], program: Program) -> AssertHeightRelative:
+    def from_program(cls, program: Program) -> AssertHeightRelative:
         return cls(
             uint32(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertHeightAbsolute(Condition):
@@ -590,12 +613,13 @@ class AssertHeightAbsolute(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertHeightAbsolute], program: Program) -> AssertHeightAbsolute:
+    def from_program(cls, program: Program) -> AssertHeightAbsolute:
         return cls(
             uint32(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertBeforeSecondsRelative(Condition):
@@ -606,12 +630,13 @@ class AssertBeforeSecondsRelative(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertBeforeSecondsRelative], program: Program) -> AssertBeforeSecondsRelative:
+    def from_program(cls, program: Program) -> AssertBeforeSecondsRelative:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertBeforeSecondsAbsolute(Condition):
@@ -622,12 +647,13 @@ class AssertBeforeSecondsAbsolute(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertBeforeSecondsAbsolute], program: Program) -> AssertBeforeSecondsAbsolute:
+    def from_program(cls, program: Program) -> AssertBeforeSecondsAbsolute:
         return cls(
             uint64(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertBeforeHeightRelative(Condition):
@@ -638,12 +664,13 @@ class AssertBeforeHeightRelative(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertBeforeHeightRelative], program: Program) -> AssertBeforeHeightRelative:
+    def from_program(cls, program: Program) -> AssertBeforeHeightRelative:
         return cls(
             uint32(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertBeforeHeightAbsolute(Condition):
@@ -654,12 +681,13 @@ class AssertBeforeHeightAbsolute(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[AssertBeforeHeightAbsolute], program: Program) -> AssertBeforeHeightAbsolute:
+    def from_program(cls, program: Program) -> AssertBeforeHeightAbsolute:
         return cls(
             uint32(program.at("rf").as_int()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class Softfork(Condition):
@@ -671,13 +699,14 @@ class Softfork(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[Softfork], program: Program) -> Softfork:
+    def from_program(cls, program: Program) -> Softfork:
         return cls(
             uint64(program.at("rf").as_int()),
             list(program.at("rrf").as_iter()),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class Remark(Condition):
@@ -688,12 +717,13 @@ class Remark(Condition):
         return condition
 
     @classmethod
-    def from_program(cls: Type[Remark], program: Program) -> Remark:
+    def from_program(cls, program: Program) -> Remark:
         return cls(
             program.at("r"),
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class UnknownCondition(Condition):
@@ -705,13 +735,14 @@ class UnknownCondition(Condition):
         return prog
 
     @classmethod
-    def from_program(cls: Type[UnknownCondition], program: Program) -> UnknownCondition:
+    def from_program(cls, program: Program) -> UnknownCondition:
         return cls(
             program.at("f"), [] if program.at("r") == Program.to(None) else [p for p in program.at("r").as_iter()]
         )
 
 
 # Abstractions
+@final
 @streamable
 @dataclass(frozen=True)
 class AggSig(Condition):
@@ -729,7 +760,7 @@ class AggSig(Condition):
         return CONDITION_DRIVERS[self.opcode](self.pubkey, self.msg).to_program()  # type: ignore[call-arg]
 
     @classmethod
-    def from_program(cls: Type[AggSig], program: Program, **kwargs: Optional[Union[uint64, bytes32]]) -> AggSig:
+    def from_program(cls, program: Program, **kwargs: Optional[Union[uint64, bytes32]]) -> AggSig:
         opcode: bytes = program.at("f").atom
         condition_driver: Condition = CONDITION_DRIVERS[opcode].from_program(program, **kwargs)
         return cls(
@@ -741,6 +772,7 @@ class AggSig(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class CreateAnnouncement(Condition):
@@ -761,9 +793,7 @@ class CreateAnnouncement(Condition):
             return CreatePuzzleAnnouncement(self.msg, self.origin_id).to_program()
 
     @classmethod
-    def from_program(
-        cls: Type[CreateAnnouncement], program: Program, **kwargs: Optional[bytes32]
-    ) -> CreateAnnouncement:
+    def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> CreateAnnouncement:
         if program.at("f").atom == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[CreateCoinAnnouncement, CreatePuzzleAnnouncement] = CreateCoinAnnouncement.from_program(
@@ -783,6 +813,7 @@ class CreateAnnouncement(Condition):
         )
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class AssertAnnouncement(Condition):
@@ -816,9 +847,7 @@ class AssertAnnouncement(Condition):
             return CreateAnnouncement(self.asserted_msg, self.coin_not_puzzle, self.asserted_origin_id)
 
     @classmethod
-    def from_program(
-        cls: Type[AssertAnnouncement], program: Program, **kwargs: Optional[bytes32]
-    ) -> AssertAnnouncement:
+    def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> AssertAnnouncement:
         if program.at("f").atom == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[AssertCoinAnnouncement, AssertPuzzleAnnouncement] = AssertCoinAnnouncement.from_program(
@@ -957,6 +986,7 @@ ABSOLUTE_TIMELOCK_OPCODES: Set[bytes] = {
 }
 
 
+@final
 @streamable
 @dataclass(frozen=True)
 class Timelock(Condition):
@@ -991,7 +1021,7 @@ class Timelock(Condition):
             return driver(uint32(self.timestamp)).to_program()  # type: ignore[arg-type]
 
     @classmethod
-    def from_program(cls: Type[Timelock], program: Program) -> Timelock:
+    def from_program(cls, program: Program) -> Timelock:
         opcode: bytes = program.at("f").atom
         if opcode in AFTER_TIMELOCK_OPCODES:
             after_not_before = True

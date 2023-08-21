@@ -28,6 +28,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.ws_message import create_payload
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 
@@ -175,6 +176,7 @@ class TestSimulation:
         tx = await wallet.generate_signed_transaction(
             uint64(10),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            DEFAULT_TX_CONFIG,
             uint64(0),
         )
         await wallet.push_transaction(tx)
@@ -348,6 +350,7 @@ class TestSimulation:
             tx = await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                tx_config=DEFAULT_TX_CONFIG,
                 coins={coin},
             )
             await wallet.push_transaction(tx)
@@ -393,6 +396,7 @@ class TestSimulation:
                 await wallet.generate_signed_transaction(
                     amount=uint64(tx_amount),
                     puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    tx_config=DEFAULT_TX_CONFIG,
                     coins={coin},
                 )
                 for coin in coins

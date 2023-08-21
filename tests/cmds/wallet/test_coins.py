@@ -8,6 +8,7 @@ from chia_rs import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32, uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
 
@@ -33,7 +34,14 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
     expected_calls: logType = {
         "get_wallets": [(None,)],
         "get_synced": [()],
-        "get_spendable_coins": [(1, None, 0, 0, [], ())],
+        "get_spendable_coins": [
+            (
+                1,
+                CoinSelectionConfig(
+                    min_coin_amount=uint64(0), max_coin_amount=uint64(0), excluded_coin_amounts=[], excluded_coin_ids=[]
+                ),
+            )
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -47,14 +55,9 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             amount: int,
             wallet_id: int,
-            excluded_coins: Optional[List[Coin]] = None,
-            min_coin_amount: uint64 = uint64(0),
-            max_coin_amount: uint64 = uint64(0),
-            excluded_amounts: Optional[List[uint64]] = None,
+            coin_selection_config: CoinSelectionConfig,
         ) -> List[Coin]:
-            self.add_to_log(
-                "select_coins", (amount, wallet_id, excluded_coins, min_coin_amount, max_coin_amount, excluded_amounts)
-            )
+            self.add_to_log("select_coins", (amount, wallet_id, coin_selection_config))
             return [
                 Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
                 Coin(get_bytes32(3), get_bytes32(4), uint64(200000000000)),
@@ -92,13 +95,41 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     expected_calls: logType = {
         "get_wallets": [(None,), (None,)],
         "get_synced": [(), ()],
-        "get_spendable_coins": [(1, None, 100000000000, 200000000000, [300000000000], None)],
-        "select_coins": [(1001000000000, 1, None, 100000000000, 200000000000, [300000000000, 1000000000000])],
+        "get_spendable_coins": [
+            (
+                1,
+                CoinSelectionConfig(
+                    min_coin_amount=uint64(100000000000),
+                    max_coin_amount=uint64(200000000000),
+                    excluded_coin_amounts=[uint64(300000000000), uint64(0)],
+                    excluded_coin_ids=[],
+                ),
+            )
+        ],
+        "select_coins": [
+            (
+                1001000000000,
+                1,
+                CoinSelectionConfig(
+                    excluded_coin_ids=[],
+                    min_coin_amount=uint64(100000000000),
+                    max_coin_amount=uint64(200000000000),
+                    excluded_coin_amounts=[uint64(300000000000), uint64(1000000000000)],
+                ),
+            )
+        ],
         "get_next_address": [(1, False), (1, False)],
         "send_transaction_multi": [
             (
                 1,
                 [{"amount": 1469120000, "puzzle_hash": get_bytes32(0)}],
+                TXConfig(
+                    min_coin_amount=uint64(100000000000),
+                    max_coin_amount=uint64(200000000000),
+                    excluded_coin_amounts=[uint64(300000000000), uint64(0)],
+                    excluded_coin_ids=[],
+                    reuse_puzhash=False,
+                ),
                 [
                     Coin(get_bytes32(1), get_bytes32(2), uint64(1234560000)),
                     Coin(get_bytes32(3), get_bytes32(4), uint64(1234560000)),
@@ -108,6 +139,13 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             (
                 1,
                 [{"amount": 599000000000, "puzzle_hash": get_bytes32(1)}],
+                TXConfig(
+                    min_coin_amount=uint64(100000000000),
+                    max_coin_amount=uint64(200000000000),
+                    excluded_coin_amounts=[uint64(300000000000), uint64(1000000000000)],
+                    excluded_coin_ids=[],
+                    reuse_puzhash=False,
+                ),
                 [
                     Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
                     Coin(get_bytes32(3), get_bytes32(4), uint64(200000000000)),
@@ -172,6 +210,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             (
                 1,
                 [{"amount": 100000, "puzzle_hash": bytes32([i] * 32)} for i in range(10)],
+                DEFAULT_TX_CONFIG,
                 [Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000))],
                 1000000000,
             )

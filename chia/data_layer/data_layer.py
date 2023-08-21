@@ -47,6 +47,7 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
@@ -72,7 +73,6 @@ class DataLayer:
     wallet_id: uint64
     initialized: bool
     none_bytes: bytes32
-    lock: asyncio.Lock
     _server: Optional[ChiaServer]
     downloaders: List[str]
     uploaders: List[str]
@@ -115,7 +115,6 @@ class DataLayer:
         self.server_files_location = path_from_root(self.root_path, server_files_replaced)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.none_bytes = bytes32([0] * 32)
-        self.lock = asyncio.Lock()
         self._server = None
         self.downloaders = downloaders
         self.uploaders = uploaders
@@ -185,8 +184,7 @@ class DataLayer:
     ) -> bytes32:
         async with self.data_store.transaction():
             # Make sure we update based on the latest confirmed root.
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=tree_id)
+            await self._update_confirmation_status(tree_id=tree_id)
             pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
             if pending_root is not None:
                 raise Exception("Already have a pending root waiting for confirmation.")
@@ -214,8 +212,7 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         # Make sure we update based on the latest confirmed root.
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
         pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
@@ -236,15 +233,13 @@ class DataLayer:
         root_hash: Optional[bytes32] = None,
     ) -> bytes32:
         async with self.data_store.transaction():
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=store_id)
+            await self._update_confirmation_status(tree_id=store_id)
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> Optional[bytes]:
         async with self.data_store.transaction():
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=store_id)
+            await self._update_confirmation_status(tree_id=store_id)
             res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             if res is None:
                 self.log.error("Failed to fetch key")
@@ -252,22 +247,19 @@ class DataLayer:
             return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
 
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_keys(store_id, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
@@ -281,8 +273,7 @@ class DataLayer:
         return latest
 
     async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
@@ -366,8 +357,7 @@ class DataLayer:
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
 
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
 
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
@@ -448,8 +438,7 @@ class DataLayer:
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
             return
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
@@ -656,8 +645,7 @@ class DataLayer:
         async with self.data_store.transaction():
             our_store_proofs: Dict[bytes32, StoreProofs] = {}
             for offer_store in offer_stores:
-                async with self.lock:
-                    await self._update_confirmation_status(tree_id=offer_store.store_id)
+                await self._update_confirmation_status(tree_id=offer_store.store_id)
 
                 changelist = await self.build_offer_changelist(
                     store_id=offer_store.store_id,
@@ -746,6 +734,9 @@ class DataLayer:
                 driver_dict={},
                 fee=fee,
                 validate_only=False,
+                # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+                # This is not a change in behavior, the default was already implicit.
+                tx_config=DEFAULT_TX_CONFIG,
             )
             if wallet_offer is None:
                 raise Exception("offer is None despite validate_only=False")
@@ -830,6 +821,9 @@ class DataLayer:
             offer=offer,
             solver=solver,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         return trade_record
@@ -847,6 +841,9 @@ class DataLayer:
             trade_id=trade_id,
             secure=secure,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         if not secure:
@@ -854,8 +851,7 @@ class DataLayer:
                 await self.data_store.clear_pending_roots(tree_id=store_id)
 
     async def get_sync_status(self, store_id: bytes32) -> SyncStatus:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         if not await self.data_store.tree_id_exists(tree_id=store_id):
             raise Exception(f"No tree id stored in the local database for {store_id}")
