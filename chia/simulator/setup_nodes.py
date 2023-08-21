@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional, Tuple, Union, cast
 
@@ -68,9 +69,10 @@ async def _teardown_nodes(node_aiters: List[AsyncGenerator[Any, None]]) -> None:
             pass
 
 
+@asynccontextmanager
 async def setup_two_nodes(
     consensus_constants: ConsensusConstants, db_version: int, self_hostname: str
-) -> AsyncGenerator[Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], None]:
+) -> AsyncIterator[Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -106,9 +108,10 @@ async def setup_two_nodes(
         await _teardown_nodes(node_iters)
 
 
+@asynccontextmanager
 async def setup_n_nodes(
     consensus_constants: ConsensusConstants, n: int, db_version: int, self_hostname: str
-) -> AsyncGenerator[List[FullNodeAPI], None]:
+) -> AsyncIterator[List[FullNodeAPI]]:
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
@@ -140,6 +143,7 @@ async def setup_n_nodes(
         keyring.cleanup()
 
 
+@asynccontextmanager
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
@@ -152,7 +156,7 @@ async def setup_simulators_and_wallets(
     db_version: int = 1,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools], None]:
+) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
@@ -183,6 +187,7 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
+@asynccontextmanager
 async def setup_simulators_and_wallets_service(
     simulator_count: int,
     wallet_count: int,
@@ -195,8 +200,8 @@ async def setup_simulators_and_wallets_service(
     db_version: int = 1,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncGenerator[
-    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools], None
+) -> AsyncIterator[
+    Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
@@ -295,6 +300,7 @@ async def setup_simulators_and_wallets_inner(
     return bt_tools, node_iters, simulators, wallets
 
 
+@asynccontextmanager
 async def setup_farmer_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
@@ -349,14 +355,15 @@ async def setup_farmer_multi_harvester(
     await _teardown_nodes(farmer_node_iterators)
 
 
+@asynccontextmanager
 async def setup_full_system(
     consensus_constants: ConsensusConstants,
     shared_b_tools: BlockTools,
     b_tools: Optional[BlockTools] = None,
     b_tools_1: Optional[BlockTools] = None,
     db_version: int = 1,
-) -> AsyncGenerator[
-    Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer], None
+) -> AsyncIterator[
+    Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer]
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         daemon_ws, node_iters, ret = await setup_full_system_inner(
@@ -368,13 +375,14 @@ async def setup_full_system(
         await _teardown_nodes(node_iters)
 
 
+@asynccontextmanager
 async def setup_full_system_connect_to_deamon(
     consensus_constants: ConsensusConstants,
     shared_b_tools: BlockTools,
     b_tools: Optional[BlockTools] = None,
     b_tools_1: Optional[BlockTools] = None,
     db_version: int = 1,
-) -> AsyncGenerator[
+) -> AsyncIterator[
     Tuple[
         Any,
         Any,
@@ -388,7 +396,6 @@ async def setup_full_system_connect_to_deamon(
         ChiaServer,
         Optional[WebSocketServer],
     ],
-    None,
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         daemon_ws, node_iters, ret = await setup_full_system_inner(

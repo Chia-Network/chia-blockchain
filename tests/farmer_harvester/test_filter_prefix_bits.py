@@ -56,9 +56,9 @@ async def farmer_harvester_with_filter_size_9(
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
-    async for harvesters, farmer_service, _ in setup_farmer_multi_harvester(
+    async with setup_farmer_multi_harvester(
         local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
-    ):
+    ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]
         assert farmer_service.rpc_server is not None
         farmer_rpc_cl = await FarmerRpcClient.create(
