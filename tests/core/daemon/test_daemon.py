@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import json
-import logging
 from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
@@ -240,7 +238,9 @@ def assert_response(
     assert message["data"] == expected_response_data
 
 
-def assert_response_success_only(response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None) -> None:
+def assert_response_success_only(
+    response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None
+) -> Dict[str, Any]:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
@@ -248,6 +248,7 @@ def assert_response_success_only(response: aiohttp.http_websocket.WSMessage, req
     if request_id is not None:
         assert message["request_id"] == request_id
     assert message["data"]["success"] is True
+    return message
 
 
 def assert_running_services_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
@@ -342,24 +343,7 @@ async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daem
 async def test_daemon_passthru(get_daemon, bt):
     ws_server = get_daemon
     config = bt.config
-    blockchain_state_found = False
     daemon_port = config["daemon_port"]
-
-    async def reader(ws, queue):
-        while True:
-            # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
-            msg = await ws.receive()
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                message = msg.data.strip()
-                message = json.loads(message)
-                await queue.put(message)
-            else:
-                if msg.type == aiohttp.WSMsgType.ERROR:
-                    await ws.close()
-                elif msg.type == aiohttp.WSMsgType.CLOSED:
-                    pass
-
-                break
 
     async with aiohttp.ClientSession() as client:
         async with client.ws_connect(
@@ -369,22 +353,18 @@ async def test_daemon_passthru(get_daemon, bt):
             ssl_context=bt.get_daemon_ssl_context(),
             max_msg_size=100 * 1024 * 1024,
         ) as ws:
-            log = logging.getLogger()
-            log.warning(f"Connecting to daemon on port {daemon_port}")
             service_name = "test_service_name"
             data = {"service": service_name}
             payload = create_payload("register_service", data, service_name, "daemon")
             await ws.send_str(payload)
-
-            message_queue = asyncio.Queue()
-            read_handler = asyncio.create_task(reader(ws, message_queue))
+            assert_response_success_only(await ws.receive())
 
             async for _ in setup_full_node(
                 consensus_constants=bt.constants,
                 db_name="sim-test.db",
-                self_hostname=config["self_hostname"],
+                self_hostname="localhost",
                 local_bt=bt,
-                simulator=True,
+                simulator=False,
                 db_version=2,
                 connect_to_daemon=True,
             ):
@@ -393,16 +373,11 @@ async def test_daemon_passthru(get_daemon, bt):
                 payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
                 await ws.send_str(payload)
 
-                await asyncio.sleep(5)
-                while not message_queue.empty():
-                    message = await message_queue.get()
-                    if message["command"] == "get_blockchain_state":
-                        blockchain_state_found = True
-                        break
-
-            read_handler.cancel()
-
-    assert blockchain_state_found
+                response = await ws.receive()
+                message = assert_response_success_only(response)
+                assert message["command"] == "get_blockchain_state"
+                assert message["origin"] == "chia_full_node"
+                assert message["data"]["blockchain_state"]["genesis_challenge_initialized"] is True
 
 
 @pytest.mark.parametrize(
