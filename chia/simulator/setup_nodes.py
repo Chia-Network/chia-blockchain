@@ -133,7 +133,7 @@ async def setup_simulators_and_wallets(
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        res = await setup_simulators_and_wallets_inner(
+        async with setup_simulators_and_wallets_inner(
             db_version,
             dic,
             initial_num_public_keys,
@@ -146,18 +146,17 @@ async def setup_simulators_and_wallets(
             xch_spam_amount,
             config_overrides,
             disable_capabilities,
-        )
+        ) as res:
+            bt_tools, simulators, wallets_services = res
+            wallets = []
+            for wallets_servic in wallets_services:
+                wallets.append((wallets_servic._node, wallets_servic._node.server))
 
-        bt_tools, simulators, wallets_services = res
-        wallets = []
-        for wallets_servic in wallets_services:
-            wallets.append((wallets_servic._node, wallets_servic._node.server))
+            nodes = []
+            for nodes_service in simulators:
+                nodes.append(nodes_service._api)
 
-        nodes = []
-        for nodes_service in simulators:
-            nodes.append(nodes_service._api)
-
-        yield nodes, wallets, bt_tools[0]
+            yield nodes, wallets, bt_tools[0]
 
 
 @asynccontextmanager
@@ -177,7 +176,7 @@ async def setup_simulators_and_wallets_service(
     Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        res = await setup_simulators_and_wallets_inner(
+        async with setup_simulators_and_wallets_inner(
             db_version,
             dic,
             initial_num_public_keys,
@@ -190,12 +189,12 @@ async def setup_simulators_and_wallets_service(
             xch_spam_amount,
             config_overrides,
             disable_capabilities,
-        )
+        ) as res:
+            bt_tools, simulators, wallets_services = res
+            yield simulators, wallets_services, bt_tools[0]
 
-        bt_tools, simulators, wallets_services = res
-        yield simulators, wallets_services, bt_tools[0]
 
-
+@asynccontextmanager
 async def setup_simulators_and_wallets_inner(
     db_version: int,
     dic: Dict[str, int],
@@ -209,7 +208,9 @@ async def setup_simulators_and_wallets_inner(
     xch_spam_amount: int,
     config_overrides: Optional[Dict[str, int]],
     disable_capabilities: Optional[List[Capability]],
-) -> Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]],]:
+) -> AsyncIterator[
+    Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]]]
+]:
     consensus_constants: ConsensusConstants = constants_for_dic(dic)
     async with AsyncExitStack() as astack:
         bt_tools: List[BlockTools] = [
@@ -258,10 +259,7 @@ async def setup_simulators_and_wallets_inner(
             for index in range(0, wallet_count)
         ]
 
-        return bt_tools, simulators, wallets
-
-    # Think this is dumb? See: https://github.com/python/mypy/issues/7726
-    assert False, "unreachable"
+        yield bt_tools, simulators, wallets
 
 
 @asynccontextmanager
@@ -315,11 +313,10 @@ async def setup_full_system(
     Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer]
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        daemon_ws, ret = await setup_full_system_inner(
+        async with setup_full_system_inner(
             b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        )
-
-        yield ret
+        ) as (_, ret):
+            yield ret
 
 
 @asynccontextmanager
@@ -345,13 +342,13 @@ async def setup_full_system_connect_to_deamon(
     ],
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        daemon_ws, ret = await setup_full_system_inner(
+        async with setup_full_system_inner(
             b_tools, b_tools_1, True, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        )
+        ) as (daemon_ws, ret):
+            yield ret + (daemon_ws,)
 
-        yield ret + (daemon_ws,)
 
-
+@asynccontextmanager
 async def setup_full_system_inner(
     b_tools: Optional[BlockTools],
     b_tools_1: Optional[BlockTools],
@@ -361,9 +358,11 @@ async def setup_full_system_inner(
     keychain1: Keychain,
     keychain2: Keychain,
     shared_b_tools: BlockTools,
-) -> Tuple[
-    Optional[WebSocketServer],
-    Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer],
+) -> AsyncIterator[
+    Tuple[
+        Optional[WebSocketServer],
+        Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer],
+    ]
 ]:
     if b_tools is None:
         b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
@@ -444,7 +443,4 @@ async def setup_full_system_inner(
                                         timelord_bluebox_server,
                                     )
                                     async with setup_daemon(btools=b_tools) as daemon_ws:
-                                        return daemon_ws, ret
-
-    # Think this is dumb? See: https://github.com/python/mypy/issues/7726
-    assert False, "unreachable"
+                                        yield daemon_ws, ret
