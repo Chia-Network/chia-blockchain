@@ -299,7 +299,7 @@ async def setup_farmer_multi_harvester(
             for i in range(0, harvester_count)
         ]
 
-    yield harvester_services, farmer_service, block_tools
+        yield harvester_services, farmer_service, block_tools
 
 
 @asynccontextmanager
