@@ -1087,9 +1087,9 @@ class FullNode:
                 if success is False:
                     await peer.close(600)
                     # check Chip 13 exception
-                    if err == Err.INVALID_POSPACE:
+                    if err == Err.CHIP_0013_VALIDATION:
                         self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
-                        raise ValueError(f"block batch {start_height} to {end_height} failed Chip-13 validation")
+                        raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -2501,15 +2501,15 @@ class FullNode:
             self.log.debug(f"add bad peak {peak_header_hash} to cache")
             self.bad_peak_cache[peak_header_hash] = peak_height
             return
-
-        if peak_height < curr_height - 2 * self.constants.SUB_EPOCH_BLOCKS:
+        minimum_cache_height = curr_height - (2 * self.constants.SUB_EPOCH_BLOCKS)
+        if peak_height < minimum_cache_height:
             return
 
         new_cache = {}
         self.log.info(f"add bad peak {peak_header_hash} to cache")
         new_cache[peak_header_hash] = peak_height
         for header_hash, height in self.bad_peak_cache.items():
-            if height < curr_height - (2 * self.constants.SUB_EPOCH_BLOCKS):
+            if height < minimum_cache_height:
                 self.log.debug(f"remove bad peak {peak_header_hash} from cache")
                 continue
             new_cache[header_hash] = height
