@@ -18,6 +18,7 @@ def configure(
     enable_upnp: str,
     set_outbound_peer_count: str,
     set_peer_count: str,
+    testnet: str,
     peer_connect_timeout: str,
     crawler_db_path: str,
     crawler_minimum_version_count: Optional[int],
@@ -96,6 +97,90 @@ def configure(
             config["full_node"]["target_peer_count"] = int(set_peer_count)
             print("Target peer count updated")
             change_made = True
+        if testnet:
+            if testnet == "true" or testnet == "t":
+                print("Setting Testnet")
+                testnet_port = "58444"
+                testnet_introducer = "introducer-testnet10.chia.net"
+                testnet_dns_introducer = "dns-introducer-testnet10.chia.net"
+                bootstrap_peers = ["testnet10-node.chia.net"]
+                testnet = "testnet10"
+                config["full_node"]["port"] = int(testnet_port)
+                if config["full_node"]["introducer_peer"] is None:
+                    config["full_node"]["introducer_peer"] = {}
+                assert config["full_node"]["introducer_peer"] is not None  # mypy
+                if config["wallet"]["introducer_peer"] is None:
+                    config["wallet"]["introducer_peer"] = {}
+                assert config["wallet"]["introducer_peer"] is not None  # mypy
+                config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
+                config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
+                config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
+                config["wallet"]["full_node_peer"]["port"] = int(testnet_port)
+                config["wallet"]["introducer_peer"]["port"] = int(testnet_port)
+                config["introducer"]["port"] = int(testnet_port)
+                config["full_node"]["introducer_peer"]["host"] = testnet_introducer
+                config["full_node"]["dns_servers"] = [testnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = testnet_introducer
+                config["wallet"]["dns_servers"] = [testnet_dns_introducer]
+                config["selected_network"] = testnet
+                config["harvester"]["selected_network"] = testnet
+                config["pool"]["selected_network"] = testnet
+                config["farmer"]["selected_network"] = testnet
+                config["timelord"]["selected_network"] = testnet
+                config["full_node"]["selected_network"] = testnet
+                config["ui"]["selected_network"] = testnet
+                config["introducer"]["selected_network"] = testnet
+                config["wallet"]["selected_network"] = testnet
+                config["data_layer"]["selected_network"] = testnet
+
+                if "seeder" in config:
+                    config["seeder"]["port"] = int(testnet_port)
+                    config["seeder"]["other_peers_port"] = int(testnet_port)
+                    config["seeder"]["selected_network"] = testnet
+                    config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
+                print("Default full node port, introducer and network setting updated")
+                change_made = True
+
+            elif testnet == "false" or testnet == "f":
+                print("Setting Mainnet")
+                mainnet_port = "8444"
+                mainnet_introducer = "introducer.chia.net"
+                mainnet_dns_introducer = "dns-introducer.chia.net"
+                bootstrap_peers = ["node.chia.net"]
+                net = "mainnet"
+                config["full_node"]["port"] = int(mainnet_port)
+                config["full_node"]["introducer_peer"]["port"] = int(mainnet_port)
+                config["farmer"]["full_node_peer"]["port"] = int(mainnet_port)
+                config["timelord"]["full_node_peer"]["port"] = int(mainnet_port)
+                config["wallet"]["full_node_peer"]["port"] = int(mainnet_port)
+                config["wallet"]["introducer_peer"]["port"] = int(mainnet_port)
+                config["introducer"]["port"] = int(mainnet_port)
+                config["full_node"]["introducer_peer"]["host"] = mainnet_introducer
+                config["full_node"]["dns_servers"] = [mainnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = mainnet_introducer
+                config["wallet"]["dns_servers"] = [mainnet_dns_introducer]
+                config["selected_network"] = net
+                config["harvester"]["selected_network"] = net
+                config["pool"]["selected_network"] = net
+                config["farmer"]["selected_network"] = net
+                config["timelord"]["selected_network"] = net
+                config["full_node"]["selected_network"] = net
+                config["ui"]["selected_network"] = net
+                config["introducer"]["selected_network"] = net
+                config["wallet"]["selected_network"] = net
+                config["data_layer"]["selected_network"] = net
+
+                if "seeder" in config:
+                    config["seeder"]["port"] = int(mainnet_port)
+                    config["seeder"]["other_peers_port"] = int(mainnet_port)
+                    config["seeder"]["selected_network"] = net
+                    config["seeder"]["bootstrap_peers"] = bootstrap_peers
+
+                print("Default full node port, introducer and network setting updated")
+                change_made = True
+            else:
+                print("Please choose True or False")
 
         if peer_connect_timeout:
             config["full_node"]["peer_connect_timeout"] = int(peer_connect_timeout)
