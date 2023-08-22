@@ -42,7 +42,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.option(
     "--root-path",
     default=str(get_default_root_path()),
-    help="[Depricated] Use 'chia context set'",
+    help="[Deprecated] Use 'chia context set'",
     type=click.Path(),
     show_default=True,
 )
