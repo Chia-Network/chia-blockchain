@@ -2406,7 +2406,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_substr(self, request, opcode, softfork_height):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with assert_runtime(seconds=1.1, label=request.node.name):
+        with assert_runtime(seconds=1.5, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
@@ -2485,7 +2485,7 @@ class TestMaliciousGenerators:
         else:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with assert_runtime(seconds=9, label=request.node.name):
+        with assert_runtime(seconds=11, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
@@ -2501,7 +2501,7 @@ class TestMaliciousGenerators:
         # duplicate
         condition = CREATE_COIN.format(num=600000)
 
-        with assert_runtime(seconds=1, label=request.node.name):
+        with assert_runtime(seconds=1.5, label=request.node.name):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value

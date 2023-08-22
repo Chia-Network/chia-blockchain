@@ -315,8 +315,12 @@ class BlockTools:
                     bytes_to_mnemonic(self.pool_master_sk_entropy),
                 )
             else:
-                self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                assert sk is not None
+                self.farmer_master_sk = sk
+                sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                assert sk is not None
+                self.pool_master_sk = sk
 
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()

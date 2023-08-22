@@ -251,7 +251,7 @@ class VCStore:
     async def add_vc_proofs(self, vc_proofs: VCProofs) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
+                "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
             )
 
     async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:

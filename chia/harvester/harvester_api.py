@@ -99,6 +99,22 @@ class HarvesterAPI:
                 )
                 try:
                     quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+                except RuntimeError as e:
+                    if str(e) == "Timeout waiting for context queue.":
+                        self.harvester.log.warning(
+                            f"No decompressor available. Cancelling qualities retrieving for {filename}"
+                        )
+                        self.harvester.log.warning(
+                            f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                            f"plot_info: {plot_info}"
+                        )
+                    else:
+                        self.harvester.log.error(f"Exception fetching qualities for {filename}. {e}")
+                        self.harvester.log.error(
+                            f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                            f"plot_info: {plot_info}"
+                        )
+                    return []
                 except Exception as e:
                     self.harvester.log.error(f"Error using prover object {e}")
                     self.harvester.log.error(
@@ -143,6 +159,14 @@ class HarvesterAPI:
                                         f"Proof dropped due to line point compression for {filename}"
                                     )
                                     self.harvester.log.info(
+                                        f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
+                                        f"plot_info: {plot_info}"
+                                    )
+                                elif str(e) == "Timeout waiting for context queue.":
+                                    self.harvester.log.warning(
+                                        f"No decompressor available. Cancelling full proof retrieving for {filename}"
+                                    )
+                                    self.harvester.log.warning(
                                         f"File: {filename} Plot ID: {plot_id.hex()}, challenge: {sp_challenge_hash}, "
                                         f"plot_info: {plot_info}"
                                     )
@@ -226,9 +250,9 @@ class HarvesterAPI:
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.time() - start
-            if time_taken > 5:
+            if time_taken > 8:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 5 seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:

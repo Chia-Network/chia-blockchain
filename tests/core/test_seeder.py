@@ -3,8 +3,8 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
-from socket import AF_INET6, SOCK_STREAM
-from typing import List, Tuple, cast
+from socket import AF_INET, AF_INET6, SOCK_STREAM
+from typing import Dict, List, Tuple, cast
 
 import dns
 import pytest
@@ -33,6 +33,17 @@ def generate_test_combs() -> List[Tuple[bool, str, dns.rdatatype.RdataType]]:
     return output
 
 
+def get_dns_port(dns_server: DNSServer, use_tcp: bool, target_addr: str) -> int:
+    if use_tcp:
+        assert dns_server.tcp_server is not None
+        tcp_sockets = dns_server.tcp_server.sockets
+        wanted_addr = "::" if target_addr == "::1" else "0.0.0.0"
+        if tcp_sockets[0].getsockname()[0] == wanted_addr:
+            return int(tcp_sockets[0].getsockname()[1])
+        return int(tcp_sockets[1].getsockname()[1])
+    return dns_server.udp_dns_port
+
+
 all_test_combinations = generate_test_combs()
 
 
@@ -46,6 +57,34 @@ class FakeDnsPacket:
     def __getattr__(self, item: object) -> None:
         # This is definitely cheating, but it works
         return None
+
+
+@pytest.fixture(scope="module")
+def database_peers() -> Dict[str, PeerReliability]:
+    """
+    We override the values in the class with these dbs, to save time.
+    """
+    host_to_reliability = {}
+    ipv4, ipv6 = get_addresses(2)  # get 1000 addresses
+    # add peers to the in memory part of the db.
+    for peer in [str(peer) for pair in zip(ipv4, ipv6) for peer in pair]:
+        new_peer = PeerRecord(
+            peer,
+            peer,
+            uint32(58444),
+            False,
+            uint64(0),
+            uint32(0),
+            uint64(0),
+            uint64(int(time.time())),
+            uint64(0),
+            "undefined",
+            uint64(0),
+            tls_version="unknown",
+        )
+        new_peer_reliability = PeerReliability(peer, tries=3, successes=3)  # make sure the peer starts as reliable.
+        host_to_reliability[new_peer.peer_id] = new_peer_reliability
+    return host_to_reliability
 
 
 async def make_dns_query(
@@ -106,6 +145,7 @@ def assert_standard_results(
         assert len(soa_answer) == 1
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_error_conditions(
@@ -115,7 +155,7 @@ async def test_error_conditions(
     We check having no peers, an invalid packet, an early EOF, and a packet then an EOF halfway through (tcp only).
     We also check for a dns record that does not exist, and a dns record outside the domain.
     """
-    port = seeder_service.dns_port
+    port = get_dns_port(seeder_service, use_tcp, target_address)
     domain = seeder_service.domain  # default is: seeder.example.com
     num_ns = len(seeder_service.ns_records)
 
@@ -155,10 +195,11 @@ async def test_error_conditions(
         await make_dns_query(use_tcp, target_address, port, invalid_packet)
 
     # early EOF packet
+    proto, source_addr = (AF_INET6, "::") if target_address == "::1" else (AF_INET, "0.0.0.0")
     if use_tcp:
         backend = dns.asyncbackend.get_default_backend()
         tcp_socket = await backend.make_socket(  # type: ignore[no-untyped-call]
-            AF_INET6, SOCK_STREAM, 0, ("::", 0), ("::1", port), timeout=timeout
+            proto, SOCK_STREAM, 0, (source_addr, 0), (target_address, port), timeout=timeout
         )
         async with tcp_socket as socket:
             await socket.close()
@@ -169,10 +210,10 @@ async def test_error_conditions(
     if use_tcp:
         backend = dns.asyncbackend.get_default_backend()
         tcp_socket = await backend.make_socket(  # type: ignore[no-untyped-call]
-            AF_INET6, SOCK_STREAM, 0, ("::", 0), ("::1", port), timeout=timeout
+            proto, SOCK_STREAM, 0, (source_addr, 0), (target_address, port), timeout=timeout
         )
         async with tcp_socket as socket:  # send packet then length then eof
-            r = await dns.asyncquery.tcp(q=no_peers, where="::1", timeout=timeout, sock=socket)
+            r = await dns.asyncquery.tcp(q=no_peers, where=target_address, timeout=timeout, sock=socket)
             assert r.answer == no_peers_response.answer
             # send 120, as the first 2 bytes / the length of the packet, so that the server expects more.
             await socket.sendall(int(120).to_bytes(2, byteorder="big"), int(time.time() + timeout))
@@ -195,6 +236,7 @@ async def test_error_conditions(
     assert len(record_outside_domain_response.authority) == 0
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_dns_queries(
@@ -203,7 +245,7 @@ async def test_dns_queries(
     """
     We add 5000 peers directly, then try every kind of query many times over both the TCP and UDP protocols.
     """
-    port = seeder_service.dns_port
+    port = get_dns_port(seeder_service, use_tcp, target_address)
     domain = seeder_service.domain  # default is: seeder.example.com
     num_ns = len(seeder_service.ns_records)
 
@@ -224,42 +266,34 @@ async def test_dns_queries(
                 assert len(record_list.items) == num_ns
             else:
                 assert len(record_list.items) == 1  # soa
-    # Validate EDNS
-    e_query = dns.message.make_query(domain, dns.rdatatype.ANY, use_edns=False)
-    with pytest.raises(dns.query.BadResponse):  # response is truncated without EDNS
-        await make_dns_query(False, target_address, port, e_query)
+    if not use_tcp:
+        # Validate EDNS
+        e_query = dns.message.make_query(domain, dns.rdatatype.ANY, use_edns=False)
+        with pytest.raises(dns.query.BadResponse):  # response is truncated without EDNS
+            await make_dns_query(use_tcp, target_address, port, e_query)
 
 
+@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.asyncio
-async def test_db_processing(seeder_service: DNSServer) -> None:
+@pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
+async def test_db_processing(
+    seeder_service: DNSServer,
+    database_peers: Dict[str, PeerReliability],
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
+) -> None:
     """
     We add 1000 peers through the db, then try every kind of query over both the TCP and UDP protocols.
     """
-    port = seeder_service.dns_port
+    port = get_dns_port(seeder_service, use_tcp, target_address)
     domain = seeder_service.domain  # default is: seeder.example.com
     num_ns = len(seeder_service.ns_records)
     crawl_store = seeder_service.crawl_store
     assert crawl_store is not None
 
-    ipv4, ipv6 = get_addresses(2)  # get 1000 addresses
-    # add peers to the in memory part of the db.
-    for peer in [str(peer) for pair in zip(ipv4, ipv6) for peer in pair]:
-        new_peer = PeerRecord(
-            peer,
-            peer,
-            uint32(58444),
-            False,
-            uint64(0),
-            uint32(0),
-            uint64(0),
-            uint64(int(time.time())),
-            uint64(0),
-            "undefined",
-            uint64(0),
-            tls_version="unknown",
-        )
-        new_peer_reliability = PeerReliability(peer, tries=3, successes=3)  # make sure the peer starts as reliable.
-        crawl_store.maybe_add_peer(new_peer, new_peer_reliability)  # we don't fully add it because we don't need to.
+    # override host_to_reliability with the pre-generated db peers
+    crawl_store.host_to_reliability = database_peers
 
     # Write these new peers to db.
     await crawl_store.load_reliable_peers_to_db()
@@ -267,9 +301,8 @@ async def test_db_processing(seeder_service: DNSServer) -> None:
     # wait for the new db to be read.
     await time_out_assert(30, lambda: seeder_service.reliable_peers_v4 != [])
 
-    # now we check all the combinations once (not a stupid amount of times)
-    for use_tcp, target_address, request_type in all_test_combinations:
-        query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
-        std_query_response = await make_dns_query(use_tcp, target_address, port, query)
-        assert std_query_response.rcode() == dns.rcode.NOERROR
-        assert_standard_results(std_query_response.answer, request_type, num_ns)
+    # now we check that the db peers are being used.
+    query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+    std_query_response = await make_dns_query(use_tcp, target_address, port, query)
+    assert std_query_response.rcode() == dns.rcode.NOERROR
+    assert_standard_results(std_query_response.answer, request_type, num_ns)

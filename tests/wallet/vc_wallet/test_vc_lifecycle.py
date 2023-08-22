@@ -839,15 +839,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             Program.to(
                 [
                     [51, ACS_PH, vc.coin.amount],
-                    [
-                        -10,
-                        vc.eml_lineage_proof.to_program(),
-                        [
-                            Program.to(vc.eml_lineage_proof.parent_proof_hash),
-                            vc.launcher_id,
-                        ],
-                        ACS_TRANSFER_PROGRAM.get_tree_hash(),
-                    ],
+                    vc.magic_condition_for_self_revoke(),
                 ]
             ),
         )

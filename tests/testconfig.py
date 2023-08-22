@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     Oses = Literal["macos", "ubuntu", "windows"]
 
 # Defaults are conservative.
-parallel: Union[bool, int, Literal["auto"]] = False
+parallel: Union[bool, int, Literal["auto"]] = True
 checkout_blocks_and_plots = False
 install_timelord = False
 check_resource_usage = False

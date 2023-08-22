@@ -53,6 +53,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
@@ -138,6 +139,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             tx_size,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -170,6 +172,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             20000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -206,6 +209,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -217,6 +221,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             40000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -229,6 +234,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             50000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -241,6 +247,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             3000000000000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -269,6 +276,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
+            DEFAULT_TX_CONFIG,
         )
         extra_spend = SpendBundle(
             [
@@ -314,6 +322,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
+            DEFAULT_TX_CONFIG,
         )
         extra_spend = SpendBundle(
             [
