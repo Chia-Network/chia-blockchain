@@ -25,7 +25,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import UnknownCondition
+from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -292,6 +292,7 @@ class DataLayerWallet:
         initial_root: bytes32,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, TransactionRecord, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
@@ -322,6 +323,7 @@ class DataLayerWallet:
             primaries=None,
             ignore_max_send_amount=False,
             coin_announcements_to_consume={announcement},
+            extra_conditions=extra_conditions,
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
@@ -406,6 +408,7 @@ class DataLayerWallet:
         sign: bool = True,
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
@@ -541,6 +544,17 @@ class DataLayerWallet:
                 ],
             )
         ]
+        if root_hash != singleton_record.root:
+            extra_conditions = (
+                *extra_conditions,
+                UnknownCondition(
+                    opcode=Program.to(-24),
+                    args=[
+                        ACS_MU,
+                        Program.to([[(root_hash, None), ACS_MU_PH], None]),
+                    ],
+                ),
+            )
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             coin_announcements={b"$"} if fee > 0 else None,
@@ -550,17 +564,7 @@ class DataLayerWallet:
             puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_consume}
             if puzzle_announcements_to_consume is not None
             else None,
-            conditions=[
-                UnknownCondition(
-                    opcode=Program.to(-24),
-                    args=[
-                        ACS_MU,
-                        Program.to([[(root_hash, None), ACS_MU_PH], None]),
-                    ],
-                )
-            ]
-            if root_hash != singleton_record.root
-            else [],
+            conditions=extra_conditions,
         )
         db_layer_sol = Program.to([inner_sol])
         full_sol = Program.to(
@@ -639,6 +643,7 @@ class DataLayerWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         ignore_max_send_amount: bool = False,  # ignored
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         launcher_id: Optional[bytes32] = kwargs.get("launcher_id", None)
@@ -677,6 +682,7 @@ class DataLayerWallet:
             sign,
             add_pending_singleton,
             announce_new_state,
+            extra_conditions,
         )
 
     async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
@@ -734,7 +740,13 @@ class DataLayerWallet:
         return collected
 
     async def create_new_mirror(
-        self, launcher_id: bytes32, amount: uint64, urls: List[bytes], tx_config: TXConfig, fee: uint64 = uint64(0)
+        self,
+        launcher_id: bytes32,
+        amount: uint64,
+        urls: List[bytes],
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             amount=amount,
@@ -744,12 +756,18 @@ class DataLayerWallet:
             primaries=[],
             memos=[launcher_id, *(url for url in urls)],
             ignore_max_send_amount=False,
+            extra_conditions=extra_conditions,
         )
         assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
         return [create_mirror_tx_record]
 
     async def delete_mirror(
-        self, mirror_id: bytes32, peer: WSChiaConnection, tx_config: TXConfig, fee: uint64 = uint64(0)
+        self,
+        mirror_id: bytes32,
+        peer: WSChiaConnection,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         mirror: Mirror = await self.get_mirror(mirror_id)
         mirror_coin: Coin = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror.coin_id], peer=peer))[
@@ -770,6 +788,7 @@ class DataLayerWallet:
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
             coin_announcements={b"$"} if excess_fee > 0 else None,
+            conditions=extra_conditions,
         )
         mirror_spend = CoinSpend(
             mirror_coin,

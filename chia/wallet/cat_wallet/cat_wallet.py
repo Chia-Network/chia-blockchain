@@ -618,6 +618,7 @@ class CATWallet:
         coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -681,19 +682,18 @@ class CATWallet:
         announcement: Announcement
 
         for coin in cat_coins:
-            extra_conditions: List[Condition] = []
             if cat_discrepancy is not None:
-                extra_conditions.append(
-                    UnknownCondition(
-                        opcode=Program.to(51),
-                        args=[
-                            Program.to(None),
-                            Program.to(-113),
-                            tail_reveal,
-                            tail_solution,
-                        ],
-                    )
+                cat_condition = UnknownCondition(
+                    opcode=Program.to(51),
+                    args=[
+                        Program.to(None),
+                        Program.to(-113),
+                        tail_reveal,
+                        tail_solution,
+                    ],
                 )
+                if first:
+                    extra_conditions = (*extra_conditions, cat_condition)
             if first:
                 first = False
                 announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
@@ -778,6 +778,7 @@ class CATWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         # (extra_delta, tail_reveal, tail_solution)
@@ -807,6 +808,7 @@ class CATWallet:
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+            extra_conditions=extra_conditions,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records

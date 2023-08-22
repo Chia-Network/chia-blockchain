@@ -288,6 +288,24 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
     )(coin_selection_args(func))
 
 
+def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+    )(
+        click.option(
+            "--expires-at",
+            help="UNIX timestamp at which the associated transactions expire",
+            type=int,
+            required=False,
+            default=None,
+        )(func)
+    )
+
+
 @streamable
 @dataclasses.dataclass(frozen=True)
 class CMDCoinSelectionConfigLoader(Streamable):

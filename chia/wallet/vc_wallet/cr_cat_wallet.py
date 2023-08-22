@@ -24,6 +24,7 @@ from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
+from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -388,6 +389,7 @@ class CRCATWallet(CATWallet):
         coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         add_authorizations_to_cr_cats: bool = True,
     ) -> Tuple[SpendBundle, List[TransactionRecord]]:
         if coin_announcements_to_consume is not None:  # pragma: no cover
@@ -485,6 +487,19 @@ class CRCATWallet(CATWallet):
                     self.info.authorized_providers, self.info.proofs_checker.flags
                 )
 
+            if cat_discrepancy is not None:
+                cat_condition = UnknownCondition(
+                    opcode=Program.to(51),
+                    args=[
+                        Program.to(None),
+                        Program.to(-113),
+                        tail_reveal,
+                        tail_solution,
+                    ],
+                )
+                if first:
+                    extra_conditions = (*extra_conditions, cat_condition)
+
             crcat: CRCAT = self.coin_record_to_crcat(coin)
             vc_announcements_to_make.append(crcat.expected_announcement())
             if first:
@@ -502,6 +517,7 @@ class CRCATWallet(CATWallet):
                             coin_announcements={announcement.message},
                             coin_announcements_to_assert=coin_announcements_bytes,
                             puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                            conditions=extra_conditions,
                         )
                     elif regular_chia_to_claim > fee:
                         chia_tx, xch_announcement = await self.create_tandem_xch_tx(
@@ -514,6 +530,7 @@ class CRCATWallet(CATWallet):
                             primaries=primaries,
                             coin_announcements={announcement.message},
                             coin_announcements_to_assert={xch_announcement.name()},
+                            conditions=extra_conditions,
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
@@ -521,16 +538,12 @@ class CRCATWallet(CATWallet):
                         coin_announcements={announcement.message},
                         coin_announcements_to_assert=coin_announcements_bytes,
                         puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                        conditions=extra_conditions,
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
                     coin_announcements_to_assert={announcement.name()},
-                )
-            if first and cat_discrepancy is not None:
-                # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-                innersol = Program.to(
-                    [[], (1, Program.to([51, None, -113, tail_reveal, tail_solution]).cons(innersol.at("rfr"))), []]
                 )
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -611,6 +624,7 @@ class CRCATWallet(CATWallet):
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         # (extra_delta, tail_reveal, tail_solution)
@@ -651,6 +665,7 @@ class CRCATWallet(CATWallet):
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+            extra_conditions=extra_conditions,
             add_authorizations_to_cr_cats=add_authorizations_to_cr_cats,
         )
 
