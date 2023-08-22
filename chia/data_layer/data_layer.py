@@ -8,7 +8,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 
@@ -157,6 +157,19 @@ class DataLayer:
             pass
         await self.data_store.close()
         await self.wallet_rpc.await_closed()
+
+    async def wallet_log_in(self, fingerprint: int) -> int:
+        if self.wallet_rpc is None:
+            # TODO: better exception
+            raise Exception("DataLayer wallet RPC connection not initialized")
+
+        result = await self.wallet_rpc.log_in(fingerprint)
+        if not result.get("success", False):
+            # TODO: better exception
+            raise Exception()
+
+        fingerprint = cast(int, result["fingerprint"])
+        return fingerprint
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
