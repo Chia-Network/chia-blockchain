@@ -12,6 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -34,10 +35,7 @@ class WalletProtocol(Protocol):
     async def select_coins(
         self,
         amount: uint64,
-        exclude: Optional[List[Coin]] = None,
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Set[Coin]:
         ...
 
@@ -84,7 +82,6 @@ class GSTOptionalArgs(TypedDict):
     add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
-    excluded_cat_coins: NotRequired[Optional[Set[Coin]]]
     cat_discrepancy: NotRequired[Optional[Tuple[int, Program, Program]]]
     # NFTWallet
     nft_coin: NotRequired[Optional[NFTCoinInfo]]
@@ -98,6 +95,7 @@ class GSTOptionalArgs(TypedDict):
     # VCWallet
     new_proof_hash: NotRequired[Optional[bytes32]]
     provider_inner_puzhash: NotRequired[Optional[bytes32]]
+    self_revoke: NotRequired[bool]
     # Wallet
     origin_id: NotRequired[Optional[bytes32]]
     negative_change_allowed: NotRequired[bool]

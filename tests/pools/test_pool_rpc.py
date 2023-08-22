@@ -34,6 +34,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
@@ -402,7 +403,7 @@ class TestPoolWalletRpc:
                                 [some_wallet.wallet_state_manager.private_key], status.current.owner_pubkey
                             )
                             assert owner_sk is not None
-                            assert owner_sk != auth_sk
+                            assert owner_sk[0] != auth_sk
 
     @pytest.mark.asyncio
     async def test_absorb_self(
@@ -469,7 +470,7 @@ class TestPoolWalletRpc:
             assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
             tr: TransactionRecord = await client.send_transaction(
-                1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch")
+                1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
             )
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tr])

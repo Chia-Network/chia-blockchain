@@ -6,6 +6,8 @@ from typing import Optional, Sequence
 
 import click
 
+from chia.cmds import options
+
 
 @click.group("coins", help="Manage your wallets coins")
 @click.pass_context
@@ -21,7 +23,7 @@ def coins_cmd(ctx: click.Context) -> None:
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
@@ -63,7 +65,7 @@ def list_cmd(
     min_amount: str,
     max_amount: str,
     coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[int],
+    amounts_to_exclude: Sequence[str],
     paginate: Optional[bool],
 ) -> None:
     from .coin_funcs import async_list
@@ -73,8 +75,8 @@ def list_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            max_coin_amount=Decimal(max_amount),
-            min_coin_amount=Decimal(min_amount),
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
             excluded_amounts=amounts_to_exclude,
             excluded_coin_ids=coins_to_exclude,
             show_unconfirmed=show_unconfirmed,
@@ -91,7 +93,7 @@ def list_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-a",
@@ -169,8 +171,8 @@ def combine_cmd(
             fingerprint=fingerprint,
             wallet_id=id,
             fee=Decimal(fee),
-            max_coin_amount=Decimal(max_amount),
-            min_coin_amount=Decimal(min_amount),
+            max_coin_amount=max_amount,
+            min_coin_amount=min_amount,
             excluded_amounts=amounts_to_exclude,
             number_of_coins=number_of_coins,
             target_coin_amount=Decimal(target_amount),
@@ -188,7 +190,7 @@ def combine_cmd(
     type=int,
     default=None,
 )
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
     "-n",
