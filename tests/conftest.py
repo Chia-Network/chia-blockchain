@@ -357,12 +357,6 @@ async def three_nodes(db_version: int, self_hostname, blockchain_constants):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def four_nodes(db_version: int, self_hostname, blockchain_constants):
-    async with setup_n_nodes(blockchain_constants, 4, db_version=db_version, self_hostname=self_hostname) as _:
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def five_nodes(db_version: int, self_hostname, blockchain_constants):
     async with setup_n_nodes(blockchain_constants, 5, db_version=db_version, self_hostname=self_hostname) as _:
         yield _
@@ -392,12 +386,6 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
 @pytest_asyncio.fixture(scope="function")
 async def setup_four_nodes(db_version):
     async with setup_simulators_and_wallets(4, 0, {}, db_version=db_version) as _:
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets():
-    async with setup_simulators_and_wallets(2, 0, {}) as _:
         yield _
 
 
@@ -514,18 +502,6 @@ async def wallet_nodes_perf():
         wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool(full_node_1.full_node.constants)
         yield full_node_1, server_1, wallet_a, wallet_receiver, bt
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_nodes_mainnet(db_version):
-    async with setup_simulators_and_wallets(2, 1, {}, db_version=db_version) as (nodes, wallets, bt):
-        full_node_1 = nodes[0]
-        full_node_2 = nodes[1]
-        server_1 = full_node_1.full_node.server
-        server_2 = full_node_2.full_node.server
-        wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool(full_node_1.full_node.constants)
-        yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -836,21 +812,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def introducer(bt):
-    async with setup_introducer(bt, 0) as service:
-        yield service._api, service._node.server
-
-
-@pytest_asyncio.fixture(scope="function")
 async def introducer_service(bt):
     async with setup_introducer(bt, 0) as _:
         yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def timelord(bt):
-    async with setup_timelord(uint16(0), False, bt.constants, bt) as service:
-        yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
