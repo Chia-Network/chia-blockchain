@@ -433,11 +433,13 @@ class DataLayer:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
-    async def clean_old_full_tree_files(self, tree_id: bytes32, full_tree_first_publish_generation: int) -> None:
+    async def clean_old_full_tree_files(
+        self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
+    ) -> None:
         generation = full_tree_first_publish_generation - 1
         if generation > 0:
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
-        while generation > 0 and delete_full_file_if_exists(tree_id, root):
+        while generation > 0 and delete_full_file_if_exists(foldername, tree_id, root):
             generation -= 1
             if generation > 0:
                 root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
