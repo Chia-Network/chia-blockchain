@@ -10,120 +10,120 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- Add config option to accept private network addresses from introducers #15543
-- Generate a directory containing missing licenses from installers #15146
-- Implement 2.0 updates #15580
-- Add DataLayer clear pending roots interfaces #15516
-- Introduce get_wallet_addresses RPC for deriving wallet addresses #15668
-- Enable multi-threading for chia plots check #15693
-- Implement Hard fork 2.0 #15581
-- Add fields to BlockRecord #15695
-- Support for compressed plot #15702
-- Introduce error protocol message in Protocols #15493
-- Add RPC client and tests for cancel_offers endpoint #15758
-- Add SQL logging config for DataLayer #15690
-- Introduce new aggregate signature conditions #15769
-- Implement Chip13 #15825
-- Add timeout for retrieving a decompressor #16047
+- Add config option to accept private network addresses from introducers [#15543](https://github.com/Chia-Network/chia-blockchain/pull/15543)
+- Generate a directory containing missing licenses from installers [#15146](https://github.com/Chia-Network/chia-blockchain/pull/15146)
+- Implement 2.0 updates [#15580](https://github.com/Chia-Network/chia-blockchain/pull/15580)
+- Add DataLayer clear pending roots interfaces [#15516](https://github.com/Chia-Network/chia-blockchain/pull/15516)
+- Introduce get_wallet_addresses RPC for deriving wallet addresses [#15668](https://github.com/Chia-Network/chia-blockchain/pull/15668)
+- Enable multi-threading for chia plots check [#15693](https://github.com/Chia-Network/chia-blockchain/pull/15693)
+- Implement Hard fork 2.0 [#15581](https://github.com/Chia-Network/chia-blockchain/pull/15581)
+- Add fields to BlockRecord [#15695](https://github.com/Chia-Network/chia-blockchain/pull/15695)
+- Support for compressed plot [#15702](https://github.com/Chia-Network/chia-blockchain/pull/15702)
+- Introduce error protocol message in Protocols [#15493](https://github.com/Chia-Network/chia-blockchain/pull/15493)
+- Add RPC client and tests for cancel_offers endpoint [#15758](https://github.com/Chia-Network/chia-blockchain/pull/15758)
+- Add SQL logging config for DataLayer [#15690](https://github.com/Chia-Network/chia-blockchain/pull/15690)
+- Introduce new aggregate signature conditions [#15769](https://github.com/Chia-Network/chia-blockchain/pull/15769)
+- Implement Chip13 [#15825](https://github.com/Chia-Network/chia-blockchain/pull/15825)
+- Add timeout for retrieving a decompressor [#16047](https://github.com/Chia-Network/chia-blockchain/pull/16047)
 
 ### Changed
 
-- Align SOFT_FORK3_HEIGHT with the next release cycle #15428
-- Move CAT_MOD from cat_loader to cat_utils #15459
-- Use a more aggressive activation schedule on testnet10 #15376
-- Optimize Full_node with more set usage in subscription code #15420
-- Rename exclude_coin_* to excluded_coin_* for consistency #15460
-- Add **kwargs to all generate_signed_transaction definitions #15240
-- Add max_height to CoinStore.get_coin_states_by_ids in Full_node #15467
-- Tweaks to StructStream and sized ints in Util #15090
-- Rephrase async contextmanager DBConnection to use asynccontextmanager #15538
-- Update chia_rs to 0.2.8 #15575
-- Update blspy to 2.0.0 #15481
-- Update blspy to 2.0.1 #15595
-- Use PKCS#8 format for SSL private keys #15594
-- Update simulator SSL keys to PKCS#8 #15630
-- Automate package discovery in setup.py #15180
-- Support daemon commands from chia rpc CLI #15584
-- Improve CLI RPC connection error handling #15704
-- Implement Plot filter hard fork #15336
-- Update DID wallet #15730
-- Update config.yml #15515
-- Renaming instances of 'decompresser' to 'decompressor' #15751
-- Bump chia_rs dependency to 0.2.9 #15760
-- Remove support for Python 3.7 #14611
-- Added quality lookup time info to FarmingInfo #15775
-- Updated UI_ACTUAL_SPACE_CONSTANT_FACTOR to 0.78 #15771
-- Solution_generator #15768
-- Added blocks_won and last_time_farmed to get_farmed_amount #15778
-- Avoid DataLayer insert precheck #15691
-- Report certificate errors directly for CLI connection errors #15518
-- Remove references to old offer mod #15694
-- Avoid DataLayer insert ancestors precheck #15728
-- Improved pool stats handling #15764
-- Added average_block_time to get_blockchain_state FullNode RPC API #15777
-- Added get_keys_for_plot daemon server API #15772
-- Added CUDA and plot compression support for bladebit 3 #15774
-- Added total_effective_plot_size for get_harvesters RPC API #15770
-- Added compression level and harvesting mode to harvester protocol/message #15776
-- Farmer now returns missing signage points #15765
-- Pass DataLayer root and generation instead of requerying #15613
-- Update chiapos #15816
-- Added defaults to get_harvester_config API #15820
-- Update CUDA plot log-progress mapping #15839
-- Update install plotters scripts #15838
-- Update chiavdf to 1.0.10 #15864
-- Bump softfork3 activation by about 2 weeks #15861
-- Remove chip13 #15871
-- Bump soft-fork3 activation height #15938
-- Update chiapos to full release #15939
-- Revert "Add fields to BlockRecord" #15947
-- Update chia_rs to 0.2.10 #15973
-- Bladebit3 as the default plotter to install #15943
-- Use 'Completed writing plot' as the magic final words for cudaplot #16011
-- Adjust harvester warning to 8 seconds from 5 #16100
-- Update to chiapos 2.0.2 #16104
+- Align SOFT_FORK3_HEIGHT with the next release cycle [#15428](https://github.com/Chia-Network/chia-blockchain/pull/15428)
+- Move CAT_MOD from cat_loader to cat_utils [#15459](https://github.com/Chia-Network/chia-blockchain/pull/15459)
+- Use a more aggressive activation schedule on testnet10 [#15376](https://github.com/Chia-Network/chia-blockchain/pull/15376)
+- Optimize Full_node with more set usage in subscription code [#15420](https://github.com/Chia-Network/chia-blockchain/pull/15420)
+- Rename exclude_coin_* to excluded_coin_* for consistency [#15460](https://github.com/Chia-Network/chia-blockchain/pull/15460)
+- Add **kwargs to all generate_signed_transaction definitions [#15240](https://github.com/Chia-Network/chia-blockchain/pull/15240)
+- Add max_height to CoinStore.get_coin_states_by_ids in Full_node [#15467](https://github.com/Chia-Network/chia-blockchain/pull/15467)
+- Tweaks to StructStream and sized ints in Util [#15090](https://github.com/Chia-Network/chia-blockchain/pull/15090)
+- Rephrase async contextmanager DBConnection to use asynccontextmanager [#15538](https://github.com/Chia-Network/chia-blockchain/pull/15538)
+- Update chia_rs to 0.2.8 [#15575](https://github.com/Chia-Network/chia-blockchain/pull/15575)
+- Update blspy to 2.0.0 [#15481](https://github.com/Chia-Network/chia-blockchain/pull/15481)
+- Update blspy to 2.0.1 [#15595](https://github.com/Chia-Network/chia-blockchain/pull/15595)
+- Use PKCS#8 format for SSL private keys [#15594](https://github.com/Chia-Network/chia-blockchain/pull/15594)
+- Update simulator SSL keys to PKCS#8 [#15630](https://github.com/Chia-Network/chia-blockchain/pull/15630)
+- Automate package discovery in setup.py [#15180](https://github.com/Chia-Network/chia-blockchain/pull/15180)
+- Support daemon commands from chia rpc CLI [#15584](https://github.com/Chia-Network/chia-blockchain/pull/15584)
+- Improve CLI RPC connection error handling [#15704](https://github.com/Chia-Network/chia-blockchain/pull/15704)
+- Implement Plot filter hard fork [#15336](https://github.com/Chia-Network/chia-blockchain/pull/15336)
+- Update DID wallet [#15730](https://github.com/Chia-Network/chia-blockchain/pull/15730)
+- Update config.yml [#15515](https://github.com/Chia-Network/chia-blockchain/pull/15515)
+- Renaming instances of 'decompresser' to 'decompressor' [#15751](https://github.com/Chia-Network/chia-blockchain/pull/15751)
+- Bump chia_rs dependency to 0.2.9 [#15760](https://github.com/Chia-Network/chia-blockchain/pull/15760)
+- Remove support for Python 3.7 [#14611](https://github.com/Chia-Network/chia-blockchain/pull/14611)
+- Added quality lookup time info to FarmingInfo [#15775](https://github.com/Chia-Network/chia-blockchain/pull/15775)
+- Updated UI_ACTUAL_SPACE_CONSTANT_FACTOR to 0.78 [#15771](https://github.com/Chia-Network/chia-blockchain/pull/15771)
+- Solution_generator [#15768](https://github.com/Chia-Network/chia-blockchain/pull/15768)
+- Added blocks_won and last_time_farmed to get_farmed_amount [#15778](https://github.com/Chia-Network/chia-blockchain/pull/15778)
+- Avoid DataLayer insert precheck [#15691](https://github.com/Chia-Network/chia-blockchain/pull/15691)
+- Report certificate errors directly for CLI connection errors [#15518](https://github.com/Chia-Network/chia-blockchain/pull/15518)
+- Remove references to old offer mod [#15694](https://github.com/Chia-Network/chia-blockchain/pull/15694)
+- Avoid DataLayer insert ancestors precheck [#15728](https://github.com/Chia-Network/chia-blockchain/pull/15728)
+- Improved pool stats handling [#15764](https://github.com/Chia-Network/chia-blockchain/pull/15764)
+- Added average_block_time to get_blockchain_state FullNode RPC API [#15777](https://github.com/Chia-Network/chia-blockchain/pull/15777)
+- Added get_keys_for_plot daemon server API [#15772](https://github.com/Chia-Network/chia-blockchain/pull/15772)
+- Added CUDA and plot compression support for bladebit 3 [#15774](https://github.com/Chia-Network/chia-blockchain/pull/15774)
+- Added total_effective_plot_size for get_harvesters RPC API [#15770](https://github.com/Chia-Network/chia-blockchain/pull/15770)
+- Added compression level and harvesting mode to harvester protocol/message [#15776](https://github.com/Chia-Network/chia-blockchain/pull/15776)
+- Farmer now returns missing signage points [#15765](https://github.com/Chia-Network/chia-blockchain/pull/15765)
+- Pass DataLayer root and generation instead of requerying [#15613](https://github.com/Chia-Network/chia-blockchain/pull/15613)
+- Update chiapos [#15816](https://github.com/Chia-Network/chia-blockchain/pull/15816)
+- Added defaults to get_harvester_config API [#15820](https://github.com/Chia-Network/chia-blockchain/pull/15820)
+- Update CUDA plot log-progress mapping [#15839](https://github.com/Chia-Network/chia-blockchain/pull/15839)
+- Update install plotters scripts [#15838](https://github.com/Chia-Network/chia-blockchain/pull/15838)
+- Update chiavdf to 1.0.10 [#15864](https://github.com/Chia-Network/chia-blockchain/pull/15864)
+- Bump softfork3 activation by about 2 weeks [#15861](https://github.com/Chia-Network/chia-blockchain/pull/15861)
+- Remove chip13 [#15871](https://github.com/Chia-Network/chia-blockchain/pull/15871)
+- Bump soft-fork3 activation height [#15938](https://github.com/Chia-Network/chia-blockchain/pull/15938)
+- Update chiapos to full release [#15939](https://github.com/Chia-Network/chia-blockchain/pull/15939)
+- Revert "Add fields to BlockRecord" [#15947](https://github.com/Chia-Network/chia-blockchain/pull/15947)
+- Update chia_rs to 0.2.10 [#15973](https://github.com/Chia-Network/chia-blockchain/pull/15973)
+- Bladebit3 as the default plotter to install [#15943](https://github.com/Chia-Network/chia-blockchain/pull/15943)
+- Use 'Completed writing plot' as the magic final words for cudaplot [#16011](https://github.com/Chia-Network/chia-blockchain/pull/16011)
+- Adjust harvester warning to 8 seconds from 5 [#16100](https://github.com/Chia-Network/chia-blockchain/pull/16100)
+- Update to chiapos 2.0.2 [#16104](https://github.com/Chia-Network/chia-blockchain/pull/16104)
 
 ### Fixed
 
-- Fix .get_next_from_coin_spend on VerifiedCredential #15423
-- Fix vcs get command when no proofs exist yet #15432
-- Wallet: Fix missing hint in GenesisById.generate_issuance_bundle #15424
-- Server: Fix versions for incoming connections #15465
-- Repin clvm_tools_rs==0.1.34 #15455
-- Add reorg rollback to retry store #15303
-- Only subscribe to inner wallet puzzle hashes #14356
-- Rpc: Fix and test WalletRpcApi.get_coin_records_by_names #15509
-- Full_node: uint32.MAXIMUM_EXCLUSIVE -> uint32.MAXIMUM #15544
-- Full_node: Don't send duplicates in register_interest_in_puzzle_hash #15560
-- Wallet: Deduplicate coin states from peers #15598
-- Build: include puzzles packages #15660
-- Handle VC syncing exceptions better #15627
-- Fix hint parsing for CATs and DIDs #15259
-- Update build script for lerna 7 #15672
-- Fix fork height constant for simulator/block tools #15629
-- Some NFT RPC mypy fixes #15715
-- Clawback resync #15496
-- Fix variable name typo #15680
-- Fixed add lock around plot info #15767
-- Fix CLI error when exiting on some builds of Python #15762
-- Fix whitespace on legacy-support-policy.md #15779
-- Cleanup & Fix Simulator Sub Epoch Logic #15698
-- Fix flaky CAT test #15759
-- Fix CLI indentation #15811
-- Fix default parallel decompressor count #15845
-- Skip clawback incoming txs while deleting the unconfirmed txs #15826
-- Fix initial-config for testnet fork points heights #15870
-- Fix initial-config for testnet fork points heights #15873
-- Cudaplot fix #15892
-- Fixed chia plotnft show command #15918
-- Fixed an issue where insufficient block interval was used to calculate average block time #15921
-- Fixed an issue where -t option was required in cudaplot #15963
-- Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py #15937
-- Fix clawback sender resync issue #15853
-- Correct --insecure flag to cancel_offer command line #16012
-- Don't farm compressed plots if context count is 0 #16004
-- Fixed an issue where chiapos recognized t2 as required option #16020
-- Fix DataLayer deadlock #15971
+- Fix .get_next_from_coin_spend on VerifiedCredential [#15423](https://github.com/Chia-Network/chia-blockchain/pull/15423)
+- Fix vcs get command when no proofs exist yet [#15432](https://github.com/Chia-Network/chia-blockchain/pull/15432)
+- Wallet: Fix missing hint in GenesisById.generate_issuance_bundle [#15424](https://github.com/Chia-Network/chia-blockchain/pull/15424)
+- Server: Fix versions for incoming connections [#15465](https://github.com/Chia-Network/chia-blockchain/pull/15465)
+- Repin clvm_tools_rs==0.1.34 [#15455](https://github.com/Chia-Network/chia-blockchain/pull/15455)
+- Add reorg rollback to retry store [#15303](https://github.com/Chia-Network/chia-blockchain/pull/15303)
+- Only subscribe to inner wallet puzzle hashes [#14356](https://github.com/Chia-Network/chia-blockchain/pull/14356)
+- Rpc: Fix and test WalletRpcApi.get_coin_records_by_names [#15509](https://github.com/Chia-Network/chia-blockchain/pull/15509)
+- Full_node: uint32.MAXIMUM_EXCLUSIVE -> uint32.MAXIMUM [#15544](https://github.com/Chia-Network/chia-blockchain/pull/15544)
+- Full_node: Don't send duplicates in register_interest_in_puzzle_hash [#15560](https://github.com/Chia-Network/chia-blockchain/pull/15560)
+- Wallet: Deduplicate coin states from peers [#15598](https://github.com/Chia-Network/chia-blockchain/pull/15598)
+- Build: include puzzles packages [#15660](https://github.com/Chia-Network/chia-blockchain/pull/15660)
+- Handle VC syncing exceptions better [#15627](https://github.com/Chia-Network/chia-blockchain/pull/15627)
+- Fix hint parsing for CATs and DIDs [#15259](https://github.com/Chia-Network/chia-blockchain/pull/15259)
+- Update build script for lerna 7 [#15672](https://github.com/Chia-Network/chia-blockchain/pull/15672)
+- Fix fork height constant for simulator/block tools [#15629](https://github.com/Chia-Network/chia-blockchain/pull/15629)
+- Some NFT RPC mypy fixes [#15715](https://github.com/Chia-Network/chia-blockchain/pull/15715)
+- Clawback resync [#15496](https://github.com/Chia-Network/chia-blockchain/pull/15496)
+- Fix variable name typo [#15680](https://github.com/Chia-Network/chia-blockchain/pull/15680)
+- Fixed add lock around plot info [#15767](https://github.com/Chia-Network/chia-blockchain/pull/15767)
+- Fix CLI error when exiting on some builds of Python [#15762](https://github.com/Chia-Network/chia-blockchain/pull/15762)
+- Fix whitespace on legacy-support-policy.md [#15779](https://github.com/Chia-Network/chia-blockchain/pull/15779)
+- Cleanup & Fix Simulator Sub Epoch Logic [#15698](https://github.com/Chia-Network/chia-blockchain/pull/15698)
+- Fix flaky CAT test [#15759](https://github.com/Chia-Network/chia-blockchain/pull/15759)
+- Fix CLI indentation [#15811](https://github.com/Chia-Network/chia-blockchain/pull/15811)
+- Fix default parallel decompressor count [#15845](https://github.com/Chia-Network/chia-blockchain/pull/15845)
+- Skip clawback incoming txs while deleting the unconfirmed txs [#15826](https://github.com/Chia-Network/chia-blockchain/pull/15826)
+- Fix initial-config for testnet fork points heights [#15870](https://github.com/Chia-Network/chia-blockchain/pull/15870)
+- Fix initial-config for testnet fork points heights [#15873](https://github.com/Chia-Network/chia-blockchain/pull/15873)
+- Cudaplot fix [#15892](https://github.com/Chia-Network/chia-blockchain/pull/15892)
+- Fixed chia plotnft show command [#15918](https://github.com/Chia-Network/chia-blockchain/pull/15918)
+- Fixed an issue where insufficient block interval was used to calculate average block time [#15921](https://github.com/Chia-Network/chia-blockchain/pull/15921)
+- Fixed an issue where -t option was required in cudaplot [#15963](https://github.com/Chia-Network/chia-blockchain/pull/15963)
+- Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py [#15937](https://github.com/Chia-Network/chia-blockchain/pull/15937)
+- Fix clawback sender resync issue [#15853](https://github.com/Chia-Network/chia-blockchain/pull/15853)
+- Correct --insecure flag to cancel_offer command line [#16012](https://github.com/Chia-Network/chia-blockchain/pull/16012)
+- Don't farm compressed plots if context count is 0 [#16004](https://github.com/Chia-Network/chia-blockchain/pull/16004)
+- Fixed an issue where chiapos recognized t2 as required option [#16020](https://github.com/Chia-Network/chia-blockchain/pull/16020)
+- Fix DataLayer deadlock [#15971](https://github.com/Chia-Network/chia-blockchain/pull/15971)
 
 ## 1.8.2 Chia blockchain 2023-06-28
 
@@ -2188,7 +2188,7 @@ all fields that referred to sub blocks are changed to blocks.
 ### Added
 
 - F1 generation in the plotter is now fully parallel for a small speedup.
-- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out oforder" and that is now expected behavior.
+- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "[out of](https://github.com/Chia-Network/chia-blockchain/pull/oforder)" and that is now expected behavior.
 - Partial support for Python 3.9. That includes new versions of Chia dependencies like chiabip158.
 
 ### Changed
