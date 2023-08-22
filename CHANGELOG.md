@@ -10,120 +10,120 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- Add config option to accept private network addresses from introducers [PR #15543]
-- Generate a directory containing missing licenses from installers [PR #15146]
-- Implement 2.0 updates [PR #15580]
-- Add DataLayer clear pending roots interfaces [PR #15516]
-- Introduce get_wallet_addresses RPC for deriving wallet addresses [PR #15668]
-- Enable multi-threading for chia plots check [PR #15693]
-- Implement Hard fork 2.0 [PR #15581]
-- Add fields to BlockRecord [PR #15695]
-- Support for compressed plot [PR #15702]
-- Introduce error protocol message in Protocols [PR #15493]
-- Add RPC client and tests for cancel_offers endpoint [PR #15758]
-- Add SQL logging config for DataLayer [PR #15690]
-- Introduce new aggregate signature conditions [PR #15769]
-- Implement Chip13 [PR #15825]
-- Add timeout for retrieving a decompressor [PR #16047]
+- Add config option to accept private network addresses from introducers #15543
+- Generate a directory containing missing licenses from installers #15146
+- Implement 2.0 updates #15580
+- Add DataLayer clear pending roots interfaces #15516
+- Introduce get_wallet_addresses RPC for deriving wallet addresses #15668
+- Enable multi-threading for chia plots check #15693
+- Implement Hard fork 2.0 #15581
+- Add fields to BlockRecord #15695
+- Support for compressed plot #15702
+- Introduce error protocol message in Protocols #15493
+- Add RPC client and tests for cancel_offers endpoint #15758
+- Add SQL logging config for DataLayer #15690
+- Introduce new aggregate signature conditions #15769
+- Implement Chip13 #15825
+- Add timeout for retrieving a decompressor #16047
 
 ### Changed
 
-- Align SOFT_FORK3_HEIGHT with the next release cycle [PR #15428]
-- Move CAT_MOD from cat_loader to cat_utils [PR #15459]
-- Use a more aggressive activation schedule on testnet10 [PR #15376]
-- Optimize Full_node with more set usage in subscription code [PR #15420]
-- Rename exclude_coin_* to excluded_coin_* for consistency [PR #15460]
-- Add **kwargs to all generate_signed_transaction definitions [PR #15240]
-- Add max_height to CoinStore.get_coin_states_by_ids in Full_node [PR #15467]
-- Tweaks to StructStream and sized ints in Util [PR #15090]
-- Rephrase async contextmanager DBConnection to use asynccontextmanager [PR #15538]
-- Update chia_rs to 0.2.8 [PR #15575]
-- Update blspy to 2.0.0 [PR #15481]
-- Update blspy to 2.0.1 [PR #15595]
-- Use PKCS#8 format for SSL private keys [PR #15594]
-- Update simulator SSL keys to PKCS#8 [PR #15630]
-- Automate package discovery in setup.py [PR #15180]
-- Support daemon commands from chia rpc CLI [PR #15584]
-- Improve CLI RPC connection error handling [PR #15704]
-- Implement Plot filter hard fork [PR #15336]
-- Update DID wallet [PR #15730]
-- Update config.yml [PR #15515]
-- Renaming instances of 'decompresser' to 'decompressor' [PR #15751]
-- Bump chia_rs dependency to 0.2.9 [PR #15760]
-- Remove support for Python 3.7 [PR #14611]
-- Added quality lookup time info to FarmingInfo [PR #15775]
-- Updated UI_ACTUAL_SPACE_CONSTANT_FACTOR to 0.78 [PR #15771]
-- Solution_generator [PR #15768]
-- Added blocks_won and last_time_farmed to get_farmed_amount [PR #15778]
-- Avoid DataLayer insert precheck [PR #15691]
-- Report certificate errors directly for CLI connection errors [PR #15518]
-- Remove references to old offer mod [PR #15694]
-- Avoid DataLayer insert ancestors precheck [PR #15728]
-- Improved pool stats handling [PR #15764]
-- Added average_block_time to get_blockchain_state FullNode RPC API [PR #15777]
-- Added get_keys_for_plot daemon server API [PR #15772]
-- Added CUDA and plot compression support for bladebit 3 [PR #15774]
-- Added total_effective_plot_size for get_harvesters RPC API [PR #15770]
-- Added compression level and harvesting mode to harvester protocol/message [PR #15776]
-- Farmer now returns missing signage points [PR #15765]
-- Pass DataLayer root and generation instead of requerying [PR #15613]
-- Update chiapos [PR #15816]
-- Added defaults to get_harvester_config API [PR #15820]
-- Update CUDA plot log-progress mapping [PR #15839]
-- Update install plotters scripts [PR #15838]
-- Update chiavdf to 1.0.10 [PR #15864]
-- Bump softfork3 activation by about 2 weeks [PR #15861]
-- Remove chip13 [PR #15871]
-- Bump soft-fork3 activation height [PR #15938]
-- Update chiapos to full release [PR #15939]
-- Revert "Add fields to BlockRecord" [PR #15947]
-- Update chia_rs to 0.2.10 [PR #15973]
-- Bladebit3 as the default plotter to install [PR #15943]
-- Use 'Completed writing plot' as the magic final words for cudaplot [PR #16011]
-- Adjust harvester warning to 8 seconds from 5 [PR #16100]
-- Update to chiapos 2.0.2 [PR #16104]
+- Align SOFT_FORK3_HEIGHT with the next release cycle #15428
+- Move CAT_MOD from cat_loader to cat_utils #15459
+- Use a more aggressive activation schedule on testnet10 #15376
+- Optimize Full_node with more set usage in subscription code #15420
+- Rename exclude_coin_* to excluded_coin_* for consistency #15460
+- Add **kwargs to all generate_signed_transaction definitions #15240
+- Add max_height to CoinStore.get_coin_states_by_ids in Full_node #15467
+- Tweaks to StructStream and sized ints in Util #15090
+- Rephrase async contextmanager DBConnection to use asynccontextmanager #15538
+- Update chia_rs to 0.2.8 #15575
+- Update blspy to 2.0.0 #15481
+- Update blspy to 2.0.1 #15595
+- Use PKCS#8 format for SSL private keys #15594
+- Update simulator SSL keys to PKCS#8 #15630
+- Automate package discovery in setup.py #15180
+- Support daemon commands from chia rpc CLI #15584
+- Improve CLI RPC connection error handling #15704
+- Implement Plot filter hard fork #15336
+- Update DID wallet #15730
+- Update config.yml #15515
+- Renaming instances of 'decompresser' to 'decompressor' #15751
+- Bump chia_rs dependency to 0.2.9 #15760
+- Remove support for Python 3.7 #14611
+- Added quality lookup time info to FarmingInfo #15775
+- Updated UI_ACTUAL_SPACE_CONSTANT_FACTOR to 0.78 #15771
+- Solution_generator #15768
+- Added blocks_won and last_time_farmed to get_farmed_amount #15778
+- Avoid DataLayer insert precheck #15691
+- Report certificate errors directly for CLI connection errors #15518
+- Remove references to old offer mod #15694
+- Avoid DataLayer insert ancestors precheck #15728
+- Improved pool stats handling #15764
+- Added average_block_time to get_blockchain_state FullNode RPC API #15777
+- Added get_keys_for_plot daemon server API #15772
+- Added CUDA and plot compression support for bladebit 3 #15774
+- Added total_effective_plot_size for get_harvesters RPC API #15770
+- Added compression level and harvesting mode to harvester protocol/message #15776
+- Farmer now returns missing signage points #15765
+- Pass DataLayer root and generation instead of requerying #15613
+- Update chiapos #15816
+- Added defaults to get_harvester_config API #15820
+- Update CUDA plot log-progress mapping #15839
+- Update install plotters scripts #15838
+- Update chiavdf to 1.0.10 #15864
+- Bump softfork3 activation by about 2 weeks #15861
+- Remove chip13 #15871
+- Bump soft-fork3 activation height #15938
+- Update chiapos to full release #15939
+- Revert "Add fields to BlockRecord" #15947
+- Update chia_rs to 0.2.10 #15973
+- Bladebit3 as the default plotter to install #15943
+- Use 'Completed writing plot' as the magic final words for cudaplot #16011
+- Adjust harvester warning to 8 seconds from 5 #16100
+- Update to chiapos 2.0.2 #16104
 
 ### Fixed
 
-- Fix .get_next_from_coin_spend on VerifiedCredential [PR #15423]
-- Fix vcs get command when no proofs exist yet [PR #15432]
-- Wallet: Fix missing hint in GenesisById.generate_issuance_bundle [PR #15424]
-- Server: Fix versions for incoming connections [PR #15465]
-- Repin clvm_tools_rs==0.1.34 [PR #15455]
-- Add reorg rollback to retry store [PR #15303]
-- Only subscribe to inner wallet puzzle hashes [PR #14356]
-- Rpc: Fix and test WalletRpcApi.get_coin_records_by_names [PR #15509]
-- Full_node: uint32.MAXIMUM_EXCLUSIVE -> uint32.MAXIMUM [PR #15544]
-- Full_node: Don't send duplicates in register_interest_in_puzzle_hash [PR #15560]
-- Wallet: Deduplicate coin states from peers [PR #15598]
-- Build: include puzzles packages [PR #15660]
-- Handle VC syncing exceptions better [PR #15627]
-- Fix hint parsing for CATs and DIDs [PR #15259]
-- Update build script for lerna 7 [PR #15672]
-- Fix fork height constant for simulator/block tools [PR #15629]
-- Some NFT RPC mypy fixes [PR #15715]
-- Clawback resync [PR #15496]
-- Fix variable name typo [PR #15680]
-- Fixed add lock around plot info [PR #15767]
-- Fix CLI error when exiting on some builds of Python [PR #15762]
-- Fix whitespace on legacy-support-policy.md [PR #15779]
-- Cleanup & Fix Simulator Sub Epoch Logic [PR #15698]
-- Fix flaky CAT test [PR #15759]
-- Fix CLI indentation [PR #15811]
-- Fix default parallel decompressor count [PR #15845]
-- Skip clawback incoming txs while deleting the unconfirmed txs [PR #15826]
-- Fix initial-config for testnet fork points heights [PR #15870]
-- Fix initial-config for testnet fork points heights [PR #15873]
-- Cudaplot fix [PR #15892]
-- Fixed chia plotnft show command [PR #15918]
-- Fixed an issue where insufficient block interval was used to calculate average block time [PR #15921]
-- Fixed an issue where -t option was required in cudaplot [PR #15963]
-- Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py [PR #15937]
-- Fix clawback sender resync issue [PR #15853]
-- Correct --insecure flag to cancel_offer command line [PR #16012]
-- Don't farm compressed plots if context count is 0 [PR #16004]
-- Fixed an issue where chiapos recognized t2 as required option [PR #16020]
-- Fix DataLayer deadlock [PR #15971]
+- Fix .get_next_from_coin_spend on VerifiedCredential #15423
+- Fix vcs get command when no proofs exist yet #15432
+- Wallet: Fix missing hint in GenesisById.generate_issuance_bundle #15424
+- Server: Fix versions for incoming connections #15465
+- Repin clvm_tools_rs==0.1.34 #15455
+- Add reorg rollback to retry store #15303
+- Only subscribe to inner wallet puzzle hashes #14356
+- Rpc: Fix and test WalletRpcApi.get_coin_records_by_names #15509
+- Full_node: uint32.MAXIMUM_EXCLUSIVE -> uint32.MAXIMUM #15544
+- Full_node: Don't send duplicates in register_interest_in_puzzle_hash #15560
+- Wallet: Deduplicate coin states from peers #15598
+- Build: include puzzles packages #15660
+- Handle VC syncing exceptions better #15627
+- Fix hint parsing for CATs and DIDs #15259
+- Update build script for lerna 7 #15672
+- Fix fork height constant for simulator/block tools #15629
+- Some NFT RPC mypy fixes #15715
+- Clawback resync #15496
+- Fix variable name typo #15680
+- Fixed add lock around plot info #15767
+- Fix CLI error when exiting on some builds of Python #15762
+- Fix whitespace on legacy-support-policy.md #15779
+- Cleanup & Fix Simulator Sub Epoch Logic #15698
+- Fix flaky CAT test #15759
+- Fix CLI indentation #15811
+- Fix default parallel decompressor count #15845
+- Skip clawback incoming txs while deleting the unconfirmed txs #15826
+- Fix initial-config for testnet fork points heights #15870
+- Fix initial-config for testnet fork points heights #15873
+- Cudaplot fix #15892
+- Fixed chia plotnft show command #15918
+- Fixed an issue where insufficient block interval was used to calculate average block time #15921
+- Fixed an issue where -t option was required in cudaplot #15963
+- Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py #15937
+- Fix clawback sender resync issue #15853
+- Correct --insecure flag to cancel_offer command line #16012
+- Don't farm compressed plots if context count is 0 #16004
+- Fixed an issue where chiapos recognized t2 as required option #16020
+- Fix DataLayer deadlock #15971
 
 ## 1.8.2 Chia blockchain 2023-06-28
 
@@ -2188,7 +2188,7 @@ all fields that referred to sub blocks are changed to blocks.
 ### Added
 
 - F1 generation in the plotter is now fully parallel for a small speedup.
-- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
+- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out oforder" and that is now expected behavior.
 - Partial support for Python 3.9. That includes new versions of Chia dependencies like chiabip158.
 
 ### Changed
