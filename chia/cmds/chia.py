@@ -9,6 +9,7 @@ from chia import __version__
 from chia.cmds.beta import beta_cmd
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
+from chia.cmds.context import context_cmd, get_default_root_path
 from chia.cmds.data import data_cmd
 from chia.cmds.db import db_cmd
 from chia.cmds.dev import dev_cmd
@@ -33,13 +34,18 @@ from chia.util.ssl_check import check_ssl
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
-
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
     context_settings=CONTEXT_SETTINGS,
 )
-@click.option("--root-path", default=DEFAULT_ROOT_PATH, help="Config file root", type=click.Path(), show_default=True)
+@click.option(
+    "--root-path",
+    default=str(get_default_root_path()),
+    help="[Depricated] Use 'chia context set'",
+    type=click.Path(),
+    show_default=True,
+)
 @click.option(
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
@@ -114,6 +120,7 @@ cli.add_command(plots_cmd)
 cli.add_command(wallet_cmd)
 cli.add_command(plotnft_cmd)
 cli.add_command(configure_cmd)
+cli.add_command(context_cmd)
 cli.add_command(init_cmd)
 cli.add_command(rpc_cmd)
 cli.add_command(show_cmd)

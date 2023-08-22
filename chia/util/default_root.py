@@ -8,3 +8,5 @@ DEFAULT_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/main
 DEFAULT_KEYS_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_KEYS_ROOT", "~/.chia_keys"))).resolve()
 
 SIMULATOR_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_SIMULATOR_ROOT", "~/.chia/simulator"))).resolve()
+
+TESTNET10_ROOT_PATH = Path(os.path.expanduser(os.getenv("CHIA_TESTNET10_ROOT", "~/.chia/testnet10"))).resolve()
