@@ -885,7 +885,7 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
         dataclasses.replace(all_transactions[0], type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
     )
     all_transactions = await client.get_transactions(
-        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]), confirmed=False
+        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
     )
     assert len(all_transactions) == 1
 
