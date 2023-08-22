@@ -98,6 +98,7 @@ async def write_files_for_root(
     tree_id: bytes32,
     root: Root,
     foldername: Path,
+    full_tree_first_publish_generation: int,
     overwrite: bool = False,
 ) -> WriteFilesResult:
     if root.node_hash is not None:
@@ -111,12 +112,13 @@ async def write_files_for_root(
     written = False
     mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
 
-    try:
-        with open(filename_full_tree, mode) as writer:
-            await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
-        written = True
-    except FileExistsError:
-        pass
+    if root.generation >= full_tree_first_publish_generation:
+        try:
+            with open(filename_full_tree, mode) as writer:
+                await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
+            written = True
+        except FileExistsError:
+            pass
 
     try:
         last_seen_generation = await data_store.get_last_tree_root_by_hash(
@@ -192,6 +194,19 @@ async def insert_from_delta_file(
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 
+    return True
+
+
+def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -> bool:
+    if root.node_hash is not None:
+        node_hash = root.node_hash
+    else:
+        node_hash = bytes32([0] * 32)  # todo change
+
+    filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
+    if not os.path.exists(filename_full_tree):
+        return False
+    os.remove(filename_full_tree)
     return True
 
 
