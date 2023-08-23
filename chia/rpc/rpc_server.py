@@ -188,7 +188,7 @@ class RpcServer:
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -246,21 +246,21 @@ class RpcServer:
             raise RuntimeError("RpcServer is not started")
         return self.webserver.listen_port
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def _get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_connections": self.get_connections,
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
-            "/get_routes": self._get_routes,
+            "/get_routes": self.get_routes,
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
-            "routes": list(self.get_routes().keys()),
+            "routes": list(self._get_routes().keys()),
         }
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:

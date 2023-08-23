@@ -60,13 +60,13 @@ new_signage_point = farmer_protocol.NewSignagePoint(
 
 proof_of_space = ProofOfSpace(
     bytes32(bytes.fromhex("1fb331df88bc142e70c110e21620374118fb220ccc3ef621378197e850882ec9")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
     None,
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "b6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0"
         ),
@@ -81,7 +81,7 @@ pool_target = PoolTarget(
     bytes32.from_hexstr("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"),
     uint32(421941852),
 )
-g2_element = G2Element(
+g2_element = G2Element.from_bytes(
     bytes.fromhex(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     )
@@ -93,19 +93,19 @@ declare_proof_of_space = farmer_protocol.DeclareProofOfSpace(
     uint8(31),
     bytes32(bytes.fromhex("6c8dbcfae52c8df391231f3f7aae24c0b1e2be9638f6fc9e4c216b9ff43548d1")),
     proof_of_space,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
     bytes32(bytes.fromhex("3843d1c2c574d376225733cf1a9c63da7051954b88b5adc1a4c198c1c7d5edfd")),
     pool_target,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -130,12 +130,12 @@ farming_info = farmer_protocol.FarmingInfo(
 
 signed_values = farmer_protocol.SignedValues(
     bytes32(bytes.fromhex("915de5949724e1fc92d334e589c26ddbcd67415cbbdbbfc5e6de93b3b33bb267")),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
     ),
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -189,7 +189,7 @@ coin_spends = [coin_spend]
 
 spend_bundle = SpendBundle(
     coin_spends,
-    G2Element(
+    G2Element.from_bytes(
         bytes.fromhex(
             "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
         )
@@ -685,14 +685,14 @@ pool_difficulty = harvester_protocol.PoolDifficulty(
 
 harvester_handhsake = harvester_protocol.HarvesterHandshake(
     [
-        G1Element(
+        G1Element.from_bytes(
             bytes.fromhex(
                 "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
             ),
         ),
     ],
     [
-        G1Element(
+        G1Element.from_bytes(
             bytes.fromhex(
                 "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
             ),
@@ -729,12 +729,12 @@ respond_signatures = harvester_protocol.RespondSignatures(
     "plot_1",
     bytes32(bytes.fromhex("59468dce63b5b08490ec4eec4c461fc84b69b6f80a64f4c76b0d55780f7e7e7a")),
     bytes32(bytes.fromhex("270b5fc00545db714077aba3b60245d769f492563f108a73b2b8502503d12b9e")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -746,13 +746,13 @@ plot = harvester_protocol.Plot(
     "plot_1",
     uint8(124),
     bytes32(bytes.fromhex("b2eb7e5c5239e8610a9dd0e137e185966ebb430faf31ae4a0e55d86251065b98")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
     ),
     bytes32(bytes.fromhex("1c96d26def7be696f12e7ebb91d50211e6217ce5d9087c9cd1b84782d5d4b237")),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -823,7 +823,7 @@ post_partial_response = pool_protocol.PostPartialResponse(
 )
 
 get_farmer_response = pool_protocol.GetFarmerResponse(
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -836,7 +836,7 @@ get_farmer_response = pool_protocol.GetFarmerResponse(
 post_farmer_payload = pool_protocol.PostFarmerPayload(
     bytes32(bytes.fromhex("d3785b251b4e066f87784d06afc8e6ac8dac5a4922d994902c1bad60b5fa7ad3")),
     uint64(5820795488800541986),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),
@@ -857,7 +857,7 @@ post_farmer_response = pool_protocol.PostFarmerResponse(
 put_farmer_payload = pool_protocol.PutFarmerPayload(
     bytes32(bytes.fromhex("78aec4d523b0bea49829a1322d5de92a86a553ce8774690b8c8ad5fc1f7540a8")),
     uint64(15049374353843709257),
-    G1Element(
+    G1Element.from_bytes(
         bytes.fromhex(
             "a04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c"
         ),

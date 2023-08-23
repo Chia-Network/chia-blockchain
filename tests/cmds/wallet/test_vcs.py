@@ -9,6 +9,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, get_bytes32
@@ -22,9 +23,13 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     # set RPC Client
     class VcsMintRpcClient(TestWalletRpcClient):
         async def vc_mint(
-            self, did_id: bytes32, target_address: Optional[bytes32] = None, fee: uint64 = uint64(0)
+            self,
+            did_id: bytes32,
+            tx_config: TXConfig,
+            target_address: Optional[bytes32] = None,
+            fee: uint64 = uint64(0),
         ) -> Tuple[VCRecord, List[TransactionRecord]]:
-            self.add_to_log("vc_mint", (did_id, target_address, fee))
+            self.add_to_log("vc_mint", (did_id, tx_config, target_address, fee))
 
             class FakeVC:
                 def __init__(self) -> None:
@@ -50,7 +55,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         f"Transaction {get_bytes32(2).hex()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"vc_mint": [(did_bytes, target_bytes, 500000000000)]}
+    expected_calls: logType = {"vc_mint": [(did_bytes, DEFAULT_TX_CONFIG, target_bytes, 500000000000)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -98,15 +103,13 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         async def vc_spend(
             self,
             vc_id: bytes32,
+            tx_config: TXConfig,
             new_puzhash: Optional[bytes32] = None,
             new_proof_hash: Optional[bytes32] = None,
             provider_inner_puzhash: Optional[bytes32] = None,
             fee: uint64 = uint64(0),
-            reuse_puzhash: Optional[bool] = None,
         ) -> List[TransactionRecord]:
-            self.add_to_log(
-                "vc_spend", (vc_id, new_puzhash, new_proof_hash, provider_inner_puzhash, fee, reuse_puzhash)
-            )
+            self.add_to_log("vc_spend", (vc_id, tx_config, new_puzhash, new_proof_hash, provider_inner_puzhash, fee))
             return [STD_TX]
 
     inst_rpc_client = VcsUpdateProofsRpcClient()  # pylint: disable=no-value-for-parameter
@@ -131,7 +134,11 @@ def test_vcs_update_proofs(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
         f"Transaction {get_bytes32(2).hex()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"vc_spend": [(vc_bytes, target_ph, new_proof, None, uint64(500000000000), True)]}
+    expected_calls: logType = {
+        "vc_spend": [
+            (vc_bytes, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), target_ph, new_proof, None, uint64(500000000000))
+        ]
+    }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -201,10 +208,10 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         async def vc_revoke(
             self,
             vc_parent_id: bytes32,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
-            reuse_puzhash: Optional[bool] = None,
         ) -> List[TransactionRecord]:
-            self.add_to_log("vc_revoke", (vc_parent_id, fee, reuse_puzhash))
+            self.add_to_log("vc_revoke", (vc_parent_id, tx_config, fee))
             return [STD_TX]
 
     inst_rpc_client = VcsRevokeRpcClient()  # pylint: disable=no-value-for-parameter
@@ -225,7 +232,10 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     run_cli_command_and_assert(capsys, root_dir, command_args + [f"-l{vc_id.hex()}"], assert_list)
     expected_calls: logType = {
         "vc_get": [(vc_id,)],
-        "vc_revoke": [(parent_id, uint64(500000000000), True), (parent_id, uint64(500000000000), True)],
+        "vc_revoke": [
+            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000)),
+            (parent_id, DEFAULT_TX_CONFIG.override(reuse_puzhash=True), uint64(500000000000)),
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -239,22 +249,16 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
             self,
             wallet_id: uint32,
             min_amount_to_claim: uint64,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
-            min_coin_amount: Optional[uint64] = None,
-            max_coin_amount: Optional[uint64] = None,
-            exclude_coin_amounts: Optional[List[uint64]] = None,
-            reuse_puzhash: Optional[bool] = None,
         ) -> List[TransactionRecord]:
             self.add_to_log(
                 "crcat_approve_pending",
                 (
                     wallet_id,
                     min_amount_to_claim,
+                    tx_config,
                     fee,
-                    min_coin_amount,
-                    max_coin_amount,
-                    exclude_coin_amounts,
-                    reuse_puzhash,
                 ),
             )
             return [STD_TX]
@@ -281,7 +285,18 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "crcat_approve_pending": [
-            (wallet_id, uint64(1000), uint64(500000000000), uint64(1000), uint64(10000000000000), None, True)
+            (
+                wallet_id,
+                uint64(1000),
+                TXConfig(
+                    min_coin_amount=uint64(0),
+                    max_coin_amount=uint64(10000),
+                    excluded_coin_amounts=[],
+                    excluded_coin_ids=[],
+                    reuse_puzhash=True,
+                ),
+                uint64(500000000000),
+            )
         ],
         "get_wallets": [(None,)],
     }

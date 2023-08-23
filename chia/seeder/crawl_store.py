@@ -333,10 +333,10 @@ class CrawlStore:
         await cursor.close()
         log.info(" - Done deleting old good_peers...")
         log.info("Saving new good_peers to DB...")
-        for peer in peers:
+        for peer_id in peers:
             cursor = await self.crawl_db.execute(
                 "INSERT OR REPLACE INTO good_peers VALUES(?)",
-                (peer,),
+                (peer_id,),
             )
             await cursor.close()
         await self.crawl_db.commit()

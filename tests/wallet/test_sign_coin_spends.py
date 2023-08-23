@@ -35,9 +35,9 @@ sk2_u: PrivateKey = calculate_synthetic_secret_key(
     master_sk_to_wallet_sk_unhardened(top_sk, uint32(2)), DEFAULT_HIDDEN_PUZZLE_HASH
 )
 pk1_h: G1Element = sk1_h.get_g1()
-pk2_h: G2Element = sk2_h.get_g1()
+pk2_h: G1Element = sk2_h.get_g1()
 pk1_u: G1Element = sk1_u.get_g1()
-pk2_u: G2Element = sk2_u.get_g1()
+pk2_u: G1Element = sk2_u.get_g1()
 msg1: bytes = b"msg1"
 msg2: bytes = b"msg2"
 

@@ -2040,7 +2040,7 @@ class TestBodyValidation:
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         public_key = synthetic_secret_key.get_g1()
 
-        args = [public_key, b"msg"] + ([b"garbage"] if with_garbage else [])
+        args = [bytes(public_key), b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
         tx2: SpendBundle = wt.generate_signed_transaction(
