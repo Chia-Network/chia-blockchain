@@ -123,7 +123,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1],
+            "blocks_needed": [1, 1],
         }
     ],
     indirect=True,
@@ -138,28 +138,25 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     client_0 = wallet_environments.environments[0].rpc_client
     client_1 = wallet_environments.environments[1].rpc_client
 
+    # Generate DID as an "authorized provider"
     confirmed_balance: int = await wallet_0.get_confirmed_balance()
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
     confirmed_balance -= 1
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-    spend_bundle = spend_bundle_list[0].spend_bundle
-    assert spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
-    await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
+    await full_node_api.wait_transaction_records_entered_mempool(
+        await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+    )
     did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
+
+    # Mint a VC
     vc_record, txs = await client_0.vc_mint(
         did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
     confirmed_balance -= 1
     confirmed_balance -= 200
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
     assert len(vc_wallet) == 1
@@ -176,9 +173,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         fee=uint64(100),
     )
     confirmed_balance -= 100
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     vc_record_updated: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
@@ -186,9 +182,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Do a mundane spend
     txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
 
     async def check_vc_record_has_parent_id(
@@ -215,9 +210,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
 
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    confirmed_balance += 2_000_000_000_000
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     confirmed_balance -= 100  # cat mint amount
 
     # Send CR-CAT to another wallet
@@ -254,10 +247,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
     confirmed_balance -= 2000000000
     await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-    assert tx.spend_bundle is not None
-    spend_bundle = tx.spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool([tx])
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
@@ -308,9 +299,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     txs = await client_0.vc_spend(
         vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
     )
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
@@ -323,9 +313,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         DEFAULT_TX_CONFIG,
         fee=uint64(90),
     )
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     await time_out_assert(15, cr_cat_wallet_1.get_confirmed_balance, 90)
     await time_out_assert(15, cr_cat_wallet_1.get_pending_approval_balance, 0)
@@ -343,7 +332,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
-        tx = await client_0.cat_spend(
+        await client_0.cat_spend(
             cr_cat_wallet_0.id(),
             DEFAULT_TX_CONFIG,
             uint64(10),
@@ -360,10 +349,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
     )
     await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
-    assert tx.spend_bundle is not None
-    spend_bundle = tx.spend_bundle
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool([tx])
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     # should go straight to confirmed because we sent to ourselves
     await time_out_assert(15, cr_cat_wallet_1.get_confirmed_balance, 40)
@@ -378,9 +365,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated is not None
     txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
     confirmed_balance -= 1
-    spend_bundle = next(tx.spend_bundle for tx in txs if tx.spend_bundle is not None)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_1)
+    await full_node_api.wait_transaction_records_entered_mempool(txs)
+    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await time_out_assert(15, wallet_0.get_confirmed_balance, confirmed_balance)
     vc_record_revoked: Optional[VCRecord] = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None
