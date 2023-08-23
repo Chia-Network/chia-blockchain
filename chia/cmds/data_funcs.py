@@ -28,6 +28,15 @@ async def get_client(
         yield client, _
 
 
+async def wallet_log_in_cmd(
+    rpc_port: Optional[int],
+    fingerprint: int,
+    root_path: Optional[Path] = None,
+) -> None:
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+        pass
+
+
 async def create_data_store_cmd(
     rpc_port: Optional[int],
     fee: Optional[str],

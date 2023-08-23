@@ -506,3 +506,23 @@ def clear_pending_roots(
             fingerprint=fingerprint,
         )
     )
+
+
+@data_cmd.command(
+    "wallet_log_in",
+    help="Request that the wallet service be logged in to the specified fingerprint",
+)
+@create_rpc_port_option()
+@options.create_fingerprint(required=True)
+def wallet_log_in(
+    data_rpc_port: int,
+    fingerprint: int,
+) -> None:
+    from chia.cmds.data_funcs import wallet_log_in_cmd
+
+    run(
+        wallet_log_in_cmd(
+            rpc_port=data_rpc_port,
+            fingerprint=fingerprint,
+        )
+    )
