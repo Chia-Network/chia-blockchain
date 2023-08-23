@@ -259,6 +259,20 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         cd .\build_scripts
         .\build_windows-2-installer-a.ps1
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\chia.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\daemon.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_crawler.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_data_layer.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_data_layer_http.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_data_layer_s3_plugin.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_farmer.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_full_node.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_harvester.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_introducer.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_seeder.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_timelord.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\start_wallet.exe SHA256
+        certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\packages\gui\ctimelord_launcher.exe SHA256
         .\build_windows-2-installer-b.ps1
         .\build_windows-2-installer-c.ps1
 
