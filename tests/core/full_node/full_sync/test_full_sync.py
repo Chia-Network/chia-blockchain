@@ -447,7 +447,6 @@ class TestFullSync:
         if consensus_mode != Mode.PLAIN:
             pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
-        bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
         full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
         full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
