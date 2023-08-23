@@ -258,7 +258,9 @@ jobs:
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
         cd .\build_scripts
-        .\build_windows-2-installer.ps1
+        .\build_windows-2-installer-a.ps1
+        .\build_windows-2-installer-b.ps1
+        .\build_windows-2-installer-c.ps1
 
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v3
