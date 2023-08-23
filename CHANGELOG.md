@@ -58,14 +58,14 @@ for setuptools_scm/PEP 440 reasons.
 - Added `total_effective_plot_size` for `get_harvesters` RPC API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15770
 - Added compression level and harvesting mode to harvester protocol/mes… by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15776
 - Farmer now returns missing signage points by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15765
-- Pass DataLayer root and generation instead of lookups 
+- Pass DataLayer root and generation instead of lookups
 - Added defaults to `get_harvester_config` API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15820
 - Update install plotters scripts by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15838
 - Adjust harvester warning to 8 seconds from 5 by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/16100
 
 ### Fixed
 
-- Fix `.get_next_from_coin_spend` on VerifiedCredential 
+- Fix `.get_next_from_coin_spend` on VerifiedCredential
 - Fix vcs get command when no proofs exist yet by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15432
 - Server: Fix versions for incoming connections by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15465
 - Add reorg rollback to retry store by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15303
@@ -94,7 +94,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Removed
 - Python 3.7 support
-  
+
 ## 1.8.2 Chia blockchain 2023-06-28
 
 ### Added
