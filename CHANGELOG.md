@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
+- Compressed plot support
 - Add config option to accept private network addresses from introducers
 - Generate a license directory that contains licenses missing from the installers
 - 2.0 updates
@@ -18,12 +19,10 @@ for setuptools_scm/PEP 440 reasons.
 - Multi threaded `chia plots check`
 - Hard fork 2.0
 - Add fields to BlockRecord.
-- Compressed plot support
 - Protocols: Introduce `error` protocol message
 - Add RPC client and tests for cancel_offers endpoint
 - Add sql logging config for DataLayer
 - New aggregate signature conditions
-- Chip13 (#15688)
 - Timeout for retrieving a decompressor.
 
 ### Changed
@@ -33,13 +32,13 @@ for setuptools_scm/PEP 440 reasons.
 - Use a more aggresive activation schedule on testnet10
 - Full_node: More set usage in subscription code
 - Rename exclude_coin_* -> excluded_coin_* for consistency
-- Add **kwargs to all generate_signed_transaction definitions
+- Add `**kwargs` to all `generate_signed_transaction` definitions
 - Full_node: Add `max_height` to `CoinStore.get_coin_states_by_ids`
 - Util: Some tweaks to `StructStream` and sized ints
-- Rephrase async contextmanager DBConnection to use asynccontextmanager
+- Rephrase async contextmanager DBConnection to use `asynccontextmanager`
 - Bump chia_rs to 0.2.8
-- Bump blspy==2.0.0 (blst)
-- Bump blspy==2.0.1
+- Bump blspy to 2.0.0 (blst)
+- Bump blspy to 2.0.1
 - Use PKCS#8 format for SSL private keys
 - Auto find setup.py packages
 - Update simulator SSL keys to PKCS#8
@@ -51,7 +50,7 @@ for setuptools_scm/PEP 440 reasons.
 - Plot filter hard fork
 - Add DIDWallet.get_coin() to simplify DID wallet
 - Update config.yml
-- Renaming instances of 'decompresser' to 'decompressor'
+- Renaming instances of `decompresser` to `decompressor`
 - Bump chia_rs dependency to 0.2.9
 - Remove support for Python 3.7
 - Added quality lookup time info to FarmingInfo
@@ -76,7 +75,6 @@ for setuptools_scm/PEP 440 reasons.
 - Update install plotters scripts
 - Update chiavdf to 1.0.10
 - Bump softfork3 activation by about 2 weeks
-- Remove chip13
 - Bump soft-fork3 activation height
 - Update chiapos to full release
 - Revert "Add fields to BlockRecord. (#15695)"
