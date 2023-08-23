@@ -68,9 +68,28 @@ mv temp.json package.json
 Write-Output "   ---"
 
 Write-Output "   ---"
-Write-Output "electron-builder"
-electron-builder build --win --x64 --config.productName="Chia"
+Write-Output "electron-builder create package directory"
+electron-builder build --win --x64 --config.productName="Chia" --dev
 Get-ChildItem dist\win-unpacked\resources
+Write-Output "   ---"
+
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign App"
+   signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\win-unpacked\Chia.exe
+   signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\win-unpacked\resources\app.asar.unpacked\*.exe
+   Write-Output "   ---"
+   Write-Output "Verify signature"
+   Write-Output "   ---"
+   signtool.exe verify /v /pa .\dist\win-unpacked\Chia.exe
+   signtool.exe verify /v /pa .\dist\win-unpacked\resources\app.asar.unpacked\*.exe
+}   Else    {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
+}
+
+Write-Output "   ---"
+Write-Output "electron-builder create installer"
+electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {
