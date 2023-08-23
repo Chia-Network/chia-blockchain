@@ -376,6 +376,8 @@ full_node:
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
 
+  bad_peak_cache_size: 100
+
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
   reserved_cores: 0

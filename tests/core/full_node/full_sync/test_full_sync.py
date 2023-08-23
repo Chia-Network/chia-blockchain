@@ -474,14 +474,15 @@ class TestFullSync:
         for block in default_1000_blocks[:-500]:
             await full_node_1.full_node.add_block(block)
 
-        for x in range(blockchain_constants.BAD_PEAK_CACHE_SIZE + 10):
+        cache_size = full_node_1.full_node.config.get("bad_peak_cache_size")
+        for x in range(cache_size + 10):
             blocks = bt.get_consecutive_blocks(
                 num_blocks=1, block_list_input=default_1000_blocks[:-500], seed=x.to_bytes(2, "big")
             )
             block = blocks[-1]
             full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
 
-        assert len(full_node_1.full_node.bad_peak_cache) == blockchain_constants.BAD_PEAK_CACHE_SIZE
+        assert len(full_node_1.full_node.bad_peak_cache) == cache_size
 
         for block in default_1000_blocks[500:]:
             await full_node_1.full_node.add_block(block)

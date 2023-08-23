@@ -1086,7 +1086,7 @@ class FullNode:
                 )
                 if success is False:
                     await peer.close(600)
-                    # check Chip 13 exception
+                    # check CHIP-0013 exception
                     if err == Err.CHIP_0013_VALIDATION:
                         self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
                         raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
@@ -2518,7 +2518,7 @@ class FullNode:
                 min_block = header_hash
             new_cache[header_hash] = height
 
-        if len(new_cache) > self.constants.BAD_PEAK_CACHE_SIZE:
+        if len(new_cache) > self.config.get("bad_peak_cache_size", 100):
             del new_cache[min_block]
 
         self.bad_peak_cache = new_cache

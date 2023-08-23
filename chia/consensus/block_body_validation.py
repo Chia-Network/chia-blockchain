@@ -88,7 +88,7 @@ async def validate_block_body(
                     curr_optional_block_record.pos_ss_cc_challenge_hash,
                     curr_optional_block_record.cc_sp_hash,
                 ):
-                    log.error(f"Chip-0013 Block Failed at height: {height}")
+                    log.error(f"CHIP-0013 Block Failed at height: {height}")
                     return Err.CHIP_0013_VALIDATION, None
 
                 sp_count += 1

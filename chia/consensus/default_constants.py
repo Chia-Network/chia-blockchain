@@ -70,7 +70,6 @@ default_kwargs = {
     "PLOT_FILTER_32_HEIGHT": 20643000,
     # Disallow plots from passing the plot filter for more than one out of any four consecutive signage points.
     "UNIQUE_PLOTS_WINDOW": 4,
-    "BAD_PEAK_CACHE_SIZE": 100,
 }
 
 
