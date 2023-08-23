@@ -20,6 +20,21 @@ Write-Output "   ---"
 $SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
 pyinstaller --log-level INFO $SPEC_FILE
 
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign Executables in dist\daemon"
+   Get-ChildItem "dist\daemon" -Recurse | Where-Object { $_.Extension -eq ".exe" } | ForEach-Object {
+      $exePath = $_.FullName
+      Write-Output "Signing $exePath"
+      signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
+      Write-Output "Verify signature"
+      signtool.exe verify /v /pa $exePath
+   }
+   Write-Output "   ---"
+} Else {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
+}
+
 Write-Output "   ---"
 Write-Output "Creating a directory of licenses from pip and npm packages"
 Write-Output "   ---"
