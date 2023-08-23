@@ -30,3 +30,18 @@ Write-Output "Copy chia executables to chia-blockchain-gui\"
 Write-Output "   ---"
 Copy-Item "dist\daemon" -Destination "..\chia-blockchain-gui\packages\gui\" -Recurse
 
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\chia.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\daemon.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_crawler.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_data_layer.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_data_layer_http.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_data_layer_s3_plugin.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_farmer.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_full_node.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_harvester.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_introducer.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_seeder.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_timelord.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\start_wallet.exe" SHA256
+signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 "..\chia-blockchain-gui\packages\gui\timelord_launcher.exe" SHA256
+
