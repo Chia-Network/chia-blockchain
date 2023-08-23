@@ -49,8 +49,7 @@ for setuptools_scm/PEP 440 reasons.
 - Cleanup CLI RPC connection error handling
 - Plot filter hard fork
 - Add DIDWallet.get_coin() to simplify DID wallet
-- Update config.yml
-- Renaming instances of `decompresser` to `decompressor`
+- Update initial-config
 - Bump chia_rs dependency to 0.2.9
 - Remove support for Python 3.7
 - Added quality lookup time info to FarmingInfo
@@ -77,7 +76,6 @@ for setuptools_scm/PEP 440 reasons.
 - Bump softfork3 activation by about 2 weeks
 - Bump soft-fork3 activation height
 - Update chiapos to full release
-- Revert "Add fields to BlockRecord. (#15695)"
 - Update chia_rs to 0.2.10
 - Bladebit3 as the default plotter to install
 - Use 'Completed writing plot' as the magic final words for cudaplot
@@ -111,9 +109,7 @@ for setuptools_scm/PEP 440 reasons.
 - Cleanup & Fix Simulator Sub Epoch Logic
 - Fix flaky CAT test
 - Fix CLI indentation
-- Fix default parallel decompressor count
 - Skip clawback incoming txs while deleting the unconfirmed txs
-- Fix initial-config for testnet fork points heights
 - Fix initial-config for testnet fork points heights
 - Cudaplot fix
 - Fixed `chia plotnft show` command
@@ -122,7 +118,6 @@ for setuptools_scm/PEP 440 reasons.
 - Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py
 - Fix clawback sender resync issue
 - Correct --insecure flag to cancel_offer command line
-- Don't farm compressed plots if context count is 0
 - Fixed an issue where chiapos recognized `t2` as required option
 - Fix DataLayer deadlock
 
