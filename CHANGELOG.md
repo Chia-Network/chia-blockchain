@@ -47,7 +47,7 @@ for setuptools_scm/PEP 440 reasons.
 - Use latest blspy
 - Convert All CLI Commands to using async generators
 - Server: Store `Handshake.software_version` in connections as `str`
-- Cleanup CLI RPC connection error handling 
+- Cleanup CLI RPC connection error handling
 - Plot filter hard fork
 - Add DIDWallet.get_coin() to simplify DID wallet
 - Update config.yml
