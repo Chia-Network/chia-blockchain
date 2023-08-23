@@ -1712,7 +1712,7 @@ class WalletRpcApi:
             }
 
         # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
-        # A more general solution surely exists, but I'm sure what it is right now
+        # A more general solution surely exists, but I'm not sure what it is right now
         return {
             **response,
             "summary": {
