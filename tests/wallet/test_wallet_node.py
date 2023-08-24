@@ -7,13 +7,17 @@ from typing import Any, Dict, List, Optional
 import pytest
 from blspy import PrivateKey
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32, uint128
+from chia.util.hash import std_hash
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.wallet_node import Balance, WalletNode
 
@@ -384,3 +388,65 @@ async def test_get_balance(
     # Restart one more time and make sure the balance is still correct after start
     await restart_with_fingerprint(initial_fingerprint)
     assert await wallet_node.get_balance(wallet_id) == expected_more_balance
+
+
+@pytest.mark.asyncio
+async def test_race_cache_helper(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
+    config = load_config(root_path_populated_with_config, "config.yaml", "wallet")
+    wallet_node = WalletNode(config, root_path_populated_with_config, test_constants, get_temp_keyring)
+
+    coin_states = [CoinState(Coin(bytes32(b"\00" * 32), bytes32(b"\11" * 32), uint64(1)), 0, i) for i in range(5)]
+    header_hashes = [std_hash(height) for height in range(10)]
+
+    # Repeated adding of the same coin state should not have any impact
+    for i in range(3):
+        wallet_node.add_state_to_race_cache(header_hashes[0], uint32(1), coin_states[0])
+        assert len(wallet_node.race_cache) == 1
+        assert wallet_node.race_cache[header_hashes[0]].height == 1
+        assert wallet_node.race_cache[header_hashes[0]].coin_states == {coin_states[0]}
+
+    # Repeated adding of the same hash for a different height should not have any impact
+    wallet_node.add_state_to_race_cache(header_hashes[0], uint32(2), coin_states[0])
+    assert len(wallet_node.race_cache) == 1
+    assert wallet_node.race_cache[header_hashes[0]].height == 1
+    assert wallet_node.race_cache[header_hashes[0]].coin_states == {coin_states[0]}
+
+    # Adding more coin states for an existing header hash
+    for i in range(1, 3):
+        wallet_node.add_state_to_race_cache(header_hashes[0], uint32(1), coin_states[i])
+    assert len(wallet_node.race_cache) == 1
+    assert wallet_node.race_cache[header_hashes[0]].height == 1
+    assert wallet_node.race_cache[header_hashes[0]].coin_states == {*coin_states[0:3]}
+
+    # Add more hashes for the existing height
+    wallet_node.add_state_to_race_cache(header_hashes[1], uint32(1), coin_states[2])
+    wallet_node.add_state_to_race_cache(header_hashes[2], uint32(1), coin_states[2])
+    for i in range(1, 3):
+        assert wallet_node.race_cache[header_hashes[i]].height == 1
+        assert wallet_node.race_cache[header_hashes[i]].coin_states == {coin_states[2]}
+    assert len(wallet_node.race_cache) == 3
+
+    # Add more hashes for the other heights
+    wallet_node.add_state_to_race_cache(header_hashes[3], uint32(2), coin_states[3])
+    wallet_node.add_state_to_race_cache(header_hashes[4], uint32(3), coin_states[4])
+    assert len(wallet_node.race_cache) == 5
+    assert wallet_node.race_cache[header_hashes[3]].height == 2
+    assert wallet_node.race_cache[header_hashes[3]].coin_states == {coin_states[3]}
+    assert wallet_node.race_cache[header_hashes[4]].height == 3
+    assert wallet_node.race_cache[header_hashes[4]].coin_states == {coin_states[4]}
+
+    # This should not clear anything since height 1 is the lowest in the race cache at this point
+    for min_height in [0, 1]:
+        wallet_node.cleanup_race_cache(min_height=min_height)
+        assert len(wallet_node.race_cache) == 5
+    # Cleanup some entries
+    expected_at_height_2 = {
+        header_hashes[3]: wallet_node.race_cache[header_hashes[3]],
+        header_hashes[4]: wallet_node.race_cache[header_hashes[4]],
+    }
+    wallet_node.cleanup_race_cache(min_height=2)
+    assert len(wallet_node.race_cache) == 2
+    assert wallet_node.race_cache == expected_at_height_2
+    # Cleanup the rest
+    wallet_node.cleanup_race_cache(min_height=4)
+    assert len(wallet_node.race_cache) == 0
