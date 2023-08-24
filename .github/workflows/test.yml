@@ -124,7 +124,7 @@ jobs:
 
       - name: Format JUnit results
         run: |
-          sudo apt-get install xmllint
+          sudo apt-get install libxml2-utils
           ls junit-data/*.xml.raw | sed 's/\.raw$//' | xargs --max-lines=1 --max-procs=10 --replace={} xmllint --format {}.raw --output {}
 
       - name: Publish formatted JUnit results
