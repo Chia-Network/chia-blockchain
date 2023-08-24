@@ -154,10 +154,7 @@ class TestBlockHeightMap:
 
             # Make sure we didn't alter the cache (nothing to write)
             async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                new_heights = bytearray(await f.read())
-                assert len(new_heights) == len(heights)
-                for i in range(0, len(heights), 32):
-                    assert new_heights[i : i + 32] == heights[i : i + 32]
+                assert bytearray(await f.read()) == heights
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
