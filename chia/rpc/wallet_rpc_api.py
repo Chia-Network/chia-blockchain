@@ -951,7 +951,7 @@ class WalletRpcApi:
             try:
                 tx["metadata"] = record.parsed_metadata().to_json_dict()
             except ValueError as e:
-                log.exception(f"Could not parse coin record metadata: {type(e).__name__} {e}")
+                log.error(f"Could not parse coin record metadata: {type(e).__name__} {e}")
                 continue
             tx["metadata"]["coin_id"] = coin.name().hex()
             tx["metadata"]["spent"] = record.spent
