@@ -703,16 +703,15 @@ class WalletStateManager:
         response: List[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
-        assert len(response) != 0, f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info.hex()}"
+        if len(response) == 0:
+            self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
+            return None, None
         parent_coin_state = response[0]
         assert parent_coin_state.spent_height == coin_state.created_height
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
-        assert (
-            coin_spend is not None
-        ), f"Could not find the coin spent  with ID: {coin_state.coin.parent_coin_info.hex()}"
 
-        puzzle = coin_spend.puzzle_reveal.to_program()
+        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(puzzle)
 
         # Check if the coin is a CAT
