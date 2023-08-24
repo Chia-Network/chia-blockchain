@@ -124,9 +124,10 @@ jobs:
 
       - name: Combine Results
         run: |
-          sudo apt-get install junitparser
+          sudo apt-get install junitparser xmllint
           mkdir junit-results
-          junitparser merge junit-data/*.xml junit-results/junit.xml
+          junitparser merge junit-data/*.xml junit-results/junit.xml.raw
+          xmllint --format junit-results/junit.xml.raw > junit-results/junit.xml
 
       - name: Publish Results
         if: always()
