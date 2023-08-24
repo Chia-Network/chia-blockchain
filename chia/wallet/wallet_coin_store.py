@@ -142,6 +142,36 @@ class WalletCoinStore:
             )
         self.total_count_cache.cache.clear()
 
+    async def add_coin_records(self, records: List[WalletCoinRecord]) -> None:
+        values2 = []
+        for record in records:
+            assert record.spent == (record.spent_block_height != 0)
+            values2.append(
+                (
+                    record.name().hex(),
+                    record.confirmed_block_height,
+                    record.spent_block_height,
+                    int(record.spent),
+                    int(record.coinbase),
+                    str(record.coin.puzzle_hash.hex()),
+                    str(record.coin.parent_coin_info.hex()),
+                    bytes(uint64(record.coin.amount)),
+                    record.wallet_type,
+                    record.wallet_id,
+                    record.coin_type,
+                    None if record.metadata is None else bytes(record.metadata),
+                )
+            )
+        if len(values2) > 0:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
+                await conn.executemany(
+                    "INSERT OR REPLACE INTO coin_record ("
+                    "coin_name, confirmed_height, spent_height, spent, coinbase, puzzle_hash, coin_parent, amount, "
+                    "wallet_type, wallet_id, coin_type, metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    values2,
+                )
+        self.total_count_cache.cache.clear()
+
     # Sometimes we realize that a coin is actually not interesting to us so we need to delete it
     async def delete_coin_record(self, coin_name: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:

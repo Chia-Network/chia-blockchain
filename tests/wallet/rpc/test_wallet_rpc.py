@@ -1852,9 +1852,7 @@ async def test_get_coin_records_rpc(
 
 
 @pytest.mark.asyncio
-async def test_get_coin_records_rpc_limits(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
-) -> None:
+async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTestEnvironment, monkeypatch) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1863,60 +1861,66 @@ async def test_get_coin_records_rpc_limits(
     api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
     store = wallet_node.wallet_state_manager.coin_store
 
-    max_coins = api.max_get_coin_records_limit * 10
-    coin_records = [
-        WalletCoinRecord(
-            Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
-            uint32(uint32.from_bytes(token_bytes(4))),
-            uint32(0),
-            False,
-            False,
-            WalletType.STANDARD_WALLET,
-            uint32(0),
-            CoinType.NORMAL,
-            None,
-        )
-        for _ in range(max_coins)
-    ]
-    for record in coin_records:
-        await store.add_coin_record(record)
+    with monkeypatch.context() as m:
+        m.setattr(WalletRpcApi, "max_get_coin_records_limit", 1000)
+        m.setattr(WalletRpcApi, "max_get_coin_records_filter_items", 1000)
+        print(f"api.max_get_coin_records_limit: {api.max_get_coin_records_limit}")
 
-    limit = api.max_get_coin_records_limit
-    response_records = []
-    for i in range(int(max_coins / api.max_get_coin_records_limit)):
-        offset = uint32(api.max_get_coin_records_limit * i)
-        response = await client.get_coin_records(GetCoinRecords(limit=limit, offset=offset, include_total_count=True))
-        response_records.extend(list(response["coin_records"]))
+        max_coins = api.max_get_coin_records_limit * 10
+        coin_records = [
+            WalletCoinRecord(
+                Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
+                uint32(uint32.from_bytes(token_bytes(4))),
+                uint32(0),
+                False,
+                False,
+                WalletType.STANDARD_WALLET,
+                uint32(0),
+                CoinType.NORMAL,
+                None,
+            )
+            for _ in range(max_coins)
+        ]
+        await store.add_coin_records(coin_records)
 
-    assert len(response_records) == max_coins
-    # Make sure we got all expected records
-    parsed_records = [coin.to_json_dict_parsed_metadata() for coin in coin_records]
-    for expected_record in parsed_records:
-        assert expected_record in response_records
+        limit = api.max_get_coin_records_limit
+        response_records = []
+        for i in range(int(max_coins / api.max_get_coin_records_limit)):
+            offset = uint32(api.max_get_coin_records_limit * i)
+            response = await client.get_coin_records(
+                GetCoinRecords(limit=limit, offset=offset, include_total_count=True)
+            )
+            response_records.extend(list(response["coin_records"]))
 
-    # Request coins with the max number of filter items
-    max_filter_items = api.max_get_coin_records_filter_items
-    filter_records = coin_records[:max_filter_items]
-    coin_id_filter = HashFilter.include([coin.name() for coin in filter_records])
-    puzzle_hash_filter = HashFilter.include([coin.coin.puzzle_hash for coin in filter_records])
-    parent_coin_id_filter = HashFilter.include([coin.coin.parent_coin_info for coin in filter_records])
-    amount_filter = AmountFilter.include([uint64(coin.coin.amount) for coin in coin_records[:max_filter_items]])
-    for request in [
-        GetCoinRecords(coin_id_filter=coin_id_filter),
-        GetCoinRecords(puzzle_hash_filter=puzzle_hash_filter),
-        GetCoinRecords(parent_coin_id_filter=parent_coin_id_filter),
-        GetCoinRecords(amount_filter=amount_filter),
-        GetCoinRecords(
-            coin_id_filter=coin_id_filter,
-            puzzle_hash_filter=puzzle_hash_filter,
-            parent_coin_id_filter=parent_coin_id_filter,
-            amount_filter=amount_filter,
-        ),
-    ]:
-        response = await client.get_coin_records(request)
-        parsed_records = [coin.to_json_dict_parsed_metadata() for coin in filter_records]
+        assert len(response_records) == max_coins
+        # Make sure we got all expected records
+        parsed_records = [coin.to_json_dict_parsed_metadata() for coin in coin_records]
         for expected_record in parsed_records:
-            assert expected_record in response["coin_records"]
+            assert expected_record in response_records
+
+        # Request coins with the max number of filter items
+        max_filter_items = api.max_get_coin_records_filter_items
+        filter_records = coin_records[:max_filter_items]
+        coin_id_filter = HashFilter.include([coin.name() for coin in filter_records])
+        puzzle_hash_filter = HashFilter.include([coin.coin.puzzle_hash for coin in filter_records])
+        parent_coin_id_filter = HashFilter.include([coin.coin.parent_coin_info for coin in filter_records])
+        amount_filter = AmountFilter.include([uint64(coin.coin.amount) for coin in coin_records[:max_filter_items]])
+        for request in [
+            GetCoinRecords(coin_id_filter=coin_id_filter),
+            GetCoinRecords(puzzle_hash_filter=puzzle_hash_filter),
+            GetCoinRecords(parent_coin_id_filter=parent_coin_id_filter),
+            GetCoinRecords(amount_filter=amount_filter),
+            GetCoinRecords(
+                coin_id_filter=coin_id_filter,
+                puzzle_hash_filter=puzzle_hash_filter,
+                parent_coin_id_filter=parent_coin_id_filter,
+                amount_filter=amount_filter,
+            ),
+        ]:
+            response = await client.get_coin_records(request)
+            parsed_records = [coin.to_json_dict_parsed_metadata() for coin in filter_records]
+            for expected_record in parsed_records:
+                assert expected_record in response["coin_records"]
 
 
 @pytest.mark.asyncio
