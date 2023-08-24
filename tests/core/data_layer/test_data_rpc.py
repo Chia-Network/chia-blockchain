@@ -2061,10 +2061,10 @@ async def test_full_file_storage_window(
                 filenames = {entry.name for entry in entries}
                 expected_files_count = min(batch_count, full_file_storage_window) + batch_count
                 assert len(filenames) == expected_files_count
-                for generation, root_hash in enumerate(root_hashes):
-                    filename = get_delta_filename(store_id, root_hash, generation + 1)
+                for generation, hash in enumerate(root_hashes):
+                    filename = get_delta_filename(store_id, hash, generation + 1)
                     assert filename in filenames
-                    filename = get_full_tree_filename(store_id, root_hash, generation + 1)
+                    filename = get_full_tree_filename(store_id, hash, generation + 1)
                     if generation + 1 > batch_count - full_file_storage_window:
                         assert filename in filenames
                     else:
