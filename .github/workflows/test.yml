@@ -124,7 +124,7 @@ jobs:
 
       - name: Combine Results
         run: |
-          apt install junitparser
+          sudo apt-get install junitparser
           junitparser merge junit-results/*.xml > junit-results/junit.xml
 
       - name: Publish Results
