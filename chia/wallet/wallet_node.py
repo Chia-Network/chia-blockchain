@@ -114,6 +114,12 @@ class PeerPeak:
     hash: bytes32
 
 
+@dataclasses.dataclass(frozen=True)
+class RaceCacheEntry:
+    height: uint32
+    coin_states: Set[CoinState]
+
+
 @dataclasses.dataclass
 class WalletNode:
     config: Dict[str, Any]
@@ -138,8 +144,7 @@ class WalletNode:
     wallet_peers: Optional[WalletPeers] = None
     peer_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
-    race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
-    race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
+    race_cache: Dict[bytes32, RaceCacheEntry] = dataclasses.field(default_factory=dict)
     node_peaks: Dict[bytes32, PeerPeak] = dataclasses.field(default_factory=dict)
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
@@ -459,7 +464,6 @@ class WalletNode:
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
         self.race_cache = {}
-        self.race_cache_hashes = []
         self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
@@ -956,18 +960,13 @@ class WalletNode:
         return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
 
     def add_state_to_race_cache(self, header_hash: bytes32, height: uint32, coin_state: CoinState) -> None:
-        # Clears old state that is no longer relevant
-        delete_threshold = 100
-        for rc_height, rc_hh in self.race_cache_hashes:
-            if height - delete_threshold >= rc_height:
-                self.race_cache.pop(rc_hh)
-        self.race_cache_hashes = [
-            (rc_height, rc_hh) for rc_height, rc_hh in self.race_cache_hashes if height - delete_threshold < rc_height
-        ]
+        race_cache = self.race_cache.setdefault(header_hash, RaceCacheEntry(height, set()))
+        race_cache.coin_states.add(coin_state)
 
-        if header_hash not in self.race_cache:
-            self.race_cache[header_hash] = set()
-        self.race_cache[header_hash].add(coin_state)
+    def cleanup_race_cache(self, *, min_height: int) -> None:
+        self.race_cache = {
+            header_hash: entry for header_hash, entry in self.race_cache.items() if entry.height >= min_height
+        }
 
     async def state_update_received(self, request: CoinStateUpdate, peer: WSChiaConnection) -> None:
         # This gets called every time there is a new coin or puzzle hash change in the DB
@@ -1199,9 +1198,13 @@ class WalletNode:
             # For every block, we need to apply the cache from race_cache
             for potential_height in range(backtrack_fork_height + 1, new_peak_hb.height + 1):
                 header_hash = self.wallet_state_manager.blockchain.height_to_hash(uint32(potential_height))
-                if header_hash in self.race_cache:
-                    self.log.info(f"Receiving race state: {self.race_cache[header_hash]}")
-                    await self.add_states_from_peer(list(self.race_cache[header_hash]), peer)
+                race_cache = self.race_cache.get(header_hash)
+                if race_cache is not None:
+                    self.log.info(f"Receiving race cache: {race_cache}")
+                    await self.add_states_from_peer(list(race_cache.coin_states), peer)
+
+            # Clear old entries that are no longer relevant
+            self.cleanup_race_cache(min_height=new_peak_hb.height - 100)
 
             self.wallet_state_manager.state_changed("new_block")
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
