@@ -119,13 +119,14 @@ jobs:
       - name: Download Results
         uses: actions/download-artifact@v3
         with:
-          name: junit-results
-          path: junit-results
+          name: junit-data
+          path: junit-data
 
       - name: Combine Results
         run: |
           sudo apt-get install junitparser
-          junitparser merge junit-results/*.xml junit-results/junit.xml
+          mkdir junit-results
+          junitparser merge junit-data/*.xml junit-results/junit.xml
 
       - name: Publish Results
         if: always()
