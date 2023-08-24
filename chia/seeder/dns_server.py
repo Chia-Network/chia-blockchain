@@ -5,7 +5,6 @@ import logging
 import signal
 import sys
 import traceback
-from asyncio import AbstractEventLoop
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
@@ -325,7 +324,6 @@ class DNSServer:
         log.info("Starting DNS server.")
         # Get a reference to the event loop as we plan to use low-level APIs.
         loop = asyncio.get_running_loop()
-        await self.setup_signal_handlers(loop)
 
         # Set up the crawl store and the peer update task.
         self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path, timeout=120))
@@ -359,8 +357,9 @@ class DNSServer:
             await self.stop()
             log.info("DNS server stopped.")
 
-    async def setup_signal_handlers(self, loop: AbstractEventLoop) -> None:
+    async def setup_process_global_state(self) -> None:
         try:
+            loop = asyncio.get_running_loop()
             loop.add_signal_handler(signal.SIGINT, self._accept_signal)
             loop.add_signal_handler(signal.SIGTERM, self._accept_signal)
         except NotImplementedError:
@@ -511,6 +510,7 @@ class DNSServer:
 
 
 async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
+    await dns_server.setup_process_global_state()
     async with dns_server.run():
         await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 

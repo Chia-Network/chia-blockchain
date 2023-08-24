@@ -6,7 +6,7 @@ import sys
 from setuptools import find_packages, setup
 
 dependencies = [
-    "aiofiles==23.1.0",  # Async IO for files
+    "aiofiles==23.2.1",  # Async IO for files
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
     "boto3==1.28.25",  # AWS S3 for DL s3 plugin
@@ -45,7 +45,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==0.10.0",
-    "coverage==7.2.7",
+    "coverage==7.3.0",
     "diff-cover==7.7.0",
     "pre-commit==3.3.3",
     "py3createtorrent==1.1.0",
