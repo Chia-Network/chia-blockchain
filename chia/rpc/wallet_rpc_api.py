@@ -948,10 +948,11 @@ class WalletRpcApi:
             if record is None:
                 log.error(f"Cannot find coin record for type {tx['type']} transaction {tx['name']}")
                 continue
-            if record.metadata is None:
-                log.error(f"Cannot find metadata for coin {coin.name().hex()}")
+            try:
+                tx["metadata"] = record.parsed_metadata().to_json_dict()
+            except ValueError as e:
+                log.exception(f"Could not parse coin record metadata: {type(e).__name__} {e}")
                 continue
-            tx["metadata"] = record.parsed_metadata().to_json_dict()
             tx["metadata"]["coin_id"] = coin.name().hex()
             tx["metadata"]["spent"] = record.spent
         return {
