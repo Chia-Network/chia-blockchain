@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from enum import IntEnum
+from itertools import zip_longest
 from typing import Dict, List, Optional, Set
 
 from chia.types.blockchain_format.coin import Coin
@@ -117,38 +118,24 @@ class WalletCoinStore:
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
-        if name is None:
-            name = record.name()
-        assert record.spent == (record.spent_block_height != 0)
-        async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute_insert(
-                "INSERT OR REPLACE INTO coin_record ("
-                "coin_name, confirmed_height, spent_height, spent, coinbase, puzzle_hash, coin_parent, amount, "
-                "wallet_type, wallet_id, coin_type, metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    name.hex(),
-                    record.confirmed_block_height,
-                    record.spent_block_height,
-                    int(record.spent),
-                    int(record.coinbase),
-                    str(record.coin.puzzle_hash.hex()),
-                    str(record.coin.parent_coin_info.hex()),
-                    bytes(uint64(record.coin.amount)),
-                    record.wallet_type,
-                    record.wallet_id,
-                    record.coin_type,
-                    None if record.metadata is None else bytes(record.metadata),
-                ),
-            )
-        self.total_count_cache.cache.clear()
+        names: List[bytes32] = []
+        if name is not None:
+            names.append(name)
 
-    async def add_coin_records(self, records: List[WalletCoinRecord]) -> None:
+        await self.add_coin_records([record], names)
+
+    async def add_coin_records(self, records: List[WalletCoinRecord], names: List[bytes32] = []) -> None:
         values2 = []
-        for record in records:
+
+        for record, name in zip_longest(records, names, fillvalue=None):
+            if record is None:
+                break
             assert record.spent == (record.spent_block_height != 0)
+            if name is None:
+                name = record.name()
             values2.append(
                 (
-                    record.name().hex(),
+                    name.hex(),
                     record.confirmed_block_height,
                     record.spent_block_height,
                     int(record.spent),
