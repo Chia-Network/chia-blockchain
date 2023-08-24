@@ -4,6 +4,7 @@ import struct
 from pathlib import Path
 from typing import Optional
 
+import aiofiles
 import pytest
 
 from chia.full_node.block_height_map import BlockHeightMap, SesCache
@@ -143,7 +144,20 @@ class TestBlockHeightMap:
                 await conn.execute("DROP TABLE full_blocks")
             await setup_db(db_wrapper)
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
+
+            # At this point we should have a proper cache file
+            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(await f.read())
+                assert len(heights) == (10000 + 1) * 32
+
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            # Make sure we didn't alter the cache (nothing to write)
+            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(await f.read())
+                assert len(new_heights) == len(heights)
+                for i in range(0, len(heights), 32):
+                    assert new_heights[i : i + 32] == heights[i : i + 32]
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
@@ -177,6 +191,15 @@ class TestBlockHeightMap:
             await setup_chain(db_wrapper, 10000, ses_every=20)
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            # We replaced the whole cache at this point so all values should be different
+            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(await f.read())
+                # Make sure we wrote the whole file
+                assert len(new_heights) == (10000 + 1) * 32
+                # Make sure none of the old values remain
+                for i in range(0, len(heights), 32):
+                    assert new_heights[i : i + 32] != heights[i : i + 32]
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
@@ -215,7 +238,20 @@ class TestBlockHeightMap:
             await setup_db(db_wrapper)
             # add 2000 blocks to the chain
             await setup_chain(db_wrapper, 4000, ses_every=20)
+
+            # At this point we should have a proper cache with the old chain data
+            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(await f.read())
+                assert len(heights) == (2000 + 1) * 32
+
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            # Make sure we properly wrote the additional data to the cache
+            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(await f.read())
+                assert len(new_heights) == (4000 + 1) * 32
+                for i in range(0, len(heights), 32):
+                    assert new_heights[i : i + 32] == heights[i : i + 32]
 
             # now make sure we have the complete chain, height 0 -> 4000
             for height in reversed(range(4000)):
