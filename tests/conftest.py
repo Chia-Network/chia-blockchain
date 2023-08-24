@@ -333,11 +333,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: List[pytest.Func
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
+    plain_consensus_only_problems: List[str] = []
     for item in items:
         if item.get_closest_marker("plain_consensus_only"):
             mode = item.callspec.params.get("consensus_mode")
             if mode is None:
-                raise Exception(f"@pytest.mark.plain_consensus_only used without consensus_mode: {item.name}")
+                plain_consensus_only_problems.append(item.name)
             if mode != Mode.PLAIN:
                 removed.append(item)
                 continue
@@ -346,6 +347,10 @@ def pytest_collection_modifyitems(config: pytest.Config, items: List[pytest.Func
     if removed:
         config.hook.pytest_deselected(items=removed)
         items[:] = kept
+
+    if len(plain_consensus_only_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in plain_consensus_only_problems)
+        raise Exception(f"@pytest.mark.plain_consensus_only used without consensus_mode:\n{name_lines}")
 
 
 @pytest.fixture(name="plain_consensus_only")
