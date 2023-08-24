@@ -329,7 +329,7 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: pytest.Config, items: List[pytest.Function]):
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
@@ -337,7 +337,7 @@ def pytest_collection_modifyitems(config, items):
         if item.get_closest_marker("plain_consensus_only"):
             mode = item.callspec.params.get("consensus_mode")
             if mode is None:
-                raise Exception("@pytest.mark.plain_consensus_only used without consensus_mode")
+                raise Exception(f"@pytest.mark.plain_consensus_only used without consensus_mode: {item.name}")
             if mode != Mode.PLAIN:
                 removed.append(item)
                 continue
