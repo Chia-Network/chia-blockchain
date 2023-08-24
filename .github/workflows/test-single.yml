@@ -227,11 +227,6 @@ jobs:
         run: |
           mv notchia/ chia/
 
-      - name: Format JUnit results
-        run: |
-          sudo apt-get install xmllint
-          xmllint --format junit-data/junit.${{ env.JOB_FILE_NAME }}.xml.raw > junit-data/junit.${{ env.JOB_FILE_NAME }}.xml
-
       - name: Publish JUnit results
         uses: actions/upload-artifact@v3
         with:

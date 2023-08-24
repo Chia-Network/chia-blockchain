@@ -122,6 +122,18 @@ jobs:
           name: junit-data
           path: junit-data
 
+      - name: Format JUnit results
+        run: |
+          sudo apt-get install xmllint
+          ls junit-data/*.xml.raw | sed 's/\.raw$//' | xargs --max-lines=1 --max-procs=10 --replace={} xmllint --format {}.raw --output {}
+
+      - name: Publish formatted JUnit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*.xml
+          if-no-files-found: error
+
       - name: Combine Results
         run: |
           sudo apt-get install junitparser xmllint
