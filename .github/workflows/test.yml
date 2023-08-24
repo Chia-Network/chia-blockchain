@@ -136,7 +136,7 @@ jobs:
 
       - name: Combine Results
         run: |
-          sudo apt-get install junitparser xmllint
+          sudo apt-get install junitparser libxml2-utils
           mkdir junit-results
           junitparser merge junit-data/*.xml junit-results/junit.xml.raw
           xmllint --format junit-results/junit.xml.raw > junit-results/junit.xml
