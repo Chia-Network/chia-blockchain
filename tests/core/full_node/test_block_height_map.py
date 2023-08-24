@@ -146,15 +146,15 @@ class TestBlockHeightMap:
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
 
             # At this point we should have a proper cache file
-            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                heights = bytearray(await f.read())
-                assert len(heights) == (10000 + 1) * 32
+            heights_stat = (tmp_dir / "height-to-hash").stat()
+            assert heights_stat.st_size == (10000 + 1) * 32
 
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             # Make sure we didn't alter the cache (nothing to write)
-            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                assert bytearray(await f.read()) == heights
+            new_heights_stat = (tmp_dir / "height-to-hash").stat()
+            assert new_heights_stat.st_mtime == heights_stat.st_mtime
+            assert new_heights_stat.st_size == heights_stat.st_size
 
             for height in reversed(range(10000)):
                 assert height_map.contains_height(uint32(height))
