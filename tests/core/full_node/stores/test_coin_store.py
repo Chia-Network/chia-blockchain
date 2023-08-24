@@ -409,7 +409,6 @@ class TestCoinStoreWithBlocks:
 
             b.shut_down()
 
-    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_get_coin_states(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
