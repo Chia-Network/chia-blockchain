@@ -116,6 +116,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download Results
+        uses: actions/download-artifact@v3
+        with:
+          name: junit-results
+          path: junit-results
+
+      - name: Combine Results
+        run: |
+          apt install junitparser
+          junitparser merge junit-results/*.xml > junit-results/junit.xml
+
+      - name: Publish Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-results
+          path: junit-results/*
+          if-no-files-found: error
+
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
