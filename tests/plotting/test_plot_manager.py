@@ -169,7 +169,7 @@ def trigger_remove_plot(_: Path, plot_path: str):
     remove_plot(Path(plot_path))
 
 
-@pytest.mark.plain_consensus_only
+@pytest.mark.plain_consensus_only(reason="not dependent on consensus, does not support parallel execution")
 @pytest.mark.asyncio
 async def test_plot_refreshing(environment):
     env: Environment = environment

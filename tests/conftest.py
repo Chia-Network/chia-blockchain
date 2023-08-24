@@ -690,7 +690,7 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest.mark.plain_consensus_only
+@pytest.mark.plain_consensus_only(reason="This test only supports one running at a time.")
 @pytest_asyncio.fixture(scope="function")
 async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
     async for _ in setup_full_system_connect_to_deamon(
@@ -972,7 +972,7 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
     print(cost_logger.log_cost_statistics())
 
 
-@pytest.mark.plain_consensus_only
+@pytest.mark.plain_consensus_only(reason="This test only supports one running at a time.")
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):

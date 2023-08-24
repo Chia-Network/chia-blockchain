@@ -33,7 +33,7 @@ from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="does not depend on consensus rules")
     @pytest.mark.asyncio
     async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
         num_blocks = 5

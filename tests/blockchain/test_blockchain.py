@@ -142,7 +142,7 @@ class TestGenesisBlock:
 
 
 class TestBlockHeaderValidation:
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks

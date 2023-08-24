@@ -53,7 +53,7 @@ log = getLogger(__name__)
 
 
 class TestWalletSync:
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
@@ -155,7 +155,7 @@ class TestWalletSync:
         ],
         indirect=True,
     )
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -207,7 +207,7 @@ class TestWalletSync:
         ],
         indirect=True,
     )
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
@@ -290,7 +290,7 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -338,7 +338,7 @@ class TestWalletSync:
                 600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
             )
 
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname):
         num_blocks = 5
@@ -395,7 +395,7 @@ class TestWalletSync:
             await time_out_assert(60, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
             await time_out_assert(60, wallet.get_confirmed_balance, 0)
 
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -1323,7 +1323,7 @@ class TestWalletSync:
             assert not wallet_node.db_flaky
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
-    @pytest.mark.plain_consensus_only
+    @pytest.mark.plain_consensus_only(reason="save time")
     @pytest.mark.asyncio
     async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -1377,7 +1377,7 @@ class TestWalletSync:
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
-@pytest.mark.plain_consensus_only
+@pytest.mark.plain_consensus_only(reason="save time")
 @pytest.mark.asyncio
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog
