@@ -138,6 +138,7 @@ def trusted_full_node(request: Any) -> bool:
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIterator[WalletTestFramework]:
+    assert len(request.param["blocks_needed"]) == request.param["num_environments"]
     async with setup_simulators_and_wallets_service(1, request.param["num_environments"], {}) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
