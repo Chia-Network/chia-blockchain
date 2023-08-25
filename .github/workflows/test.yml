@@ -125,7 +125,7 @@ jobs:
       - name: Format JUnit results
         run: |
           sudo snap install yq
-          ls junit-data/*.xml | xargs --max-lines=1 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+          ls junit-data/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit results
         uses: actions/upload-artifact@v3
@@ -139,7 +139,7 @@ jobs:
           sudo apt-get install junitparser
           mkdir junit-results
           junitparser merge junit-data/*.xml junit-results/junit.xml
-          ls junit-results/*.xml | xargs --max-lines=1 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+          ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish Results
         if: always()
