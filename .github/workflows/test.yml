@@ -124,22 +124,22 @@ jobs:
 
       - name: Format JUnit results
         run: |
-          sudo apt-get install libxml2-utils
-          ls junit-data/*.xml.raw | sed 's/\.raw$//' | xargs --max-lines=1 --max-procs=10 --replace={} xmllint --format {}.raw --output {}
+          sudo snap install yq
+          ls junit-data/*.xml | xargs --max-lines=1 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit results
         uses: actions/upload-artifact@v3
         with:
           name: junit-data
-          path: junit-data/*.xml
+          path: junit-data/*
           if-no-files-found: error
 
       - name: Combine Results
         run: |
-          sudo apt-get install junitparser libxml2-utils
+          sudo apt-get install junitparser
           mkdir junit-results
-          junitparser merge junit-data/*.xml junit-results/junit.xml.raw
-          xmllint --format junit-results/junit.xml.raw > junit-results/junit.xml
+          junitparser merge junit-data/*.xml junit-results/junit.xml
+          ls junit-results/*.xml | xargs --max-lines=1 --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish Results
         if: always()
