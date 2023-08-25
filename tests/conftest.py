@@ -977,7 +977,6 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
     print(cost_logger.log_cost_statistics())
 
 
-@pytest.mark.plain_consensus_only(reason="This test only supports one running at a time.")
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
