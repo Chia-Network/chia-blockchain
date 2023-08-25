@@ -116,6 +116,37 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download Results
+        uses: actions/download-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data
+
+      - name: Format JUnit data and prepare results
+        run: |
+          sudo snap install yq
+          ls junit-data/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+
+          sudo apt-get install junitparser
+          mkdir junit-results
+          junitparser merge junit-data/*.xml junit-results/junit.xml
+          ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
+
+      - name: Publish formatted JUnit data
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*
+          if-no-files-found: error
+
+      - name: Publish JUnit results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-results
+          path: junit-results/*
+          if-no-files-found: error
+
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
