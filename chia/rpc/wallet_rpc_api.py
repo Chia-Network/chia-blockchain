@@ -5,7 +5,7 @@ import json
 import logging
 import zlib
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -101,13 +101,17 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
-    max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
-    max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
-
-    def __init__(self, wallet_node: WalletNode):
+    def __init__(
+        self,
+        wallet_node: WalletNode,
+        max_get_coin_records_limit: uint32 = uint32(1000),
+        max_get_coin_records_filter_items: uint32 = uint32(1000),
+    ):
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
+        self.max_get_coin_records_limit = max_get_coin_records_limit
+        self.max_get_coin_records_filter_items = max_get_coin_records_filter_items
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {

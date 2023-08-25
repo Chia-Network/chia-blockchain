@@ -1861,6 +1861,8 @@ async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTest
     api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
     store = wallet_node.wallet_state_manager.coin_store
 
+    api.max_get_coin_records_limit = uint32(10)
+    api.max_get_coin_records_filter_items = uint32(10)
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
