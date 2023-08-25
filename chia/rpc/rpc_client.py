@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
 
@@ -88,3 +89,24 @@ class RpcClient:
     async def await_closed(self) -> None:
         if self.closing_task is not None:
             await self.closing_task
+
+
+@asynccontextmanager
+async def client_as_context_manager(
+    cls: Type[_T_RpcClient],
+    self_hostname: str,
+    port: uint16,
+    root_path: Path,
+    net_config: Dict[str, Any],
+) -> AsyncIterator[_T_RpcClient]:
+    rpc_client: _T_RpcClient = await cls.create(
+        self_hostname,
+        port,
+        root_path,
+        net_config,
+    )
+
+    yield rpc_client
+
+    rpc_client.close()
+    await rpc_client.await_closed()

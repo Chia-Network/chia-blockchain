@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import pytest
 import pytest_asyncio
 
+from chia.rpc.rpc_client import client_as_context_manager
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
@@ -142,62 +144,62 @@ async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIte
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **request.param["config_overrides"]}
 
         rpc_clients: List[WalletRpcClient] = []
-        for service in wallet_services:
-            service._node.config = {
-                **service._node.config,
-                "trusted_peers": {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
-                if trusted_full_node
-                else {},
-                **request.param["config_overrides"],
-            }
-            service._node.wallet_state_manager.config = service._node.config
-            await service._node.server.start_client(
-                PeerInfo(bt.config["self_hostname"], uint16(full_node[0]._api.full_node.server._port)), None
-            )
-            rpc_clients.append(
-                await WalletRpcClient.create(
-                    bt.config["self_hostname"],
-                    # Semantics guarantee us a non-None value here
-                    service.rpc_server.listen_port,  # type: ignore[union-attr]
-                    service.root_path,
-                    service.config,
+        async with AsyncExitStack() as astack:
+            for service in wallet_services:
+                service._node.config = {
+                    **service._node.config,
+                    "trusted_peers": {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
+                    if trusted_full_node
+                    else {},
+                    **request.param["config_overrides"],
+                }
+                service._node.wallet_state_manager.config = service._node.config
+                await service._node.server.start_client(
+                    PeerInfo(bt.config["self_hostname"], uint16(full_node[0]._api.full_node.server._port)), None
                 )
-            )
-
-        wallet_states: List[WalletState] = []
-        for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
-            await full_node[0]._api.farm_blocks_to_wallet(
-                count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
-            )
-            wallet_states.append(
-                WalletState(
-                    Balance(
-                        confirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
-                        unconfirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
-                        spendable_balance=uint128(2_000_000_000_000 * blocks_needed),
-                        pending_change=uint64(0),
-                        max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
-                        unspent_coin_count=uint32(2 * blocks_needed),
-                        pending_coin_removal_count=uint32(0),
-                    ),
+                rpc_clients.append(
+                    await astack.enter_async_context(
+                        client_as_context_manager(
+                            WalletRpcClient,
+                            bt.config["self_hostname"],
+                            # Semantics guarantee us a non-None value here
+                            service.rpc_server.listen_port,  # type: ignore[union-attr]
+                            service.root_path,
+                            service.config,
+                        )
+                    )
                 )
-            )
 
-        yield WalletTestFramework(
-            full_node[0]._api,
-            trusted_full_node,
-            [
-                WalletEnvironment(
-                    service._node,
-                    service._node.wallet_state_manager,
-                    service._node.wallet_state_manager.main_wallet,
-                    rpc_client,
-                    {uint32(1): wallet_state},
+            wallet_states: List[WalletState] = []
+            for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
+                await full_node[0]._api.farm_blocks_to_wallet(
+                    count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
                 )
-                for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
-            ],
-        )
+                wallet_states.append(
+                    WalletState(
+                        Balance(
+                            confirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            unconfirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            spendable_balance=uint128(2_000_000_000_000 * blocks_needed),
+                            pending_change=uint64(0),
+                            max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
+                            unspent_coin_count=uint32(2 * blocks_needed),
+                            pending_coin_removal_count=uint32(0),
+                        ),
+                    )
+                )
 
-        for rpc_client in rpc_clients:
-            rpc_client.close()
-            await rpc_client.await_closed()
+            yield WalletTestFramework(
+                full_node[0]._api,
+                trusted_full_node,
+                [
+                    WalletEnvironment(
+                        service._node,
+                        service._node.wallet_state_manager,
+                        service._node.wallet_state_manager.main_wallet,
+                        rpc_client,
+                        {uint32(1): wallet_state},
+                    )
+                    for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
+                ],
+            )
