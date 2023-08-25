@@ -138,6 +138,9 @@ def trusted_full_node(request: Any) -> bool:
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIterator[WalletTestFramework]:
+    if "trusted" in request.param:
+        if request.param["trusted"] != trusted_full_node:
+            pytest.skip("Skipping not specified trusted mode")
     assert len(request.param["blocks_needed"]) == request.param["num_environments"]
     if "config_overrides" in request.param:
         config_overrides: Dict[str, Any] = request.param["config_overrides"]

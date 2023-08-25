@@ -65,7 +65,8 @@ async def test_basic_functionality(
             "num_environments": 1,
             "config_overrides": {},
             "blocks_needed": [1],
-        }
+            "trusted": True,
+        },
     ],
     indirect=True,
 )
