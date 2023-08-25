@@ -397,12 +397,12 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
+# Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
+# mode `PLAIN` and `SOFT_FORK4`.
+# TODO: plain and also fork4
+@pytest.mark.plain_consensus_only(reason="the same setup is ran by Mode.PLAIN")
 @pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     constants = blockchain_constants
     async_gen = setup_simulators_and_wallets(
         2,
@@ -434,12 +434,12 @@ async def two_nodes_sim_and_wallets():
         yield _
 
 
+# Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
+# mode `PLAIN` and `SOFT_FORK4`.
+# TODO: plain and also fork4
+@pytest.mark.plain_consensus_only(reason="the same setup is ran by Mode.PLAIN")
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     async for _ in setup_simulators_and_wallets_service(
         2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
     ):
