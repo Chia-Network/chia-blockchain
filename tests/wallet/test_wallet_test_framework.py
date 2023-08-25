@@ -4,9 +4,7 @@ from typing import Dict, Generator, List
 
 import pytest
 
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.wallet_node import Balance
 from tests.wallet.conftest import WalletEnvironment, WalletTestFramework
 
 
@@ -122,17 +120,34 @@ async def test_balance_checking(
     with pytest.raises(KeyError, match="No wallet state for wallet id 2"):
         await env_0.check_balances()
 
-    await env_0.init_wallet_state(
-        "cat",
-        balance=Balance(
-            confirmed_wallet_balance=uint128(1_000_000),
-            unconfirmed_wallet_balance=uint128(0),
-            spendable_balance=uint128(0),
-            pending_change=uint64(0),
-            max_send_amount=uint128(0),
-            unspent_coin_count=uint32(0),
-            pending_coin_removal_count=uint32(0),
-        ),
+    with pytest.raises(ValueError, match="if you intended to initialize its state"):
+        await env_0.change_balances(
+            {
+                "cat": {
+                    "confirmed_wallet_balance": 1_000_000,
+                    "unconfirmed_wallet_balance": 0,
+                    "spendable_balance": 0,
+                    "pending_change": 0,
+                    "max_send_amount": 0,
+                    "unspent_coin_count": 0,
+                    "pending_coin_removal_count": 0,
+                }
+            }
+        )
+
+    await env_0.change_balances(
+        {
+            "cat": {
+                "init": True,
+                "confirmed_wallet_balance": 1_000_000,
+                "unconfirmed_wallet_balance": 0,
+                "spendable_balance": 0,
+                "pending_change": 0,
+                "max_send_amount": 0,
+                "unspent_coin_count": 0,
+                "pending_coin_removal_count": 0,
+            }
+        }
     )
 
     with pytest.raises(ValueError):
@@ -141,5 +156,5 @@ async def test_balance_checking(
     # Test override
     await env_0.check_balances(additional_balance_info={"cat": {"confirmed_wallet_balance": 0}})
 
-    await env_0.init_wallet_state("cat")
+    await env_0.change_balances({"cat": {"init": True, "set_remainder": True}})
     await env_0.check_balances()

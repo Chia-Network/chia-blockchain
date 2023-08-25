@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 from contextlib import AsyncExitStack
-from dataclasses import asdict, dataclass, field, replace
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from dataclasses import asdict, dataclass, field
+from typing import Any, AsyncIterator, Dict, List, Union
 
 import pytest
 import pytest_asyncio
@@ -46,15 +46,6 @@ class WalletEnvironment:
             return inverted_wallet_aliases[wallet_id]
         else:
             return wallet_id
-
-    async def init_wallet_state(self, wallet_id_or_alias: Union[int, str], balance: Optional[Balance] = None) -> None:
-        wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
-        self.wallet_states = {
-            **self.wallet_states,
-            wallet_id: WalletState(
-                await self.wallet_node.get_balance(wallet_id) if balance is None else balance,
-            ),
-        }
 
     async def check_balances(self, additional_balance_info: Dict[Union[uint32, str], Dict[str, int]] = {}) -> None:
         dealiased_additional_balance_info: Dict[uint32, Dict[str, int]] = {
@@ -99,26 +90,39 @@ class WalletEnvironment:
     async def change_balances(self, update_dictionary: Dict[Union[int, str], Dict[str, int]]) -> None:
         for wallet_id_or_alias, kwargs in update_dictionary.items():
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
+
             new_values: Dict[str, int] = {}
-            for key, change in kwargs.items():
-                if key == "set_remainder":
-                    continue
-                new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
+            if "init" in kwargs and kwargs["init"]:
+                new_values = {k: v for k, v in kwargs.items() if k not in ("set_remainder", "init")}
+            elif wallet_id not in self.wallet_states:
+                raise ValueError(
+                    f"Wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)}) does not have a current state. "
+                    "Please use 'init': True if you intended to initialize its state."
+                )
+            else:
+                for key, change in kwargs.items():
+                    if key in "set_remainder":
+                        continue
+                    new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
 
             self.wallet_states = {
                 **self.wallet_states,
-                wallet_id: replace(
-                    self.wallet_states[wallet_id],
-                    balance=Balance(
-                        **{
-                            **(
-                                asdict(await self.wallet_node.get_balance(wallet_id))
-                                if "set_remainder" in kwargs and kwargs["set_remainder"]
-                                else asdict(self.wallet_states[wallet_id].balance)
-                            ),
-                            **new_values,
-                        }
-                    ),
+                wallet_id: WalletState(
+                    **{
+                        **({} if "init" in kwargs and kwargs["init"] else asdict(self.wallet_states[wallet_id])),
+                        "balance": Balance(
+                            **{
+                                **(
+                                    asdict(await self.wallet_node.get_balance(wallet_id))
+                                    if "set_remainder" in kwargs and kwargs["set_remainder"]
+                                    else {}
+                                    if "init" in kwargs and kwargs["init"]
+                                    else asdict(self.wallet_states[wallet_id].balance)
+                                ),
+                                **new_values,
+                            }
+                        ),
+                    }
                 ),
             }
 
