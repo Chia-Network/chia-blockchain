@@ -4,6 +4,9 @@ from typing import Dict, Generator, List
 
 import pytest
 
+from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.wallet_node import Balance
 from tests.wallet.conftest import WalletEnvironment, WalletTestFramework
 
 
@@ -53,3 +56,89 @@ async def test_basic_functionality(
     assert env_0.wallet_node.config["min_mainnet_k_size"] == 2
     assert env_0.wallet_state_manager.config["min_mainnet_k_size"] == 2
     assert wallet_environments.full_node.full_node.config["min_mainnet_k_size"] == 2
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "config_overrides": {},
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.asyncio
+async def test_balance_checking(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    env_0: WalletEnvironment = wallet_environments.environments[0]
+    await env_0.check_balances()
+    await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
+    with pytest.raises(ValueError, match="2000000000000 compared to balance response 4000000000000"):
+        await env_0.check_balances()
+    with pytest.raises(KeyError):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    "confirmed_wallet_balance": 2_000_000_000_000,
+                    "unconfirmed_wallet_balance": 2_000_000_000_000,
+                    "spendable_balance": 2_000_000_000_000,
+                    "max_send_amount": 2_000_000_000_000,
+                    "unspent_coin_count": 2,
+                }
+            }
+        )
+    env_0.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+    await env_0.change_balances(
+        {
+            "xch": {
+                "confirmed_wallet_balance": 2_000_000_000_000,
+                "unconfirmed_wallet_balance": 2_000_000_000_000,
+                "spendable_balance": 2_000_000_000_000,
+                "max_send_amount": 2_000_000_000_000,
+                "unspent_coin_count": 2,
+            }
+        }
+    )
+    await env_0.check_balances()
+    await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
+    await env_0.change_balances(
+        {
+            "xch": {
+                "set_remainder": True,
+            }
+        }
+    )
+    await env_0.check_balances()
+    await CATWallet.get_or_create_wallet_for_cat(env_0.wallet_state_manager, env_0.xch_wallet, "00" * 32)
+    with pytest.raises(KeyError, match="No wallet state for wallet id 2"):
+        await env_0.check_balances()
+
+    await env_0.init_wallet_state(
+        "cat",
+        balance=Balance(
+            confirmed_wallet_balance=uint128(1_000_000),
+            unconfirmed_wallet_balance=uint128(0),
+            spendable_balance=uint128(0),
+            pending_change=uint64(0),
+            max_send_amount=uint128(0),
+            unspent_coin_count=uint32(0),
+            pending_coin_removal_count=uint32(0),
+        ),
+    )
+
+    with pytest.raises(ValueError):
+        await env_0.check_balances()
+
+    # Test override
+    await env_0.check_balances(additional_balance_info={"cat": {"confirmed_wallet_balance": 0}})
+
+    await env_0.init_wallet_state("cat")
+    await env_0.check_balances()

@@ -322,14 +322,14 @@ class VCWallet:
                 raise ValueError(
                     f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
                 )  # pragma: no cover
+        add_list: List[Coin] = list(spend_bundles[0].additions())
+        rem_list: List[Coin] = list(spend_bundles[0].removals())
         tx_list: List[TransactionRecord] = []
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundles.append(chia_tx.spend_bundle)
             tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
         spend_bundle = SpendBundle.aggregate(spend_bundles)
         now = uint64(int(time.time()))
-        add_list: List[Coin] = list(spend_bundle.additions())
-        rem_list: List[Coin] = list(spend_bundle.removals())
         tx_list.append(
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -416,8 +416,8 @@ class VCWallet:
             confirmed=False,
             sent=uint32(0),
             spend_bundle=final_bundle,
-            additions=list(final_bundle.additions()),
-            removals=list(final_bundle.removals()),
+            additions=[],
+            removals=[],
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
