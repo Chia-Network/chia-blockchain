@@ -139,10 +139,14 @@ def trusted_full_node(request: Any) -> bool:
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIterator[WalletTestFramework]:
     assert len(request.param["blocks_needed"]) == request.param["num_environments"]
+    if "config_overrides" in request.param:
+        config_overrides: Dict[str, Any] = request.param["config_overrides"]
+    else:
+        config_overrides = {}
     async with setup_simulators_and_wallets_service(1, request.param["num_environments"], {}) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
-        full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **request.param["config_overrides"]}
+        full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
         rpc_clients: List[WalletRpcClient] = []
         async with AsyncExitStack() as astack:
@@ -152,7 +156,7 @@ async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIte
                     "trusted_peers": {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
                     if trusted_full_node
                     else {},
-                    **request.param["config_overrides"],
+                    **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config
                 await service._node.server.start_client(
