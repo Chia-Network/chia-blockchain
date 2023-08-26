@@ -435,12 +435,13 @@ async def two_nodes_sim_and_wallets():
         yield _
 
 
-# Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-# mode `PLAIN` and `SOFT_FORK4`.
-# TODO: plain and also fork4
-@pytest.mark.plain_consensus_only(reason="the same setup is ran by Mode.PLAIN")
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
+    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
+    # mode `PLAIN` and `SOFT_FORK4`.
+    # TODO: translate to @pytest.mark.plain_consensus_only
+    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
+        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     async for _ in setup_simulators_and_wallets_service(
         2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
     ):
@@ -696,9 +697,11 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest.mark.plain_consensus_only(reason="This test only supports one running at a time.")
 @pytest_asyncio.fixture(scope="function")
-async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
+async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
+    # TODO: translate to @pytest.mark.plain_consensus_only
+    if consensus_mode != Mode.PLAIN:
+        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
