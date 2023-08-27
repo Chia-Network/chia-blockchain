@@ -335,14 +335,14 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
     kept = []
     limit_consensus_modes_problems: List[str] = []
     for item in items:
-        # if 'postgres' in getattr(item, 'fixturenames', ()):
-        #     item.add_marker("slow")
-
-        if item.get_closest_marker("limit_consensus_modes"):
+        limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
+        if limit_consensus_modes_marker is not None:
             mode = item.callspec.params.get("consensus_mode")
             if mode is None:
                 limit_consensus_modes_problems.append(item.name)
-            if mode != Mode.PLAIN:
+
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [Mode.PLAIN])
+            if mode not in modes:
                 removed.append(item)
                 continue
 
@@ -404,8 +404,15 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
     scope="function",
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
-    # TODO: plain... and also soft fork 4
-    params=[pytest.param(None, marks=pytest.mark.limit_consensus_modes(reason="the same setup is ran by Mode.PLAIN"))],
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
+                reason="the same setup is ran by Mode.PLAIN",
+            ),
+        )
+    ],
 )
 async def wallet_nodes(blockchain_constants, consensus_mode):
     constants = blockchain_constants
@@ -443,8 +450,15 @@ async def two_nodes_sim_and_wallets():
     scope="function",
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
-    # TODO: plain... and also soft fork 4
-    params=[pytest.param(None, marks=pytest.mark.limit_consensus_modes(reason="the same setup is ran by Mode.PLAIN"))],
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
+                reason="the same setup is ran by Mode.PLAIN",
+            ),
+        )
+    ],
 )
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
     async for _ in setup_simulators_and_wallets_service(
