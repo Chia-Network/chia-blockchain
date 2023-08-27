@@ -51,7 +51,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 
 class TestCoinStoreWithBlocks:
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_basic_coin_store(self, db_version: int, softfork_height: uint32, bt: BlockTools) -> None:
         wallet_a = WALLET_A
@@ -163,7 +163,7 @@ class TestCoinStoreWithBlocks:
                     should_be_included_prev = should_be_included.copy()
                     should_be_included = set()
 
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_set_spent(self, db_version: int, bt: BlockTools) -> None:
         blocks = bt.get_consecutive_blocks(9, [])
@@ -207,7 +207,7 @@ class TestCoinStoreWithBlocks:
                         assert record.spent
                         assert record.spent_block_index == block.height
 
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_num_unspent(self, bt: BlockTools, db_version: int) -> None:
         blocks = bt.get_consecutive_blocks(37, [])
@@ -240,7 +240,7 @@ class TestCoinStoreWithBlocks:
 
         assert test_excercised
 
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_rollback(self, db_version: int, bt: BlockTools) -> None:
         blocks = bt.get_consecutive_blocks(20)
@@ -379,7 +379,7 @@ class TestCoinStoreWithBlocks:
             finally:
                 b.shut_down()
 
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self, tmp_dir: Path, db_version: int, bt: BlockTools) -> None:
         async with DBConnection(db_version) as db_wrapper:

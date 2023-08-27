@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 
 class TestMempoolPerformance:
-    @pytest.mark.plain_consensus_only(reason="benchmark")
+    @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(

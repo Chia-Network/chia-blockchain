@@ -64,7 +64,7 @@ async def empty_blockchain_with_original_constants(
 
 
 class TestFullNodeStore:
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     @pytest.mark.parametrize("normalized_to_identity", [False, True])
     async def test_basic_store(
@@ -936,7 +936,7 @@ class TestFullNodeStore:
                 for block in blocks[-2:]:
                     await _validate_and_add_block_no_error(blockchain, block)
 
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_long_chain_slots(
         self,

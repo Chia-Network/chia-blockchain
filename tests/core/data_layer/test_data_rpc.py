@@ -1861,7 +1861,7 @@ async def test_get_sync_status(
         assert sync_status["target_generation"] == 3
 
 
-@pytest.mark.plain_consensus_only(reason="does not depend on consensus rules")
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
 @pytest.mark.asyncio
 async def test_clear_pending_roots(

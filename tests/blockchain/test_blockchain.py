@@ -142,7 +142,7 @@ class TestGenesisBlock:
 
 
 class TestBlockHeaderValidation:
-    @pytest.mark.plain_consensus_only(reason="save time")
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
@@ -3612,7 +3612,7 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 @pytest.mark.parametrize("unique_plots_window", [1, 2])
 @pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
 @pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
-@pytest.mark.plain_consensus_only
+@pytest.mark.limit_consensus_modes
 @pytest.mark.asyncio
 async def test_soft_fork4_activation(
     blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window

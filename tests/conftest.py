@@ -333,15 +333,15 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
-    plain_consensus_only_problems: List[str] = []
+    limit_consensus_modes_problems: List[str] = []
     for item in items:
         # if 'postgres' in getattr(item, 'fixturenames', ()):
         #     item.add_marker("slow")
 
-        if item.get_closest_marker("plain_consensus_only"):
+        if item.get_closest_marker("limit_consensus_modes"):
             mode = item.callspec.params.get("consensus_mode")
             if mode is None:
-                plain_consensus_only_problems.append(item.name)
+                limit_consensus_modes_problems.append(item.name)
             if mode != Mode.PLAIN:
                 removed.append(item)
                 continue
@@ -351,13 +351,13 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         config.hook.pytest_deselected(items=removed)
         items[:] = kept
 
-    if len(plain_consensus_only_problems) > 0:
-        name_lines = "\n".join(f"    {line}" for line in plain_consensus_only_problems)
-        raise Exception(f"@pytest.mark.plain_consensus_only used without consensus_mode:\n{name_lines}")
+    if len(limit_consensus_modes_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
+        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
 
 
-@pytest.fixture(name="plain_consensus_only")
-def plain_consensus_only_fixture(consensus_mode: Mode) -> Mode:
+@pytest.fixture(name="limit_consensus_modes")
+def limit_consensus_modes_fixture(consensus_mode: Mode) -> Mode:
     return consensus_mode
 
 
@@ -405,7 +405,7 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
     # TODO: plain... and also soft fork 4
-    params=[pytest.param(None, marks=pytest.mark.plain_consensus_only(reason="the same setup is ran by Mode.PLAIN"))],
+    params=[pytest.param(None, marks=pytest.mark.limit_consensus_modes(reason="the same setup is ran by Mode.PLAIN"))],
 )
 async def wallet_nodes(blockchain_constants, consensus_mode):
     constants = blockchain_constants
@@ -444,7 +444,7 @@ async def two_nodes_sim_and_wallets():
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
     # TODO: plain... and also soft fork 4
-    params=[pytest.param(None, marks=pytest.mark.plain_consensus_only(reason="the same setup is ran by Mode.PLAIN"))],
+    params=[pytest.param(None, marks=pytest.mark.limit_consensus_modes(reason="the same setup is ran by Mode.PLAIN"))],
 )
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
     async for _ in setup_simulators_and_wallets_service(
@@ -706,7 +706,7 @@ async def farmer_three_harvester_not_started(
     scope="function",
     params=[
         pytest.param(
-            None, marks=pytest.mark.plain_consensus_only(reason="This test only supports one running at a time.")
+            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
         )
     ],
 )

@@ -45,7 +45,7 @@ def use_plot_filter_info(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_block_store(
     tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool, use_plot_filter_info: bool
@@ -142,7 +142,7 @@ async def test_block_store(
             assert br.header_hash == b.header_hash
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool) -> None:
     """
@@ -175,7 +175,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
         await asyncio.gather(*tasks)
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
@@ -221,7 +221,7 @@ async def test_rollback(bt: BlockTools, tmp_dir: Path, use_cache: bool) -> None:
                 count += 1
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
@@ -241,7 +241,7 @@ async def test_count_compactified_blocks(bt: BlockTools, tmp_dir: Path, db_versi
         assert count == 0
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
@@ -261,7 +261,7 @@ async def test_count_uncompactified_blocks(bt: BlockTools, tmp_dir: Path, db_ver
         assert count == 10
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
@@ -308,7 +308,7 @@ async def test_replace_proof(bt: BlockTools, tmp_dir: Path, db_version: int, use
             assert b.challenge_chain_ip_proof == proof
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -> None:
     blocks = bt.get_consecutive_blocks(10)
@@ -348,7 +348,7 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
         assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
@@ -387,7 +387,7 @@ async def test_get_blocks_by_hash(tmp_dir: Path, bt: BlockTools, db_version: int
             await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * (get_host_parameter_limit() + 1))
 
 
-@pytest.mark.plain_consensus_only(reason="save time")
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_version: int, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
