@@ -146,28 +146,29 @@ class TestNewPeak:
 
         return None
 
-    def get_recent_reward_challenges(
-        self, blockchain: BlockchainInterface, constants: ConsensusConstants
-    ) -> List[Tuple[bytes32, uint128]]:
-        peak = blockchain.get_peak()
-        if peak is None:
-            return []
-        recent_rc: List[Tuple[bytes32, uint128]] = []
-        curr: Optional[BlockRecord] = peak
-        while curr is not None and len(recent_rc) < 2 * constants.MAX_SUB_SLOT_BLOCKS:
-            if curr != peak:
-                recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
-            if curr.first_in_sub_slot:
-                assert curr.finished_reward_slot_hashes is not None
-                sub_slot_total_iters = curr.ip_sub_slot_total_iters(constants)
-                # Start from the most recent
-                for rc in reversed(curr.finished_reward_slot_hashes):
-                    if sub_slot_total_iters < curr.sub_slot_iters:
-                        break
-                    recent_rc.append((rc, sub_slot_total_iters))
-                    sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
-            curr = blockchain.try_block_record(curr.prev_hash)
-        return list(reversed(recent_rc))
+
+def get_recent_reward_challenges(
+    self, blockchain: BlockchainInterface, constants: ConsensusConstants
+) -> List[Tuple[bytes32, uint128]]:
+    peak = blockchain.get_peak()
+    if peak is None:
+        return []
+    recent_rc: List[Tuple[bytes32, uint128]] = []
+    curr: Optional[BlockRecord] = peak
+    while curr is not None and len(recent_rc) < 2 * constants.MAX_SUB_SLOT_BLOCKS:
+        if curr != peak:
+            recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
+        if curr.first_in_sub_slot:
+            assert curr.finished_reward_slot_hashes is not None
+            sub_slot_total_iters = curr.ip_sub_slot_total_iters(constants)
+            # Start from the most recent
+            for rc in reversed(curr.finished_reward_slot_hashes):
+                if sub_slot_total_iters < curr.sub_slot_iters:
+                    break
+                recent_rc.append((rc, sub_slot_total_iters))
+                sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
+        curr = blockchain.try_block_record(curr.prev_hash)
+    return list(reversed(recent_rc))
 
 
 def timelord_peak_from_block(block, blockchain: BlockchainInterface, constants: ConsensusConstants):
