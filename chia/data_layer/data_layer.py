@@ -532,13 +532,14 @@ class DataLayer:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
-        generation = await self.data_store.get_tree_generation(tree_id)
-        all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
         filenames: List[str] = []
-        for root in all_roots:
-            root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
-            filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
-            filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
+        if await self.tree_id_exists(tree_id):
+            generation = await self.data_store.get_tree_generation(tree_id)        
+            all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
+            for root in all_roots:
+                root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
+                filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
+                filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
