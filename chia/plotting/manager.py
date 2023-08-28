@@ -46,6 +46,7 @@ class PlotManager:
     _refresh_callback: Callable
     _initial: bool
     max_compression_level_allowed: int
+    context_count: int
 
     def __init__(
         self,
@@ -79,6 +80,7 @@ class PlotManager:
         self._refresh_callback = refresh_callback
         self._initial = True
         self.max_compression_level_allowed = 0
+        self.context_count = 0
 
     def __enter__(self):
         self._lock.acquire()
@@ -95,6 +97,7 @@ class PlotManager:
         use_gpu_harvesting: bool,
         gpu_index: int,
         enforce_gpu_index: bool,
+        decompressor_timeout: int,
     ) -> HarvestingMode:
         if max_compression_level_allowed > 7:
             log.error(
@@ -111,6 +114,7 @@ class PlotManager:
             use_gpu_harvesting,
             gpu_index,
             enforce_gpu_index,
+            decompressor_timeout,
         )
         if not is_using_gpu and use_gpu_harvesting:
             log.error(
@@ -118,6 +122,7 @@ class PlotManager:
                 f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
             )
         self.max_compression_level_allowed = max_compression_level_allowed
+        self.context_count = context_count
         return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
@@ -337,17 +342,28 @@ class PlotManager:
                                 "We assume the file is being copied."
                             )
                             return None
-                    elif level > self.max_compression_level_allowed:
-                        log.warning(
-                            f"Not farming plot {file_path}. Plot compression level: {level}, "
-                            f"max compression level allowed: {self.max_compression_level_allowed}."
-                        )
-                        return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
+
+                level = cache_entry.prover.get_compression_level()
+                if level > self.max_compression_level_allowed:
+                    log.warning(
+                        f"Not farming plot {file_path}. Plot compression level: {level}, "
+                        f"max compression level allowed: {self.max_compression_level_allowed}."
+                    )
+                    return None
+
+                if level > 0 and self.context_count == 0:
+                    log.warning(
+                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                        " to start harvesting compressed plots."
+                    )
+                    return None
+
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
                     log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")

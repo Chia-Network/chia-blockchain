@@ -202,14 +202,14 @@ class KeyData(Streamable):
         # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
         if self.secrets is not None and self.public_key != self.private_key.get_g1():
             raise KeychainKeyDataMismatch("public_key")
-        if self.public_key.get_fingerprint() != self.fingerprint:
+        if uint32(self.public_key.get_fingerprint()) != self.fingerprint:
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
-            fingerprint=private_key.get_g1().get_fingerprint(),
+            fingerprint=uint32(private_key.get_g1().get_fingerprint()),
             public_key=private_key.get_g1(),
             label=label,
             secrets=KeyDataSecrets.from_mnemonic(mnemonic),
@@ -285,7 +285,7 @@ class Keychain:
         entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
         return KeyData(
-            fingerprint=fingerprint,
+            fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,

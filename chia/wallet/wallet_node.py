@@ -458,6 +458,8 @@ class WalletNode:
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
+        self.race_cache = {}
+        self.race_cache_hashes = []
         self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
@@ -1302,8 +1304,7 @@ class WalletNode:
         fork_height: Optional[uint32],
     ) -> bool:
         """
-        Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
-        is False, only new states that are not in the coin_store are returned.
+        Returns True if the coin_state is valid and included in the blockchain proved by the weight proof.
         """
         if peer.closed:
             return False

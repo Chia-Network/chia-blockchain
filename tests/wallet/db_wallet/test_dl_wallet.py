@@ -18,6 +18,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 pytestmark = pytest.mark.data_layer
 
@@ -34,12 +35,16 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
 
 class TestDLWallet:
     @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
+        "trusted,reuse_puzhash",
+        [
+            (True, True),
+            (True, False),
+            (False, False),
+        ],
     )
     @pytest.mark.asyncio
     async def test_initial_creation(
-        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool
+        self, self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, trusted: bool, reuse_puzhash: bool
     ) -> None:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
@@ -68,7 +73,7 @@ class TestDLWallet:
 
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
-                current_root, fee=uint64(1999999999999)
+                current_root, DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash), fee=uint64(1999999999999)
             )
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
@@ -120,7 +125,7 @@ class TestDLWallet:
 
         for i in range(0, 2):
             dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
-                current_root, fee=uint64(1999999999999)
+                current_root, DEFAULT_TX_CONFIG, fee=uint64(1999999999999)
             )
             expected_launcher_ids.add(launcher_id)
 
@@ -183,7 +188,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root)
+        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         assert await dl_wallet_0.get_latest_singleton(launcher_id) is not None
 
@@ -200,7 +205,7 @@ class TestDLWallet:
 
         for i in range(0, 5):
             new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
-            txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root)
+            txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG)
 
             for tx in txs:
                 await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
@@ -255,7 +260,7 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(current_root)
+        dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
@@ -275,6 +280,7 @@ class TestDLWallet:
         txs = await dl_wallet.generate_signed_transaction(
             [previous_record.lineage_proof.amount],
             [previous_record.inner_puzzle_hash],
+            DEFAULT_TX_CONFIG,
             launcher_id=previous_record.launcher_id,
             new_root_hash=new_root,
             fee=uint64(1999999999999),
@@ -284,6 +290,7 @@ class TestDLWallet:
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
+                DEFAULT_TX_CONFIG,
                 coins=set([txs[0].spend_bundle.removals()[0]]),
                 fee=uint64(1999999999999),
             )
@@ -309,7 +316,7 @@ class TestDLWallet:
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
-        txs = await dl_wallet.create_update_state_spend(launcher_id, new_root)
+        txs = await dl_wallet.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
@@ -328,7 +335,12 @@ class TestDLWallet:
         [True, False],
     )
     @pytest.mark.asyncio
-    async def test_rebase(self, self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+    async def test_rebase(
+        self,
+        self_hostname: str,
+        two_wallet_nodes: SimulatorsAndWallets,
+        trusted: bool,
+    ) -> None:  # pragma: no cover
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -371,7 +383,7 @@ class TestDLWallet:
                 return False
             return latest_singleton.confirmed
 
-        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root)
+        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         initial_record = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert initial_record is not None
@@ -395,13 +407,13 @@ class TestDLWallet:
 
         # Because these have the same fee, the one that gets pushed first will win
         report_txs = await dl_wallet_1.create_update_state_spend(
-            launcher_id, current_record.root, fee=uint64(2000000000000)
+            launcher_id, current_record.root, DEFAULT_TX_CONFIG, fee=uint64(2000000000000)
         )
         record_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
         assert record_1 is not None
         assert current_record != record_1
         update_txs = await dl_wallet_0.create_update_state_spend(
-            launcher_id, bytes32([0] * 32), fee=uint64(2000000000000)
+            launcher_id, bytes32([0] * 32), DEFAULT_TX_CONFIG, fee=uint64(2000000000000)
         )
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
@@ -458,7 +470,7 @@ class TestDLWallet:
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
         update_txs_1 = await dl_wallet_0.create_update_state_spend(
-            launcher_id, bytes32([1] * 32), fee=uint64(2000000000000)
+            launcher_id, bytes32([1] * 32), DEFAULT_TX_CONFIG, fee=uint64(2000000000000)
         )
         record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_1 is not None
@@ -471,7 +483,7 @@ class TestDLWallet:
         for tx in update_txs_1:
             await wallet_node_0.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
 
-        update_txs_0 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32))
+        update_txs_0 = await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG)
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert record_0 != record_1
@@ -540,14 +552,14 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     async with wsm_2.lock:
         dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
 
-    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32))
+    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
     await wsm_1.add_pending_transaction(dl_record)
     await wsm_1.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
 
-    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32))
+    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
     await wsm_2.add_pending_transaction(dl_record)
     await wsm_2.add_pending_transaction(std_record)
@@ -561,7 +573,9 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))
 
-    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1_999_999_999_999))
+    txs = await dl_wallet_1.create_new_mirror(
+        launcher_id_2, uint64(3), [b"foo", b"bar"], DEFAULT_TX_CONFIG, fee=uint64(1_999_999_999_999)
+    )
     additions: List[Coin] = []
     for tx in txs:
         if tx.spend_bundle is not None:
@@ -578,7 +592,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
     )
 
-    txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, fee=uint64(2_000_000_000_000))
+    txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, DEFAULT_TX_CONFIG, fee=uint64(2_000_000_000_000))
     for tx in txs:
         await wsm_1.add_pending_transaction(tx)
     await full_node_api.process_transaction_records(records=txs)

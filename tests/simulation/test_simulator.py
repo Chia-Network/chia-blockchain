@@ -11,6 +11,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 
@@ -161,6 +162,7 @@ async def test_wait_transaction_records_entered_mempool(
         tx = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
         await wallet.push_transaction(tx)
@@ -195,6 +197,7 @@ async def test_process_transaction_records(
         tx = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            tx_config=DEFAULT_TX_CONFIG,
             coins={coin},
         )
         await wallet.push_transaction(tx)

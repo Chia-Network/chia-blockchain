@@ -102,6 +102,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
+from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_coin_spend_for_coin_state,
@@ -771,12 +772,25 @@ class WalletStateManager:
         current_timestamp = self.blockchain.get_latest_timestamp()
         clawback_coins: Dict[Coin, ClawbackMetadata] = {}
         tx_fee = uint64(self.config.get("auto_claim", {}).get("tx_fee", 0))
-        min_amount = uint64(self.config.get("auto_claim", {}).get("min_amount", 0))
+        assert self.wallet_node.logged_in_fingerprint is not None
+        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(self.config.get("auto_claim", {}))
+        if tx_config_loader.min_coin_amount is None:
+            tx_config_loader = tx_config_loader.override(
+                min_coin_amount=self.config.get("auto_claim", {}).get("min_amount"),
+            )
+        tx_config: TXConfig = tx_config_loader.autofill(
+            constants=self.constants,
+            config=self.config,
+            logged_in_fingerprint=self.wallet_node.logged_in_fingerprint,
+        )
         unspent_coins = await self.coin_store.get_coin_records(
             coin_type=CoinType.CLAWBACK,
             wallet_type=WalletType.STANDARD_WALLET,
             spent_range=UInt32Range(stop=uint32(0)),
-            amount_range=UInt64Range(start=uint64(min_amount)),
+            amount_range=UInt64Range(
+                start=tx_config.coin_selection_config.min_coin_amount,
+                stop=tx_config.coin_selection_config.max_coin_amount,
+            ),
         )
         for coin in unspent_coins.records:
             try:
@@ -787,15 +801,15 @@ class WalletStateManager:
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
                         clawback_coins[coin.coin] = metadata
                         if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                            await self.spend_clawback_coins(clawback_coins, tx_fee)
+                            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
                             clawback_coins = {}
             except Exception as e:
                 self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
-            await self.spend_clawback_coins(clawback_coins, tx_fee)
+            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
 
     async def spend_clawback_coins(
-        self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64, force: bool = False
+        self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64, tx_config: TXConfig, force: bool = False
     ) -> List[bytes32]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
@@ -846,7 +860,7 @@ class WalletStateManager:
         spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
-                fee, Announcement(coin_spends[0].coin.name(), message)
+                fee, tx_config, Announcement(coin_spends[0].coin.name(), message)
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
@@ -1533,6 +1547,8 @@ class WalletStateManager:
                                 fee = 0
 
                                 to_puzzle_hash = None
+                                coin_spend: Optional[CoinSpend] = None
+                                clawback_metadata: Optional[ClawbackMetadata] = None
                                 # Find coin that doesn't belong to us
                                 amount = 0
                                 for coin in additions:
@@ -1542,6 +1558,18 @@ class WalletStateManager:
                                     if derivation_record is None:  # not change
                                         to_puzzle_hash = coin.puzzle_hash
                                         amount += coin.amount
+                                        if coin_spend is None:
+                                            # To prevent unnecessary fetch, we only fetch once,
+                                            # if there is a child coin that is not owned by the wallet.
+                                            coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
+                                            # Check if the parent coin is a Clawback coin
+                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
+                                            solution: Program = coin_spend.solution.to_program()
+                                            uncurried = uncurry_puzzle(puzzle)
+                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                        if clawback_metadata is not None:
+                                            # Add the Clawback coin as the interested coin for the sender
+                                            await self.add_interested_coin_ids([coin.name()])
                                     elif wallet_identifier.type == WalletType.CAT:
                                         # We subscribe to change for CATs since they didn't hint previously
                                         await self.add_interested_coin_ids([coin.name()])
@@ -1883,8 +1911,11 @@ class WalletStateManager:
 
         parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         change = parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type
+        # If the coin is from a Clawback spent, we want to add the INCOMING_TX,
+        # no matter if there is another TX updated.
+        clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or not coin_confirmed_transaction and not change:
+        if coinbase or clawback or not coin_confirmed_transaction and not change:
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),

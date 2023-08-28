@@ -95,7 +95,7 @@ class PlotKeysResolver:
                 await keychain_proxy.close()
         return self.resolved_keys
 
-    async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
+    async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[PrivateKey]:
         sk: Optional[PrivateKey] = None
         if keychain_proxy:
             try:
