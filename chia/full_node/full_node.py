@@ -984,13 +984,15 @@ class FullNode:
                         peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[target_peak.header_hash])
                         await peak_first_peer.close(600)
                         raise RuntimeError(
-                            f"Weight proof had the wrong height, ban peer that first sent us the peak: {peak_first_peer.peer_info.host}"
+                            f"Weight proof had the wrong height, ban peer that first sent us the peak: "
+                            f"{peak_first_peer.peer_info.host}"
                         )
                     if response.wp.recent_chain_data[-1].reward_chain_block.weight != target_peak.weight:
                         peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[target_peak.header_hash])
                         await peak_first_peer.close(600)
                         raise RuntimeError(
-                            f"Weight proof had the wrong weight, ban peer that first sent us the peak: {peak_first_peer.peer_info.host}"
+                            f"Weight proof had the wrong weight, ban peer that first sent us the peak: "
+                            f"{peak_first_peer.peer_info.host}"
                         )
 
                     raise RuntimeError(
