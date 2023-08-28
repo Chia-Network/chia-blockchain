@@ -29,6 +29,7 @@ class SyncStore:
     long_sync: bool = False
     # Header hash : peer node id
     peak_to_peer: OrderedDict[bytes32, Set[bytes32]] = field(default_factory=orderedDict)
+    peak_to_first_peer: OrderedDict[bytes32, bytes32] = field(default_factory=orderedDict)
     # peer node id : Peak
     peer_to_peak: Dict[bytes32, Peak] = field(default_factory=dict)
     # Peak we are syncing towards
@@ -67,12 +68,16 @@ class SyncStore:
             self.peak_to_peer[header_hash].add(peer_id)
         else:
             self.peak_to_peer[header_hash] = {peer_id}
+            self.peak_to_first_peer[header_hash] = peer_id
+
             if len(self.peak_to_peer) > 256:  # nice power of two
                 item = self.peak_to_peer.popitem(last=False)  # Remove the oldest entry
                 # sync target hash is used throughout the sync process and should not be deleted.
                 if self.target_peak is not None and item[0] == self.target_peak.header_hash:
                     self.peak_to_peer[item[0]] = item[1]  # Put it back in if it was the sync target
-                    self.peak_to_peer.popitem(last=False)  # Remove the oldest entry again
+                    item = self.peak_to_peer.popitem(last=False)  # Remove the oldest entry again
+
+                del self.peak_to_first_peer[item[0]]
         if new_peak:
             self.peer_to_peak[peer_id] = Peak(header_hash, height, weight)
 
