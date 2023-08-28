@@ -165,6 +165,36 @@ async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setu
     return (await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer))[1]
 
 
+async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process:
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "chia",
+        *args,
+        env={**os.environ, "CHIA_ROOT": os.fspath(root_path)},
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await process.wait()
+    assert process.stdout is not None
+    assert process.stderr is not None
+    stderr = await process.stderr.read()
+    if sys.version_info >= (3, 10, 6):
+        assert stderr == b""
+    else:
+        # https://github.com/python/cpython/issues/92841
+        assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+    assert process.returncode == 0
+
+    return process
+
+
+def create_mnemonic(seed: bytes = b"ab") -> str:
+    random_ = random.Random()
+    random_.seed(a=seed, version=2)
+    return bytes_to_mnemonic(mnemonic_bytes=bytes(random_.randrange(256) for _ in range(32)))
+
+
 @pytest.mark.asyncio
 async def test_create_insert_get(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
@@ -2037,9 +2067,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
     )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
 
-    random_ = random.Random()
-    random_.seed(b"ab", version=2)
-    mnemonic = bytes_to_mnemonic(mnemonic_bytes=bytes(random_.randrange(256) for _ in range(32)))
+    mnemonic = create_mnemonic()
     assert wallet_rpc_api.service.local_keychain is not None
     private_key = wallet_rpc_api.service.local_keychain.add_private_key(mnemonic=mnemonic)
     secondary_fingerprint: int = private_key.get_g1().get_fingerprint()
@@ -2054,7 +2082,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
         assert data_layer_service.rpc_server is not None
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer
-        # test wallte log in
+        # test wallet log in
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         if layer == InterfaceLayer.direct:
@@ -2074,35 +2102,17 @@ async def test_wallet_log_in_changes_active_fingerprint(
         elif layer == InterfaceLayer.funcs:
             await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:
-            args: List[str] = [
-                sys.executable,
-                "-m",
-                "chia",
+            process = await run_cli_cmd(
                 "data",
                 "wallet_log_in",
                 "--fingerprint",
                 str(secondary_fingerprint),
                 "--data-rpc-port",
                 str(rpc_port),
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                root_path=bt.root_path,
             )
-            await process.wait()
             assert process.stdout is not None
-            assert process.stderr is not None
-            stdout = await process.stdout.read()
-            assert stdout == b""
-            stderr = await process.stderr.read()
-            if sys.version_info >= (3, 10, 6):
-                assert stderr == b""
-            else:
-                # https://github.com/python/cpython/issues/92841
-                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
-            assert process.returncode == 0
+            assert await process.stdout.read() == b""
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
