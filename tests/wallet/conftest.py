@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import pytest
 import pytest_asyncio
@@ -14,6 +14,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -32,6 +33,14 @@ class WalletEnvironment:
     rpc_client: WalletRpcClient
     wallet_states: Dict[uint32, WalletState]
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
+    _full_node: Optional[FullNodeSimulator] = None
+
+    @property
+    def full_node_api(self) -> FullNodeSimulator:
+        if self._full_node is None:
+            raise ValueError("WalletEnvironment._full_node has not been set")
+        else:
+            return self._full_node
 
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         return (
@@ -126,6 +135,22 @@ class WalletEnvironment:
                 ),
             }
 
+    async def process_pending_state(
+        self,
+        *,
+        pre_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = {},
+        post_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = {},
+    ) -> None:
+        pending_txs: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        await self.full_node_api.wait_transaction_records_entered_mempool(pending_txs)
+        await self.full_node_api.wait_for_wallet_synced(wallet_node=self.wallet_node, timeout=20)
+        await self.change_balances(pre_block_balance_updates)
+        await self.check_balances()
+        await self.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+        await self.full_node_api.wait_for_wallet_synced(wallet_node=self.wallet_node, timeout=20)
+        await self.change_balances(post_block_balance_updates)
+        await self.check_balances()
+
 
 @dataclass
 class WalletTestFramework:
@@ -212,6 +237,7 @@ async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIte
                         service._node.wallet_state_manager.main_wallet,
                         rpc_client,
                         {uint32(1): wallet_state},
+                        _full_node=full_node[0]._api,
                     )
                     for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
                 ],

@@ -94,8 +94,8 @@ async def test_balance_checking(
         "xch": 1,
         "cat": 2,
     }
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": 2_000_000_000_000,
                 "unconfirmed_wallet_balance": 2_000_000_000_000,
@@ -103,19 +103,13 @@ async def test_balance_checking(
                 "max_send_amount": 2_000_000_000_000,
                 "unspent_coin_count": 2,
             }
-        }
-    )
-    await env_0.check_balances()
-    await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
-    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "set_remainder": True,
             }
-        }
+        },
     )
-    await env_0.check_balances()
     await CATWallet.get_or_create_wallet_for_cat(env_0.wallet_state_manager, env_0.xch_wallet, "00" * 32)
     with pytest.raises(KeyError, match="No wallet state for wallet id 2"):
         await env_0.check_balances()

@@ -156,32 +156,27 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
+    did_id: bytes32 = bytes32.from_hexstr(
+        (await DIDWallet.create_new_did_wallet(wallet_node_0.wallet_state_manager, wallet_0, uint64(1))).get_my_DID()
     )
-    await full_node_api.wait_transaction_records_entered_mempool(
-        await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-    )
-    await env_0.change_balances({"xch": {"set_remainder": True}, "did": {"init": True, "set_remainder": True}})
-    did_id = bytes32.from_hexstr(did_wallet.get_my_DID())
 
     # Mint a VC
     vc_record, txs = await client_0.vc_mint(
         did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    await env_0.change_balances(
-        {
+
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
-                "unconfirmed_wallet_balance": -201,
+                "unconfirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
                 # I'm not sure incrementing pending_coin_removal_count here by 3 is the spirit of this balance number
                 # One existing coin has been removed and two ephemeral coins have been removed
                 # Does pending_coin_removal_count attempt to show the number of current pending coins in the wallet
                 # Or does it intend to just mean all pending removals that we should eventually get coin states for?
-                "pending_coin_removal_count": 3,
+                "pending_coin_removal_count": 4,  # 3 for VC mint, 1 for DID mint
                 "set_remainder": True,
             },
+            "did": {"init": True, "set_remainder": True},
             "vc": {
                 "init": True,
                 "confirmed_wallet_balance": 0,
@@ -192,17 +187,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "unspent_coin_count": 0,
                 "pending_coin_removal_count": 0,
             },
-        }
-    )
-    await env_0.check_balances()
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    vc_wallet = await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.VC)
-    assert len(vc_wallet) == 1
-    new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
-    assert new_vc_record is not None
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
                 "pending_coin_removal_count": -4,  # 3 for VC mint, 1 for DID mint
@@ -214,9 +200,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             "vc": {
                 "unspent_coin_count": 1,
             },
-        }
+        },
     )
-    await env_0.check_balances()
+    new_vc_record: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
+    assert new_vc_record is not None
 
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
@@ -227,60 +214,56 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         new_proof_hash=proof_root,
         fee=uint64(100),
     )
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": -100,
                 "pending_coin_removal_count": 1,
                 "set_remainder": True,
             },
+            "did": {
+                "spendable_balance": -1,
+                "pending_change": 1,
+                "pending_coin_removal_count": 1,
+            },
             "vc": {
                 "pending_coin_removal_count": 1,
             },
-        }
-    )
-    await env_0.check_balances()
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    vc_record_updated: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
-    assert vc_record_updated.vc.proof_hash == proof_root
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -100,
                 "pending_coin_removal_count": -1,
                 "set_remainder": True,
             },
+            "did": {
+                "spendable_balance": 1,
+                "pending_change": -1,
+                "pending_coin_removal_count": -1,
+            },
             "vc": {
                 "pending_coin_removal_count": -1,
             },
-        }
+        },
     )
-    await env_0.check_balances()
+    vc_record_updated: Optional[VCRecord] = await client_0.vc_get(vc_record.vc.launcher_id)
+    assert vc_record_updated is not None
+    assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
     txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "vc": {
                 "pending_coin_removal_count": 1,
             },
-        }
-    )
-    await env_0.check_balances()
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "vc": {
                 "pending_coin_removal_count": -1,
             },
-        }
+        },
     )
-    await env_0.check_balances()
 
     async def check_vc_record_has_parent_id(
         parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
@@ -307,19 +290,14 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Mint CR-CAT
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": -100,
                 "set_remainder": True,
             },
-        }
-    )
-    await env_0.check_balances()
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -100,
                 "set_remainder": True,
@@ -334,9 +312,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "unspent_coin_count": 1,
                 "pending_coin_removal_count": 0,
             },
-        }
+        },
     )
-    await env_0.check_balances()
 
     async def check_length(length: int, func: Callable[..., Awaitable[Any]], *args: Any) -> Optional[Literal[True]]:
         if len(await func(*args)) == length:
@@ -372,8 +349,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         memos=["hey"],
     )
     await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": -2000000000,
                 "pending_coin_removal_count": 1,
@@ -388,15 +365,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "max_send_amount": -100,
                 "pending_coin_removal_count": 1,
             },
-        }
-    )
-    await env_0.check_balances()
-    await full_node_api.wait_transaction_records_entered_mempool([tx])
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    await env_0.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -2000000000,
                 "pending_coin_removal_count": -1,
@@ -411,9 +381,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "max_send_amount": 10,
                 "pending_coin_removal_count": -1,
             },
-        }
+        },
     )
-    await env_0.check_balances()
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
 
     # Check the other wallet was created
     await time_out_assert_not_none(
@@ -460,17 +430,19 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     txs = await client_0.vc_spend(
         vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
     )
-    await env_0.change_balances(
-        {
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "vc": {
                 "pending_coin_removal_count": 1,
             }
-        }
+        },
+        post_block_balance_updates={
+            "vc": {
+                "pending_coin_removal_count": -1,
+                "unspent_coin_count": -1,
+            }
+        },
     )
-    await env_0.check_balances()
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
     vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_updated is not None
     await client_1.vc_add_proofs(proofs.key_value_pairs)
@@ -479,15 +451,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             "vc": {"init": True, "set_remainder": True},
         }
     )
-    await env_0.change_balances(
-        {
-            "vc": {
-                "pending_coin_removal_count": -1,
-                "unspent_coin_count": -1,
-            }
-        }
-    )
-    await env_0.check_balances()
     await env_1.check_balances()
 
     # Claim the pending approval to our wallet
@@ -497,8 +460,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         DEFAULT_TX_CONFIG,
         fee=uint64(90),
     )
-    await env_1.change_balances(
-        {
+    await env_1.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": -90,
                 "pending_coin_removal_count": 1,
@@ -511,14 +474,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "unconfirmed_wallet_balance": 90,
                 "pending_coin_removal_count": 1,
             },
-        }
-    )
-    await env_1.check_balances(additional_balance_info={cr_cat_wallet_id_1: {"pending_approval_balance": 90}})
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    await env_1.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -90,
                 "pending_coin_removal_count": -1,
@@ -534,7 +491,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "unspent_coin_count": 1,
                 "pending_coin_removal_count": -1,
             },
-        }
+        },
     )
     await env_1.check_balances(additional_balance_info={cr_cat_wallet_id_1: {"pending_approval_balance": 0}})
     await time_out_assert_not_none(
@@ -564,8 +521,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
     )
     await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
-    await env_1.change_balances(
-        {
+    await env_1.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": 20,
                 "pending_coin_removal_count": 1,
@@ -580,15 +537,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "max_send_amount": -90,
                 "pending_coin_removal_count": 1,
             },
-        }
-    )
-    await env_1.check_balances()
-    await full_node_api.wait_transaction_records_entered_mempool([tx])
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    # should go straight to confirmed because we sent to ourselves
-    await env_1.change_balances(
-        {
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": 20,
                 "pending_coin_removal_count": -1,
@@ -598,15 +548,14 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 "pending_coin_removal_count": -1,
             },
             "crcat": {
-                "confirmed_wallet_balance": -50,
+                "confirmed_wallet_balance": -50,  # should go straight to confirmed because we sent to ourselves
                 "spendable_balance": 40,
                 "max_send_amount": 40,
                 "pending_coin_removal_count": -1,
                 "unspent_coin_count": 1,
             },
-        }
+        },
     )
-    await env_1.check_balances()
     await time_out_assert_not_none(
         10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_1, vc_record.vc.launcher_id
     )
@@ -615,28 +564,32 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Revoke VC
     txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
-    await env_0.change_balances(
-        {
+    await env_1.check_balances()
+    await env_0.process_pending_state(
+        pre_block_balance_updates={
             "xch": {
                 "unconfirmed_wallet_balance": -1,
                 "pending_coin_removal_count": 1,
                 "set_remainder": True,
             },
-        }
-    )
-    await env_0.check_balances()
-    await env_1.check_balances()
-    await full_node_api.wait_transaction_records_entered_mempool(txs)
-    await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-    await env_0.change_balances(
-        {
+            "did": {
+                "spendable_balance": -1,
+                "pending_change": 1,
+                "pending_coin_removal_count": 1,
+            },
+        },
+        post_block_balance_updates={
             "xch": {
                 "confirmed_wallet_balance": -1,
                 "pending_coin_removal_count": -1,
                 "set_remainder": True,
             },
-        }
+            "did": {
+                "spendable_balance": 1,
+                "pending_change": -1,
+                "pending_coin_removal_count": -1,
+            },
+        },
     )
     await env_1.change_balances(
         {
@@ -645,7 +598,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             },
         }
     )
-    await env_0.check_balances()
     await env_1.check_balances()
     vc_record_revoked: Optional[VCRecord] = await client_1.vc_get(vc_record.vc.launcher_id)
     assert vc_record_revoked is None
