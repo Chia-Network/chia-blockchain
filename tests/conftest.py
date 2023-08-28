@@ -869,7 +869,7 @@ async def timelord(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.constants, bt.config, bt.root_path):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield _
 
 

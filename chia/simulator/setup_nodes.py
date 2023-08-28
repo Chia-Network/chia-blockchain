@@ -462,6 +462,7 @@ async def setup_full_system_inner(
     )
     vdf1_port = uint16(find_available_listen_port("vdf1"))
     vdf2_port = uint16(find_available_listen_port("vdf2"))
+
     timelord_iter = setup_timelord(
         full_node_0_port, False, consensus_constants, b_tools.config, b_tools.root_path, vdf_port=vdf1_port
     )
