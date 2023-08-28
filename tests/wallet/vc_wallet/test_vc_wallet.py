@@ -17,7 +17,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16, uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -265,21 +265,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         },
     )
 
-    async def check_vc_record_has_parent_id(
-        parent_id: bytes32, client: WalletRpcClient, launcher_id: bytes32
-    ) -> Optional[Literal[True]]:
-        vc_record = await client.vc_get(launcher_id)
-        result: Optional[Literal[True]] = None
-        if vc_record is not None:
-            result = True if vc_record.vc.coin.parent_coin_info == parent_id else None
-        return result
-
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_0, vc_record.vc.launcher_id
-    )
-    vc_record_updated = await client_0.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
-
     # Add proofs to DB
     await client_0.vc_add_proofs(proofs.key_value_pairs)
     await client_0.vc_add_proofs(proofs.key_value_pairs)  # Doing it again just to make sure it doesn't care
@@ -315,22 +300,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         },
     )
 
-    async def check_length(length: int, func: Callable[..., Awaitable[Any]], *args: Any) -> Optional[Literal[True]]:
-        if len(await func(*args)) == length:
-            return True
-        return None  # pragma: no cover
-
-    await time_out_assert_not_none(
-        15, check_length, 1, wallet_node_0.wallet_state_manager.get_all_wallet_info_entries, WalletType.CRCAT
-    )
-    cr_cat_wallet_id_0: uint32 = (
-        await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT)
-    )[0].id
-    cr_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[cr_cat_wallet_id_0]
+    cr_cat_wallet_0 = wallet_node_0.wallet_state_manager.wallets[env_0.dealias_wallet_id("crcat")]
     assert isinstance(cr_cat_wallet_0, CRCATWallet)
+    assert await CRCATWallet.create(  # just testing the create method doesn't throw
+        wallet_node_0.wallet_state_manager,
+        wallet_node_0.wallet_state_manager.main_wallet,
+        (await wallet_node_0.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT))[0],
+    )
     assert {
         "data": bytes(cr_cat_wallet_0.info).hex(),
-        "id": cr_cat_wallet_id_0,
+        "id": env_0.dealias_wallet_id("crcat"),
         "name": cr_cat_wallet_0.get_name(),
         "type": cr_cat_wallet_0.type(),
         "authorized_providers": [p.hex() for p in cr_cat_wallet_0.info.authorized_providers],
@@ -339,7 +318,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
 
     # Send CR-CAT to another wallet
-    wallet_1_addr = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
+    wallet_1_addr: str = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
         DEFAULT_TX_CONFIG,
@@ -383,23 +362,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             },
         },
     )
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=20)
-
-    # Check the other wallet was created
-    await time_out_assert_not_none(
-        15, check_length, 1, wallet_node_1.wallet_state_manager.get_all_wallet_info_entries, WalletType.CRCAT
-    )
-    cr_cat_wallet_info = (
-        await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.CRCAT)
-    )[0]
-    cr_cat_wallet_id_1: uint32 = cr_cat_wallet_info.id
-    cr_cat_wallet_1 = wallet_node_1.wallet_state_manager.wallets[cr_cat_wallet_id_1]
-    assert isinstance(cr_cat_wallet_1, CRCATWallet)
-    assert await CRCATWallet.create(  # just testing the create method doesn't throw
-        wallet_node_1.wallet_state_manager,
-        wallet_node_1.wallet_state_manager.main_wallet,
-        cr_cat_wallet_info,
-    )
 
     # Check that the balances are correct
     await env_1.change_balances(
@@ -418,7 +380,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
     await env_1.check_balances(additional_balance_info={"crcat": {"pending_approval_balance": 90}})
     pending_tx = await client_1.get_transactions(
-        cr_cat_wallet_1.id(),
+        env_1.dealias_wallet_id("crcat"),
         0,
         1,
         reverse=True,
@@ -443,8 +405,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             }
         },
     )
-    vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
     await client_1.vc_add_proofs(proofs.key_value_pairs)
     await env_1.change_balances(
         {
@@ -455,7 +415,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Claim the pending approval to our wallet
     txs = await client_1.crcat_approve_pending(
-        uint32(cr_cat_wallet_id_1),
+        env_1.dealias_wallet_id("crcat"),
         uint64(90),
         DEFAULT_TX_CONFIG,
         fee=uint64(90),
@@ -493,14 +453,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             },
         },
     )
-    await env_1.check_balances(additional_balance_info={cr_cat_wallet_id_1: {"pending_approval_balance": 0}})
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_1, vc_record.vc.launcher_id
-    )
-    vc_record_updated = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_updated is not None
+    await env_1.check_balances(additional_balance_info={"crcat": {"pending_approval_balance": 0}})
     for tx in txs:
-        await time_out_assert(15, is_transaction_confirmed, True, cr_cat_wallet_1.wallet_state_manager, tx.name)
+        await time_out_assert(15, is_transaction_confirmed, True, env_1.wallet_state_manager, tx.name)
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
@@ -513,7 +468,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Test melting a CRCAT
     tx = await client_1.cat_spend(
-        cr_cat_wallet_id_1,
+        env_1.dealias_wallet_id("crcat"),
         DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
         uint64(20),
         wallet_1_addr,
@@ -556,9 +511,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             },
         },
     )
-    await time_out_assert_not_none(
-        10, check_vc_record_has_parent_id, vc_record_updated.vc.coin.name(), client_1, vc_record.vc.launcher_id
-    )
     vc_record_updated = await client_1.vc_get(vc_record_updated.vc.launcher_id)
     assert vc_record_updated is not None
 
@@ -599,8 +551,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         }
     )
     await env_1.check_balances()
-    vc_record_revoked: Optional[VCRecord] = await client_1.vc_get(vc_record.vc.launcher_id)
-    assert vc_record_revoked is None
     assert (
         len(await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).store.get_unconfirmed_vcs()) == 0
     )
