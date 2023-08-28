@@ -148,7 +148,7 @@ class TestNewPeak:
 
 
 def get_recent_reward_challenges(
-    self, blockchain: BlockchainInterface, constants: ConsensusConstants
+    blockchain: BlockchainInterface, constants: ConsensusConstants
 ) -> List[Tuple[bytes32, uint128]]:
     peak = blockchain.get_peak()
     if peak is None:
