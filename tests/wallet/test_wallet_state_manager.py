@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 import pytest
-from chia_rs.chia_rs import Coin
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
 from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
