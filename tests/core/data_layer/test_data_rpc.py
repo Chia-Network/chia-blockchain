@@ -23,6 +23,7 @@ from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
+from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -73,6 +74,7 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
+    config["data_layer"]["manage_data_interval"] = 5
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
@@ -2016,3 +2018,44 @@ async def test_issue_15955_deadlock(
                 await asyncio.gather(
                     *(asyncio.create_task(data_layer.get_value(store_id=tree_id, key=key)) for _ in range(10))
                 )
+
+
+@pytest.mark.asyncio
+async def test_unsubscribe_removes_files(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        root_hashes: List[bytes32] = []
+        assert res is not None
+        store_id = bytes32.from_hexstr(res["id"])
+        await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
+
+        for batch_count in range(10):
+            key = batch_count.to_bytes(2, "big")
+            value = batch_count.to_bytes(2, "big")
+            changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+            update_tx_rec = res["tx_id"]
+            await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
+            await asyncio.sleep(10)
+            root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
+            root_hashes.append(root_hash["hash"])
+
+        with os.scandir(data_layer.server_files_location) as entries:
+            filenames = {entry.name for entry in entries}
+            assert len(filenames) == 20
+            for generation, hash in enumerate(root_hashes):
+                assert get_delta_filename(store_id, hash, generation + 1) in filenames
+                assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
+
+        res = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
+        with os.scandir(data_layer.server_files_location) as entries:
+            filenames = {entry.name for entry in entries}
+            assert len(filenames) == 0
