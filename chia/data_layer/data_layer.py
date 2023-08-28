@@ -533,7 +533,7 @@ class DataLayer:
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
         filenames: List[str] = []
-        if await self.tree_id_exists(tree_id):
+        if await self.data_store.tree_id_exists(tree_id):
             generation = await self.data_store.get_tree_generation(tree_id)        
             all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
             for root in all_roots:
