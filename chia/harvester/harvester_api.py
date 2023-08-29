@@ -272,7 +272,7 @@ class HarvesterAPI:
             uint32(passed),
             uint32(total_proofs_found),
             uint32(total),
-            uint64(time_taken * 1_000_000),  # nano seconds,
+            uint64(time_taken * 1_000_000),  # microseconds
         )
         pass_msg = make_msg(ProtocolMessageTypes.farming_info, farming_info)
         await peer.send_message(pass_msg)

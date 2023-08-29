@@ -18,7 +18,7 @@ async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> 
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.create_data_store(fee=final_fee)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_hash: Optional[str]) -> None:
@@ -27,7 +27,7 @@ async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_h
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def update_data_store_cmd(
@@ -40,7 +40,7 @@ async def update_data_store_cmd(
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_keys_cmd(
@@ -52,7 +52,7 @@ async def get_keys_cmd(
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_keys_values_cmd(
@@ -64,7 +64,7 @@ async def get_keys_values_cmd(
     root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_root_cmd(
@@ -74,7 +74,7 @@ async def get_root_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_root(store_id=store_id_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def subscribe_cmd(
@@ -85,7 +85,7 @@ async def subscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.subscribe(store_id=store_id_bytes, urls=urls)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def unsubscribe_cmd(
@@ -95,7 +95,7 @@ async def unsubscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.unsubscribe(store_id=store_id_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def remove_subscriptions_cmd(
@@ -106,7 +106,7 @@ async def remove_subscriptions_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_kv_diff_cmd(
@@ -120,7 +120,7 @@ async def get_kv_diff_cmd(
     hash_2_bytes = bytes32.from_hexstr(hash_2)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_kv_diff(store_id=store_id_bytes, hash_1=hash_1_bytes, hash_2=hash_2_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_root_history_cmd(
@@ -130,7 +130,7 @@ async def get_root_history_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_root_history(store_id=store_id_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def add_missing_files_cmd(
@@ -142,7 +142,7 @@ async def add_missing_files_cmd(
             overwrite=overwrite,
             foldername=foldername,
         )
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def add_mirror_cmd(
@@ -157,7 +157,7 @@ async def add_mirror_cmd(
             amount=amount,
             fee=final_fee,
         )
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
@@ -168,26 +168,26 @@ async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional
             coin_id=coin_id_bytes,
             fee=final_fee,
         )
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_mirrors(store_id=store_id_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_subscriptions_cmd(rpc_port: Optional[int]) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_subscriptions()
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_owned_stores()
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def get_sync_status_cmd(
@@ -197,7 +197,7 @@ async def get_sync_status_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_any_service_client(DataLayerRpcClient, rpc_port) as (client, _):
         res = await client.get_sync_status(store_id=store_id_bytes)
-        print(res)
+        print(json.dumps(res, indent=4, sort_keys=True))
 
 
 async def check_plugins_cmd(rpc_port: Optional[int]) -> None:
