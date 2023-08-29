@@ -352,7 +352,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-
+    asset_id = args.get("asset_id")
     address = args.get("to_address")
     amount = args.get("amount")
     additions = args.get("from_json")
@@ -369,11 +369,13 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             additions=additions,
             amount=final_amount,
             inner_address=address,
+            asset_id=asset_id,
             vote_amount=vote_amount,
             fee=final_fee,
             reuse_puzhash=reuse_puzhash,
         )
         if res["success"]:
+            print(f"Created spend proposal for asset: {asset_id}")
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
         else:  # pragma: no cover
