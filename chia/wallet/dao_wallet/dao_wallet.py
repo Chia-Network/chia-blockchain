@@ -60,6 +60,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
     get_update_proposal_puzzle,
+    match_funding_puzzle,
     uncurry_proposal,
     uncurry_treasury,
 )
@@ -72,6 +73,7 @@ from chia.wallet.singleton import (
 )
 from chia.wallet.singleton_record import SingletonRecord
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
@@ -426,7 +428,7 @@ class DAOWallet(WalletProtocol):
         Notification from wallet state manager that a coin has been received.
         This can be either a treasury coin update or funds added to the treasury
         """
-        self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name()}:{coin}.")
+        self.log.info(f"DAOWallet.coin_added() called with the coin: {coin.name().hex()}:{coin}.")
         wallet_node: Any = self.wallet_state_manager.wallet_node
         peer = wallet_node.get_full_node_peer()
         if peer is None:  # pragma: no cover
@@ -438,17 +440,27 @@ class DAOWallet(WalletProtocol):
 
             # check if it's a singleton and add to singleton_store
             singleton_id = get_singleton_id_from_puzzle(parent_spend.puzzle_reveal)
+
             if singleton_id:
                 await self.wallet_state_manager.singleton_store.add_spend(self.id(), parent_spend, height)
-            else:
+            puzzle = Program.from_bytes(bytes(parent_spend.puzzle_reveal))
+            solution = Program.from_bytes(bytes(parent_spend.solution))
+            uncurried = uncurry_puzzle(puzzle)
+            matched_funding_puz = match_funding_puzzle(uncurried, solution, coin)
+            if matched_funding_puz:
                 # funding coin
-                asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
+                xch_funds_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
+                if coin.puzzle_hash == xch_funds_puzhash:
+                    asset_id = None
+                else:
+                    asset_id = get_asset_id_from_puzzle(parent_spend.puzzle_reveal.to_program())
                 if asset_id not in self.dao_info.assets:
                     new_asset_list = self.dao_info.assets.copy()
                     new_asset_list.append(asset_id)
                     dao_info = dataclasses.replace(self.dao_info, assets=new_asset_list)
                     await self.save_info(dao_info)
                     await self.wallet_state_manager.add_interested_puzzle_hashes([coin.puzzle_hash], [self.id()])
+                self.log.info(f"DAO funding coin added: {coin.name().hex()}:{coin}. Asset ID: {asset_id}")
         except Exception as e:  # pragma: no cover
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
         return
@@ -585,6 +597,8 @@ class DAOWallet(WalletProtocol):
         assert self.dao_info.parent_info is not None
 
         # get existing xch funds for treasury
+        xch_funds_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([xch_funds_puzhash], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes(
             [self.dao_info.current_treasury_coin.puzzle_hash], [self.id()]
@@ -1414,22 +1428,26 @@ class DAOWallet(WalletProtocol):
                     for condition in conditions.as_iter():
                         if condition.first().as_int() == 51:
                             sum_of_conditions += condition.rest().rest().first().as_int()
-                    cat_coins = await self.select_coins_for_asset_type(uint64(sum), tail_hash)
+                    cat_coins = await self.select_coins_for_asset_type(uint64(sum_of_conditions), tail_hash)
                     parent_amount_list = []
                     for cat_coin in cat_coins:
                         sum_of_coins += cat_coin.amount
                         parent_amount_list.append([cat_coin.parent_coin_info, cat_coin.amount])
                         lineage_proof = await self.fetch_cat_lineage_proof(cat_coin)
                         if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
-                            change_condition = Program.to(
-                                [
-                                    51,
-                                    p2_singleton_puzzle.get_tree_hash(),
-                                    sum_of_coins - sum_of_conditions,
-                                    [self.dao_info.treasury_id],
-                                ]
-                            )
-                            delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
+                            if sum_of_coins - sum_of_conditions > 0:
+                                change_condition = Program.to(
+                                    [
+                                        51,
+                                        p2_singleton_puzzle.get_tree_hash(),
+                                        sum_of_coins - sum_of_conditions,
+                                        [self.dao_info.treasury_id],
+                                    ]
+                                )
+                                delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
+                            else:
+                                delegated_puzzle = Program.to((1, conditions))
+
                             solution = Program.to(
                                 [
                                     0,

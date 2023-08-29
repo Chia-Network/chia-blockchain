@@ -603,7 +603,6 @@ def test_spend_p2_singleton() -> None:
         [cat_tail_1, [[51, 0x8BADF00D, 123], [51, 0xF00DF00D, 321]]],
         [cat_tail_2, [[51, 0x8BADF00D, 123], [51, 0xF00DF00D, 321]]],
     ]
-    # list_of_tailhash_conds = []
 
     # Solution Values
     xch_parent_amt_list = [[b"x" * 32, 10], [b"y" * 32, 100]]
@@ -622,6 +621,29 @@ def test_spend_p2_singleton() -> None:
     # Solution
     spend_p2_sol = Program.to([xch_parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
+    conds = spend_p2_puz.run(spend_p2_sol)
+    assert conds
+
+    # spend only cats
+    conditions = []
+    list_of_tailhash_conds = [
+        [cat_tail_1, [[51, b"q" * 32, 123], [51, b"w" * 32, 321]]],
+        [cat_tail_2, [[51, b"e" * 32, 123], [51, b"r" * 32, 321]]],
+    ]
+    xch_parent_amt_list = []
+    cat_parent_amt_list = [
+        [cat_tail_1, [[b"b" * 32, 100], [b"c" * 32, 400]]],
+        [cat_tail_2, [[b"e" * 32, 100], [b"f" * 32, 400]]],
+    ]
+    treasury_inner_puzhash = Program.to("treasury_inner").get_tree_hash()
+
+    # Puzzle
+    spend_p2_puz = SPEND_P2_SINGLETON_MOD.curry(
+        singleton_struct, CAT_MOD_HASH, conditions, list_of_tailhash_conds, p2_singleton_puzhash
+    )
+
+    # Solution
+    spend_p2_sol = Program.to([xch_parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
     conds = spend_p2_puz.run(spend_p2_sol)
     assert conds
 
@@ -652,7 +674,7 @@ def test_merge_p2_singleton() -> None:
         SINGLETON_MOD.curry(singleton_struct, singleton_inner).get_tree_hash()
         + Program.to([my_id, delegated_puz.get_tree_hash()]).get_tree_hash()
     )
-    assert len(conds) == 4
+    assert len(conds) == 5
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == apa
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
 
