@@ -2048,7 +2048,6 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_wallet_log_in_changes_active_fingerprint(
     self_hostname: str,
