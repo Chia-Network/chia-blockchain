@@ -17,6 +17,8 @@ from chia.daemon.keychain_server import (
     GetKeyRequest,
     GetKeyResponse,
     GetKeysResponse,
+    GetPublicKeyResponse,
+    GetPublicKeysResponse,
     SetLabelRequest,
 )
 from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
@@ -192,6 +194,14 @@ def get_key_response_data(key: KeyData) -> Dict[str, object]:
 
 def get_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
     return {"success": True, **GetKeysResponse(keys=keys).to_json_dict()}
+
+
+def get_public_key_response_data(key: KeyData) -> Dict[str, object]:
+    return {"success": True, **GetPublicKeyResponse(key=key).to_json_dict()}
+
+
+def get_public_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
+    return {"success": True, **GetPublicKeysResponse(keys=keys).to_json_dict()}
 
 
 def label_missing_response_data(request_type: Type[Any]) -> Dict[str, Any]:
@@ -1028,6 +1038,57 @@ async def test_get_keys(daemon_connection_and_temp_keychain):
         # with `include_secrets=True`
         await ws.send_str(create_payload("get_keys", {"include_secrets": True}, "test", "daemon"))
         assert_response(await ws.receive(), get_keys_response_data(keys_added))
+
+
+@pytest.mark.asyncio
+async def test_get_public_key(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # empty keychain
+    await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
+
+    keychain.add_private_key(test_key_data.mnemonic_str())
+
+    await ws.send_str(create_payload("get_public_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    response = await ws.receive()
+    assert_response(response, get_public_key_response_data(test_key_data))
+
+    # Only allowed_keys are allowed in the key dict
+    key_dict = json.loads(response.data)["data"]["key"]
+    keys_in_response = [key for key in key_dict.keys()]
+    allowed_keys = ["fingerprint", "public_key", "label"]
+    for key in keys_in_response:
+        assert key in allowed_keys, f"Unexpected key '{key}' found in response."
+
+
+@pytest.mark.asyncio
+async def test_get_public_keys(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # empty keychain
+    await ws.send_str(create_payload("get_public_keys", {}, "test", "daemon"))
+    assert_response(await ws.receive(), get_public_keys_response_data([]))
+
+    # populate keychain
+    keys = [KeyData.generate() for _ in range(5)]
+    keys_added = []
+    for key_data in keys:
+        keychain.add_private_key(key_data.mnemonic_str())
+        keys_added.append(key_data)
+
+    get_public_keys_response = get_public_keys_response_data(keys_added)
+    await ws.send_str(create_payload("get_public_keys", {}, "test", "daemon"))
+    response = await ws.receive()
+    assert_response(response, get_public_keys_response)
+
+    # Only allowed_keys are allowed in the key dict
+    allowed_keys = ["fingerprint", "public_key", "label"]
+    keys_array = json.loads(response.data)["data"]["keys"]
+    for key_dict in keys_array:
+        keys_in_response = [key for key in key_dict.keys()]
+        for key in keys_in_response:
+            assert key in allowed_keys, f"Unexpected key '{key}' found in response."
 
 
 @pytest.mark.asyncio

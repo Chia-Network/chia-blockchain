@@ -329,6 +329,33 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
+    # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
+    removed = []
+    kept = []
+    limit_consensus_modes_problems: List[str] = []
+    for item in items:
+        limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
+        if limit_consensus_modes_marker is not None:
+            mode = item.callspec.params.get("consensus_mode")
+            if mode is None:
+                limit_consensus_modes_problems.append(item.name)
+
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [Mode.PLAIN])
+            if mode not in modes:
+                removed.append(item)
+                continue
+
+        kept.append(item)
+    if removed:
+        config.hook.pytest_deselected(items=removed)
+        items[:] = kept
+
+    if len(limit_consensus_modes_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
+        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
+
+
 @pytest_asyncio.fixture(scope="function")
 async def node_with_params(request):
     params = {}
@@ -368,12 +395,21 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
-async def wallet_nodes(blockchain_constants, consensus_mode):
+@pytest_asyncio.fixture(
+    scope="function",
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
+                reason="the same setup is ran by Mode.PLAIN",
+            ),
+        )
+    ],
+)
+async def wallet_nodes(blockchain_constants, consensus_mode):
     constants = blockchain_constants
     async_gen = setup_simulators_and_wallets(
         2,
@@ -405,12 +441,21 @@ async def two_nodes_sim_and_wallets():
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
+@pytest_asyncio.fixture(
+    scope="function",
     # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
     # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
+                reason="the same setup is ran by Mode.PLAIN",
+            ),
+        )
+    ],
+)
+async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
     async for _ in setup_simulators_and_wallets_service(
         2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
     ):
@@ -666,10 +711,15 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    params=[
+        pytest.param(
+            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+        )
+    ],
+)
 async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -950,9 +1000,7 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(consensus_mode, bt):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
+async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 

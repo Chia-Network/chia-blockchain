@@ -36,14 +36,12 @@ log = logging.getLogger(__name__)
 
 
 class TestMempoolPerformance:
+    @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, consensus_mode: Mode
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
     ):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run benchmarks in PLAIN mode")
-
         blocks = default_400_blocks
         full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
