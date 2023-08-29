@@ -99,27 +99,30 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class Mode(Enum):
+class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
     SOFT_FORK3 = 2
     SOFT_FORK4 = 3
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3, Mode.SOFT_FORK4])
+@pytest.fixture(
+    scope="session",
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3, ConsensusMode.SOFT_FORK4],
+)
 def consensus_mode(request):
     return request.param
 
 
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
-    if consensus_mode == Mode.PLAIN:
+    if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == Mode.SOFT_FORK3:
+    if consensus_mode == ConsensusMode.SOFT_FORK3:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3)
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
-    if consensus_mode == Mode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
         )
@@ -188,7 +191,7 @@ saved_blocks_version = "rc5"
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -199,7 +202,7 @@ def default_400_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -210,7 +213,7 @@ def default_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -227,7 +230,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -239,7 +242,7 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
@@ -247,7 +250,7 @@ def default_10000_blocks(bt, consensus_mode):
 
 @pytest.fixture(scope="session")
 def default_20000_blocks(bt, consensus_mode):
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available")
 
     from tests.util.blockchain import persistent_blocks
@@ -258,7 +261,7 @@ def default_20000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -276,7 +279,7 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -297,7 +300,7 @@ def default_2000_blocks_compact(bt, consensus_mode):
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,
@@ -341,7 +344,7 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
             if mode is None:
                 limit_consensus_modes_problems.append(item.name)
 
-            modes = limit_consensus_modes_marker.kwargs.get("allowed", [Mode.PLAIN])
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [ConsensusMode.PLAIN])
             if mode not in modes:
                 removed.append(item)
                 continue
@@ -397,14 +400,14 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
 
 @pytest_asyncio.fixture(
     scope="function",
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
     params=[
         pytest.param(
             None,
             marks=pytest.mark.limit_consensus_modes(
-                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
-                reason="the same setup is ran by Mode.PLAIN",
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
             ),
         )
     ],
@@ -443,14 +446,14 @@ async def two_nodes_sim_and_wallets():
 
 @pytest_asyncio.fixture(
     scope="function",
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
     params=[
         pytest.param(
             None,
             marks=pytest.mark.limit_consensus_modes(
-                allowed=[Mode.PLAIN, Mode.SOFT_FORK4],
-                reason="the same setup is ran by Mode.PLAIN",
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
             ),
         )
     ],

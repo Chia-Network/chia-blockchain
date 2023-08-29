@@ -56,7 +56,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
-from tests.conftest import Mode
+from tests.conftest import ConsensusMode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -1367,8 +1367,8 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: Mode):
-        if consensus_mode == Mode.SOFT_FORK4:
+    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
+        if consensus_mode == ConsensusMode.SOFT_FORK4:
             pytest.skip("Skipped temporarily until adding more pool plots.")
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
@@ -1994,18 +1994,20 @@ class TestBodyValidation:
             (False, (AddBlockResult.NEW_PEAK, None, 2)),
         ],
     )
-    async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected, bt, consensus_mode: Mode):
+    async def test_aggsig_garbage(
+        self, empty_blockchain, opcode, with_garbage, expected, bt, consensus_mode: ConsensusMode
+    ):
         # in the 2.0 hard fork, we relax the strict 2-parameters rule of
         # AGG_SIG_* conditions, in consensus mode. In mempool mode we always
         # apply strict rules.
-        if consensus_mode == Mode.HARD_FORK_2_0 and with_garbage:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0 and with_garbage:
             expected = (AddBlockResult.NEW_PEAK, None, 2)
 
         # before the 2.0 hard fork, these conditions do not exist
         # but WalletTool still lets us create them, and aggregate them into the
         # block signature. When the pre-hard fork node sees them, the conditions
         # are ignored, but the aggregate signature is corrupt.
-        if consensus_mode != Mode.HARD_FORK_2_0 and opcode in [
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0 and opcode in [
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -2399,7 +2401,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
     @pytest.mark.asyncio
-    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: Mode):
+    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
         # No generator should have [1]s for the root
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2449,7 +2451,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        if consensus_mode == Mode.HARD_FORK_2_0:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert generator_arg is None
@@ -2464,7 +2466,7 @@ class TestBodyValidation:
             previous_generator=generator_arg,
         )
         block = blocks[-1]
-        if consensus_mode == Mode.HARD_FORK_2_0:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert len(block.transactions_generator_ref_list) == 0
@@ -3609,9 +3611,10 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 async def test_soft_fork4_activation(
     blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
 ):
-    # We don't run Mode.SOFT_FORK4, since this is already parametrized by this test.
-    # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
-    # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
+    # We don't run ConsensusMode.SOFT_FORK4, since this is already parametrized by this test.
+    # Additionally, ConsensusMode.HARD_FORK_2_0 mode is incopatible with this test, since
+    # plot filter size would be zero, blocks won't ever be produced (we'll pass every
+    # consecutive plot filter, hence no block would pass CHIP-13).
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
