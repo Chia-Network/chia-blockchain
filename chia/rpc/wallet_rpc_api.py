@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
@@ -82,6 +83,7 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
@@ -1699,15 +1701,40 @@ class WalletRpcApi:
         offered, requested, infos = offer.summary()
 
         if request.get("advanced", False):
-            return {
+            response = {
                 "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
                 "id": offer.name(),
             }
         else:
-            return {
+            response = {
                 "summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer),
                 "id": offer.name(),
             }
+
+        # This is a bit of a hack in favor of returning some more manageable information about CR-CATs
+        # A more general solution surely exists, but I'm not sure what it is right now
+        return {
+            **response,
+            "summary": {
+                **response["summary"],  # type: ignore[dict-item]
+                "infos": {
+                    key: {
+                        **info,
+                        "also": {
+                            **info["also"],
+                            "flags": ProofsChecker.from_program(
+                                uncurry_puzzle(
+                                    Program(assemble(info["also"]["proofs_checker"]))  # type: ignore[no-untyped-call]
+                                )
+                            ).flags,
+                        },
+                    }
+                    if "also" in info and "proofs_checker" in info["also"]
+                    else info
+                    for key, info in response["summary"]["infos"].items()  # type: ignore[index]
+                },
+            },
+        }
 
     async def check_offer_validity(self, request: Dict[str, Any]) -> EndpointResult:
         offer_hex: str = request["offer"]

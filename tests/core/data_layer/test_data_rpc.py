@@ -43,7 +43,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-from tests.conftest import Mode
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -1862,6 +1861,7 @@ async def test_get_sync_status(
         assert sync_status["target_generation"] == 3
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
 @pytest.mark.asyncio
 async def test_clear_pending_roots(
@@ -1870,11 +1870,7 @@ async def test_clear_pending_roots(
     tmp_path: Path,
     layer: InterfaceLayer,
     bt: BlockTools,
-    consensus_mode: Mode,
 ) -> None:
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipped test - does not depend on Consensus rules")
-
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )

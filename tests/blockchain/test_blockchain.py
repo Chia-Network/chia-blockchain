@@ -142,11 +142,9 @@ class TestGenesisBlock:
 
 
 class TestBlockHeaderValidation:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_long_chain(self, empty_blockchain, default_1000_blocks, consensus_mode: Mode):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
-
+    async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
         for block in blocks:
             if (
@@ -3614,15 +3612,14 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 @pytest.mark.parametrize("unique_plots_window", [1, 2])
 @pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
 @pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
+@pytest.mark.limit_consensus_modes
 @pytest.mark.asyncio
 async def test_soft_fork4_activation(
-    consensus_mode, blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
+    blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
 ):
     # We don't run Mode.SOFT_FORK4, since this is already parametrized by this test.
     # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
     # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipped test")
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
