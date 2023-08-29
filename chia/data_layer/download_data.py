@@ -10,7 +10,7 @@ from typing import List, Optional
 import aiohttp
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -144,7 +144,7 @@ async def insert_from_delta_file(
     timeout: int,
     log: logging.Logger,
     proxy_url: str,
-    downloader: Optional[str],
+    downloader: Optional[PluginRemote],
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -158,7 +158,11 @@ async def insert_from_delta_file(
         else:
             log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
             async with aiohttp.ClientSession() as session:
-                async with session.post(downloader + "/download", json=request_json) as response:
+                async with session.post(
+                    downloader.url + "/download",
+                    json=request_json,
+                    headers=downloader.headers,
+                ) as response:
                     res_json = await response.json()
                     if not res_json["downloaded"]:
                         log.error(f"Failed to download delta file {filename} from {downloader}: {res_json}")

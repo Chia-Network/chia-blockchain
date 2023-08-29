@@ -20,6 +20,7 @@ from chia.data_layer.data_layer_util import (
     Layer,
     Offer,
     OfferStore,
+    PluginRemote,
     PluginStatus,
     Proof,
     ProofOfInclusion,
@@ -50,16 +51,20 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
-async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
+async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Dict[str, Any]]:
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url + "/plugin_info", json={}) as response:
+            async with session.post(
+                plugin_remote.url + "/plugin_info",
+                json={},
+                headers=plugin_remote.headers,
+            ) as response:
                 ret = {"status": response.status}
                 if response.status == 200:
                     ret["response"] = json.loads(await response.text())
-                return url, ret
+                return plugin_remote, ret
     except aiohttp.ClientError as e:
-        return url, {"error": f"ClientError: {e}"}
+        return plugin_remote, {"error": f"ClientError: {e}"}
 
 
 class DataLayer:
@@ -74,8 +79,8 @@ class DataLayer:
     initialized: bool
     none_bytes: bytes32
     _server: Optional[ChiaServer]
-    downloaders: List[str]
-    uploaders: List[str]
+    downloaders: List[PluginRemote]
+    uploaders: List[PluginRemote]
 
     @property
     def server(self) -> ChiaServer:
@@ -91,8 +96,8 @@ class DataLayer:
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
-        downloaders: List[str],
-        uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
+        downloaders: List[PluginRemote],
+        uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
     ):
         if name == "":
@@ -423,12 +428,16 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[str]:
+    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[PluginRemote]:
         request_json = {"store_id": tree_id.hex(), "url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(d + "/handle_download", json=request_json) as response:
+                    async with session.post(
+                        d.url + "/handle_download",
+                        json=request_json,
+                        headers=d.headers,
+                    ) as response:
                         res_json = await response.json()
                         if res_json["handle_download"]:
                             return d
@@ -464,7 +473,11 @@ class DataLayer:
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
                         async with aiohttp.ClientSession() as session:
-                            async with session.post(uploader + "/upload", json=request_json) as response:
+                            async with session.post(
+                                uploader.url + "/upload",
+                                json=request_json,
+                                headers=uploader.headers,
+                            ) as response:
                                 res_json = await response.json()
                                 if res_json["uploaded"]:
                                     self.log.info(
@@ -503,7 +516,11 @@ class DataLayer:
             request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
             for uploader in uploaders:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(uploader + "/add_missing_files", json=request_json) as response:
+                    async with session.post(
+                        uploader.url + "/add_missing_files",
+                        json=request_json,
+                        headers=uploader.headers,
+                    ) as response:
                         res_json = await response.json()
                         if not res_json["uploaded"]:
                             self.log.error(f"failed to upload to uploader {uploader}")
@@ -872,12 +889,16 @@ class DataLayer:
             target_generation=singleton_record.generation,
         )
 
-    async def get_uploaders(self, tree_id: bytes32) -> List[str]:
+    async def get_uploaders(self, tree_id: bytes32) -> List[PluginRemote]:
         uploaders = []
         for uploader in self.uploaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(uploader + "/handle_upload", json={"store_id": tree_id.hex()}) as response:
+                    async with session.post(
+                        uploader.url + "/handle_upload",
+                        json={"store_id": tree_id.hex()},
+                        headers=uploader.headers,
+                    ) as response:
                         res_json = await response.json()
                         if res_json["handle_upload"]:
                             uploaders.append(uploader)
@@ -886,10 +907,10 @@ class DataLayer:
         return uploaders
 
     async def check_plugins(self) -> PluginStatus:
-        coros = [get_plugin_info(url=plugin) for plugin in {*self.uploaders, *self.downloaders}]
+        coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
         results = dict(await asyncio.gather(*coros))
 
-        uploader_status = {url: results.get(url, "unknown") for url in self.uploaders}
-        downloader_status = {url: results.get(url, "unknown") for url in self.downloaders}
+        uploader_status = {uploader.url: results.get(uploader.url, "unknown") for uploader in self.uploaders}
+        downloader_status = {downloader.url: results.get(downloader.url, "unknown") for downloader in self.downloaders}
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)
