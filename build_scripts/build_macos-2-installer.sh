@@ -93,7 +93,7 @@ ls -lh final_installer
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit 1
-  xcrun notarytool submit --wait --apple-id "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD" "$DMG_NAME"
+  xcrun notarytool submit --wait --apple-id "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD" --team-id "$APPLE_TEAM_ID" "$DMG_NAME"
   xcrun stapler staple "$DMG_NAME"
   echo "Notarization step complete"
 else
@@ -104,7 +104,7 @@ fi
 #
 # Ask for username and password. password should be an app specific password.
 # Generate app specific password https://support.apple.com/en-us/HT204397
-# xcrun notarytool submit --wait --apple-id username --password password Chia-0.1.X.dmg
+# xcrun notarytool submit --wait --apple-id username --password password --team-id team-id Chia-0.1.X.dmg
 # Wait until the command returns a success message
 #
 # Once that is successful, execute the following command":
