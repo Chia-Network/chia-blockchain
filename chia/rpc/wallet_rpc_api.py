@@ -3069,7 +3069,7 @@ class WalletRpcApi:
                 last_height_farmed = height
             amount += record.amount
 
-        last_time_farmed = uint32(
+        last_time_farmed = uint64(
             await self.service.get_timestamp_for_height(last_height_farmed) if last_height_farmed > 0 else 0
         )
         assert amount == pool_reward_amount + farmer_reward_amount + fee_amount
