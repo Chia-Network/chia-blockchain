@@ -2050,12 +2050,11 @@ async def test_unsubscribe_removes_files(
             root_hashes.append(root_hash["hash"])
 
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-            assert len(filenames) == 2 * update_count
-            for generation, hash in enumerate(root_hashes):
-                assert get_delta_filename(store_id, hash, generation + 1) in filenames
-                assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
+        assert len(filenames) == 2 * update_count
+        for generation, hash in enumerate(root_hashes):
+            assert get_delta_filename(store_id, hash, generation + 1) in filenames
+            assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
-        with os.scandir(data_layer.server_files_location) as entries:
-            filenames = {entry.name for entry in entries}
-            assert len(filenames) == 0
+        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        assert len(filenames) == 0
