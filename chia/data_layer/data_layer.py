@@ -436,13 +436,11 @@ class DataLayer:
     async def clean_old_full_tree_files(
         self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
     ) -> None:
-        generation = full_tree_first_publish_generation - 1
-        if generation > 0:
+        for generation in range(full_tree_first_publish_generation - 1, 0, -1):
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
-        while generation > 0 and delete_full_file_if_exists(foldername, tree_id, root):
-            generation -= 1
-            if generation > 0:
-                root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
+            file_exists = delete_full_file_if_exists(foldername, tree_id, root)
+            if not file_exists:
+                break
 
     async def upload_files(self, tree_id: bytes32) -> None:
         uploaders = await self.get_uploaders(tree_id)
