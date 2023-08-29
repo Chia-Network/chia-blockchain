@@ -546,8 +546,10 @@ class DataLayer:
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            try:
+                file_path.unlink()
+            except FileNotFoundError:
+                pass
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
