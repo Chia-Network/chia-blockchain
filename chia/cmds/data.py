@@ -470,7 +470,6 @@ def plugins_cmd() -> None:
 
 
 @plugins_cmd.command("check", help="Calls the plugin_info endpoint on all configured plugins")
-# TODO: fingerprint for plugins?  maybe?  not?
 @create_rpc_port_option()
 def check_plugins(
     data_rpc_port: int,
