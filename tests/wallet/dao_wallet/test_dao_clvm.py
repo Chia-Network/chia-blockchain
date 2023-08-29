@@ -674,7 +674,7 @@ def test_merge_p2_singleton() -> None:
         SINGLETON_MOD.curry(singleton_struct, singleton_inner).get_tree_hash()
         + Program.to([my_id, delegated_puz.get_tree_hash()]).get_tree_hash()
     )
-    assert len(conds) == 5
+    assert len(conds) == 4
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == apa
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
 
