@@ -66,6 +66,7 @@ async def init_data_layer_service(
     bt: BlockTools,
     db_path: Path,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
+    manage_data_interval: int = 5,
 ) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -74,7 +75,7 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
-    config["data_layer"]["manage_data_interval"] = 5
+    config["data_layer"]["manage_data_interval"] = manage_data_interval
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
@@ -2029,7 +2030,10 @@ async def test_unsubscribe_removes_files(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+    ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         root_hashes: List[bytes32] = []
@@ -2045,7 +2049,7 @@ async def test_unsubscribe_removes_files(
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
-            await asyncio.sleep(10)
+            await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
