@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
 
 import aiohttp
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
+from chia.wallet.conditions import Condition, conditions_from_json_dicts
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
@@ -63,6 +64,11 @@ def tx_endpoint(
             config=self.service.wallet_state_manager.config,
             logged_in_fingerprint=self.service.logged_in_fingerprint,
         )
-        return await func(self, request, *args, tx_config=tx_config, **kwargs)
+
+        extra_conditions: Tuple[Condition, ...] = tuple()
+        if "extra_conditions" in request:
+            extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
+
+        return await func(self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, **kwargs)
 
     return rpc_endpoint

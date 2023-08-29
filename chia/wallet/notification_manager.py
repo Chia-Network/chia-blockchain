@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G2Element
 
@@ -15,6 +15,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import Condition
 from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
@@ -83,7 +84,13 @@ class NotificationManager:
             return True
 
     async def send_new_notification(
-        self, target: bytes32, msg: bytes, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+        self,
+        target: bytes32,
+        msg: bytes,
+        amount: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
             uint64(amount + fee), tx_config.coin_selection_config
@@ -107,6 +114,7 @@ class NotificationManager:
             origin_id=origin_coin,
             coin_announcements_to_consume={Announcement(notification_coin.name(), b"")},
             memos=[target, msg],
+            extra_conditions=extra_conditions,
         )
         full_tx: TransactionRecord = dataclasses.replace(
             chia_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
