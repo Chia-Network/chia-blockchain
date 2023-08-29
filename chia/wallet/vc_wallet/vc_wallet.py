@@ -410,36 +410,20 @@ class VCWallet:
         )
         assert did_tx.spend_bundle is not None
         final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
-        did_tx = dataclasses.replace(did_tx, spend_bundle=None)
-        tx: TransactionRecord = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=vc.inner_puzzle_hash,
-            amount=uint64(1),
-            fee_amount=uint64(fee),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=final_bundle,
-            additions=[],
-            removals=[],
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=final_bundle.name(),
-            memos=list(compute_memos(final_bundle).items()),
-        )
+        did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle)
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                 fee, tx_config, vc_announcement
             )
-            assert tx.spend_bundle is not None
+            assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
-            tx = dataclasses.replace(tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, tx.spend_bundle]))
+            did_tx = dataclasses.replace(
+                did_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
+            )
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            return [tx, did_tx, chia_tx]
+            return [did_tx, chia_tx]
         else:
-            return [tx, did_tx]  # pragma: no cover
+            return [did_tx]  # pragma: no cover
 
     async def add_vc_authorization(self, offer: Offer, solver: Solver, tx_config: TXConfig) -> Tuple[Offer, Solver]:
         """

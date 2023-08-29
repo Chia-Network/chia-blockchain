@@ -151,10 +151,10 @@ class WalletTestFramework:
     environments: List[WalletEnvironment]
 
     async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
-        pending_txs: List[TransactionRecord] = []
+        pending_txs: List[List[TransactionRecord]] = []
         for env in self.environments:
-            pending_txs.extend(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
-        await self.full_node.wait_transaction_records_entered_mempool(pending_txs)
+            pending_txs.append(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
+        await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
         for env in self.environments:
             await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
         for env, transition in zip(self.environments, state_transitions):
@@ -166,6 +166,15 @@ class WalletTestFramework:
         for env, transition in zip(self.environments, state_transitions):
             await env.change_balances(transition.post_block_balance_updates)
             await env.check_balances(transition.post_block_additional_balance_info)
+        for i, env_and_txs in enumerate(zip(self.environments, pending_txs)):
+            env, txs = env_and_txs
+            try:
+                await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
+            except TimeoutError:
+                unconfirmed: List[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                raise TimeoutError(
+                    f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
+                )
 
 
 @pytest.fixture(scope="function", params=[True, False])

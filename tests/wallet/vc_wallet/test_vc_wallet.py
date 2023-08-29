@@ -9,7 +9,7 @@ from typing_extensions import Literal
 
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import time_out_assert_not_none
 from chia.types.blockchain_format.coin import coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -161,7 +161,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Mint a VC
-    vc_record, txs = await client_0.vc_mint(
+    vc_record, _ = await client_0.vc_mint(
         did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
 
@@ -213,7 +213,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Spend VC
     proofs: VCProofs = VCProofs({"foo": "1", "bar": "1", "baz": "1", "qux": "1", "grault": "1"})
     proof_root: bytes32 = proofs.root()
-    txs = await client_0.vc_spend(
+    await client_0.vc_spend(
         vc_record.vc.launcher_id,
         DEFAULT_TX_CONFIG,
         new_proof_hash=proof_root,
@@ -261,7 +261,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    txs = await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
+    await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -415,7 +415,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert len(pending_tx) == 1
 
     # Send the VC to wallet_1 to use for the CR-CATs
-    txs = await client_0.vc_spend(
+    await client_0.vc_spend(
         vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
     )
     await wallet_environments.process_pending_states(
@@ -443,7 +443,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     await client_1.vc_add_proofs(proofs.key_value_pairs)
 
     # Claim the pending approval to our wallet
-    txs = await client_1.crcat_approve_pending(
+    await client_1.crcat_approve_pending(
         env_1.dealias_wallet_id("crcat"),
         uint64(90),
         DEFAULT_TX_CONFIG,
@@ -492,8 +492,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             ),
         ]
     )
-    for tx in txs:
-        await time_out_assert(15, is_transaction_confirmed, True, env_1.wallet_state_manager, tx.name)
 
     # (Negative test) Try to spend a CR-CAT that we don't have a valid VC for
     with pytest.raises(ValueError):
@@ -558,7 +556,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated is not None
 
     # Revoke VC
-    txs = await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
+    await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
