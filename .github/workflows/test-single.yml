@@ -221,11 +221,18 @@ jobs:
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml=junit-data/junit.${{ env.JOB_FILE_NAME }}.xml --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Move back to chia/ for coverage
         run: |
           mv notchia/ chia/
+
+      - name: Publish JUnit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*
+          if-no-files-found: error
 
       - name: Process coverage data
         run: |

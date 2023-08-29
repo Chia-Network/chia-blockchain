@@ -33,11 +33,9 @@ from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
+    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
     @pytest.mark.asyncio
-    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("test does not depend on consesus rules")
-
+    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
         num_blocks = 5
         nodes, _, bt = two_nodes_sim_and_wallets_services
         full_node_service_1, full_node_service_2 = nodes

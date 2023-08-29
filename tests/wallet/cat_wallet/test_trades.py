@@ -24,6 +24,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
@@ -346,8 +347,9 @@ async def test_cat_trades(
     assert trade_make is not None
 
     peer = wallet_node_taker.get_full_node_peer()
+    maker_offer: Offer = Offer.from_bytes(trade_make.offer)
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         tx_config,
         fee=uint64(1),
@@ -355,6 +357,10 @@ async def test_cat_trades(
     assert trade_take is not None
     assert tx_records is not None
 
+    if credential_restricted:
+        assert (await client_maker.get_offer_summary(maker_offer))[1]["infos"][
+            bytes.fromhex(new_cat_wallet_maker.get_asset_id()).hex()
+        ]["also"]["flags"] == ProofsChecker.from_program(uncurry_puzzle(proofs_checker_taker.as_program())).flags
     if test_aggregation:
         first_offer = Offer.from_bytes(trade_take.offer)
 
