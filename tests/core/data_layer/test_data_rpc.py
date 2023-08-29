@@ -2048,16 +2048,13 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_wallet_log_in_changes_active_fingerprint(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     layer: InterfaceLayer,
-    consensus_mode: Mode,
 ) -> None:
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipped test - does not depend on Consensus rules")
-
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
