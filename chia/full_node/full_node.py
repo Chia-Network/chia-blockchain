@@ -70,7 +70,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_m
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
-from chia.util.errors import ConsensusError, Err, ValidationError
+from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
@@ -1643,6 +1643,8 @@ class FullNode:
                     if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
                         added = AddBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
+                    elif Err(pre_validation_results[0].error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
+                        raise TimestampError()
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
@@ -1823,7 +1825,10 @@ class FullNode:
             start_header_time = time.time()
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
-                raise ConsensusError(header_error)
+                if header_error == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
+                    raise TimestampError()
+                else:
+                    raise ConsensusError(header_error)
             validate_time = time.time() - start_header_time
             self.log.log(
                 logging.WARNING if validate_time > 2 else logging.DEBUG,
