@@ -6,13 +6,13 @@ import sys
 from setuptools import find_packages, setup
 
 dependencies = [
-    "aiofiles==23.1.0",  # Async IO for files
+    "aiofiles==23.2.1",  # Async IO for files
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
     "boto3==1.28.25",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.10",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
-    "chiapos==2.0.0",  # proof of space
+    "chiapos==2.0.2",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.10",
@@ -45,7 +45,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==0.10.0",
-    "coverage==7.2.7",
+    "coverage==7.3.0",
     "diff-cover==7.7.0",
     "pre-commit==3.3.3",
     "py3createtorrent==1.1.0",

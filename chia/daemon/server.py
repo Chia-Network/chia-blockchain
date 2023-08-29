@@ -748,7 +748,10 @@ class WebSocketServer:
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
-            final_words = ["Finished plotting in"]
+            if "cudaplot" in config["command_args"]:
+                final_words = ["Completed writing plot"]
+            else:
+                final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -807,7 +810,7 @@ class WebSocketServer:
     def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
-        t2 = request["t2"]  # Temp2 directory
+        t2 = request.get("t2")  # Temp2 directory
         b = request["b"]  # Buffer size
         u = request["u"]  # Buckets
         a = request.get("a")  # Fingerprint
@@ -815,8 +818,11 @@ class WebSocketServer:
         x = request["x"]  # Exclude final directory
         override_k = request["overrideK"]  # Force plot sizes < k32
 
-        command_args: List[str] = ["-k", str(k), "-t", t, "-2", t2, "-b", str(b), "-u", str(u)]
+        command_args: List[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
 
+        if t2 is not None:
+            command_args.append("-2")
+            command_args.append(str(t2))
         if a is not None:
             command_args.append("-a")
             command_args.append(str(a))
