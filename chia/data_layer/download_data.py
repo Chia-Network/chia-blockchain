@@ -89,7 +89,7 @@ async def insert_into_data_store_from_file(
 @dataclass
 class WriteFilesResult:
     result: bool
-    full_tree: Path
+    full_tree: Optional[Path]
     diff_tree: Path
 
 
@@ -112,11 +112,13 @@ async def write_files_for_root(
     written = False
     mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
 
+    written_full_file = False
     if root.generation >= full_tree_first_publish_generation:
         try:
             with open(filename_full_tree, mode) as writer:
                 await data_store.write_tree_to_file(root, node_hash, tree_id, False, writer)
             written = True
+            written_full_file = True
         except FileExistsError:
             pass
 
@@ -133,7 +135,7 @@ async def write_files_for_root(
     except FileExistsError:
         pass
 
-    return WriteFilesResult(written, filename_full_tree, filename_diff_tree)
+    return WriteFilesResult(written, filename_full_tree if written_full_file else None, filename_diff_tree)
 
 
 async def insert_from_delta_file(
