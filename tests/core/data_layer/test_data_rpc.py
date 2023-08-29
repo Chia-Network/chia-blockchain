@@ -94,7 +94,7 @@ async def init_data_layer(
     bt: BlockTools,
     db_path: Path,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
-    manage_data_interval: int = 5
+    manage_data_interval: int = 5,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
         wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval
