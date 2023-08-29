@@ -1393,7 +1393,7 @@ class DAOWallet(WalletProtocol):
                                 cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(
                                     CAT_MOD, [new_spendable_cat]
                                 )
-                            else:  # pragma: no cover
+                            else:
                                 cat_spend_bundle = cat_spend_bundle.aggregate(
                                     [
                                         cat_spend_bundle,
@@ -1457,7 +1457,7 @@ class DAOWallet(WalletProtocol):
                                     cat_coin.name(),
                                 ]
                             )
-                        else:  # pragma: no cover
+                        else:
                             solution = Program.to(
                                 [
                                     0,
@@ -1478,7 +1478,7 @@ class DAOWallet(WalletProtocol):
                     # create or merge with other CAT spends
                     if cat_spend_bundle is None:
                         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-                    else:  # pragma: no cover
+                    else:
                         cat_spend_bundle = cat_spend_bundle.aggregate(
                             [cat_spend_bundle, unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)]
                         )
@@ -1684,19 +1684,19 @@ class DAOWallet(WalletProtocol):
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
                 spends.append(prop_sb)
 
-        sb = await dao_cat_wallet.remove_active_proposal(closed_list, fee=fee, push=False)
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, push=False)
         spends.append(sb)
 
         if not spends:  # pragma: no cover
             raise ValueError("No proposals are available for release")
 
         full_spend = SpendBundle.aggregate(spends)
-        if fee > 0:  # pragma: no cover
+        if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(fee, reuse_puzhash=reuse_puzhash)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
 
-        if push:  # pragma: no cover
+        if push:
             assert isinstance(finished_puz, Program)
             record = TransactionRecord(
                 confirmed_at_height=uint32(0),

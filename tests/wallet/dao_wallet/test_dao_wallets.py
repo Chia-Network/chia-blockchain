@@ -896,7 +896,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     # Remove Proposals from Memory and Free up locked coins
     await time_out_assert(20, len, 5, dao_wallet_0.dao_info.proposals_list)
     await dao_wallet_0.clear_finished_proposals_from_memory()
-    free_sb = await dao_wallet_0.free_coins_from_finished_proposals()
+    free_sb = await dao_wallet_0.free_coins_from_finished_proposals(fee=uint64(100), push=True)
     assert free_sb is not None
     await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, free_sb.name())
     await full_node_api.process_spend_bundles(bundles=[free_sb])
