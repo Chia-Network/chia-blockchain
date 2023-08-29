@@ -475,7 +475,7 @@ class DataLayer:
                         "store_id": tree_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
                     }
-                    if publish_generation >= full_tree_first_publish_generation:
+                    if write_file_result.full_tree is not None:
                         request_json["full_tree_filename"] = write_file_result.full_tree.name
 
                     for uploader in uploaders:
@@ -500,7 +500,8 @@ class DataLayer:
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
-                os.remove(write_file_result.full_tree)
+                if write_file_result.full_tree is not None:
+                    os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
@@ -527,7 +528,7 @@ class DataLayer:
                 overwrite,
             )
             files.append(res.diff_tree.name)
-            if generation >= full_tree_first_publish_generation:
+            if res.full_tree is not None:
                 files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
