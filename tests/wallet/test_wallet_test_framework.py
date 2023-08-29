@@ -5,7 +5,7 @@ from typing import Dict, Generator, List
 import pytest
 
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from tests.wallet.conftest import WalletEnvironment, WalletTestFramework
+from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 @pytest.fixture(scope="session")
@@ -94,21 +94,25 @@ async def test_balance_checking(
         "xch": 1,
         "cat": 2,
     }
-    await env_0.process_pending_state(
-        pre_block_balance_updates={
-            "xch": {
-                "confirmed_wallet_balance": 2_000_000_000_000,
-                "unconfirmed_wallet_balance": 2_000_000_000_000,
-                "spendable_balance": 2_000_000_000_000,
-                "max_send_amount": 2_000_000_000_000,
-                "unspent_coin_count": 2,
-            }
-        },
-        post_block_balance_updates={
-            "xch": {
-                "set_remainder": True,
-            }
-        },
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": 2_000_000_000_000,
+                        "unconfirmed_wallet_balance": 2_000_000_000_000,
+                        "spendable_balance": 2_000_000_000_000,
+                        "max_send_amount": 2_000_000_000_000,
+                        "unspent_coin_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    }
+                },
+            )
+        ]
     )
     await CATWallet.get_or_create_wallet_for_cat(env_0.wallet_state_manager, env_0.xch_wallet, "00" * 32)
     with pytest.raises(KeyError, match="No wallet state for wallet id 2"):

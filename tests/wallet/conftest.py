@@ -26,6 +26,14 @@ class WalletState:
 
 
 @dataclass
+class WalletStateTransition:
+    pre_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
+    post_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
+    pre_block_additional_balance_info: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
+    post_block_additional_balance_info: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
+
+
+@dataclass
 class WalletEnvironment:
     wallet_node: WalletNode
     wallet_state_manager: WalletStateManager
@@ -56,7 +64,7 @@ class WalletEnvironment:
         else:
             return wallet_id
 
-    async def check_balances(self, additional_balance_info: Dict[Union[uint32, str], Dict[str, int]] = {}) -> None:
+    async def check_balances(self, additional_balance_info: Dict[Union[int, str], Dict[str, int]] = {}) -> None:
         dealiased_additional_balance_info: Dict[uint32, Dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
@@ -135,28 +143,29 @@ class WalletEnvironment:
                 ),
             }
 
-    async def process_pending_state(
-        self,
-        *,
-        pre_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = {},
-        post_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = {},
-    ) -> None:
-        pending_txs: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
-        await self.full_node_api.wait_transaction_records_entered_mempool(pending_txs)
-        await self.full_node_api.wait_for_wallet_synced(wallet_node=self.wallet_node, timeout=20)
-        await self.change_balances(pre_block_balance_updates)
-        await self.check_balances()
-        await self.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-        await self.full_node_api.wait_for_wallet_synced(wallet_node=self.wallet_node, timeout=20)
-        await self.change_balances(post_block_balance_updates)
-        await self.check_balances()
-
 
 @dataclass
 class WalletTestFramework:
     full_node: FullNodeSimulator
     trusted_full_node: bool
     environments: List[WalletEnvironment]
+
+    async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
+        pending_txs: List[TransactionRecord] = []
+        for env in self.environments:
+            pending_txs.extend(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
+        await self.full_node.wait_transaction_records_entered_mempool(pending_txs)
+        for env in self.environments:
+            await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+        for env, transition in zip(self.environments, state_transitions):
+            await env.change_balances(transition.pre_block_balance_updates)
+            await env.check_balances(transition.pre_block_additional_balance_info)
+        await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+        for env in self.environments:
+            await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+        for env, transition in zip(self.environments, state_transitions):
+            await env.change_balances(transition.post_block_balance_updates)
+            await env.check_balances(transition.post_block_additional_balance_info)
 
 
 @pytest.fixture(scope="function", params=[True, False])
