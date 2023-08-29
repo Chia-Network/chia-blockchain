@@ -51,9 +51,12 @@
               (+ total (f (r (f p2_singleton_list))))
               output
             )
-            (c
-              (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT) (list (f (r TREASURY_SINGLETON_STRUCT))))
-              output
+            (if (> (- total SPEND_AMOUNT) 0)
+                (c
+                  (list CREATE_COIN P2_SINGLETON_PUZHASH (- total SPEND_AMOUNT) (list (f (r TREASURY_SINGLETON_STRUCT))))
+                  output
+                )
+                output
             )
         )
       )
@@ -119,9 +122,12 @@
             (r parent_amount_list)  ; this is the delegated_puzhash
             (sha256tree 0)  ; most coins destroy themselves
             (calculate_delegated_puzzlehash  ; the last coin creates the conditions
-              (c
-                (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) (list (f (r TREASURY_SINGLETON_STRUCT))))
-                CONDITIONS_FOR_THIS_ASSET_TYPE
+              (if (> (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) 0)
+                  (c
+                    (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) (list (f (r TREASURY_SINGLETON_STRUCT))))
+                    CONDITIONS_FOR_THIS_ASSET_TYPE
+                  )
+                  CONDITIONS_FOR_THIS_ASSET_TYPE
               )
             )
           )
@@ -137,7 +143,7 @@
             output
           )
         )
-        ()
+        output
     )
   )
 
@@ -150,7 +156,7 @@
       p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
       output
     )
-    (if p2_singleton_tailhash_parent_amount_list
+    (if LIST_OF_TAILHASH_CONDITIONS
         (for_each_asset_type
           TREASURY_SINGLETON_STRUCT
           CAT_MOD_HASH
@@ -186,21 +192,31 @@
     (list ASSERT_MY_PUZZLEHASH (calculate_singleton_puzzle_hash TREASURY_SINGLETON_STRUCT treasury_inner_puzhash))
     (c
       (list CREATE_COIN treasury_inner_puzhash ONE (list (f (r TREASURY_SINGLETON_STRUCT))))
-      (loop_through_list
-        TREASURY_SINGLETON_STRUCT
-        (sum_create_coins CONDITIONS)
-        P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
-        (calculate_coin_id (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list))))
-        (r p2_singleton_parent_amount_list)
-        (f (r (f p2_singleton_parent_amount_list)))
-        (for_each_asset_type
-          TREASURY_SINGLETON_STRUCT
-          CAT_MOD_HASH
-          P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
-          LIST_OF_TAILHASH_CONDITIONS
-          p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
-          CONDITIONS
-        )
+      (if CONDITIONS
+          (loop_through_list
+            TREASURY_SINGLETON_STRUCT
+            (sum_create_coins CONDITIONS)
+            P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+            (if p2_singleton_parent_amount_list (calculate_coin_id (f (f p2_singleton_parent_amount_list)) P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH (f (r (f p2_singleton_parent_amount_list)))) ())
+            (if p2_singleton_parent_amount_list (r p2_singleton_parent_amount_list) ())
+            (if p2_singleton_parent_amount_list (f (r (f p2_singleton_parent_amount_list))) ())
+            (for_each_asset_type
+              TREASURY_SINGLETON_STRUCT
+              CAT_MOD_HASH
+              P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+              LIST_OF_TAILHASH_CONDITIONS
+              p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
+              CONDITIONS
+            )
+          )
+          (for_each_asset_type
+            TREASURY_SINGLETON_STRUCT
+            CAT_MOD_HASH
+            P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH
+            LIST_OF_TAILHASH_CONDITIONS
+            p2_singleton_tailhash_parent_amount_list  ; ((tailhash ((parent amount) (parent_amount)... ) (tailhash (parent amount))..)
+            CONDITIONS
+          )
       )
     )
   )
