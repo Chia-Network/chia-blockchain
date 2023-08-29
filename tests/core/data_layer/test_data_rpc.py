@@ -2037,7 +2037,8 @@ async def test_unsubscribe_removes_files(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
 
-        for batch_count in range(10):
+        update_count = 10
+        for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
             changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
@@ -2048,9 +2049,8 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        with os.scandir(data_layer.server_files_location) as entries:
-            filenames = {entry.name for entry in entries}
-            assert len(filenames) == 20
+        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+            assert len(filenames) == 2 * update_count
             for generation, hash in enumerate(root_hashes):
                 assert get_delta_filename(store_id, hash, generation + 1) in filenames
                 assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
