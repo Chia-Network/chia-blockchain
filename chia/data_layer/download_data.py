@@ -204,9 +204,11 @@ def delete_full_file_if_exists(foldername: Path, tree_id: bytes32, root: Root) -
         node_hash = bytes32([0] * 32)  # todo change
 
     filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
-    if not os.path.exists(filename_full_tree):
+    try:
+        filename_full_tree.unlink()
+    except FileNotFoundError:
         return False
-    os.remove(filename_full_tree)
+
     return True
 
 
