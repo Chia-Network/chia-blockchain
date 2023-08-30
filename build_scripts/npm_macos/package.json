@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@chia-network/notarize-cli": "^0.2.2",
     "dmg-license": "^1.0.11",
     "electron-builder": "^24.6.3",
     "lerna": "7.1.3",
