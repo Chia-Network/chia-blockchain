@@ -1404,7 +1404,7 @@ class DAOWallet(WalletProtocol):
                                 cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(
                                     CAT_MOD, [new_spendable_cat]
                                 )
-                            else:
+                            else:  # pragma: no cover
                                 cat_spend_bundle = cat_spend_bundle.aggregate(
                                     [
                                         cat_spend_bundle,
@@ -1456,7 +1456,7 @@ class DAOWallet(WalletProtocol):
                                     ]
                                 )
                                 delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
-                            else:
+                            else:  # pragma: no cover
                                 delegated_puzzle = Program.to((1, conditions))
 
                             solution = Program.to(

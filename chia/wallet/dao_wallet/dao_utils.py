@@ -546,7 +546,7 @@ def get_proposed_puzzle_reveal_from_solution(solution: Program) -> Program:
 
 def get_asset_id_from_puzzle(puzzle: Program) -> Optional[bytes32]:
     mod, curried_args = puzzle.uncurry()
-    if mod == MOD:
+    if mod == MOD:  # pragma: no cover
         return None
     elif mod == CAT_MOD:
         return bytes32(curried_args.at("rf").as_atom())
