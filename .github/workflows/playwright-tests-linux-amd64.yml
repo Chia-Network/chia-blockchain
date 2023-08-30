@@ -13,6 +13,18 @@ on:
         - 9.9.9-b1
         - 9.9.9-rc1
         - 9.9.9
+  push:
+    paths-ignore:
+    - '**.md'
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
+  pull_request:
+    paths-ignore:
+    - '**.md'
+    branches:
+      - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
