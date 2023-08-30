@@ -62,6 +62,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.weight_proof import WeightProof
 from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
@@ -125,6 +126,7 @@ class FullNode:
     _blockchain: Optional[Blockchain]
     _timelord_lock: Optional[asyncio.Lock]
     weight_proof_handler: Optional[WeightProofHandler]
+    bad_peak_cache: Dict[bytes32, uint32]  # hashes of peaks that failed long sync on chip13 Validation
 
     @property
     def server(self) -> ChiaServer:
@@ -187,6 +189,7 @@ class FullNode:
         self._blockchain = None
         self._timelord_lock = None
         self.weight_proof_handler = None
+        self.bad_peak_cache = {}
 
     @property
     def block_store(self) -> BlockStore:
@@ -551,7 +554,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary = await self.add_block_batch(response.blocks, peer, None)
+                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -890,8 +893,6 @@ class FullNode:
             - Download blocks in batch (and in parallel) and verify them one at a time
             - Disconnect peers that provide invalid blocks or don't have the blocks
         """
-        if self.weight_proof_handler is None:
-            return None
         # Ensure we are only syncing once and not double calling this method
         if self.sync_store.get_sync_mode():
             return None
@@ -947,62 +948,9 @@ class FullNode:
                         target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
-
-            peers_with_peak = self.get_peers_with_peak(target_peak.header_hash)
-
-            # Request weight proof from a random peer
-            self.log.info(f"Total of {len(peers_with_peak)} peers with peak {target_peak.height}")
-            weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
-            self.log.info(
-                f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} "
-                f"up to height {target_peak.height}"
+            fork_point, summaries = await self.request_validate_wp(
+                target_peak.header_hash, target_peak.height, target_peak.weight
             )
-            cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
-            if cur_peak is not None and target_peak.weight <= cur_peak.weight:
-                raise ValueError("Not performing sync, already caught up.")
-
-            wp_timeout = 360
-            if "weight_proof_timeout" in self.config:
-                wp_timeout = self.config["weight_proof_timeout"]
-            self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-            request = full_node_protocol.RequestProofOfWeight(target_peak.height, target_peak.header_hash)
-            response = await weight_proof_peer.call_api(
-                FullNodeAPI.request_proof_of_weight, request, timeout=wp_timeout
-            )
-
-            # Disconnect from this peer, because they have not behaved properly
-            if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
-                await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
-            if response.wp.recent_chain_data[-1].reward_chain_block.height != target_peak.height:
-                await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
-            if response.wp.recent_chain_data[-1].reward_chain_block.weight != target_peak.weight:
-                await weight_proof_peer.close(600)
-                raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_info.host}")
-
-            # dont sync to wp if local peak is heavier,
-            # dont ban peer, we asked for this peak
-            current_peak = self.blockchain.get_peak()
-            if current_peak is not None:
-                if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
-                    raise RuntimeError(
-                        f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
-                    )
-
-            try:
-                validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
-            except Exception as e:
-                await weight_proof_peer.close(600)
-                raise ValueError(f"Weight proof validation threw an error {e}")
-
-            if not validated:
-                await weight_proof_peer.close(600)
-                raise ValueError("Weight proof validation failed")
-
-            self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {target_peak.height}")
-            self.sync_store.set_sync_mode(True)
-            self._state_changed("sync_mode")
             # Ensures that the fork point does not change
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 await self.blockchain.warmup(fork_point)
@@ -1016,6 +964,60 @@ class FullNode:
             if self._shut_down:
                 return None
             await self._finish_sync()
+
+    async def request_validate_wp(
+        self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
+    ) -> Tuple[uint32, List[SubEpochSummary]]:
+        if self.weight_proof_handler is None:
+            raise RuntimeError("Weight proof handler is None")
+        peers_with_peak = self.get_peers_with_peak(peak_header_hash)
+        # Request weight proof from a random peer
+        self.log.info(f"Total of {len(peers_with_peak)} peers with peak {peak_height}")
+        weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
+        self.log.info(
+            f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
+        )
+        cur_peak: Optional[BlockRecord] = self.blockchain.get_peak()
+        if cur_peak is not None and peak_weight <= cur_peak.weight:
+            raise ValueError("Not performing sync, already caught up.")
+        wp_timeout = 360
+        if "weight_proof_timeout" in self.config:
+            wp_timeout = self.config["weight_proof_timeout"]
+        self.log.debug(f"weight proof timeout is {wp_timeout} sec")
+        request = full_node_protocol.RequestProofOfWeight(peak_height, peak_header_hash)
+        response = await weight_proof_peer.call_api(FullNodeAPI.request_proof_of_weight, request, timeout=wp_timeout)
+        # Disconnect from this peer, because they have not behaved properly
+        if response is None or not isinstance(response, full_node_protocol.RespondProofOfWeight):
+            await weight_proof_peer.close(600)
+            raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
+        if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
+            await weight_proof_peer.close(600)
+            raise RuntimeError(f"Weight proof had the wrong height: {weight_proof_peer.peer_info.host}")
+        if response.wp.recent_chain_data[-1].reward_chain_block.weight != peak_weight:
+            await weight_proof_peer.close(600)
+            raise RuntimeError(f"Weight proof had the wrong weight: {weight_proof_peer.peer_info.host}")
+        if self.in_bad_peak_cache(response.wp):
+            raise ValueError("Weight proof failed bad peak cache validation")
+        # dont sync to wp if local peak is heavier,
+        # dont ban peer, we asked for this peak
+        current_peak = self.blockchain.get_peak()
+        if current_peak is not None:
+            if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
+                raise RuntimeError(
+                    f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
+                )
+        try:
+            validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
+        except Exception as e:
+            await weight_proof_peer.close(600)
+            raise ValueError(f"Weight proof validation threw an error {e}")
+        if not validated:
+            await weight_proof_peer.close(600)
+            raise ValueError("Weight proof validation failed")
+        self.log.info(f"Re-checked peers: total of {len(peers_with_peak)} peers with peak {peak_height}")
+        self.sync_store.set_sync_mode(True)
+        self._state_changed("sync_mode")
+        return fork_point, summaries
 
     async def sync_from_fork_point(
         self,
@@ -1076,11 +1078,15 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
-                success, state_change_summary = await self.add_block_batch(
+                success, state_change_summary, err = await self.add_block_batch(
                     blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
                     await peer.close(600)
+                    # check CHIP-0013 exception
+                    if err == Err.CHIP_0013_VALIDATION:
+                        self.add_to_bad_peak_cache(peak_hash, target_peak_sb_height)
+                        raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
                 peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -1181,7 +1187,7 @@ class FullNode:
         peer: WSChiaConnection,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, Optional[StateChangeSummary]]:
+    ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
@@ -1191,7 +1197,7 @@ class FullNode:
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
-            return True, None
+            return True, None, None
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
@@ -1212,7 +1218,7 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
                 )
-                return False, None
+                return False, None, Err(pre_validation_results[i].error)
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
 
@@ -1242,7 +1248,7 @@ class FullNode:
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
-                return False, agg_state_change_summary
+                return False, agg_state_change_summary, error
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
@@ -1253,7 +1259,7 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.time() - pre_validate_start}, "
                 f"advanced: True"
             )
-        return True, agg_state_change_summary
+        return True, agg_state_change_summary, None
 
     async def _finish_sync(self) -> None:
         """
@@ -2483,6 +2489,41 @@ class FullNode:
         )
         if self._server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+    def in_bad_peak_cache(self, wp: WeightProof) -> bool:
+        for block in wp.recent_chain_data:
+            if block.header_hash in self.bad_peak_cache.keys():
+                return True
+        return False
+
+    def add_to_bad_peak_cache(self, peak_header_hash: bytes32, peak_height: uint32) -> None:
+        curr_height = self.blockchain.get_peak_height()
+
+        if curr_height is None:
+            self.log.debug(f"add bad peak {peak_header_hash} to cache")
+            self.bad_peak_cache[peak_header_hash] = peak_height
+            return
+        minimum_cache_height = curr_height - (2 * self.constants.SUB_EPOCH_BLOCKS)
+        if peak_height < minimum_cache_height:
+            return
+
+        new_cache = {}
+        self.log.info(f"add bad peak {peak_header_hash} to cache")
+        new_cache[peak_header_hash] = peak_height
+        min_height = peak_height
+        min_block = peak_header_hash
+        for header_hash, height in self.bad_peak_cache.items():
+            if height < minimum_cache_height:
+                self.log.debug(f"remove bad peak {peak_header_hash} from cache")
+                continue
+            if height < min_height:
+                min_block = header_hash
+            new_cache[header_hash] = height
+
+        if len(new_cache) > self.config.get("bad_peak_cache_size", 100):
+            del new_cache[min_block]
+
+        self.bad_peak_cache = new_cache
 
     async def broadcast_uncompact_blocks(
         self, uncompact_interval_scan: int, target_uncompact_proofs: int, sanitize_weight_proof_only: bool

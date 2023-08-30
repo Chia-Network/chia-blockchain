@@ -186,6 +186,7 @@ class Err(Enum):
     # raised if a spend issues too many assert spend, assert puzzle,
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
+    CHIP_0013_VALIDATION = 145
 
 
 class ValidationError(Exception):
