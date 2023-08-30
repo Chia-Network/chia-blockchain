@@ -25,6 +25,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
+from chia.wallet.conditions import Condition
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE_HASH,
     add_proposal_to_active_list,
@@ -381,6 +382,7 @@ class DAOCATWallet:
         tx_config: TXConfig,
         push: bool = False,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
@@ -391,7 +393,11 @@ class DAOCATWallet:
         lockup_puzzle = await self.get_new_puzzle()
         # create the cat spend
         txs = await cat_wallet.generate_signed_transaction(
-            [amount], [lockup_puzzle.get_tree_hash()], tx_config, fee=fee
+            [amount],
+            [lockup_puzzle.get_tree_hash()],
+            tx_config,
+            fee=fee,
+            extra_conditions=extra_conditions,
         )
         new_cats = []
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
@@ -413,6 +419,7 @@ class DAOCATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         push: bool = True,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> SpendBundle:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
@@ -470,7 +477,11 @@ class DAOCATWallet:
 
         if fee > 0:  # pragma: no cover
             dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-            chia_tx = await dao_wallet.create_tandem_xch_tx(fee, tx_config)
+            chia_tx = await dao_wallet.create_tandem_xch_tx(
+                fee,
+                tx_config,
+                extra_conditions=extra_conditions,
+            )
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
