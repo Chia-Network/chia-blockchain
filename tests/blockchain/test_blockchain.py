@@ -3624,7 +3624,7 @@ async def test_soft_fork4_activation(
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
-            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.INVALID_POSPACE])
+            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.CHIP_0013_VALIDATION])
             peak = b.get_peak()
             assert peak is not None
             if peak.height != height:

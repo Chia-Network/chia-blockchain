@@ -90,7 +90,7 @@ async def validate_client_connection(
 async def get_any_service_client(
     client_type: Type[_T_RpcClient],
     rpc_port: Optional[int] = None,
-    root_path: Path = DEFAULT_ROOT_PATH,
+    root_path: Optional[Path] = None,
     consume_errors: bool = True,
 ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
@@ -98,6 +98,9 @@ async def get_any_service_client(
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
+
+    if root_path is None:
+        root_path = DEFAULT_ROOT_PATH
 
     node_type = node_config_section_names.get(client_type)
     if node_type is None:

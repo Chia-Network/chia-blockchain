@@ -373,9 +373,12 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     async def test_get_any_service_client(
         client_type: Type[_T_RpcClient],
         rpc_port: Optional[int] = None,
-        root_path: Path = default_root,
+        root_path: Optional[Path] = None,
         consume_errors: bool = True,
     ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
+        if root_path is None:
+            root_path = default_root
+
         node_type = node_config_section_names.get(client_type)
         if node_type is None:
             # Click already checks this, so this should never happen
