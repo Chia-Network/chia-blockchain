@@ -46,6 +46,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import Condition
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -398,6 +399,7 @@ class PoolWallet:
         fee: uint64 = uint64(0),
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, bytes32, bytes32]:
         """
         A "plot NFT", or pool wallet, represents the idea of a set of plots that all pay to
@@ -435,6 +437,7 @@ class PoolWallet:
             p2_singleton_delay_time,
             p2_singleton_delayed_ph,
             tx_config,
+            extra_conditions=extra_conditions,
         )
 
         if spend_bundle is None:
@@ -644,6 +647,7 @@ class PoolWallet:
         delay_time: uint64,
         delay_ph: bytes32,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
@@ -702,6 +706,7 @@ class PoolWallet:
             False,
             announcement_set,
             origin_id=launcher_parent.name(),
+            extra_conditions=extra_conditions,
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 

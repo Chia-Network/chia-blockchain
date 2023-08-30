@@ -18,6 +18,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -64,6 +65,7 @@ from chia.wallet.cat_wallet.cat_info import CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
+from chia.wallet.conditions import Condition
 from chia.wallet.dao_wallet.dao_utils import (
     match_dao_cat_puzzle,
     match_finished_puzzle,
@@ -862,7 +864,12 @@ class WalletStateManager:
             await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
 
     async def spend_clawback_coins(
-        self, clawback_coins: Dict[Coin, ClawbackMetadata], fee: uint64, tx_config: TXConfig, force: bool = False
+        self,
+        clawback_coins: Dict[Coin, ClawbackMetadata],
+        fee: uint64,
+        tx_config: TXConfig,
+        force: bool = False,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[bytes32]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
@@ -903,6 +910,7 @@ class WalletStateManager:
                         )
                     ],
                     coin_announcements=None if len(coin_spends) > 0 or fee == 0 else {message},
+                    conditions=extra_conditions,
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)

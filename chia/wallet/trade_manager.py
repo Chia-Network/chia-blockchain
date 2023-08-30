@@ -17,6 +17,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import Condition
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -228,6 +229,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         secure: bool = True,  # Cancel with a transaction on chain
         trade_cache: Dict[bytes32, TradeRecord] = {},  # Optional pre-fetched trade records for optimization
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
 
@@ -282,6 +284,7 @@ class TradeManager:
                         fee=fee_to_pay,
                         coins=selected_coins,
                         ignore_max_send_amount=True,
+                        extra_conditions=extra_conditions,
                     )
                     if tx is not None and tx.spend_bundle is not None:
                         bundles.append(tx.spend_bundle)
@@ -298,6 +301,7 @@ class TradeManager:
                         fee=fee_to_pay,
                         coins={coin},
                         ignore_max_send_amount=True,
+                        extra_conditions=extra_conditions,
                     )
                     for tx in txs:
                         if tx is not None and tx.spend_bundle is not None:
@@ -305,6 +309,7 @@ class TradeManager:
                             cancellation_additions.extend(tx.spend_bundle.additions())
                             all_txs.append(dataclasses.replace(tx, spend_bundle=None))
                 fee_to_pay = uint64(0)
+                extra_conditions = tuple()
 
                 all_txs.append(
                     TransactionRecord(
@@ -358,6 +363,7 @@ class TradeManager:
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         taking: bool = False,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
@@ -370,6 +376,7 @@ class TradeManager:
             driver_dict,
             solver,
             fee=fee,
+            extra_conditions=extra_conditions,
             taking=taking,
         )
         if not result[0] or result[1] is None:
@@ -404,6 +411,7 @@ class TradeManager:
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         taking: bool = False,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
@@ -526,6 +534,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:
@@ -540,6 +549,7 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                     all_transactions.extend(txs)
                 else:
@@ -551,11 +561,13 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                         add_authorizations_to_cr_cats=False,
                     )
                     all_transactions.extend(txs)
 
                 fee_left_to_pay = uint64(0)
+                extra_conditions = tuple()
 
             total_spend_bundle = SpendBundle.aggregate(
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
@@ -696,6 +708,7 @@ class TradeManager:
         tx_config: TXConfig,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TradeRecord, List[TransactionRecord]]:
         if solver is None:
             solver = Solver({})
@@ -727,6 +740,7 @@ class TradeManager:
             offer.driver_dict,
             solver,
             fee=fee,
+            extra_conditions=extra_conditions,
             taking=True,
         )
         if not result[0] or result[1] is None:

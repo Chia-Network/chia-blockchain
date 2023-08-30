@@ -203,7 +203,7 @@ class Wallet:
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
-        conditions: List[Condition] = [],
+        conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
@@ -277,6 +277,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -371,6 +372,7 @@ class Wallet:
                     coin_announcements={message},
                     coin_announcements_to_assert=coin_announcements_bytes,
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                    conditions=extra_conditions,
                 )
                 solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
@@ -427,6 +429,7 @@ class Wallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> TransactionRecord:
         origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
@@ -456,6 +459,7 @@ class Wallet:
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
+            extra_conditions=extra_conditions,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
