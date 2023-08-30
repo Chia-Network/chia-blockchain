@@ -12,6 +12,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
 from tests.cmds.wallet.test_consts import FINGERPRINT_ARG
@@ -27,13 +28,13 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         async def create_new_dao_wallet(
             self,
             mode: str,
+            tx_config: TXConfig,
             dao_rules: Optional[Dict[str, uint64]] = None,
             amount_of_cats: Optional[uint64] = None,
             treasury_id: Optional[bytes32] = None,
             filter_amount: uint64 = uint64(1),
             name: Optional[str] = None,
             fee: uint64 = uint64(0),
-            reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, int, bytes32]]:
             if not treasury_id:
                 treasury_id = bytes32(token_bytes(32))
@@ -101,6 +102,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             wallet_id: int,
             funding_wallet_id: int,
             amount: uint64,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, bool]]:
@@ -223,9 +225,9 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             wallet_id: int,
             proposal_id: str,
             vote_amount: int,
+            tx_config: TXConfig,
             is_yes_vote: bool,
             fee: uint64 = uint64(0),
-            reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, bool]]:
             return {"success": True, "spend_bundle_name": "0xCAFEF00D"}
 
@@ -233,6 +235,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             wallet_id: int,
             proposal_id: str,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
             self_destruct: bool = False,
             reuse_puzhash: Optional[bool] = None,
@@ -243,6 +246,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             wallet_id: int,
             proposal_type: str,
+            tx_config: TXConfig,
             additions: Optional[List[Dict[str, Any]]] = None,
             amount: Optional[uint64] = None,
             inner_address: Optional[str] = None,
@@ -406,6 +410,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             self,
             wallet_id: int,
             amount: uint64,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, int]]:
@@ -414,6 +419,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         async def dao_free_coins_from_finished_proposals(
             self,
             wallet_id: int,
+            tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, int]]:
@@ -422,6 +428,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         async def dao_exit_lockup(
             self,
             wallet_id: int,
+            tx_config: TXConfig,
             coins: Optional[List[Dict[str, Union[str, int]]]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,

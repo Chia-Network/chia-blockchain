@@ -235,13 +235,13 @@ class GenesisByIdOrSingleton(LimitationsProgram):
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, tail_info: Dict, amount: uint64
+        cls, wallet, tail_info: Dict, amount: uint64, tx_config: TXConfig
     ) -> Tuple[TransactionRecord, SpendBundle]:
         if "coins" in tail_info:
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
         else:  # pragma: no cover
-            coins = await wallet.standard_wallet.select_coins(amount)
+            coins = await wallet.standard_wallet.select_coins(amount, tx_config.coin_selection_config)
             origin = coins.copy().pop()
             origin_id = origin.name()
 
@@ -264,7 +264,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, uint64(0), origin_id=origin_id, coins=set(coins)
+            amount, minted_cat_puzzle_hash, tx_config, uint64(0), coins=set(coins), origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
         payment = Payment(cat_inner.get_tree_hash(), amount)

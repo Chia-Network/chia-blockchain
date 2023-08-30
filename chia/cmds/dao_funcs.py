@@ -5,7 +5,7 @@ import time
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
-from chia.cmds.cmds_util import get_wallet_client, transaction_status_msg, transaction_submitted_msg
+from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -15,7 +15,7 @@ from chia.util.ints import uint64
 from chia.wallet.util.wallet_types import WalletType
 
 
-async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     treasury_id = args["treasury_id"]
     filter_amount = args["filter_amount"]
     name = args["name"]
@@ -23,9 +23,12 @@ async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
     print(f"Adding wallet for DAO: {treasury_id}")
     print("This may take awhile.")
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.create_new_dao_wallet(
             mode="existing",
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=True,
+            ).to_tx_config(units["chia"], config, fingerprint),
             dao_rules=None,
             amount_of_cats=None,
             treasury_id=treasury_id,
@@ -40,7 +43,7 @@ async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
 
 
-async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     dao_rules = {
         "proposal_timelock": args["proposal_timelock"],
         "soft_close_length": args["soft_close_length"],
@@ -58,7 +61,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.create_new_dao_wallet(
             mode="new",
             dao_rules=dao_rules,
@@ -67,7 +70,9 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
             filter_amount=filter_amount,
             name=name,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
 
         print("Successfully created DAO Wallet")
@@ -77,22 +82,22 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
         print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
 
 
-async def get_treasury_id(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def get_treasury_id(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_treasury_id(wallet_id=wallet_id)
         treasury_id = res["treasury_id"]
         print(f"Treasury ID: {treasury_id}")
 
 
-async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]
     amount = Decimal(args["amount"])
     reuse_puzhash = args["reuse_puzhash"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(typ)
@@ -109,7 +114,9 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
             funding_wallet_id=funding_wallet_id,
             amount=final_amount,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(mojo_per_unit, config, fingerprint),
         )
 
         tx_id = res["tx_id"]
@@ -126,10 +133,10 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
         print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
-async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_treasury_balance(wallet_id=wallet_id)
         balances = res["balances"]
 
@@ -137,19 +144,19 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[i
             print("The DAO treasury currently has no funds")
             return None
 
+        xch_mojos = get_mojo_per_unit(WalletType.STANDARD_WALLET)
+        cat_mojos = get_mojo_per_unit(WalletType.CAT)
         for asset_id, balance in balances.items():
             if asset_id == "xch":
-                mojos = get_mojo_per_unit(WalletType.STANDARD_WALLET)
-                print(f"XCH: {balance / mojos}")
+                print(f"XCH: {balance / xch_mojos}")
             else:
-                mojos = get_mojo_per_unit(WalletType.CAT)
-                print(f"{asset_id}: {balance / mojos}")
+                print(f"{asset_id}: {balance / cat_mojos}")
 
 
-async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
         proposals = res["proposals"]
         soft_close_length = res["soft_close_length"]
@@ -166,11 +173,11 @@ async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         print("############################")
 
 
-async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     proposal_id = args["proposal_id"]
 
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
         res = await wallet_client.dao_parse_proposal(wallet_id, proposal_id)
         pd = res["proposal_dictionary"]
         blocks_needed = pd["state"]["blocks_needed"]
@@ -236,7 +243,7 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
             print(f"Address: {address}")
 
 
-async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     vote_amount = args["vote_amount"]
     fee = args["fee"]
@@ -245,14 +252,16 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
     is_yes_vote = args["is_yes_vote"]
     reuse_puzhash = args["reuse_puzhash"]
     # wallet_id: int, proposal_id: str, vote_amount: uint64, is_yes_vote: bool = True, fee: uint64 = uint64(0)
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_vote_on_proposal(
             wallet_id=wallet_id,
             proposal_id=proposal_id,
             vote_amount=vote_amount,
             is_yes_vote=is_yes_vote,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["mojo"], config, fingerprint),
         )
         spend_bundle = res["spend_bundle_name"]
         if res["success"]:
@@ -261,20 +270,22 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
             print("Unable to generate vote transaction.")
 
 
-async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     proposal_id = args["proposal_id"]
     reuse_puzhash = args["reuse_puzhash"]
     self_destruct = args["self_destruct"]
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_close_proposal(
             wallet_id=wallet_id,
             proposal_id=proposal_id,
             fee=final_fee,
             self_destruct=self_destruct,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
             name = res["tx_id"]
@@ -283,19 +294,21 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
             print("Unable to generate close transaction.")
 
 
-async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     amount = args["amount"]
     final_amount: uint64 = uint64(int(Decimal(amount) * units["cat"]))
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_send_to_lockup(
             wallet_id=wallet_id,
             amount=final_amount,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         tx_id = res["tx_id"]
         start = time.time()
@@ -310,16 +323,18 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fin
         print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
-async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_free_coins_from_finished_proposals(
             wallet_id=wallet_id,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
             spend_bundle_id = res["spend_bundle_id"]
@@ -328,17 +343,19 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fi
             print("Transaction failed.")
 
 
-async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
     reuse_puzhash = args["reuse_puzhash"]
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_exit_lockup(
             wallet_id=wallet_id,
             coins=[],
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
             spend_bundle_id = res["spend_bundle_id"]
@@ -347,7 +364,7 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fing
             print("Transaction failed.")
 
 
-async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -359,7 +376,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     if additions is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
     vote_amount = args.get("vote_amount")
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
         final_amount: Optional[uint64] = uint64(int(Decimal(amount) * mojo_per_unit)) if amount else None
@@ -372,7 +389,9 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             asset_id=asset_id,
             vote_amount=vote_amount,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(mojo_per_unit, config, fingerprint),
         )
         if res["success"]:
             print(f"Created spend proposal for asset: {asset_id}")
@@ -382,7 +401,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             print("Failed to create proposal.")
 
 
-async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
@@ -402,14 +421,16 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
         "self_destruct_length": self_destruct_length,
         "oracle_spend_delay": oracle_spend_delay,
     }
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
             proposal_type="update",
             new_dao_rules=new_dao_rules,
             vote_amount=vote_amount,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
             print("Successfully created proposal.")
@@ -418,7 +439,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
             print("Failed to create proposal.")
 
 
-async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -426,7 +447,7 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
     cat_target_address = args["cat_target_address"]
     amount = args["amount"]
     vote_amount = args.get("vote_amount")
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,
             proposal_type="mint",
@@ -434,7 +455,9 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
             amount=amount,
             vote_amount=vote_amount,
             fee=final_fee,
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
             print("Successfully created proposal.")

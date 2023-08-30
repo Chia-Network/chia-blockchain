@@ -1185,13 +1185,13 @@ class WalletRpcClient(RpcClient):
     async def create_new_dao_wallet(
         self,
         mode: str,
+        tx_config: TXConfig,
         dao_rules: Optional[Dict[str, uint64]] = None,
         amount_of_cats: Optional[uint64] = None,
         treasury_id: Optional[bytes32] = None,
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "dao_wallet",
@@ -1202,7 +1202,7 @@ class WalletRpcClient(RpcClient):
             "filter_amount": filter_amount,
             "name": name,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("create_new_wallet", request)
         return response
@@ -1219,6 +1219,7 @@ class WalletRpcClient(RpcClient):
         self,
         wallet_id: int,
         proposal_type: str,
+        tx_config: TXConfig,
         additions: Optional[List[Dict]] = None,
         amount: Optional[uint64] = None,
         inner_address: Optional[str] = None,
@@ -1227,7 +1228,6 @@ class WalletRpcClient(RpcClient):
         vote_amount: Optional[int] = None,
         new_dao_rules: Optional[Dict[str, Optional[uint64]]] = None,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1240,7 +1240,7 @@ class WalletRpcClient(RpcClient):
             "vote_amount": vote_amount,
             "new_dao_rules": new_dao_rules,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
 
         response = await self.fetch("dao_create_proposal", request)
@@ -1261,9 +1261,9 @@ class WalletRpcClient(RpcClient):
         wallet_id: int,
         proposal_id: str,
         vote_amount: uint64,
+        tx_config: TXConfig,
         is_yes_vote: bool = True,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1271,7 +1271,7 @@ class WalletRpcClient(RpcClient):
             "vote_amount": vote_amount,
             "is_yes_vote": is_yes_vote,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_vote_on_proposal", request)
         return response
@@ -1285,16 +1285,16 @@ class WalletRpcClient(RpcClient):
         self,
         wallet_id: int,
         proposal_id: str,
-        self_destruct: bool,
+        tx_config: TXConfig,
+        self_destruct: bool = None,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "proposal_id": proposal_id,
             "self_destruct": self_destruct,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_close_proposal", request)
         return response
@@ -1302,13 +1302,13 @@ class WalletRpcClient(RpcClient):
     async def dao_free_coins_from_finished_proposals(
         self,
         wallet_id: int,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_free_coins_from_finished_proposals", request)
         return response
@@ -1323,15 +1323,15 @@ class WalletRpcClient(RpcClient):
         wallet_id: int,
         funding_wallet_id: int,
         amount: uint64,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "funding_wallet_id": funding_wallet_id,
             "amount": amount,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_add_funds_to_treasury", request)
         return response
@@ -1340,14 +1340,14 @@ class WalletRpcClient(RpcClient):
         self,
         wallet_id: int,
         amount: uint64,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "amount": amount,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_send_to_lockup", request)
         return response
@@ -1355,15 +1355,15 @@ class WalletRpcClient(RpcClient):
     async def dao_exit_lockup(
         self,
         wallet_id: int,
+        tx_config: TXConfig,
         coins: Optional[List[Dict]] = None,
         fee: uint64 = uint64(0),
-        reuse_puzhash: Optional[bool] = None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "coins": coins,
             "fee": fee,
-            "reuse_puzhash": reuse_puzhash,
+            **tx_config.to_json_dict(),
         }
         response = await self.fetch("dao_exit_lockup", request)
         return response
