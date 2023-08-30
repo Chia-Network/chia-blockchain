@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
-from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
@@ -34,7 +34,7 @@ MAX_BLOCK_COST_CLVM = int(1e18)
 
 def secret_exponent_for_index(index: int) -> int:
     blob = index.to_bytes(32, "big")
-    hashed_blob = BasicSchemeMPL.key_gen(std_hash(b"foo" + blob))
+    hashed_blob = AugSchemeMPL.key_gen(std_hash(b"foo" + blob))
     r = int.from_bytes(hashed_blob, "big")
     return r
 
@@ -87,7 +87,7 @@ def do_test_spend(
             assert 0
 
     # make sure we can actually sign the solution
-    signatures = []
+    signatures: List[G2Element] = []
     for coin_spend in spend_bundle.coin_spends:
         signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)

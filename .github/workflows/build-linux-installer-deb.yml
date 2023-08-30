@@ -35,7 +35,7 @@ concurrency:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -271,7 +271,12 @@ jobs:
           build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb \
           build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb
 
-    - name: Mark installer complete
+    - name: Mark pre-release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO-prerelease/$RELEASE_TAG/success/build-linux-deb
+
+    - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-linux-deb

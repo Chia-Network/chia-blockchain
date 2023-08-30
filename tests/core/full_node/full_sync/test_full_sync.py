@@ -5,7 +5,6 @@ import asyncio
 import logging
 import time
 from typing import List
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -324,7 +323,7 @@ class TestFullSync:
         assert node_height_exactly(full_node_2, 999)
 
     @pytest.mark.asyncio
-    async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname):
+    async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname, monkeypatch):
         full_node_1, full_node_2, server_1, server_2, _ = two_nodes
         blocks = default_1000_blocks
 
@@ -332,42 +331,42 @@ class TestFullSync:
         async def async_mock():
             log.info("do nothing")
 
-        full_node_2.full_node._sync = MagicMock(return_value=async_mock())
+        with monkeypatch.context() as monkeypatch_context:
+            monkeypatch_context.setattr(full_node_2.full_node, "_sync", async_mock)
+            # load blocks into node 1
+            for block in blocks[:501]:
+                await full_node_1.full_node.add_block(block)
 
-        # load blocks into node 1
-        for block in blocks[:501]:
-            await full_node_1.full_node.add_block(block)
+            peak1 = full_node_1.full_node.blockchain.get_peak()
+            assert peak1 is not None
 
-        peak1 = full_node_1.full_node.blockchain.get_peak()
-        assert peak1 is not None
+            summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
+            summaries: List[SubEpochSummary] = []
 
-        summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
-        summaries: List[SubEpochSummary] = []
+            # get ses list
+            for sub_epoch_n, ses_height in enumerate(summary_heights):
+                summaries.append(full_node_1.full_node.blockchain.get_ses(ses_height))
 
-        # get ses list
-        for sub_epoch_n, ses_height in enumerate(summary_heights):
-            summaries.append(full_node_1.full_node.blockchain.get_ses(ses_height))
+            # change summary so check would fail on sub epoch 1
+            s = summaries[1]
+            summaries[1] = SubEpochSummary(
+                s.prev_subepoch_summary_hash,
+                s.reward_chain_hash,
+                s.num_blocks_overflow,
+                s.new_difficulty * 2,
+                s.new_sub_slot_iters * 2,
+            )
+            # manually try sync with wrong sub epoch summary list
+            await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
-        # change summary so check would fail on sub epoch 1
-        s = summaries[1]
-        summaries[1] = SubEpochSummary(
-            s.prev_subepoch_summary_hash,
-            s.reward_chain_hash,
-            s.num_blocks_overflow,
-            s.new_difficulty * 2,
-            s.new_sub_slot_iters * 2,
-        )
-        # manually try sync with wrong sub epoch summary list
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-
-        # call peer has block to populate peer_to_peak
-        full_node_2.full_node.sync_store.peer_has_block(
-            peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
-        )
-        # sync using bad ses list
-        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
-        # assert we failed somewhere between sub epoch 0 to sub epoch 1
-        assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
+            # call peer has block to populate peer_to_peak
+            full_node_2.full_node.sync_store.peer_has_block(
+                peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
+            )
+            # sync using bad ses list
+            await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
+            # assert we failed somewhere between sub epoch 0 to sub epoch 1
+            assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])
 
     @pytest.mark.asyncio
     @pytest.mark.skip("skipping until we re-enable the capability in chia.protocols.shared_protocol")

@@ -10,7 +10,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import cli_confirm, get_wallet_client, transaction_status_msg, transaction_submitted_msg
+from chia.cmds.cmds_util import (
+    CMDTXConfigLoader,
+    cli_confirm,
+    get_wallet_client,
+    transaction_status_msg,
+    transaction_submitted_msg,
+)
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -257,13 +263,13 @@ async def send(
     fee: Decimal,
     address: str,
     override: bool,
-    min_coin_amount: Decimal,
-    max_coin_amount: Decimal,
+    min_coin_amount: str,
+    max_coin_amount: str,
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
 ) -> None:  # pragma: no cover
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if memo is None:
             memos = None
         else:
@@ -290,20 +296,20 @@ async def send(
 
         final_fee: uint64 = uint64(int(fee * units["chia"]))  # fees are always in XCH mojos
         final_amount: uint64 = uint64(int(amount * mojo_per_unit))
-        final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
-        final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
         if typ == WalletType.STANDARD_WALLET:
             print("Submitting transaction...")
             res = await wallet_client.send_transaction(
                 wallet_id,
                 final_amount,
                 address,
+                CMDTXConfigLoader(
+                    min_coin_amount=min_coin_amount,
+                    max_coin_amount=max_coin_amount,
+                    excluded_coin_ids=list(excluded_coin_ids),
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(mojo_per_unit, config, fingerprint),
                 final_fee,
                 memos,
-                final_min_coin_amount,
-                final_max_coin_amount,
-                excluded_coin_ids=excluded_coin_ids,
-                reuse_puzhash=reuse_puzhash,
                 puzzle_decorator_override=[
                     {"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}
                 ]
@@ -314,14 +320,16 @@ async def send(
             print("Submitting transaction...")
             res = await wallet_client.cat_spend(
                 wallet_id,
+                CMDTXConfigLoader(
+                    min_coin_amount=min_coin_amount,
+                    max_coin_amount=max_coin_amount,
+                    excluded_coin_ids=list(excluded_coin_ids),
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(mojo_per_unit, config, fingerprint),
                 final_amount,
                 address,
                 final_fee,
                 memos,
-                final_min_coin_amount,
-                final_max_coin_amount,
-                excluded_coin_ids=excluded_coin_ids,
-                reuse_puzhash=reuse_puzhash,
             )
         else:
             print("Only standard wallet and CAT wallets are supported")
@@ -537,7 +545,12 @@ async def make_offer(
                 cli_confirm("Confirm (y/n): ", "Not creating offer...")
 
                 offer, trade_record = await wallet_client.create_offer_for_ids(
-                    offer_dict, driver_dict=driver_dict, fee=fee, reuse_puzhash=reuse_puzhash
+                    offer_dict,
+                    driver_dict=driver_dict,
+                    fee=fee,
+                    tx_config=CMDTXConfigLoader(
+                        reuse_puzhash=reuse_puzhash,
+                    ).to_tx_config(units["chia"], config, fingerprint),
                 )
                 if offer is not None:
                     with open(pathlib.Path(filepath), "w") as file:
@@ -751,13 +764,21 @@ async def take_offer(
         if not examine_only:
             print()
             cli_confirm("Would you like to take this offer? (y/n): ")
-            trade_record = await wallet_client.take_offer(offer, fee=fee)
+            trade_record = await wallet_client.take_offer(
+                offer,
+                fee=fee,
+                tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+            )
             print(f"Accepted offer with ID {trade_record.trade_id}")
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view its status")
 
 
 async def cancel_offer(
-    wallet_rpc_port: Optional[int], fp: Optional[int], d_fee: Decimal, offer_id_hex: str, secure: bool
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    d_fee: Decimal,
+    offer_id_hex: str,
+    secure: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         offer_id = bytes32.from_hexstr(offer_id_hex)
@@ -767,7 +788,9 @@ async def cancel_offer(
         await print_trade_record(trade_record, wallet_client, summaries=True)
 
         cli_confirm(f"Are you sure you wish to cancel offer with ID: {trade_record.trade_id}? (y/n): ")
-        await wallet_client.cancel_offer(offer_id, secure=secure, fee=fee)
+        await wallet_client.cancel_offer(
+            offer_id, CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint), secure=secure, fee=fee
+        )
         print(f"Cancelled offer with ID {trade_record.trade_id}")
         if secure:
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
@@ -921,11 +944,21 @@ async def get_did_info(wallet_rpc_port: Optional[int], fp: Optional[int], coin_i
 
 
 async def update_did_metadata(
-    wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_id: int, metadata: str, reuse_puzhash: bool
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    did_wallet_id: int,
+    metadata: str,
+    reuse_puzhash: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
-            response = await wallet_client.update_did_metadata(did_wallet_id, json.loads(metadata), reuse_puzhash)
+            response = await wallet_client.update_did_metadata(
+                did_wallet_id,
+                json.loads(metadata),
+                tx_config=CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
+            )
             print(
                 f"Successfully updated DID wallet ID: {response['wallet_id']}, Spend Bundle: {response['spend_bundle']}"
             )
@@ -942,7 +975,12 @@ async def did_message_spend(
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
-            response = await wallet_client.did_message_spend(did_wallet_id, puzzle_announcements, coin_announcements)
+            response = await wallet_client.did_message_spend(
+                did_wallet_id,
+                puzzle_announcements,
+                coin_announcements,
+                CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+            )
             print(f"Message Spend Bundle: {response['spend_bundle']}")
         except Exception as e:
             print(f"Failed to update DID metadata: {e}")
@@ -964,7 +1002,9 @@ async def transfer_did(
                 target_address,
                 fee,
                 with_recovery,
-                reuse_puzhash,
+                tx_config=CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
             )
             print(f"Successfully transferred DID to {target_address}")
             print(f"Transaction ID: {response['transaction_id']}")
@@ -1063,6 +1103,9 @@ async def mint_nft(
                 target_address,
                 hash,
                 uris,
+                CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
                 metadata_hash,
                 metadata_uris,
                 license_hash,
@@ -1072,7 +1115,6 @@ async def mint_nft(
                 fee,
                 royalty_percentage,
                 did_id,
-                reuse_puzhash=reuse_puzhash,
             )
             spend_bundle = response["spend_bundle"]
             print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
@@ -1087,9 +1129,9 @@ async def add_uri_to_nft(
     wallet_id: int,
     d_fee: Decimal,
     nft_coin_id: str,
-    uri: str,
-    metadata_uri: str,
-    license_uri: str,
+    uri: Optional[str],
+    metadata_uri: Optional[str],
+    license_uri: Optional[str],
     reuse_puzhash: Optional[bool],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -1108,7 +1150,16 @@ async def add_uri_to_nft(
             else:
                 raise ValueError("You must provide at least one of the URI flags")
             fee: int = int(d_fee * units["chia"])
-            response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri_value, fee, reuse_puzhash)
+            response = await wallet_client.add_uri_to_nft(
+                wallet_id,
+                nft_coin_id,
+                key,
+                uri_value,
+                fee,
+                tx_config=CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
+            )
             spend_bundle = response["spend_bundle"]
             print(f"URI added successfully with spend bundle: {spend_bundle}")
         except Exception as e:
@@ -1130,7 +1181,13 @@ async def transfer_nft(
             target_address = ensure_valid_address(target_address, allowed_types={AddressType.XCH}, config=config)
             fee: int = int(d_fee * units["chia"])
             response = await wallet_client.transfer_nft(
-                wallet_id, nft_coin_id, target_address, fee, reuse_puzhash=reuse_puzhash
+                wallet_id,
+                nft_coin_id,
+                target_address,
+                fee,
+                tx_config=CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
             )
             spend_bundle = response["spend_bundle"]
             print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
@@ -1205,7 +1262,15 @@ async def set_nft_did(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         fee: int = int(d_fee * units["chia"])
         try:
-            response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee, reuse_puzhash=reuse_puzhash)
+            response = await wallet_client.set_nft_did(
+                wallet_id,
+                did_id,
+                nft_coin_id,
+                fee,
+                tx_config=CMDTXConfigLoader(
+                    reuse_puzhash=reuse_puzhash,
+                ).to_tx_config(units["chia"], config, fingerprint),
+            )
             spend_bundle = response["spend_bundle"]
             print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
         except Exception as e:
@@ -1386,6 +1451,7 @@ async def mint_vc(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         vc_record, txs = await wallet_client.vc_mint(
             decode_puzzle_hash(ensure_valid_address(did, allowed_types={AddressType.DID}, config=config)),
+            CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
             None
             if target_address is None
             else decode_puzzle_hash(
@@ -1448,7 +1514,9 @@ async def spend_vc(
             new_puzhash=None if new_puzhash is None else bytes32.from_hexstr(new_puzhash),
             new_proof_hash=bytes32.from_hexstr(new_proof_hash),
             fee=uint64(int(d_fee * units["chia"])),
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
 
         print("Proofs successfully updated!")
@@ -1515,7 +1583,9 @@ async def revoke_vc(
         txs = await wallet_client.vc_revoke(
             parent_id,
             fee=uint64(fee * units["chia"]),
-            reuse_puzhash=reuse_puzhash,
+            tx_config=CMDTXConfigLoader(
+                reuse_puzhash=reuse_puzhash,
+            ).to_tx_config(units["chia"], config, fingerprint),
         )
 
         print("VC successfully revoked!")
@@ -1548,9 +1618,11 @@ async def approve_r_cats(
             wallet_id=uint32(id),
             min_amount_to_claim=uint64(int(Decimal(min_amount_to_claim) * units["cat"])),
             fee=uint64(int(fee * units["chia"])),
-            min_coin_amount=uint64(int(min_coin_amount * units["chia"])) if min_coin_amount is not None else None,
-            max_coin_amount=uint64(int(max_coin_amount * units["chia"])) if max_coin_amount is not None else None,
-            reuse_puzhash=reuse,
+            tx_config=CMDTXConfigLoader(
+                min_coin_amount=None if min_coin_amount is None else str(min_coin_amount),
+                max_coin_amount=None if max_coin_amount is None else str(max_coin_amount),
+                reuse_puzhash=reuse,
+            ).to_tx_config(units["cat"], config, fingerprint),
         )
 
         print("VC successfully approved R-CATs!")
