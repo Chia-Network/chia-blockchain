@@ -181,7 +181,7 @@ async def test_loop() -> None:
                 print(" ==== connection succeeded")
                 post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
-            post_connection_succeeded
+            post_connection_succeeded = False
             post_connection_error = e
         finally:
             if writer is not None:
