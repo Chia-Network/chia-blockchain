@@ -52,7 +52,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -1466,7 +1466,7 @@ class WalletRpcApi:
         :return:
         """
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
-        selected_wallet: Optional[WalletProtocol] = None
+        selected_wallet: Optional[WalletProtocol[Any]] = None
         is_hex = request.get("is_hex", False)
         if isinstance(is_hex, str):
             is_hex = bool(is_hex)
@@ -2100,7 +2100,13 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-
+        did_data: DIDCoinData = DIDCoinData(
+            p2_puzzle,
+            bytes32(recovery_list_hash.atom),
+            uint16(num_verification.as_int()),
+            singleton_struct,
+            metadata,
+        )
         hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
@@ -2258,7 +2264,12 @@ class WalletRpcApi:
                 coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
-            await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)
+            await did_wallet.coin_added(
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                peer,
+                did_data,
+            )
             return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
 
     @tx_endpoint

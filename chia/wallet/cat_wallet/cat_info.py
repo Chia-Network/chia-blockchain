@@ -17,6 +17,14 @@ class CATInfo(Streamable):
     my_tail: Optional[Program]  # this is the program
 
 
+@streamable
+@dataclass(frozen=True)
+class CATCoinData(Streamable):
+    mod_hash: bytes32
+    tail_program_hash: bytes32
+    inner_puzzle: Program
+
+
 # We used to store all of the lineage proofs here but it was very slow to serialize for a lot of transactions
 # so we moved it to CATLineageStore.  We keep this around for migration purposes.
 @streamable

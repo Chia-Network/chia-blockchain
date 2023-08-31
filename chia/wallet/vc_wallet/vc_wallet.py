@@ -20,6 +20,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
@@ -94,11 +95,14 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
         """
+        # TODO Use coin_data instead of calling peer API
         wallet_node = self.wallet_state_manager.wallet_node
         coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
@@ -664,4 +668,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol = VCWallet()  # pragma: no cover
+    _dummy: WalletProtocol[VerifiedCredential] = VCWallet()  # pragma: no cover
