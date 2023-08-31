@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import asyncio.events
 import asyncio.protocols
+import functools
 import logging.config
+import signal
 import sys
 import threading
 from typing import List, Optional
@@ -39,9 +41,33 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
+    async def setup_process_global_state() -> None:
+        # Being async forces this to be run from within an active event loop as is
+        # needed for the signal handler setup.
+
+        if sys.platform == "win32" or sys.platform == "cygwin":
+            # pylint: disable=E1101
+            signal.signal(signal.SIGBREAK, dun)
+            signal.signal(signal.SIGINT, dun)
+            signal.signal(signal.SIGTERM, dun)
+        else:
+            loop = asyncio.get_running_loop()
+            loop.add_signal_handler(
+                signal.SIGINT,
+                functools.partial(dun, signal_number=signal.SIGINT),
+            )
+            loop.add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(dun, signal_number=signal.SIGTERM),
+            )
+
     if thread_end_event is None:
-        # will never be set, wait to be killed
         thread_end_event = threading.Event()
+
+        def dun(*args: object, **kwargs: object) -> None:
+            thread_end_event.set()
+
+        await setup_process_global_state()
 
     loop = asyncio.get_event_loop()
     server = await loop.create_server(EchoServer, ip, port)
@@ -54,8 +80,11 @@ async def async_main(
     try:
         while not thread_end_event.is_set():
             await asyncio.sleep(0.1)
+        print("exit: thread end event set")
     except KeyboardInterrupt:
-        print("exit")
+        print("exit: keyboard interrupt")
+    except asyncio.CancelledError:
+        print("exit: cancelled")
     finally:
         print("closing server")
         server.close()

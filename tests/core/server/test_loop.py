@@ -148,10 +148,18 @@ class ServeInThread:
 async def test_loop() -> None:
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
+    # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        creationflags = 0
+
     print(" ==== launching serve.py")
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve"],
+        creationflags=creationflags,
         encoding="utf-8",
+        stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
     ) as serving_process:
@@ -189,9 +197,8 @@ async def test_loop() -> None:
                 await writer.wait_closed()
 
         print(" ====   killing serve.py")
-        # serving_process.send_signal(signal.CTRL_C_EVENT)
         serving_process.terminate()
-        output, _ = serving_process.communicate()
+        output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
     print(" ====           serve.py done")
 
     print("\n\n ==== output:")
