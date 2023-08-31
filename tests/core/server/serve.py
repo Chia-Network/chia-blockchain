@@ -39,6 +39,10 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
+    if thread_end_event is None:
+        # will never be set, wait to be killed
+        thread_end_event = threading.Event()
+
     loop = asyncio.get_event_loop()
     server = await loop.create_server(EchoServer, ip, port)
     if port_holder is not None:
@@ -48,11 +52,8 @@ async def async_main(
     print("serving on {}".format(server.sockets[0].getsockname()))
 
     try:
-        if thread_end_event is None:
-            await asyncio.sleep(20)
-        else:
-            while not thread_end_event.is_set():
-                await asyncio.sleep(0.1)
+        while not thread_end_event.is_set():
+            await asyncio.sleep(0.1)
     except KeyboardInterrupt:
         print("exit")
     finally:
