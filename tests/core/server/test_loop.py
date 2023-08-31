@@ -190,8 +190,7 @@ async def test_loop() -> None:
 
         print(" ====   killing serve.py")
         # serving_process.send_signal(signal.CTRL_C_EVENT)
-        # serving_process.terminate()
-        serving_process.kill()
+        serving_process.terminate()
         output, _ = serving_process.communicate()
     print(" ====           serve.py done")
 
