@@ -172,7 +172,6 @@ async def test_loop() -> None:
         [sys.executable, "-m", "tests.core.server.serve"],
         creationflags=creationflags,
         encoding="utf-8",
-        stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
     ) as serving_process:
@@ -181,6 +180,7 @@ async def test_loop() -> None:
         logger.info(" ==== launching flood.py")
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood"],
+            creationflags=creationflags,
             encoding="utf-8",
             stderr=subprocess.STDOUT,
             stdout=subprocess.PIPE,
