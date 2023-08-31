@@ -419,7 +419,7 @@ class TestFullSync:
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != Mode.PLAIN:
+        if consensus_mode != ConsensusMode.PLAIN:
             pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
@@ -443,7 +443,7 @@ class TestFullSync:
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != Mode.PLAIN:
+        if consensus_mode != ConsensusMode.PLAIN:
             pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
