@@ -20,7 +20,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.conditions import UnknownCondition
+from chia.wallet.conditions import Condition, UnknownCondition
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
@@ -155,6 +155,7 @@ class VCWallet:
         tx_config: TXConfig,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
         """
         Given the DID ID of a proof provider, mint a brand new VC with an empty slot for proofs.
@@ -184,6 +185,7 @@ class VCWallet:
             inner_puzzle_hash,
             [inner_puzzle_hash],
             fee=fee,
+            extra_conditions=extra_conditions,
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
@@ -224,6 +226,7 @@ class VCWallet:
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         new_proof_hash: Optional[bytes32] = kwargs.get(
@@ -296,13 +299,14 @@ class VCWallet:
             magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
+        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             coin_announcements=coin_announcements,
             puzzle_announcements=puzzle_announcements,
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
-            conditions=[UnknownCondition.from_program(magic_condition)],
+            conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
         spend_bundles = [await self.wallet_state_manager.sign_transaction([coin_spend])]
@@ -358,6 +362,7 @@ class VCWallet:
         peer: WSChiaConnection,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         vc_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [parent_id], peer=peer
@@ -405,6 +410,7 @@ class VCWallet:
             tx_config,
             puzzle_announcements={expected_did_announcement},
             coin_announcements_to_assert={vc_announcement},
+            extra_conditions=extra_conditions,
         )
         final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_spend])
         tx: TransactionRecord = TransactionRecord(

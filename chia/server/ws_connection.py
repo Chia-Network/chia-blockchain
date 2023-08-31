@@ -27,7 +27,7 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
-from chia.util.errors import ApiError, Err, ProtocolError
+from chia.util.errors import ApiError, Err, ProtocolError, TimestampError
 from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
@@ -411,6 +411,8 @@ class WSChiaConnection:
                         )
                     else:
                         return None
+                except TimestampError:
+                    raise
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Exception: {e}, {self.get_peer_logging()}. {tb}")
@@ -436,6 +438,8 @@ class WSChiaConnection:
             #     await self.send_message(response_message)
         except TimeoutError:
             self.log.error(f"Timeout error for: {message_type}")
+        except TimestampError:
+            self.log.info("Received block with timestamp too far into the future")
         except Exception as e:
             if not self.closed:
                 tb = traceback.format_exc()
