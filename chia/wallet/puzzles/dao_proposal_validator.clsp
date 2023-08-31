@@ -80,7 +80,8 @@
             (list CREATE_COIN PROPOSAL_EXCESS_PAYOUT_PUZ_HASH (- coin_amount 1) (list (f (r SINGLETON_STRUCT))))
             conditions
           )
-      conditions)
+          conditions
+      )
     )
   )
 )

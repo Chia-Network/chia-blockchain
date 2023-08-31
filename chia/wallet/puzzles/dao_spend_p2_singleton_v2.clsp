@@ -20,6 +20,7 @@
 
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
 
   (defun-inline calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
     (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
@@ -122,13 +123,14 @@
             (r parent_amount_list)  ; this is the delegated_puzhash
             (sha256tree 0)  ; most coins destroy themselves
             (calculate_delegated_puzzlehash  ; the last coin creates the conditions
-              (if (> (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) 0)
-                  (c
-                    (list CREATE_COIN P2_SINGLETON_PUZHASH (- (+ total (f (r (f parent_amount_list)))) create_coin_sum) (list (f (r TREASURY_SINGLETON_STRUCT))))
+              (let ((coin_sum (- (+ total (f (r (f parent_amount_list)))) create_coin_sum)))
+                (if (> coin_sum 0)
+                    (c
+                      (list CREATE_COIN P2_SINGLETON_PUZHASH coin_sum (list (f (r TREASURY_SINGLETON_STRUCT))))
+                      CONDITIONS_FOR_THIS_ASSET_TYPE
+                    )
                     CONDITIONS_FOR_THIS_ASSET_TYPE
-                  )
-                  CONDITIONS_FOR_THIS_ASSET_TYPE
-              )
+              ))
             )
           )
           (for_each_asset
