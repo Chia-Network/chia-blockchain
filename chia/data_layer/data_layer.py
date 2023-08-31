@@ -187,7 +187,8 @@ class DataLayer:
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
-        self.wallet_rpc.close()
+        if self._wallet_rpc is not None:
+            self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
         if self.periodically_manage_data_task is not None:
@@ -195,13 +196,12 @@ class DataLayer:
                 self.periodically_manage_data_task.cancel()
             except asyncio.CancelledError:
                 pass
-        await self.data_store.close()
-        await self.wallet_rpc.await_closed()
+        if self._data_store is not None:
+            await self.data_store.close()
+        if self._wallet_rpc is not None:
+            await self.wallet_rpc.await_closed()
 
     async def wallet_log_in(self, fingerprint: int) -> int:
-        if self.wallet_rpc is None:
-            raise Exception("DataLayer wallet RPC connection not initialized")
-
         result = await self.wallet_rpc.log_in(fingerprint)
         if not result.get("success", False):
             wallet_error = result.get("error", "no error message provided")
