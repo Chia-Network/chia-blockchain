@@ -27,7 +27,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
