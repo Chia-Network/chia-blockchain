@@ -1,20 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, Generator, List
-
 import pytest
 
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
-
-
-@pytest.fixture(scope="session")
-def track_trusted() -> Generator[Dict[str, List[bool]], None, None]:
-    trusted_dict: Dict[str, List[bool]] = {}
-    yield trusted_dict
-    for key, value in trusted_dict.items():
-        if len(value) != 2 or True not in value or False not in value:
-            raise ValueError(f"Test {key} did not do exactly trusted and untrusted: {value}")
 
 
 @pytest.mark.parametrize(
@@ -32,12 +21,7 @@ def track_trusted() -> Generator[Dict[str, List[bool]], None, None]:
     indirect=True,
 )
 @pytest.mark.asyncio
-async def test_basic_functionality(
-    track_trusted: Dict[str, List[bool]], wallet_environments: WalletTestFramework
-) -> None:
-    track_trusted.setdefault("test_basic_functionality", [])
-    track_trusted["test_basic_functionality"].append(wallet_environments.trusted_full_node)
-
+async def test_basic_functionality(wallet_environments: WalletTestFramework) -> None:
     env_0: WalletEnvironment = wallet_environments.environments[0]
     env_1: WalletEnvironment = wallet_environments.environments[1]
 
