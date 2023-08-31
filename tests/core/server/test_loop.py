@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import pathlib
 import random
+import signal
 import subprocess
 import sys
 import threading
@@ -197,7 +198,10 @@ async def test_loop() -> None:
                 await writer.wait_closed()
 
         print(" ====   killing serve.py")
-        serving_process.terminate()
+        if sys.platform == "win32" or sys.platform == "cygwin":
+            serving_process.send_signal(signal.CTRL_BREAK_EVENT)
+        else:
+            serving_process.terminate()
         output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
     print(" ====           serve.py done")
 
