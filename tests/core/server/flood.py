@@ -18,7 +18,7 @@ async def tcp_echo_client(counter: str) -> None:
         writer = None
         try:
             print(f"Opening connection: {counter}")
-            reader, writer = await asyncio.open_connection(IP, PORT)
+            reader, writer = await asyncio.shield(asyncio.create_task(asyncio.open_connection(IP, PORT)))
             print(f"Opened connection: {counter}")
             assert writer is not None
             await asyncio.sleep(15)
