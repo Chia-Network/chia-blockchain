@@ -367,8 +367,8 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append(str(args.device))
     if "disk_128" in args and args.disk_128:
         call_args.append("--disk-128")
-    if "disk_64" in args and args.disk_64:
-        call_args.append("--disk-64")
+    if "disk_16" in args and args.disk_16:
+        call_args.append("--disk-16")
 
     call_args.append(args.finaldir)
 
