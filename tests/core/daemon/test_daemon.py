@@ -1634,6 +1634,23 @@ async def test_plotter_errors(
     ),
     RouteCase(
         route="start_plotting",
+        description="bladebit - cudaplot",
+        request={
+            **plotter_request_ref,
+            "plotter": "bladebit",
+            "plot_type": "cudaplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "e": False,
+            "compress": 1,
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
         description="madmax",
         request={
             **plotter_request_ref,
