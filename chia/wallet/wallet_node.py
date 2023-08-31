@@ -280,7 +280,7 @@ class WalletNode:
     async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:
         conn: aiosqlite.Connection
         # are not part of core wallet tables, but might appear later
-        ignore_tables = {"lineage_proofs_", "sqlite_"}
+        ignore_tables = {"lineage_proofs_", "sqlite_", "MIGRATED_VALID_TIMES_TXS", "MIGRATED_VALID_TIMES_TRADES"}
         required_tables = [
             "coin_record",
             "transaction_record",
