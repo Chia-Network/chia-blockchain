@@ -374,6 +374,74 @@ class TestBlockHeightMap:
             with pytest.raises(KeyError) as _:
                 height_map.get_ses(uint32(8))
 
+    @pytest.mark.asyncio
+    async def test_cache_file_nothing_to_write(self, tmp_dir: Path, db_version: int) -> None:
+        # This is a test where the height-to-hash data is entirely used from
+        # the cache file and there is nothing to write in that file as a result.
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 10000, ses_every=20)
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+            # To ensure we're actually loading from cache, and not the DB, clear
+            # the table.
+            async with db_wrapper.writer_maybe_transaction() as conn:
+                await conn.execute("DELETE FROM full_blocks")
+            await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
+            # At this point we should have a proper cache file
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(f.read())
+                assert len(heights) == (10000 + 1) * 32
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+            # Make sure we didn't alter the cache (nothing new to write)
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                assert bytearray(f.read()) == heights
+
+    @pytest.mark.asyncio
+    async def test_cache_file_replace_everything(self, tmp_dir: Path, db_version: int) -> None:
+        # This is a test where the height-to-hash is entirely unrelated to the
+        # database. Make sure it can be fully replaced
+        async with DBConnection(db_version) as db_wrapper:
+            heights = bytearray(900 * 32)
+            for i in range(900):
+                idx = i * 32
+                heights[idx : idx + 32] = bytes([i % 256] * 32)
+            await write_file_async(tmp_dir / "height-to-hash", heights)
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 10000, ses_every=20)
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+            # We replaced the whole cache at this point so all values should be different
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(f.read())
+                # Make sure we wrote the whole file
+                assert len(new_heights) == (10000 + 1) * 32
+                # Make sure none of the old values remain
+                for i in range(0, len(heights), 32):
+                    assert new_heights[i : i + 32] != heights[i : i + 32]
+
+    @pytest.mark.asyncio
+    async def test_cache_file_extend(self, tmp_dir: Path, db_version: int) -> None:
+        # Test the case where the cache has fewer blocks than the DB, and that
+        # we correctly load all the missing blocks from the DB to update the
+        # cache
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 2000, ses_every=20)
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            # Add 2000 blocks to the chain
+            await setup_chain(db_wrapper, 4000, ses_every=20)
+            # At this point we should have a proper cache with the old chain data
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(f.read())
+                assert len(heights) == (2000 + 1) * 32
+            await BlockHeightMap.create(tmp_dir, db_wrapper)
+            # Make sure we properly wrote the additional data to the cache
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(f.read())
+                assert len(new_heights) == (4000 + 1) * 32
+                assert new_heights[: len(heights)] == heights
+
 
 @pytest.mark.asyncio
 async def test_unsupported_version(tmp_dir: Path) -> None:
