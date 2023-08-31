@@ -159,6 +159,8 @@ jobs:
         cd "$OLDPWD"
 
     - uses: ./.github/actions/install
+      env:
+        SKIP_PACKAGE_INSTALL: "1"
       with:
         python-version: ${{ matrix.python-version }}
         development: true
