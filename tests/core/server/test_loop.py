@@ -173,14 +173,16 @@ async def test_loop() -> None:
         time.sleep(adjusted_timeout(5))
 
         writer = None
+        post_connection_error: Optional[Exception] = None
         try:
             with anyio.fail_after(delay=adjusted_timeout(1)):
                 print(" ==== attempting a single new connection")
                 reader, writer = await asyncio.open_connection(IP, PORT)
                 print(" ==== connection succeeded")
                 post_connection_succeeded = True
-        except (TimeoutError, ConnectionRefusedError):
-            post_connection_succeeded = False
+        except (TimeoutError, ConnectionRefusedError) as e:
+            post_connection_succeeded
+            post_connection_error = e
         finally:
             if writer is not None:
                 writer.close()
@@ -217,7 +219,7 @@ async def test_loop() -> None:
     assert accept_loop_count_over == [], accept_loop_count_over
     assert "Traceback" not in output
     assert "paused accepting connections" in output
-    assert post_connection_succeeded
+    assert post_connection_succeeded, str(post_connection_error)
 
     print(" ==== all checks passed")
 
