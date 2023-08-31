@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import pathlib
 import random
 import signal
@@ -147,6 +148,17 @@ class ServeInThread:
 
 @pytest.mark.asyncio
 async def test_loop() -> None:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
@@ -155,7 +167,7 @@ async def test_loop() -> None:
     else:
         creationflags = 0
 
-    print(" ==== launching serve.py")
+    logger.info(" ==== launching serve.py")
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve"],
         creationflags=creationflags,
@@ -164,20 +176,20 @@ async def test_loop() -> None:
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
     ) as serving_process:
-        print(" ====           serve.py running")
+        logger.info(" ====           serve.py running")
         time.sleep(5)
-        print(" ==== launching flood.py")
+        logger.info(" ==== launching flood.py")
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood"],
             encoding="utf-8",
             stderr=subprocess.STDOUT,
             stdout=subprocess.PIPE,
         ) as flooding_process:
-            print(" ====           flood.py running")
+            logger.info(" ====           flood.py running")
             time.sleep(5)
-            print(" ====   killing flood.py")
+            logger.info(" ====   killing flood.py")
             flooding_process.kill()
-        print(" ====           flood.py done")
+        logger.info(" ====           flood.py done")
 
         time.sleep(adjusted_timeout(5))
 
@@ -185,9 +197,9 @@ async def test_loop() -> None:
         post_connection_error: Optional[Exception] = None
         try:
             with anyio.fail_after(delay=adjusted_timeout(1)):
-                print(" ==== attempting a single new connection")
+                logger.info(" ==== attempting a single new connection")
                 reader, writer = await asyncio.open_connection(IP, PORT)
-                print(" ==== connection succeeded")
+                logger.info(" ==== connection succeeded")
                 post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
             post_connection_succeeded = False
@@ -197,16 +209,16 @@ async def test_loop() -> None:
                 writer.close()
                 await writer.wait_closed()
 
-        print(" ====   killing serve.py")
+        logger.info(" ====   killing serve.py")
         if sys.platform == "win32" or sys.platform == "cygwin":
             serving_process.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             serving_process.terminate()
         output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
-    print(" ====           serve.py done")
+    logger.info(" ====           serve.py done")
 
-    print("\n\n ==== output:")
-    print(output)
+    logger.info("\n\n ==== output:")
+    logger.info(output)
 
     over = []
     connection_limit = 25
@@ -232,7 +244,7 @@ async def test_loop() -> None:
     assert "paused accepting connections" in output
     assert post_connection_succeeded, str(post_connection_error)
 
-    print(" ==== all checks passed")
+    logger.info(" ==== all checks passed")
 
 
 @pytest.mark.parametrize(

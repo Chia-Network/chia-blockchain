@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import asyncio.events
 import asyncio.protocols
+import dataclasses
 import functools
 import logging.config
 import signal
 import sys
 import threading
-from typing import List, Optional
+from typing import List, Optional, final
 
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
@@ -19,10 +20,14 @@ if sys.platform == "win32":
     NULL = _winapi.NULL
 
 
+@final
+@dataclasses.dataclass
 class EchoServer(asyncio.Protocol):
+    logger: logging.Logger
+
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         peername = transport.get_extra_info("peername")
-        print("connection from {}".format(peername))
+        self.logger.info("connection from {}".format(peername))
         self.transport = transport
 
     def data_received(self, data: bytes) -> None:
@@ -41,6 +46,17 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
     async def setup_process_global_state() -> None:
         # Being async forces this to be run from within an active event loop as is
         # needed for the signal handler setup.
@@ -70,35 +86,31 @@ async def async_main(
         await setup_process_global_state()
 
     loop = asyncio.get_event_loop()
-    server = await loop.create_server(EchoServer, ip, port)
+    server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
     if port_holder is not None:
         [server_socket] = server.sockets
         # TODO: review if this is general enough, such as for ipv6
         port_holder.append(server_socket.getsockname()[1])
-    print("serving on {}".format(server.sockets[0].getsockname()))
+    logger.info("serving on {}".format(server.sockets[0].getsockname()))
 
     try:
         while not thread_end_event.is_set():
             await asyncio.sleep(0.1)
-        print("exit: thread end event set")
+        logger.info("exit: thread end event set")
     except KeyboardInterrupt:
-        print("exit: keyboard interrupt")
+        logger.info("exit: keyboard interrupt")
     except asyncio.CancelledError:
-        print("exit: cancelled")
+        logger.info("exit: cancelled")
     finally:
-        print("closing server")
+        logger.info("closing server")
         server.close()
         await server.wait_closed()
-        print("server closed")
+        logger.info("server closed")
         # await asyncio.sleep(5)
 
 
 def main(connection_limit: int = 25) -> None:
     asyncio.set_event_loop_policy(ChiaPolicy())
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.DEBUG)
-    stream_handler = logging.StreamHandler(stream=sys.stdout)
-    logger.addHandler(hdlr=stream_handler)
     async_run(async_main(), connection_limit=connection_limit - 100)
 
 
