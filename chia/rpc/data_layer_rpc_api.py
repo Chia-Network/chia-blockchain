@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -74,6 +74,7 @@ class DataLayerRpcApi:
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
+            "/wallet_log_in": self.wallet_log_in,
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
@@ -107,6 +108,13 @@ class DataLayerRpcApi:
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         return []
+
+    async def wallet_log_in(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        fingerprint = cast(int, request["fingerprint"])
+        await self.service.wallet_log_in(fingerprint=fingerprint)
+        return {}
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:

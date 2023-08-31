@@ -6,17 +6,18 @@ import copy
 import enum
 import json
 import os
+import random
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import anyio
 import pytest
 import pytest_asyncio
 
-from chia.cmds.data_funcs import clear_pending_roots
+from chia.cmds.data_funcs import clear_pending_roots, wallet_log_in_cmd
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
@@ -38,6 +39,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.keychain import bytes_to_mnemonic
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
@@ -62,7 +64,7 @@ class InterfaceLayer(enum.Enum):
 async def init_data_layer_service(
     wallet_rpc_port: uint16,
     bt: BlockTools,
-    db_path: Path,
+    db_path: Optional[Path] = None,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
 ) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
     config = bt.config
@@ -71,7 +73,8 @@ async def init_data_layer_service(
     config["data_layer"]["run_server"] = False
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
-    config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
+    if db_path is not None:
+        config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     save_config(bt.root_path, "config.yaml", config)
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
@@ -159,6 +162,36 @@ async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     return (await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer))[1]
+
+
+async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process:
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "chia",
+        *args,
+        env={**os.environ, "CHIA_ROOT": os.fspath(root_path)},
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await process.wait()
+    assert process.stdout is not None
+    assert process.stderr is not None
+    stderr = await process.stderr.read()
+    if sys.version_info >= (3, 10, 6):
+        assert stderr == b""
+    else:
+        # https://github.com/python/cpython/issues/92841
+        assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+    assert process.returncode == 0
+
+    return process
+
+
+def create_mnemonic(seed: bytes = b"ab") -> str:
+    random_ = random.Random()
+    random_.seed(a=seed, version=2)
+    return bytes_to_mnemonic(mnemonic_bytes=bytes(random_.randrange(256) for _ in range(32)))
 
 
 @pytest.mark.asyncio
@@ -2012,3 +2045,68 @@ async def test_issue_15955_deadlock(
                 await asyncio.gather(
                     *(asyncio.create_task(data_layer.get_value(store_id=tree_id, key=key)) for _ in range(10))
                 )
+
+
+@pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.asyncio
+async def test_wallet_log_in_changes_active_fingerprint(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    layer: InterfaceLayer,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+
+    mnemonic = create_mnemonic()
+    assert wallet_rpc_api.service.local_keychain is not None
+    private_key = wallet_rpc_api.service.local_keychain.add_private_key(mnemonic=mnemonic)
+    secondary_fingerprint: int = private_key.get_g1().get_fingerprint()
+
+    await wallet_rpc_api.log_in(request={"fingerprint": primary_fingerprint})
+
+    active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+    assert active_fingerprint == primary_fingerprint
+
+    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt) as data_layer_service:
+        # NOTE: we don't need the service for direct...  simpler to leave it in
+        assert data_layer_service.rpc_server is not None
+        rpc_port = data_layer_service.rpc_server.listen_port
+        data_layer = data_layer_service._api.data_layer
+        # test wallet log in
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        if layer == InterfaceLayer.direct:
+            await data_rpc_api.wallet_log_in({"fingerprint": secondary_fingerprint})
+        elif layer == InterfaceLayer.client:
+            client = await DataLayerRpcClient.create(
+                self_hostname=self_hostname,
+                port=rpc_port,
+                root_path=bt.root_path,
+                net_config=bt.config,
+            )
+            try:
+                await client.wallet_log_in(fingerprint=secondary_fingerprint)
+            finally:
+                client.close()
+                await client.await_closed()
+        elif layer == InterfaceLayer.funcs:
+            await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
+        elif layer == InterfaceLayer.cli:
+            process = await run_cli_cmd(
+                "data",
+                "wallet_log_in",
+                "--fingerprint",
+                str(secondary_fingerprint),
+                "--data-rpc-port",
+                str(rpc_port),
+                root_path=bt.root_path,
+            )
+            assert process.stdout is not None
+            assert await process.stdout.read() == b""
+        else:  # pragma: no cover
+            assert False, "unhandled parametrization"
+
+        active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
+        assert active_fingerprint == secondary_fingerprint
