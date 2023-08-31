@@ -170,7 +170,7 @@ async def test_loop() -> None:
             flooding_process.kill()
         print(" ====           flood.py done")
 
-        # time.sleep(adjusted_timeout(5))
+        time.sleep(adjusted_timeout(5))
 
         writer = None
         post_connection_error: Optional[Exception] = None
@@ -191,6 +191,7 @@ async def test_loop() -> None:
         print(" ====   killing serve.py")
         # serving_process.send_signal(signal.CTRL_C_EVENT)
         # serving_process.terminate()
+        serving_process.kill()
         output, _ = serving_process.communicate()
     print(" ====           serve.py done")
 
