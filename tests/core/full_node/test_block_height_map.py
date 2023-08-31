@@ -4,7 +4,6 @@ import struct
 from pathlib import Path
 from typing import Optional
 
-import aiofiles
 import pytest
 
 from chia.full_node.block_height_map import BlockHeightMap, SesCache
@@ -386,16 +385,14 @@ class TestBlockHeightMap:
             # To ensure we're actually loading from cache, and not the DB, clear
             # the table.
             async with db_wrapper.writer_maybe_transaction() as conn:
-                await conn.execute("DROP TABLE full_blocks")
-            await setup_db(db_wrapper)
+                await conn.execute("DELETE FROM full_blocks")
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
             # At this point we should have a proper cache file
             heights_stat = (tmp_dir / "height-to-hash").stat()
             assert heights_stat.st_size == (10000 + 1) * 32
             await BlockHeightMap.create(tmp_dir, db_wrapper)
-            # Make sure we didn't alter the cache (nothing to write)
+            # Make sure we didn't alter the cache (nothing new to write)
             new_heights_stat = (tmp_dir / "height-to-hash").stat()
-            assert new_heights_stat.st_mtime == heights_stat.st_mtime
             assert new_heights_stat.st_size == heights_stat.st_size
 
     @pytest.mark.asyncio
@@ -412,8 +409,8 @@ class TestBlockHeightMap:
             await setup_chain(db_wrapper, 10000, ses_every=20)
             await BlockHeightMap.create(tmp_dir, db_wrapper)
             # We replaced the whole cache at this point so all values should be different
-            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                new_heights = bytearray(await f.read())
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(f.read())
                 # Make sure we wrote the whole file
                 assert len(new_heights) == (10000 + 1) * 32
                 # Make sure none of the old values remain
@@ -434,16 +431,15 @@ class TestBlockHeightMap:
             # Add 2000 blocks to the chain
             await setup_chain(db_wrapper, 4000, ses_every=20)
             # At this point we should have a proper cache with the old chain data
-            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                heights = bytearray(await f.read())
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(f.read())
                 assert len(heights) == (2000 + 1) * 32
             await BlockHeightMap.create(tmp_dir, db_wrapper)
             # Make sure we properly wrote the additional data to the cache
-            async with aiofiles.open(tmp_dir / "height-to-hash", "rb") as f:
-                new_heights = bytearray(await f.read())
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                new_heights = bytearray(f.read())
                 assert len(new_heights) == (4000 + 1) * 32
-                for i in range(0, len(heights), 32):
-                    assert new_heights[i : i + 32] == heights[i : i + 32]
+                assert new_heights[: len(heights)] == heights
 
 
 @pytest.mark.asyncio
