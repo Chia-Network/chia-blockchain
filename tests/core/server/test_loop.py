@@ -15,6 +15,7 @@ import anyio
 import pytest
 
 from chia.server import chia_policy
+from chia.simulator.time_out_assert import adjusted_timeout
 from tests.core.server import serve
 
 here = pathlib.Path(__file__).parent
@@ -169,11 +170,11 @@ async def test_loop() -> None:
             flooding_process.kill()
         print(" ====           flood.py done")
 
-        time.sleep(5)
+        time.sleep(adjusted_timeout(5))
 
         writer = None
         try:
-            with anyio.fail_after(delay=1):
+            with anyio.fail_after(delay=adjusted_timeout(1)):
                 print(" ==== attempting a single new connection")
                 reader, writer = await asyncio.open_connection(IP, PORT)
                 print(" ==== connection succeeded")
