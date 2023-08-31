@@ -19,7 +19,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
-from tests.conftest import Mode
+from tests.conftest import ConsensusMode
 from tests.core.node_height import node_height_between, node_height_exactly
 
 log = logging.getLogger(__name__)

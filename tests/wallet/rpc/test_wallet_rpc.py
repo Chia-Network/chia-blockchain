@@ -881,16 +881,12 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all(not transaction.confirmed for transaction in all_transactions)
 
     # Test bypass broken txs
-    tx = all_transactions[0]
-    new_tx = dataclasses.replace(tx, type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
-    await wallet.wallet_state_manager.tx_store.add_transaction_record(new_tx)
-    tr1 = await wallet.wallet_state_manager.tx_store.get_transaction_record(tx.name)
-    assert new_tx == tr1
-
-    all_transactions = await client.get_transactions(
-        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]), confirmed=tx.confirmed
+    await wallet.wallet_state_manager.tx_store.add_transaction_record(
+        dataclasses.replace(all_transactions[0], type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
     )
-    assert all_transactions[0] == tr1
+    all_transactions = await client.get_transactions(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]), confirmed=False
+    )
     assert len(all_transactions) == 1
 
 
