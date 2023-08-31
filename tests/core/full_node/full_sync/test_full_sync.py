@@ -434,7 +434,7 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
         await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, True)
-        await time_out_assert(300, full_node_1.full_node.sync_store.get_long_sync, False)
+        await time_out_assert(250, full_node_1.full_node.sync_store.get_long_sync, False)
         peak = full_node_2.full_node.blockchain.get_peak()
         wp = await full_node_2.full_node.weight_proof_handler.get_proof_of_weight(peak.header_hash)
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
