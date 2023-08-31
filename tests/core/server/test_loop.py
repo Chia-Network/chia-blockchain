@@ -9,7 +9,6 @@ import signal
 import subprocess
 import sys
 import threading
-import time
 from dataclasses import dataclass, field
 from typing import AsyncIterator, List, Optional
 
@@ -176,7 +175,7 @@ async def test_loop() -> None:
         stdout=subprocess.PIPE,
     ) as serving_process:
         logger.info(" ====           serve.py running")
-        time.sleep(5)
+        await asyncio.sleep(adjusted_timeout(5))
         logger.info(" ==== launching flood.py")
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood"],
@@ -186,15 +185,16 @@ async def test_loop() -> None:
             stdout=subprocess.PIPE,
         ) as flooding_process:
             logger.info(" ====           flood.py running")
-            time.sleep(5)
+            await asyncio.sleep(adjusted_timeout(5))
             logger.info(" ====   killing flood.py")
             if sys.platform == "win32" or sys.platform == "cygwin":
                 flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
             else:
                 flooding_process.terminate()
+            flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
         logger.info(" ====           flood.py done")
 
-        time.sleep(adjusted_timeout(5))
+        await asyncio.sleep(adjusted_timeout(5))
 
         writer = None
         post_connection_error: Optional[Exception] = None
@@ -217,16 +217,16 @@ async def test_loop() -> None:
             serving_process.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             serving_process.terminate()
-        output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
+        serve_output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
     logger.info(" ====           serve.py done")
 
-    logger.info("\n\n ==== output:\n")
-    logger.info(output)
+    logger.info(f"\n\n ==== serve output:\n{serve_output}")
+    logger.info(f"\n\n ==== flood output:\n{flood_output}")
 
     over = []
     connection_limit = 25
     accept_loop_count_over: List[int] = []
-    for line in output.splitlines():
+    for line in serve_output.splitlines():
         mark = "Total connections:"
         if mark in line:
             _, _, rest = line.partition(mark)
@@ -243,8 +243,8 @@ async def test_loop() -> None:
 
     assert over == [], over
     assert accept_loop_count_over == [], accept_loop_count_over
-    assert "Traceback" not in output
-    assert "paused accepting connections" in output
+    assert "Traceback" not in serve_output
+    assert "paused accepting connections" in serve_output
     assert post_connection_succeeded, str(post_connection_error)
 
     logger.info(" ==== all checks passed")
