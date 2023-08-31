@@ -388,12 +388,13 @@ class TestBlockHeightMap:
                 await conn.execute("DELETE FROM full_blocks")
             await setup_chain(db_wrapper, 10000, ses_every=20, start_height=9970)
             # At this point we should have a proper cache file
-            heights_stat = (tmp_dir / "height-to-hash").stat()
-            assert heights_stat.st_size == (10000 + 1) * 32
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                heights = bytearray(f.read())
+                assert len(heights) == (10000 + 1) * 32
             await BlockHeightMap.create(tmp_dir, db_wrapper)
             # Make sure we didn't alter the cache (nothing new to write)
-            new_heights_stat = (tmp_dir / "height-to-hash").stat()
-            assert new_heights_stat.st_size == heights_stat.st_size
+            with open(tmp_dir / "height-to-hash", "rb") as f:
+                assert bytearray(f.read()) == heights
 
     @pytest.mark.asyncio
     async def test_cache_file_replace_everything(self, tmp_dir: Path, db_version: int) -> None:
