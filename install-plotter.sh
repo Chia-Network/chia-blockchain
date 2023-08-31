@@ -166,11 +166,6 @@ if [ "$VIRTUAL_ENV" = "" ]; then
   exit 1
 fi
 
-if [ "$(id -u)" = 0 ]; then
-  echo "ERROR: Plotter can not be installed or run by the root user."
-  exit 1
-fi
-
 OS=""
 ARCH="x86-64"
 if [ "$(uname)" = "Linux" ]; then
