@@ -188,7 +188,10 @@ async def test_loop() -> None:
             logger.info(" ====           flood.py running")
             time.sleep(5)
             logger.info(" ====   killing flood.py")
-            flooding_process.kill()
+            if sys.platform == "win32" or sys.platform == "cygwin":
+                flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                flooding_process.terminate()
         logger.info(" ====           flood.py done")
 
         time.sleep(adjusted_timeout(5))
@@ -217,7 +220,7 @@ async def test_loop() -> None:
         output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
     logger.info(" ====           serve.py done")
 
-    logger.info("\n\n ==== output:")
+    logger.info("\n\n ==== output:\n")
     logger.info(output)
 
     over = []
