@@ -193,6 +193,8 @@ def default_400_blocks(bt, consensus_mode):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -204,6 +206,8 @@ def default_1000_blocks(bt, consensus_mode):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -215,6 +219,8 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -232,6 +238,8 @@ def default_1500_blocks(bt, consensus_mode):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -242,7 +250,7 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4 or consensus_mode == ConsensusMode.HARD_FORK_2_0:
         pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
@@ -253,6 +261,8 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -271,6 +281,8 @@ def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
 
     from tests.util.blockchain import persistent_blocks
 
@@ -290,7 +302,7 @@ def default_2000_blocks_compact(bt, consensus_mode):
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4 or consensus_mode == ConsensusMode.HARD_FORK_2_0:
         pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,

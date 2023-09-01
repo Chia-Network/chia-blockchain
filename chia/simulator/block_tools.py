@@ -130,6 +130,10 @@ GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
     "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
+DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
+    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
+)
+
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "MIN_PLOT_SIZE": 18,
@@ -1844,17 +1848,31 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int, hard_fork: 
     condition_cost = 0
     clvm_cost = 0
 
-    flags = MEMPOOL_MODE
     if hard_fork:
-        flags |= ALLOW_BACKREFS
-    block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-    clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, flags, generator.program, block_program_args)
+        blocks = [bytes(g) for g in generator.generator_refs]
+        cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, DESERIALIZE_MOD, blocks)
+        clvm_cost += cost
 
-    for res in result.first().as_iter():
-        res = res.rest()  # skip parent coin id
-        res = res.rest()  # skip puzzle hash
-        res = res.rest()  # skip amount
-        condition_cost += conditions_cost(res.first(), hard_fork)
+        for spend in result.first().as_iter():
+            spend = spend.rest()  # skip parent coin id
+            puzzle = spend.first()
+            spend = spend.rest()  # skip puzzle
+            spend = spend.rest()  # skip amount
+            solution = spend.first()
+
+            cost, result = puzzle._run(INFINITE_COST, MEMPOOL_MODE, solution)
+            clvm_cost += cost
+            condition_cost += conditions_cost(result, hard_fork)
+
+    else:
+        block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
+        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, generator.program, block_program_args)
+
+        for res in result.first().as_iter():
+            res = res.rest()  # skip parent coin id
+            res = res.rest()  # skip puzzle hash
+            res = res.rest()  # skip amount
+            condition_cost += conditions_cost(res.first(), hard_fork)
 
     size_cost = len(bytes(generator.program)) * cost_per_byte
 
