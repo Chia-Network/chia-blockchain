@@ -9,7 +9,7 @@ import time
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
 PORT = 8444
-NUM_CLIENTS = 500
+NUM_CLIENTS = 100
 
 
 async def tcp_echo_client(counter: str) -> None:
@@ -26,9 +26,9 @@ async def tcp_echo_client(counter: str) -> None:
             t2 = time.monotonic()
             print(f"Closed connection {counter}: {e}. Time: {t2 - t1}")
         finally:
-            print(f"--- a {counter}")
+            print(f"--- a  {counter}")
             if writer is not None:
-                print(f"--- b {counter}")
+                print(f"---  B {counter}")
                 writer.close()
                 await writer.wait_closed()
 

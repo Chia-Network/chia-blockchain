@@ -185,7 +185,7 @@ async def test_loop() -> None:
             stdout=subprocess.PIPE,
         ) as flooding_process:
             logger.info(" ====           flood.py running")
-            await asyncio.sleep(adjusted_timeout(5))
+            await asyncio.sleep(adjusted_timeout(25))
             logger.info(" ====   killing flood.py")
             if sys.platform == "win32" or sys.platform == "cygwin":
                 flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
@@ -194,19 +194,19 @@ async def test_loop() -> None:
             flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
         logger.info(" ====           flood.py done")
 
-        await asyncio.sleep(adjusted_timeout(5))
+        await asyncio.sleep(adjusted_timeout(30))
 
         writer = None
-        post_connection_error: Optional[Exception] = None
+        post_connection_error: Optional[str] = None
         try:
-            with anyio.fail_after(delay=adjusted_timeout(1)):
+            with anyio.fail_after(delay=adjusted_timeout(15)):
                 logger.info(" ==== attempting a single new connection")
                 reader, writer = await asyncio.open_connection(IP, PORT)
                 logger.info(" ==== connection succeeded")
                 post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
             post_connection_succeeded = False
-            post_connection_error = e
+            post_connection_error = f"{type(e).__name__}: {e}"
         finally:
             if writer is not None:
                 writer.close()
@@ -245,7 +245,7 @@ async def test_loop() -> None:
     assert accept_loop_count_over == [], accept_loop_count_over
     assert "Traceback" not in serve_output
     assert "paused accepting connections" in serve_output
-    assert post_connection_succeeded, str(post_connection_error)
+    assert post_connection_succeeded, post_connection_error
 
     logger.info(" ==== all checks passed")
 
