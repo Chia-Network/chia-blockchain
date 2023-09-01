@@ -20,6 +20,19 @@ from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
+class BalanceCheckingError(Exception):
+    errors: Dict[Union[int, str], List[str]]
+
+    def __init__(self, errors: Dict[Union[int, str], List[str]]) -> None:
+        self.errors = errors
+
+    def __repr__(self) -> str:
+        return json.dumps(self.errors, indent=4)
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
 @dataclass
 class WalletState:
     balance: Balance
@@ -60,7 +73,7 @@ class WalletEnvironment:
         dealiased_additional_balance_info: Dict[uint32, Dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
-        errors: Dict[int, List[str]] = {}
+        errors: Dict[Union[int, str], List[str]] = {}
         for wallet_id in self.wallet_state_manager.wallets:
             if wallet_id not in self.wallet_states:
                 raise KeyError(f"No wallet state for wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)})")
@@ -91,10 +104,10 @@ class WalletEnvironment:
                         )
 
             if wallet_errors != []:
-                errors[wallet_id] = wallet_errors
+                errors[self.alias_wallet_id(wallet_id)] = wallet_errors
 
         if errors != {}:
-            raise ValueError(json.dumps(errors, indent=4))
+            raise BalanceCheckingError(errors)
 
     async def change_balances(self, update_dictionary: Dict[Union[int, str], Dict[str, int]]) -> None:
         for wallet_id_or_alias, kwargs in update_dictionary.items():
@@ -147,17 +160,23 @@ class WalletTestFramework:
         for env in self.environments:
             pending_txs.append(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
         await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
-        for env in self.environments:
-            await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
-        for env, transition in zip(self.environments, state_transitions):
-            await env.change_balances(transition.pre_block_balance_updates)
-            await env.check_balances(transition.pre_block_additional_balance_info)
+        try:
+            for env in self.environments:
+                await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+            for env, transition in zip(self.environments, state_transitions):
+                await env.change_balances(transition.pre_block_balance_updates)
+                await env.check_balances(transition.pre_block_additional_balance_info)
+        except Exception:
+            raise ValueError("Error before block was farmed")
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-        for env in self.environments:
-            await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
-        for env, transition in zip(self.environments, state_transitions):
-            await env.change_balances(transition.post_block_balance_updates)
-            await env.check_balances(transition.post_block_additional_balance_info)
+        try:
+            for env in self.environments:
+                await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
+            for env, transition in zip(self.environments, state_transitions):
+                await env.change_balances(transition.post_block_balance_updates)
+                await env.check_balances(transition.post_block_additional_balance_info)
+        except Exception:
+            raise ValueError("Error after block was farmed")
         for i, env_and_txs in enumerate(zip(self.environments, pending_txs)):
             env, txs = env_and_txs
             try:
