@@ -24,8 +24,6 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from typing_extensions import final
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
 from chia.server.api_protocol import ApiProtocol
@@ -567,27 +565,12 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
-        for message in messages:
-            if message_requires_reply(ProtocolMessageTypes(message.type)):
-                # Internal protocol logic error - we will raise, blocking messages to all peers
-                self.log.error(f"Attempt to broadcast message requiring protocol response: {message.type}")
-                for _, connection in self.all_connections.items():
-                    if connection.connection_type is node_type:
-                        await connection.close(
-                            ban_time=self.invalid_protocol_ban_seconds,
-                            ws_close_code=WSCloseCode.INTERNAL_ERROR,
-                            error=Err.INTERNAL_PROTOCOL_ERROR,
-                        )
-                raise ProtocolError(Err.INTERNAL_PROTOCOL_ERROR, [message.type])
-
     async def send_to_all(
         self,
         messages: List[Message],
         node_type: NodeType,
         exclude: Optional[bytes32] = None,
     ) -> None:
-        await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
                 for message in messages:

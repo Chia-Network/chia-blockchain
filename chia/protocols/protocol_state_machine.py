@@ -56,12 +56,6 @@ def static_check_sent_message_response() -> None:
         raise AssertionError(f"Overlapping NO_REPLY_EXPECTED and VALID_REPLY_MESSAGE_MAP values: {overlap}")
 
 
-def message_requires_reply(sent: ProtocolMessageTypes) -> bool:
-    """Return True if message has an entry in the full node P2P message map"""
-    # If we knew the peer NodeType is FULL_NODE, we could also check `sent not in NO_REPLY_EXPECTED`
-    return sent in VALID_REPLY_MESSAGE_MAP
-
-
 def message_response_ok(sent: ProtocolMessageTypes, received: ProtocolMessageTypes) -> bool:
     """
     Check to see that peers respect protocol message types in reply.

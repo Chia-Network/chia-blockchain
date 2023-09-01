@@ -430,7 +430,7 @@ class WSChiaConnection:
                 await self.send_message(response_message)
             # todo uncomment when enabling none response capability
             # check that this call needs a reply
-            # elif message_requires_reply(ProtocolMessageTypes(full_message.type)) and self.has_capability(
+            # elif self.has_capability(
             #     Capability.NONE_RESPONSE
             # ):
             #     # this peer can accept None reply's, send empty msg back, so it doesn't wait for timeout
