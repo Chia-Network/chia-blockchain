@@ -220,7 +220,7 @@ async def test_loop() -> None:
             serving_process.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             serving_process.terminate()
-        serve_output, _ = serving_process.communicate(timeout=adjusted_timeout(5))
+        serve_output, _ = serving_process.communicate()  # timeout=adjusted_timeout(5))
     logger.info(" ====           serve.py done")
 
     logger.info(f"\n\n ==== serve output:\n{serve_output}")
