@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import itertools
 import signal
 import sys
 import time
@@ -12,28 +13,29 @@ PORT = 8444
 NUM_CLIENTS = 100
 
 
-async def tcp_echo_client(counter: str) -> None:
+async def tcp_echo_client(task_counter: str) -> None:
     try:
-        while True:
+        for loop_counter in itertools.count():
+            label = f"{task_counter:5}-{loop_counter:5}"
             t1 = time.monotonic()
             writer = None
             try:
-                print(f"Opening connection: {counter}")
+                print(f"Opening connection: {label}")
                 reader, writer = await asyncio.shield(asyncio.create_task(asyncio.open_connection(IP, PORT)))
-                print(f"Opened connection: {counter}")
+                print(f"Opened connection: {label}")
                 assert writer is not None
                 await asyncio.sleep(15)
             except Exception as e:
                 t2 = time.monotonic()
-                print(f"Closed connection {counter}: {e}. Time: {t2 - t1}")
+                print(f"Closed connection {label}: {e}. Time: {t2 - t1}")
             finally:
-                print(f"--- {counter:5} a")
+                print(f"--- {label} a")
                 if writer is not None:
-                    print(f"--- {counter:5}   B")
+                    print(f"--- {label}   B")
                     writer.close()
                     await writer.wait_closed()
     finally:
-        print(f"--- {counter:5} task finishing")
+        print(f"--- {label} task finishing")
 
 
 async def main() -> None:
@@ -66,7 +68,7 @@ async def main() -> None:
 
     await setup_process_global_state()
     try:
-        await asyncio.gather(*[tcp_echo_client("{}".format(i)) for i in range(0, NUM_CLIENTS)])
+        await asyncio.gather(*[tcp_echo_client(task_counter="{}".format(i)) for i in range(0, NUM_CLIENTS)])
     except asyncio.CancelledError:
         pass
     finally:
