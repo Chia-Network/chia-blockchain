@@ -415,12 +415,11 @@ class TestFullSync:
         duration = time.time() - start
         assert duration > 5
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != ConsensusMode.PLAIN:
-            pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
@@ -439,12 +438,11 @@ class TestFullSync:
         wp = await full_node_2.full_node.weight_proof_handler.get_proof_of_weight(peak.header_hash)
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != ConsensusMode.PLAIN:
-            pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
         full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
