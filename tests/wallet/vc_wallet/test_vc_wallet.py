@@ -30,18 +30,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.wallet.conftest import WalletStateTransition, WalletTestFramework
-
-
-async def is_transaction_confirmed(wallet_state_manager: WalletStateManager, tx_id: bytes32) -> bool:
-    tr = await wallet_state_manager.get_transaction(tx_id)
-    if tr is None:
-        return False  # pragma: no cover
-    elif not tr.confirmed:
-        return False  # pragma: no cover
-    else:
-        return True
 
 
 async def mint_cr_cat(
