@@ -35,7 +35,7 @@ async def tcp_echo_client(task_counter: str) -> None:
                     writer.close()
                     await writer.wait_closed()
     finally:
-        print(f"--- {label} task finishing")
+        print(f"--- {task_counter:5} task finishing")
 
 
 async def main() -> None:
