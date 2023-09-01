@@ -229,7 +229,16 @@ async def test_loop() -> None:
     over = []
     connection_limit = 25
     accept_loop_count_over: List[int] = []
-    for line in serve_output.splitlines():
+    server_output_lines = serve_output.splitlines()
+    found_shutdown = False
+    shutdown_lines: List[str] = []
+    for line in server_output_lines:
+        if not found_shutdown:
+            if line.casefold().endswith("shutting down"):
+                found_shutdown = True
+            continue
+        shutdown_lines.append(line)
+    for line in server_output_lines:
         mark = "Total connections:"
         if mark in line:
             _, _, rest = line.partition(mark)
@@ -249,6 +258,9 @@ async def test_loop() -> None:
     assert "Traceback" not in serve_output
     assert "paused accepting connections" in serve_output
     assert post_connection_succeeded, post_connection_error
+    assert all(
+        "new connection" not in line.casefold() for line in shutdown_lines
+    ), "new connection found during shutting down"
 
     logger.info(" ==== all checks passed")
 
