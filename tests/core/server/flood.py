@@ -44,7 +44,6 @@ async def tcp_echo_client(task_counter: str) -> None:
 
 async def main() -> None:
     def dun(*args: object, **kwargs: object) -> None:
-        print("yeppers")
         task.cancel()
 
     async def setup_process_global_state() -> None:

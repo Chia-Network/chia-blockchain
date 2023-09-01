@@ -81,7 +81,6 @@ async def async_main(
         thread_end_event = threading.Event()
 
         def dun(*args: object, **kwargs: object) -> None:
-            logger.info("shutting down")
             thread_end_event.set()
 
         await setup_process_global_state()
