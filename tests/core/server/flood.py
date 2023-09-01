@@ -13,24 +13,27 @@ NUM_CLIENTS = 100
 
 
 async def tcp_echo_client(counter: str) -> None:
-    while True:
-        t1 = time.monotonic()
-        writer = None
-        try:
-            print(f"Opening connection: {counter}")
-            reader, writer = await asyncio.shield(asyncio.create_task(asyncio.open_connection(IP, PORT)))
-            print(f"Opened connection: {counter}")
-            assert writer is not None
-            await asyncio.sleep(15)
-        except Exception as e:
-            t2 = time.monotonic()
-            print(f"Closed connection {counter}: {e}. Time: {t2 - t1}")
-        finally:
-            print(f"--- {counter:5} a")
-            if writer is not None:
-                print(f"--- {counter:5}   B")
-                writer.close()
-                await writer.wait_closed()
+    try:
+        while True:
+            t1 = time.monotonic()
+            writer = None
+            try:
+                print(f"Opening connection: {counter}")
+                reader, writer = await asyncio.shield(asyncio.create_task(asyncio.open_connection(IP, PORT)))
+                print(f"Opened connection: {counter}")
+                assert writer is not None
+                await asyncio.sleep(15)
+            except Exception as e:
+                t2 = time.monotonic()
+                print(f"Closed connection {counter}: {e}. Time: {t2 - t1}")
+            finally:
+                print(f"--- {counter:5} a")
+                if writer is not None:
+                    print(f"--- {counter:5}   B")
+                    writer.close()
+                    await writer.wait_closed()
+    finally:
+        print(f"--- {counter:5} task finishing")
 
 
 async def main() -> None:
@@ -66,6 +69,8 @@ async def main() -> None:
         await asyncio.gather(*[tcp_echo_client("{}".format(i)) for i in range(0, NUM_CLIENTS)])
     except asyncio.CancelledError:
         pass
+    finally:
+        print("leaving flood")
 
 
 asyncio.run(main())
