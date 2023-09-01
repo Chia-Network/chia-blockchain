@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, List, Union
 
 import pytest
 import pytest_asyncio
@@ -41,14 +41,6 @@ class WalletEnvironment:
     rpc_client: WalletRpcClient
     wallet_states: Dict[uint32, WalletState]
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
-    _full_node: Optional[FullNodeSimulator] = None
-
-    @property
-    def full_node_api(self) -> FullNodeSimulator:
-        if self._full_node is None:
-            raise ValueError("WalletEnvironment._full_node has not been set")
-        else:
-            return self._full_node
 
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         return (
@@ -255,7 +247,6 @@ async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIte
                         service._node.wallet_state_manager.main_wallet,
                         rpc_client,
                         {uint32(1): wallet_state},
-                        _full_node=full_node[0]._api,
                     )
                     for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
                 ],
