@@ -26,9 +26,9 @@ async def tcp_echo_client(counter: str) -> None:
             t2 = time.monotonic()
             print(f"Closed connection {counter}: {e}. Time: {t2 - t1}")
         finally:
-            print(f"--- a  {counter}")
+            print(f"--- {counter:5} a")
             if writer is not None:
-                print(f"---  B {counter}")
+                print(f"--- {counter:5}   B")
                 writer.close()
                 await writer.wait_closed()
 
