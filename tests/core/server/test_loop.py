@@ -213,6 +213,8 @@ async def test_loop() -> None:
                 writer.close()
                 await writer.wait_closed()
 
+        await asyncio.sleep(adjusted_timeout(30))
+
         logger.info(" ====   killing serve.py")
         if sys.platform == "win32" or sys.platform == "cygwin":
             serving_process.send_signal(signal.CTRL_BREAK_EVENT)
