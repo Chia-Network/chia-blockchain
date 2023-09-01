@@ -10,7 +10,7 @@ import time
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
 PORT = 8444
-NUM_CLIENTS = 30
+NUM_CLIENTS = 5000
 
 
 async def tcp_echo_client(task_counter: str) -> None:
