@@ -189,7 +189,7 @@ async def test_loop() -> None:
             await asyncio.sleep(adjusted_timeout(25))
             logger.info(" ====   killing flood.py")
             if sys.platform == "win32" or sys.platform == "cygwin":
-                flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
+                flooding_process.send_signal(signal.CTRL_C_EVENT)
             else:
                 flooding_process.terminate()
             flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
@@ -217,7 +217,7 @@ async def test_loop() -> None:
 
         logger.info(" ====   killing serve.py")
         if sys.platform == "win32" or sys.platform == "cygwin":
-            serving_process.send_signal(signal.CTRL_BREAK_EVENT)
+            serving_process.send_signal(signal.CTRL_C_EVENT)
         else:
             serving_process.terminate()
         serve_output, _ = serving_process.communicate()  # timeout=adjusted_timeout(5))
