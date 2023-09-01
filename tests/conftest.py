@@ -916,13 +916,13 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield _
 
 
