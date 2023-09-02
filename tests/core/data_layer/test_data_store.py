@@ -1380,7 +1380,7 @@ class BatchInsertBenchmarkCase:
         return f"pre={self.pre},count={self.count}"
 
 
-@pytest.mark.parametrize(argnames="asfd", argvalues=range(30))
+@pytest.mark.parametrize(argnames="asdf", argvalues=range(30))
 @datacases(
     BatchInsertBenchmarkCase(
         pre=0,
