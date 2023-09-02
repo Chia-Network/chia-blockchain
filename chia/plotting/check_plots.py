@@ -64,6 +64,7 @@ def check_plots(
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
     gpu_index = config["harvester"].get("gpu_index", 0)
     enforce_gpu_index = config["harvester"].get("enforce_gpu_index", False)
+    decompressor_timeout = config["harvester"].get("decompressor_timeout", 20)
 
     plot_manager.configure_decompressor(
         context_count,
@@ -73,6 +74,7 @@ def check_plots(
         use_gpu_harvesting,
         gpu_index,
         enforce_gpu_index,
+        decompressor_timeout,
     )
 
     if num is not None:
@@ -170,9 +172,9 @@ def check_plots(
                     quality_start_time = int(round(time() * 1000))
                     for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                         quality_spent_time = int(round(time() * 1000)) - quality_start_time
-                        if quality_spent_time > 5000:
+                        if quality_spent_time > 8000:
                             log.warning(
-                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 5 seconds "
+                                f"\tLooking up qualities took: {quality_spent_time} ms. This should be below 8 seconds "
                                 f"to minimize risk of losing rewards. Filepath: {plot_path}"
                             )
                         else:
@@ -238,7 +240,7 @@ def check_plots(
                 )
                 bad_plots_list.append(plot_path)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=context_count) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, context_count)) as executor:
             logger_lock = Lock()
             futures = []
             for plot_path, plot_info in plot_manager.plots.items():

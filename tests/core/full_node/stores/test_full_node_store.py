@@ -26,7 +26,6 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
-from tests.conftest import Mode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -65,17 +64,15 @@ async def empty_blockchain_with_original_constants(
 
 
 class TestFullNodeStore:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     @pytest.mark.parametrize("normalized_to_identity", [False, True])
     async def test_basic_store(
         self,
         empty_blockchain: Blockchain,
         custom_block_tools: BlockTools,
-        consensus_mode: Mode,
         normalized_to_identity: bool,
     ) -> None:
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
             10,
@@ -877,7 +874,9 @@ class TestFullNodeStore:
                 assert_sp_none(i2 + 1, False)
                 assert_sp_none(i1, True)
                 assert_sp_none(i1 + 1, True)
-                assert_sp_none(i1 + 4, True)
+                # We load into `all_sps` only up to `NUM_SPS_SUB_SLOT - 3`, so make sure we're not out of range
+                if i1 + 4 < custom_block_tools.constants.NUM_SPS_SUB_SLOT - 3:
+                    assert_sp_none(i1 + 4, True)
 
                 for i in range(i2, custom_block_tools.constants.NUM_SPS_SUB_SLOT):
                     if is_overflow_block(custom_block_tools.constants, uint8(i)):
@@ -937,15 +936,13 @@ class TestFullNodeStore:
                 for block in blocks[-2:]:
                     await _validate_and_add_block_no_error(blockchain, block)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_long_chain_slots(
         self,
         empty_blockchain_with_original_constants: Blockchain,
         default_1000_blocks: List[FullBlock],
-        consensus_mode: Mode,
     ) -> None:
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(blockchain.constants)
         peak = None

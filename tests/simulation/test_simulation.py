@@ -22,6 +22,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 test_constants_modified = test_constants.replace(
@@ -59,6 +60,7 @@ async def extra_node(self_hostname):
 
 
 class TestSimulation:
+    @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
@@ -166,6 +168,7 @@ class TestSimulation:
         tx = await wallet.generate_signed_transaction(
             uint64(10),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            DEFAULT_TX_CONFIG,
             uint64(0),
         )
         await wallet.push_transaction(tx)
@@ -339,6 +342,7 @@ class TestSimulation:
             tx = await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                tx_config=DEFAULT_TX_CONFIG,
                 coins={coin},
             )
             await wallet.push_transaction(tx)
@@ -384,6 +388,7 @@ class TestSimulation:
                 await wallet.generate_signed_transaction(
                     amount=uint64(tx_amount),
                     puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    tx_config=DEFAULT_TX_CONFIG,
                     coins={coin},
                 )
                 for coin in coins

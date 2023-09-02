@@ -95,16 +95,16 @@ for path in test_paths:
         test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
+        conf = update_config(module_dict(testconfig), dir_config(path))
     else:
         paths_for_cli = path.relative_to(project_root_path).as_posix()
-
-    conf = update_config(module_dict(testconfig), dir_config(path))
+        conf = update_config(module_dict(testconfig), dir_config(path.parent))
 
     # TODO: design a configurable system for this
     process_count = {
         "macos": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
         "ubuntu": {False: 0, True: 4}.get(conf["parallel"], conf["parallel"]),
-        "windows": {False: 0, True: 2}.get(conf["parallel"], conf["parallel"]),
+        "windows": {False: 0, True: 3}.get(conf["parallel"], conf["parallel"]),
     }
     pytest_parallel_args = {os: f" -n {count}" for os, count in process_count.items()}
 

@@ -74,6 +74,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
+from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
@@ -457,6 +458,8 @@ class WalletNode:
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.wallet_peers = None
+        self.race_cache = {}
+        self.race_cache_hashes = []
         self._balance_cache = {}
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
@@ -1301,8 +1304,7 @@ class WalletNode:
         fork_height: Optional[uint32],
     ) -> bool:
         """
-        Returns all state that is valid and included in the blockchain proved by the weight proof. If return_old_states
-        is False, only new states that are not in the coin_store are returned.
+        Returns True if the coin_state is valid and included in the blockchain proved by the weight proof.
         """
         if peer.closed:
             return False
@@ -1639,7 +1641,11 @@ class WalletNode:
     async def _update_balance_cache(self, wallet_id: uint32) -> None:
         assert self.wallet_state_manager.lock.locked(), "WalletStateManager.lock required"
         wallet = self.wallet_state_manager.wallets[wallet_id]
-        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id)
+        if wallet.type() == WalletType.CRCAT:
+            coin_type = CoinType.CRCAT
+        else:
+            coin_type = CoinType.NORMAL
+        unspent_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet_id, coin_type)
         balance = await wallet.get_confirmed_balance(unspent_records)
         pending_balance = await wallet.get_unconfirmed_balance(unspent_records)
         spendable_balance = await wallet.get_spendable_balance(unspent_records)

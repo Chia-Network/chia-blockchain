@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime
 import multiprocessing
 import os
+import random
 import sysconfig
 import tempfile
 from enum import Enum
@@ -32,6 +33,7 @@ from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
+from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -44,7 +46,7 @@ from chia.simulator.setup_nodes import (
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
-from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_timelord
+from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
@@ -55,7 +57,6 @@ from chia.util.ints import uint16, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
@@ -100,21 +101,30 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class Mode(Enum):
+class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
+    SOFT_FORK3 = 2
+    SOFT_FORK4 = 3
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0])
+@pytest.fixture(
+    scope="session",
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3, ConsensusMode.SOFT_FORK4],
+)
 def consensus_mode(request):
     return request.param
 
 
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
-    if consensus_mode == Mode.PLAIN:
+    if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == Mode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.SOFT_FORK3:
+        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
         )
@@ -164,12 +174,15 @@ def latest_db_version() -> int:
     return 2
 
 
-@pytest.fixture(scope="function", params=[1, 2])
+@pytest.fixture(scope="function", params=[2])
 def db_version(request) -> int:
     return request.param
 
 
-@pytest.fixture(scope="function", params=[1000000, 3886635, 4410000, 5496000])
+SOFTFORK_HEIGHTS = [1000000, 4510000, 5496000]
+
+
+@pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
 def softfork_height(request) -> int:
     return request.param
 
@@ -178,26 +191,38 @@ saved_blocks_version = "rc5"
 
 
 @pytest.fixture(scope="session")
-def default_400_blocks(bt):
+def default_400_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}.db", bt, seed=b"400")
+    return persistent_blocks(400, f"test_blocks_400_{saved_blocks_version}{version}.db", bt, seed=b"400")
 
 
 @pytest.fixture(scope="session")
-def default_1000_blocks(bt):
+def default_1000_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}.db", bt, seed=b"1000")
+    return persistent_blocks(1000, f"test_blocks_1000_{saved_blocks_version}{version}.db", bt, seed=b"1000")
 
 
 @pytest.fixture(scope="session")
-def pre_genesis_empty_slots_1000_blocks(bt):
+def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         1000,
-        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}.db",
+        f"pre_genesis_empty_slots_1000_blocks{saved_blocks_version}{version}.db",
         bt,
         seed=b"empty_slots",
         empty_sub_slots=1,
@@ -205,33 +230,47 @@ def pre_genesis_empty_slots_1000_blocks(bt):
 
 
 @pytest.fixture(scope="session")
-def default_1500_blocks(bt):
+def default_1500_blocks(bt, consensus_mode):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
-    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}.db", bt, seed=b"1500")
+    return persistent_blocks(1500, f"test_blocks_1500_{saved_blocks_version}{version}.db", bt, seed=b"1500")
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks(bt):
+def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
+
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt):
+def default_20000_blocks(bt, consensus_mode):
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        pytest.skip("Test cache not available")
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
 
 
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, default_1500_blocks):
+def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         758,
-        f"test_blocks_long_reorg_{saved_blocks_version}.db",
+        f"test_blocks_long_reorg_{saved_blocks_version}{version}.db",
         bt,
         block_list_input=default_1500_blocks[:320],
         seed=b"reorg_blocks",
@@ -240,12 +279,16 @@ def test_long_reorg_blocks(bt, default_1500_blocks):
 
 
 @pytest.fixture(scope="session")
-def default_2000_blocks_compact(bt):
+def default_2000_blocks_compact(bt, consensus_mode):
+    version = ""
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        version = "_softfork3"
+
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
         2000,
-        f"test_blocks_2000_compact_{saved_blocks_version}.db",
+        f"test_blocks_2000_compact_{saved_blocks_version}{version}.db",
         bt,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
@@ -256,9 +299,11 @@ def default_2000_blocks_compact(bt):
 
 
 @pytest.fixture(scope="session")
-def default_10000_blocks_compact(bt):
+def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
+        pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,
         f"test_blocks_10000_compact_{saved_blocks_version}.db",
@@ -287,6 +332,33 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
     @pytest.hookimpl(tryfirst=True)
     def pytest_internalerror(excinfo):
         raise excinfo.value
+
+
+def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
+    # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
+    removed = []
+    kept = []
+    limit_consensus_modes_problems: List[str] = []
+    for item in items:
+        limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
+        if limit_consensus_modes_marker is not None:
+            mode = item.callspec.params.get("consensus_mode")
+            if mode is None:
+                limit_consensus_modes_problems.append(item.name)
+
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [ConsensusMode.PLAIN])
+            if mode not in modes:
+                removed.append(item)
+                continue
+
+        kept.append(item)
+    if removed:
+        config.hook.pytest_deselected(items=removed)
+        items[:] = kept
+
+    if len(limit_consensus_modes_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
+        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -328,9 +400,27 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
-async def wallet_nodes():
-    async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
+async def wallet_nodes(blockchain_constants, consensus_mode):
+    constants = blockchain_constants
+    async_gen = setup_simulators_and_wallets(
+        2,
+        1,
+        {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK4_HEIGHT": constants.SOFT_FORK4_HEIGHT},
+    )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -356,9 +446,24 @@ async def two_nodes_sim_and_wallets():
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets_services():
-    async for _ in setup_simulators_and_wallets_service(2, 0, {}):
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
+async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
+    async for _ in setup_simulators_and_wallets_service(
+        2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
+    ):
         yield _
 
 
@@ -493,48 +598,6 @@ async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulato
         yield _
 
 
-@pytest.fixture(scope="function", params=[True, False])
-def enable_softfork2(request):
-    return request.param
-
-
-@pytest_asyncio.fixture(scope="function")
-async def one_node_one_block_with_softfork2(
-    enable_softfork2,
-) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
-    if enable_softfork2:
-        constant_replacements = {"SOFT_FORK2_HEIGHT": 0}
-    else:
-        constant_replacements = {}
-
-    async_gen = setup_simulators_and_wallets(1, 0, constant_replacements)
-    nodes, _, bt = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    server_1 = full_node_1.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-
-    reward_ph = wallet_a.get_new_puzzlehash()
-    blocks = bt.get_consecutive_blocks(
-        1,
-        guarantee_transaction_block=True,
-        farmer_reward_puzzle_hash=reward_ph,
-        pool_reward_puzzle_hash=reward_ph,
-        genesis_timestamp=uint64(10000),
-        time_per_block=10,
-    )
-    assert blocks[0].height == 0
-
-    for block in blocks:
-        await full_node_1.full_node.add_block(block)
-
-    await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
-
-    yield full_node_1, server_1, bt
-
-    async for _ in async_gen:
-        yield _
-
-
 @pytest_asyncio.fixture(scope="function")
 async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async_gen = setup_simulators_and_wallets(1, 0, {})
@@ -598,10 +661,29 @@ async def two_nodes_one_block():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def farmer_one_harvester(
+async def farmer_one_harvester_simulator_wallet(
     tmp_path: Path,
-    get_b_tools: BlockTools,
-) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
+) -> AsyncIterator[
+    Tuple[
+        Service[Harvester, HarvesterAPI],
+        Service[Farmer, FarmerAPI],
+        Service[FullNode, FullNodeSimulator],
+        Service[WalletNode, WalletNodeAPI],
+        BlockTools,
+    ]
+]:
+    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, {}):
+        nodes, wallets, bt = sim_and_wallet
+        async for farmer_harvester in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
+            harvester_services, farmer_service, _ = farmer_harvester
+            yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
+
+
+FarmerOneHarvester = Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
+
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> AsyncIterator[FarmerOneHarvester]:
     async for _ in setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=True):
         yield _
 
@@ -634,10 +716,15 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    params=[
+        pytest.param(
+            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+        )
+    ],
+)
 async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -698,11 +785,14 @@ async def daemon_connection_and_temp_keychain(
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted):
+async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, trusted, request):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
-    farm_blocks = 3
+    try:
+        farm_blocks = request.param
+    except AttributeError:
+        farm_blocks = 3
     buffer = 1
     full_nodes, wallets, bt = two_wallet_nodes_services
     full_node_api = full_nodes[0]._api
@@ -828,20 +918,28 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
-    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def crawler_service(bt: BlockTools) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
-    async for service in setup_crawler(bt):
+async def crawler_service(
+    root_path_populated_with_config: Path, database_uri: str
+) -> AsyncIterator[Service[Crawler, CrawlerAPI]]:
+    async for service in setup_crawler(root_path_populated_with_config, database_uri):
         yield service
+
+
+@pytest_asyncio.fixture(scope="function")
+async def seeder_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[DNSServer]:
+    async for seeder in setup_seeder(root_path_populated_with_config, database_uri):
+        yield seeder
 
 
 @pytest.fixture(scope="function")
@@ -863,6 +961,12 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
     root_path: Path = tmp_chia_root
     create_default_chia_config(root_path)
     return root_path
+
+
+@pytest.fixture(scope="function")
+def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        return config
 
 
 @pytest.fixture(scope="function")
@@ -901,9 +1005,7 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(consensus_mode, bt):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
+async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 
@@ -941,3 +1043,8 @@ async def harvester_farmer_environment(
     harvester_rpc_cl.close()
     await farmer_rpc_cl.await_closed()
     await harvester_rpc_cl.await_closed()
+
+
+@pytest.fixture(name="database_uri")
+def database_uri_fixture() -> str:
+    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"

@@ -23,6 +23,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 
 
 async def nft_count(wallet: NFTWallet) -> int:
@@ -110,7 +111,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
-        metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
+        metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -255,13 +256,17 @@ async def test_nft_mint_from_did_rpc(
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
         chunk = 5
         next_coin = funding_coin
-        did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
+        did_coin = (
+            await client.select_coins(amount=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=2)
+        )[0]
         did_lineage_parent = None
         spends = []
         nft_ids = set([])
@@ -281,6 +286,7 @@ async def test_nft_mint_from_did_rpc(
                 did_lineage_parent=did_lineage_parent,
                 mint_from_did=True,
                 fee=fee,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -439,13 +445,17 @@ async def test_nft_mint_from_did_rpc_no_royalties(
         royalty_address = None
         royalty_percentage = None
         required_amount = n
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
         chunk = 5
         next_coin = funding_coin
-        did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
+        did_coin = (
+            await client.select_coins(amount=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=2)
+        )[0]
         did_lineage_parent = None
         spends = []
 
@@ -464,6 +474,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(
                 did_coin=did_coin.to_json_dict(),
                 did_lineage_parent=did_lineage_parent,
                 mint_from_did=True,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -573,14 +584,18 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000)
-    xch_coins_2 = await wallet_maker.select_coins(amount=10000, exclude=xch_coins_1)
+    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
+    xch_coins_2 = await wallet_maker.select_coins(
+        amount=10000,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
+    )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
         metadata_list,
+        DEFAULT_TX_CONFIG,
         target_list=target_list,
         mint_number_start=1,
         mint_total=mint_total,
@@ -682,7 +697,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_xch(
-        metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
+        metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -826,7 +841,9 @@ async def test_nft_mint_from_xch_rpc(
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
@@ -848,6 +865,7 @@ async def test_nft_mint_from_xch_rpc(
                 xch_change_target=funding_coin_dict["puzzle_hash"],
                 mint_from_did=False,
                 fee=fee,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -971,14 +989,18 @@ async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nod
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000)
-    xch_coins_2 = await wallet_maker.select_coins(amount=10000, exclude=xch_coins_1)
+    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
+    xch_coins_2 = await wallet_maker.select_coins(
+        amount=10000,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
+    )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_xch(
         metadata_list,
+        DEFAULT_TX_CONFIG,
         target_list=target_list,
         mint_number_start=1,
         mint_total=mint_total,

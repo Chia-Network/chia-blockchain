@@ -22,17 +22,22 @@ from tests.core.make_block_generator import int_to_public_key
 
 SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clsp")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-DID_MOD = load_clvm("did_innerpuz.clsp")
-NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clsp")
-NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clsp")
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clsp")
+DID_MOD = load_clvm("did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles")
+NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm(
+    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
+    package_or_requirement="chia.wallet.nft_wallet.puzzles",
+)
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 OFFER_MOD = load_clvm("settlement_payments.clsp")
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
-NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clsp")
+NFT_METADATA_UPDATER_DEFAULT = load_clvm(
+    "nft_metadata_updater_default.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 
 def test_nft_transfer_puzzle_hashes():

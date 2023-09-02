@@ -3,13 +3,14 @@
 set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-adlsph]
+Usage: $0 [-adilpsh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
+  -i                          install non-editable
   -l                          install legacy keyring dependencies (linux only)
-  -s                          skip python package installation and just do pip install
   -p                          additional plotters installation
+  -s                          skip python package installation and just do pip install
   -h                          display this help and exit
 "
 
@@ -19,21 +20,25 @@ usage() {
 
 PACMAN_AUTOMATED=
 EXTRAS=
+BLSPY_STUBS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
+EDITABLE='-e'
 
-while getopts adlsph flag
+while getopts adilpsh flag
 do
   case "${flag}" in
     # automated
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
-    d) EXTRAS=${EXTRAS}dev,;;
-    # simple install
-    s) SKIP_PACKAGE_INSTALL=1;;
-    p) PLOTTER_INSTALL=1;;
+    d) EXTRAS=${EXTRAS}dev,;BLSPY_STUBS=1;;
+    # non-editable
+    i) EDITABLE='';;
     # legacy keyring
     l) EXTRAS=${EXTRAS}legacy_keyring,;;
+    p) PLOTTER_INSTALL=1;;
+    # simple install
+    s) SKIP_PACKAGE_INSTALL=1;;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -68,8 +73,6 @@ git submodule update --init mozilla-ca
 
 UBUNTU_PRE_20=0
 UBUNTU_20=0
-UBUNTU_21=0
-UBUNTU_22=0
 
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
@@ -80,12 +83,8 @@ if $UBUNTU; then
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
   if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
     UBUNTU_PRE_20=1
-  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
-    UBUNTU_20=1
-  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
-    UBUNTU_21=1
   else
-    UBUNTU_22=1
+    UBUNTU_20=1
   fi
 fi
 
@@ -199,17 +198,9 @@ elif [ "$(uname)" = "Linux" ]; then
     # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
   elif [ "$UBUNTU_20" = "1" ]; then
-    echo "Installing on Ubuntu 20.*."
+    echo "Installing on Ubuntu 20.* or newer."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv openssl
-  elif [ "$UBUNTU_21" = "1" ]; then
-    echo "Installing on Ubuntu 21.*."
-    sudo apt-get update
-    sudo apt-get install -y python3.9-venv openssl
-  elif [ "$UBUNTU_22" = "1" ]; then
-    echo "Installing on Ubuntu 22.* or newer."
-    sudo apt-get update
-    sudo apt-get install -y python3.10-venv openssl
+    sudo apt-get install -y python3-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
@@ -342,7 +333,11 @@ python -m pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
 python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+python -m pip install ${EDITABLE} ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
+
+if [ -n "$BLSPY_STUBS" ]; then
+python -m pip install ${EDITABLE} ./blspy-stubs
+fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e

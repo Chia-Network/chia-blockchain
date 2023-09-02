@@ -25,6 +25,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
@@ -185,7 +186,7 @@ class TestSimpleSyncProtocol:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
         assert spent_coin.puzzle_hash == puzzle_hash
@@ -199,7 +200,9 @@ class TestSimpleSyncProtocol:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
+        tx_record = await wallet.generate_signed_transaction(
+            uint64(10), SINGLETON_LAUNCHER_HASH, DEFAULT_TX_CONFIG, uint64(0)
+        )
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -207,7 +210,7 @@ class TestSimpleSyncProtocol:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         # Send a transaction to make sure the wallet is still running
-        tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
+        tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, DEFAULT_TX_CONFIG, uint64(0))
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -267,7 +270,9 @@ class TestSimpleSyncProtocol:
 
         coins = set()
         coins.add(coin_to_spend)
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0), coins=coins)
+        tx_record = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0), coins=coins
+        )
         await standard_wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -287,7 +292,9 @@ class TestSimpleSyncProtocol:
         # Test getting notification for coin that is about to be created
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        tx_record = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0)
+        )
 
         tx_record.spend_bundle.additions()
 
