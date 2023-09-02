@@ -1380,6 +1380,7 @@ class BatchInsertBenchmarkCase:
         return f"pre={self.pre},count={self.count}"
 
 
+@pytest.mark.parametrize(argname="asfd", argvalues=range(30))
 @datacases(
     BatchInsertBenchmarkCase(
         pre=0,
@@ -1409,6 +1410,7 @@ async def test_benchmark_batch_insert_speed(
     tree_id: bytes32,
     request: SubRequest,
     case: BatchInsertBenchmarkCase,
+    asdf: int,
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)
