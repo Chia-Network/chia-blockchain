@@ -39,6 +39,7 @@ from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -333,9 +334,20 @@ class WebSocketServer:
         return service_names
 
     async def ping_task(self) -> None:
-        try:
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="Ping task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
             while True:
-                try:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
                     await asyncio.sleep(30)
 
                     for service_name, connections in self.connections.items():
@@ -345,21 +357,16 @@ class WebSocketServer:
                         for connection in connections.copy():
                             self.log.debug(f"About to ping: {service_name}")
                             try:
-                                await connection.ping()
-                            except asyncio.CancelledError:
-                                raise
-                            except Exception as e:
-                                self.log.warning(
-                                    f"Ping error to {service_name}, closing connection ({type(e).__name__}: {e})"
-                                )
+                                with log_exceptions(
+                                    log=self.log,
+                                    message=f"Ping error to {service_name}, closing connection.",
+                                    level=logging.WARNING,
+                                    show_traceback=False,
+                                ):
+                                    await connection.ping()
+                            except:  # noqa E722
                                 self.remove_connection(connection)
                                 await connection.close()
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    self.log.exception(f"Unexpected exception in {type(self).__name__}.ping_task(), continuing:")
-        except asyncio.CancelledError:
-            self.log.debug("Ping task received Cancel")
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
