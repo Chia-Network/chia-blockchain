@@ -13,12 +13,10 @@ from chia.server.rate_limit_numbers import rate_limits as rl_numbers
 from chia.server.rate_limits import RateLimiter
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.simulator.block_tools import test_constants
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.conftest import node_with_params
 
-constants = test_constants
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]
 node_with_params_b = node_with_params

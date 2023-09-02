@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from sys import platform
@@ -55,17 +56,14 @@ def child_writer_dispatch_with_readiness_check(
     with open(ready_file_path, "w") as f:
         f.write(f"{os.getpid()}\n")
 
-    # Wait up to 30 seconds for all processes to indicate readiness
+    # Wait for all processes to indicate readiness
     start_file_path: Path = ready_dir / "start"
-    remaining_attempts = 120
-    while remaining_attempts > 0:
-        if start_file_path.exists():
-            break
-        else:
-            sleep(0.25)
-            remaining_attempts -= 1
-
-    assert remaining_attempts >= 0
+    end = time.monotonic() + 120
+    started = False
+    while not started and time.monotonic() < end:
+        started = start_file_path.exists()
+        sleep(0.1)
+    assert started
 
     try:
         while attempts > 0:
@@ -91,15 +89,14 @@ def child_writer_dispatch_with_readiness_check(
             f.write(f"{os.getpid()}\n")
 
 
-def poll_directory(dir: Path, expected_entries: int, max_attempts: int, interval: float = 1.0) -> bool:
+def wait_for_enough_files_in_directory(dir: Path, expected_entries: int) -> bool:
     found_all: bool = False
-    remaining_attempts: int = 30
-    while remaining_attempts > 0:
+    end = time.monotonic() + 120
+    while time.monotonic() < end:
         entries = list(os.scandir(dir))
         if len(entries) < expected_entries:  # Expecting num_workers of dir entries
             log.warning(f"Polling not complete: {len(entries)} of {expected_entries} entries found")
-            sleep(1)
-            remaining_attempts -= 1
+            sleep(0.1)
         else:
             found_all = True
             break
@@ -137,8 +134,7 @@ def test_timeout(tmp_path: Path, ready_dir: Path, finished_dir: Path) -> None:
                 [(child_proc_fn, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -147,8 +143,7 @@ def test_timeout(tmp_path: Path, ready_dir: Path, finished_dir: Path) -> None:
             with open(start_file_path, "w") as f:
                 f.write(f"{os.getpid()}\n")
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
@@ -177,8 +172,7 @@ def test_succeeds(tmp_path: Path, ready_dir: Path, finished_dir: Path) -> None:
                 [(child_proc_fn, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -196,8 +190,7 @@ def test_succeeds(tmp_path: Path, ready_dir: Path, finished_dir: Path) -> None:
             result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
             assert result[0] == "A winner is you!"
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
@@ -221,8 +214,7 @@ def test_reacquisition_failure(tmp_path: Path, ready_dir: Path, finished_dir: Pa
                 [(child_proc_function, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -241,8 +233,7 @@ def test_reacquisition_failure(tmp_path: Path, ready_dir: Path, finished_dir: Pa
                 with Lockfile.create(tmp_path, timeout=0.25):
                     pass
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
@@ -265,8 +256,7 @@ def test_reacquisition_success(tmp_path: Path, ready_dir: Path, finished_dir: Pa
                 [(child_proc_function, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -277,8 +267,7 @@ def test_reacquisition_success(tmp_path: Path, ready_dir: Path, finished_dir: Pa
 
             # When: the writer lock is released
             lock.release()
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
@@ -330,8 +319,7 @@ def test_blocked_by_readers(tmp_path: Path, ready_dir: Path, finished_dir: Path)
                 [(child_proc_function, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -340,8 +328,7 @@ def test_blocked_by_readers(tmp_path: Path, ready_dir: Path, finished_dir: Path)
             with open(start_file_path, "w") as f:
                 f.write(f"{os.getpid()}\n")
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 
@@ -369,8 +356,7 @@ def test_initially_blocked_by_readers(tmp_path: Path, ready_dir: Path, finished_
                 [(child_proc_function, tmp_path, timeout, attempts, ready_dir, finished_dir)],
             )
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
             log.warning(f"Test setup complete: {num_workers} workers ready")
 
@@ -385,8 +371,7 @@ def test_initially_blocked_by_readers(tmp_path: Path, ready_dir: Path, finished_
 
             # When: the reader releases its lock
             lock.release()
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
             log.warning(f"Finished: {num_workers} workers finished")
 

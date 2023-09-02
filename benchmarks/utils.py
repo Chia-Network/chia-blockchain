@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import enum
 import os
 import random
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union
 
 import aiosqlite
 import click
@@ -18,9 +19,9 @@ from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.full_block import FullBlock
@@ -34,13 +35,16 @@ with open(Path(os.path.realpath(__file__)).parent / "clvm_generator.bin", "rb") 
     clvm_generator = f.read()
 
 
+_T_Enum = TypeVar("_T_Enum", bound=enum.Enum)
+
+
 # Workaround to allow `Enum` with click.Choice: https://github.com/pallets/click/issues/605#issuecomment-901099036
-class EnumType(click.Choice):
-    def __init__(self, enum, case_sensitive=False):
+class EnumType(click.Choice, Generic[_T_Enum]):
+    def __init__(self, enum: Type[_T_Enum], case_sensitive: bool = False) -> None:
         self.__enum = enum
         super().__init__(choices=[item.value for item in enum], case_sensitive=case_sensitive)
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> _T_Enum:
         converted_str = super().convert(value, param, ctx)
         return self.__enum(converted_str)
 
@@ -51,7 +55,7 @@ def rewards(height: uint32) -> Tuple[Coin, Coin]:
     return farmer_coin, pool_coin
 
 
-def rand_bytes(num) -> bytes:
+def rand_bytes(num: int) -> bytes:
     ret = bytearray(num)
     for i in range(num):
         ret[i] = random.getrandbits(8)
@@ -175,7 +179,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: Union[str, os.PathLike], db_version: int) -> DBWrapper2:
+async def setup_db(name: Union[str, os.PathLike[str]], db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -183,7 +187,7 @@ async def setup_db(name: Union[str, os.PathLike], db_version: int) -> DBWrapper2
         pass
     connection = await aiosqlite.connect(db_filename)
 
-    def sql_trace_callback(req: str):
+    def sql_trace_callback(req: str) -> None:
         sql_log_path = "sql.log"
         timestamp = datetime.now().strftime("%H:%M:%S.%f")
         log = open(sql_log_path, "a")

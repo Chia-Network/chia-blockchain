@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.full_node.hint_store import HintStore
-from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -98,13 +98,9 @@ class TestHintStore:
                 cursor = await conn.execute("SELECT COUNT(*) FROM hints")
                 rows = await cursor.fetchall()
 
-            if db_wrapper.db_version == 2:
-                # even though we inserted the pair multiple times, there's only one
-                # entry in the DB
-                assert rows[0][0] == 1
-            else:
-                # we get one copy for each duplicate
-                assert rows[0][0] == 4
+            # even though we inserted the pair multiple times, there's only one
+            # entry in the DB
+            assert rows[0][0] == 1
 
     @pytest.mark.asyncio
     async def test_hints_in_blockchain(self, wallet_nodes):  # noqa: F811
@@ -118,7 +114,7 @@ class TestHintStore:
             pool_reward_puzzle_hash=bt.pool_ph,
         )
         for block in blocks:
-            await full_node_1.full_node.respond_block(RespondBlock(block), None)
+            await full_node_1.full_node.add_block(block, None)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
         puzzle_hash = bytes32(32 * b"\0")
@@ -140,7 +136,7 @@ class TestHintStore:
         )
 
         for block in blocks[-10:]:
-            await full_node_1.full_node.respond_block(RespondBlock(block), None)
+            await full_node_1.full_node.add_block(block, None)
 
         get_hint = await full_node_1.full_node.hint_store.get_coin_ids(hint)
 
@@ -163,3 +159,29 @@ class TestHintStore:
 
             count = await hint_store.count_hints()
             assert count == 2
+
+    @pytest.mark.asyncio
+    async def test_limits(self, db_version):
+        async with DBConnection(db_version) as db_wrapper:
+            hint_store = await HintStore.create(db_wrapper)
+
+            # Add 200 coins, all with the same hint
+            hint = 32 * b"\0"
+            for i in range(200):
+                coin_id = (28 * b"\4") + i.to_bytes(4, "big")
+                await hint_store.add_hints([(coin_id, hint)])
+
+            count = await hint_store.count_hints()
+            assert count == 200
+
+            for limit in [0, 1, 42, 200]:
+                assert len(await hint_store.get_coin_ids(hint, max_items=limit)) == limit
+
+            assert len(await hint_store.get_coin_ids(hint, max_items=10000)) == 200
+
+
+@pytest.mark.asyncio
+async def test_unsupported_version(tmp_dir: Path) -> None:
+    with pytest.raises(RuntimeError, match="HintStore does not support database schema v1"):
+        async with DBConnection(1) as db_wrapper:
+            await HintStore.create(db_wrapper)

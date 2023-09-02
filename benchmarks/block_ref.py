@@ -15,7 +15,7 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
@@ -48,8 +48,7 @@ def random_refs() -> List[uint32]:
 REPETITIONS = 100
 
 
-async def main(db_path: Path):
-
+async def main(db_path: Path) -> None:
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:
@@ -92,7 +91,7 @@ async def main(db_path: Path):
 
 @click.command()
 @click.argument("db-path", type=click.Path())
-def entry_point(db_path: Path):
+def entry_point(db_path: Path) -> None:
     asyncio.run(main(Path(db_path)))
 
 

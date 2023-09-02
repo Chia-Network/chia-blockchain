@@ -18,6 +18,7 @@ from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
+@dataclasses.dataclass
 class PaginatedRequestData(Protocol):
     @property
     def node_id(self) -> bytes32:
@@ -109,13 +110,23 @@ class FarmerRpcApi:
             pass
         elif change == "new_signage_point":
             sp_hash = change_data["sp_hash"]
+            missing_signage_points = change_data["missing_signage_points"]
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
+            data["missing_signage_points"] = missing_signage_points
             payloads.append(
                 create_payload_dict(
                     "new_signage_point",
                     data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "new_signage_point",
+                    data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "new_farming_info":
@@ -127,6 +138,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "new_farming_info",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "harvester_update":
             payloads.append(
                 create_payload_dict(
@@ -134,6 +153,14 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "wallet_ui",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "metrics",
                 )
             )
         elif change == "harvester_removed":
@@ -145,6 +172,14 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
         elif change == "submitted_partial":
             payloads.append(
                 create_payload_dict(
@@ -152,6 +187,23 @@ class FarmerRpcApi:
                     change_data,
                     self.service_name,
                     "metrics",
+                )
+            )
+            payloads.append(
+                create_payload_dict(
+                    "submitted_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "failed_partial":
+            payloads.append(
+                create_payload_dict(
+                    "failed_partial",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
                 )
             )
         elif change == "proof":
@@ -163,29 +215,48 @@ class FarmerRpcApi:
                     "metrics",
                 )
             )
+        elif change == "add_connection":
+            payloads.append(
+                create_payload_dict(
+                    "add_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
+        elif change == "close_connection":
+            payloads.append(
+                create_payload_dict(
+                    "close_connection",
+                    change_data,
+                    self.service_name,
+                    "metrics",
+                )
+            )
 
         return payloads
 
-    async def get_signage_point(self, request: Dict) -> EndpointResult:
-        sp_hash = hexstr_to_bytes(request["sp_hash"])
-        for _, sps in self.service.sps.items():
-            for sp in sps:
-                if sp.challenge_chain_sp == sp_hash:
-                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
-                    return {
-                        "signage_point": {
-                            "challenge_hash": sp.challenge_hash,
-                            "challenge_chain_sp": sp.challenge_chain_sp,
-                            "reward_chain_sp": sp.reward_chain_sp,
-                            "difficulty": sp.difficulty,
-                            "sub_slot_iters": sp.sub_slot_iters,
-                            "signage_point_index": sp.signage_point_index,
-                        },
-                        "proofs": pospaces,
-                    }
-        raise ValueError(f"Signage point {sp_hash.hex()} not found")
+    async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
+        sp_hash = bytes32.from_hexstr(request["sp_hash"])
+        sps = self.service.sps.get(sp_hash)
+        if sps is None or len(sps) < 1:
+            raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp = sps[0]
+        assert sp_hash == sp.challenge_chain_sp
+        pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+        return {
+            "signage_point": {
+                "challenge_hash": sp.challenge_hash,
+                "challenge_chain_sp": sp.challenge_chain_sp,
+                "reward_chain_sp": sp.reward_chain_sp,
+                "difficulty": sp.difficulty,
+                "sub_slot_iters": sp.sub_slot_iters,
+                "signage_point_index": sp.signage_point_index,
+            },
+            "proofs": pospaces,
+        }
 
-    async def get_signage_points(self, _: Dict) -> EndpointResult:
+    async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
         result: List[Dict[str, Any]] = []
         for sps in self.service.sps.values():
             for sp in sps:
@@ -205,12 +276,12 @@ class FarmerRpcApi:
                 )
         return {"signage_points": result}
 
-    async def get_reward_targets(self, request: Dict) -> EndpointResult:
+    async def get_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         search_for_private_key = request["search_for_private_key"]
         max_ph_to_search = request.get("max_ph_to_search", 500)
         return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
-    async def set_reward_targets(self, request: Dict) -> EndpointResult:
+    async def set_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
         farmer_target, pool_target = None, None
         if "farmer_target" in request:
             farmer_target = request["farmer_target"]
@@ -228,21 +299,20 @@ class FarmerRpcApi:
             )
         return plot_count
 
-    async def get_pool_state(self, _: Dict) -> EndpointResult:
+    async def get_pool_state(self, request: Dict[str, Any]) -> EndpointResult:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
-            pool_state["p2_singleton_puzzle_hash"] = p2_singleton_puzzle_hash.hex()
             pool_state["plot_count"] = self.get_pool_contract_puzzle_hash_plot_count(p2_singleton_puzzle_hash)
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
-    async def set_payout_instructions(self, request: Dict) -> EndpointResult:
+    async def set_payout_instructions(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 
-    async def get_harvesters(self, _: Dict) -> EndpointResult:
+    async def get_harvesters(self, request: Dict[str, Any]) -> EndpointResult:
         return await self.service.get_harvesters(False)
 
     async def get_harvesters_summary(self, _: Dict[str, object]) -> EndpointResult:
@@ -285,7 +355,7 @@ class FarmerRpcApi:
     async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
-    async def get_pool_login_link(self, request: Dict) -> EndpointResult:
+    async def get_pool_login_link(self, request: Dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
         login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
         if login_link is None:

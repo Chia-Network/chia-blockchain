@@ -6,9 +6,24 @@ from typing import List
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
-from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
 from chia.util.ints import uint32, uint64
+
+
+@dataclass(frozen=True)
+class MempoolItemInfo:
+    """
+    The information the fee estimator is passed for each mempool item that's
+    added, removed from the mempool and included in blocks
+    """
+
+    cost: int
+    fee: int
+    height_added_to_mempool: uint32
+
+    @property
+    def fee_per_cost(self) -> float:
+        return self.fee / self.cost
 
 
 @dataclass(frozen=True)
@@ -32,10 +47,12 @@ class FeeMempoolInfo:
     """
     Information from Mempool and MempoolItems needed to estimate fees.
     Updated when `MemPoolItem`s are added or removed from the Mempool.
+    This information is more dynamic in nature than the info in `MempoolInfo`
 
     Attributes:
         mempool_info (MempoolInfo): A `MempoolInfo`, defined above. Parameters of our mempool.
         current_mempool_cost (uint64):This is the current capacity of the mempool, measured in XCH per CLVM Cost
+        current_mempool_fees (int): Sum of fees for all spends waiting in the Mempool
         time (datetime): Local time this sample was taken
 
         Note that we use the node's local time, not "Blockchain time" for the timestamp above
@@ -43,6 +60,7 @@ class FeeMempoolInfo:
 
     mempool_info: MempoolInfo
     current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
+    current_mempool_fees: int  # Sum of fees for all spends waiting in the Mempool
     time: datetime  # Local time this sample was taken
 
 
@@ -54,6 +72,7 @@ EmptyMempoolInfo = MempoolInfo(
 EmptyFeeMempoolInfo = FeeMempoolInfo(
     EmptyMempoolInfo,
     CLVMCost(uint64(0)),
+    0,
     datetime.min,
 )
 
@@ -71,4 +90,4 @@ class FeeBlockInfo:  # See BlockRecord
     """
 
     block_height: uint32
-    included_items: List[MempoolItem]
+    included_items: List[MempoolItemInfo]

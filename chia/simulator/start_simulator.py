@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -34,7 +35,7 @@ def create_full_node_simulator_service(
     bt: BlockTools,
     connect_to_daemon: bool = True,
     override_capabilities: List[Tuple[uint16, str]] = None,
-) -> Service[FullNode]:
+) -> Service[FullNode, FullNodeAPI]:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
@@ -54,7 +55,6 @@ def create_full_node_simulator_service(
         node_type=NodeType.FULL_NODE,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),

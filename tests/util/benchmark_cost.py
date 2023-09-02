@@ -32,7 +32,6 @@ def float_to_str(f):
 
 
 def run_and_return_cost_time(chialisp):
-
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
@@ -114,7 +113,7 @@ if __name__ == "__main__":
 
     for i in range(0, 1000):
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
-        public_key = private_key.public_key()
+        public_key = private_key.get_g1()
         solution = wallet_tool.make_solution(
             {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
         )

@@ -132,7 +132,7 @@ class PeerRequestCache:
         self._additions_in_block = new_additions_in_block
 
 
-async def can_use_peer_request_cache(
+def can_use_peer_request_cache(
     coin_state: CoinState, peer_request_cache: PeerRequestCache, fork_height: Optional[uint32]
 ) -> bool:
     if not peer_request_cache.in_states_validated(coin_state.get_hash()):

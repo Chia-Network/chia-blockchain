@@ -19,7 +19,7 @@ class ClassgroupElement(Streamable):
     data: bytes100
 
     @staticmethod
-    def from_bytes(data) -> "ClassgroupElement":
+    def from_bytes(data: bytes) -> ClassgroupElement:
         if len(data) < 100:
             data += b"\x00" * (100 - len(data))
         return ClassgroupElement(bytes100(data))
@@ -31,5 +31,5 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement.from_bytes(b"\x08")
 
     @staticmethod
-    def get_size(constants: ConsensusConstants):
+    def get_size(constants: ConsensusConstants) -> int:
         return 100

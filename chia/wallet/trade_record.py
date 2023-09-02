@@ -40,7 +40,7 @@ class TradeRecord(Streamable):
             "offered": offered,
             "requested": requested,
             "infos": infos,
-            "fees": offer.bundle.fees(),
+            "fees": offer.fees(),
         }
         formatted["pending"] = offer.get_pending_amounts()
         del formatted["offer"]

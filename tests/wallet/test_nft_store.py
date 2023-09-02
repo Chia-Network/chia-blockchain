@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from secrets import token_bytes
+from typing import Dict, List
+
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
@@ -10,6 +14,26 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
 from tests.util.db_connection import DBConnection
+
+
+def get_dummy_nft() -> NFTCoinInfo:
+    return NFTCoinInfo(
+        bytes32(token_bytes(32)),
+        Coin(bytes32(token_bytes(32)), bytes32(token_bytes(32)), uint64(1)),
+        LineageProof(bytes32(token_bytes(32)), bytes32(token_bytes(32)), uint64(1)),
+        Program.to(["A Test puzzle"]),
+        uint32(1),
+    )
+
+
+@dataclass
+class DummyNFTs:
+    nfts_per_wallet: Dict[uint32, List[NFTCoinInfo]] = field(default_factory=dict)
+
+    def generate(self, wallet_id: int, count: int) -> None:
+        nfts = self.nfts_per_wallet.setdefault(uint32(wallet_id), [])
+        for _ in range(count):
+            nfts.append(get_dummy_nft())
 
 
 class TestNftStore:
@@ -51,6 +75,15 @@ class TestNftStore:
             assert nft == (await db.get_nft_list(did_id=a_bytes32))[0]
             assert nft == (await db.get_nft_list(wallet_id=uint32(1), did_id=a_bytes32))[0]
             assert nft == await db.get_nft_by_id(a_bytes32)
+
+            # test get nft list pagination
+            assert not (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=0))
+            assert nft == (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=1))[0]
+            assert 1 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=1))
+            assert 2 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=5))
+            assert nft2 == (await db.get_nft_list(wallet_id=uint32(1), start_index=0, count=2))[1]
+            assert nft2 == (await db.get_nft_list(wallet_id=uint32(1), start_index=1, count=1))[0]
+            assert 0 == len(await db.get_nft_list(wallet_id=uint32(1), start_index=2, count=1))
 
             assert nft == (await db.get_nft_by_coin_id(nft.coin.name()))
             assert await db.exists(nft.coin.name())
@@ -135,3 +168,25 @@ class TestNftStore:
             await db.rollback_to_block(-1)
             assert await db.count(wallet_id=uint32(1)) == 0
             assert await db.is_empty(wallet_id=uint32(1))
+
+
+@pytest.mark.asyncio
+async def test_delete_wallet() -> None:
+    dummy_nfts = DummyNFTs()
+    for i in range(5):
+        dummy_nfts.generate(i, i * 5)
+    async with DBConnection(1) as wrapper:
+        db = await WalletNftStore.create(wrapper)
+        # Add the nfts per wallet and verify them
+        for wallet_id, nfts in dummy_nfts.nfts_per_wallet.items():
+            for nft in nfts:
+                await db.save_nft(wallet_id, None, nft)
+            assert await db.count(wallet_id) == len(nfts)
+        # Remove one wallet after the other and verify before and after each
+        for wallet_id, nfts in dummy_nfts.nfts_per_wallet.items():
+            # Assert the length again here to make sure the previous removals did not affect other wallet_ids
+            assert await db.count(wallet_id) == len(nfts)
+            await db.delete_wallet(wallet_id)
+            assert await db.count(wallet_id) == 0
+
+        assert await db.is_empty()

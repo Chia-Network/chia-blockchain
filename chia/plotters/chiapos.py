@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from argparse import Namespace
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import pkg_resources
 
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
-from chia.plotting.util import add_plot_directory, validate_plot_size
+from chia.plotting.util import Params, add_plot_directory, validate_plot_size
 
 log = logging.getLogger(__name__)
 
@@ -22,23 +23,7 @@ def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 
-class Params:
-    def __init__(self, args):
-        self.size = args.size
-        self.num = args.count
-        self.buffer = args.buffer
-        self.num_threads = args.threads
-        self.buckets = args.buckets
-        self.stripe_size = args.stripes
-        self.tmp_dir = Path(args.tmpdir)
-        self.tmp2_dir = Path(args.tmpdir2) if args.tmpdir2 else None
-        self.final_dir = Path(args.finaldir)
-        self.plotid = args.id
-        self.memo = args.memo
-        self.nobitfield = args.nobitfield
-
-
-def plot_chia(args, root_path):
+def plot_chia(args: Namespace, root_path: Path) -> None:
     try:
         validate_plot_size(root_path, args.size, args.override)
     except ValueError as e:
@@ -56,7 +41,21 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.run(create_plots(Params(args), plot_keys))
+    params = Params(
+        size=args.size,
+        num=args.count,
+        buffer=args.buffer,
+        num_threads=args.threads,
+        buckets=args.buckets,
+        stripe_size=args.stripes,
+        tmp_dir=Path(args.tmpdir),
+        tmp2_dir=Path(args.tmpdir2) if args.tmpdir2 else None,
+        final_dir=Path(args.finaldir),
+        plotid=args.id,
+        memo=args.memo,
+        nobitfield=args.nobitfield,
+    )
+    asyncio.run(create_plots(params, plot_keys))
     if not args.exclude_final_dir:
         try:
             add_plot_directory(root_path, args.finaldir)

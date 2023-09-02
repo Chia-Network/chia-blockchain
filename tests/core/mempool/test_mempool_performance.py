@@ -11,6 +11,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import assert_runtime
@@ -34,6 +35,7 @@ log = logging.getLogger(__name__)
 
 
 class TestMempoolPerformance:
+    @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
@@ -51,7 +53,7 @@ class TestMempoolPerformance:
         ph = await wallet.get_new_puzzlehash()
 
         for block in blocks:
-            await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_1.full_node.add_block(block)
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
@@ -59,9 +61,12 @@ class TestMempoolPerformance:
         fee_amount = 2213
         await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
-        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(send_amount, ph, fee_amount)
+        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(
+            send_amount, ph, DEFAULT_TX_CONFIG, fee_amount
+        )
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+        assert big_transaction.spend_bundle
         await full_node_api_1.respond_transaction(
             full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
         )
@@ -70,7 +75,7 @@ class TestMempoolPerformance:
             await con.close()
 
         blocks = bt.get_consecutive_blocks(3, blocks)
-        await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
+        await full_node_api_1.full_node.add_block(blocks[-3])
 
         for idx, block in enumerate(blocks):
             if idx >= len(blocks) - 3:
@@ -79,4 +84,4 @@ class TestMempoolPerformance:
                 duration = 0.001
 
             with assert_runtime(seconds=duration, label=request.node.name):
-                await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+                await full_node_api_1.full_node.add_block(block)

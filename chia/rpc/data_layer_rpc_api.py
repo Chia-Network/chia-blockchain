@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
     CancelOfferRequest,
     CancelOfferResponse,
+    ClearPendingRootsRequest,
+    ClearPendingRootsResponse,
     MakeOfferRequest,
     MakeOfferResponse,
     Side,
@@ -72,6 +74,7 @@ class DataLayerRpcApi:
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
+            "/wallet_log_in": self.wallet_log_in,
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
@@ -99,10 +102,19 @@ class DataLayerRpcApi:
             "/verify_offer": self.verify_offer,
             "/cancel_offer": self.cancel_offer,
             "/get_sync_status": self.get_sync_status,
+            "/check_plugins": self.check_plugins,
+            "/clear_pending_roots": self.clear_pending_roots,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         return []
+
+    async def wallet_log_in(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        fingerprint = cast(int, request["fingerprint"])
+        await self.service.wallet_log_in(fingerprint=fingerprint)
+        return {}
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -428,3 +440,16 @@ class DataLayerRpcApi:
                 "target_generation": sync_status.target_generation,
             }
         }
+
+    async def check_plugins(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        plugin_status = await self.service.check_plugins()
+
+        return plugin_status.marshal()
+
+    @marshal()  # type: ignore[arg-type]
+    async def clear_pending_roots(self, request: ClearPendingRootsRequest) -> ClearPendingRootsResponse:
+        root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
+
+        return ClearPendingRootsResponse(success=root is not None, root=root)

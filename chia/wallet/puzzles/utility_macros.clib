@@ -1,17 +1,40 @@
 (
+  ; assert takes a list of parameters
+  ; all items in the list are required to be non-nil
+  ; except for the final item which is returned
   (defmacro assert items
-      (if (r items)
-          (list if (f items) (c assert (r items)) (q . (x)))
-          (f items)
-      )
+    (if (r items)
+        (list if (f items) (c assert (r items)) (q . (x)))
+        (f items)
+    )
   )
 
   (defmacro and ARGS
-   (if ARGS
-       (qq (if (unquote (f ARGS))
-           (unquote (c and (r ARGS)))
-           ()
-           ))
-       1)
-   )
+    (if ARGS
+        (qq (if (unquote (f ARGS))
+                (unquote (c and (r ARGS)))
+                ()
+        ))
+    1)
+  )
+
+  (defmacro or ARGS
+    (if ARGS
+        (qq (if (unquote (f ARGS))
+                1
+                (unquote (c or (r ARGS)))
+        ))
+    0)
+  )
+
+  (defun in (atom list_a)
+    (if list_a
+        (i (= atom (f list_a))
+          1
+          (in atom (r list_a))
+        )
+        ()
+    )
+  )
+
 )

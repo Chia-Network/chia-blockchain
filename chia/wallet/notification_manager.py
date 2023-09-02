@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G2Element
 
@@ -15,10 +15,13 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import Condition
 from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
+from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.util.wallet_types import WalletType
 
 
 class NotificationManager:
@@ -43,22 +46,32 @@ class NotificationManager:
         return self
 
     async def potentially_add_new_notification(self, coin_state: CoinState, parent_spend: CoinSpend) -> bool:
+        coin_name: bytes32 = coin_state.coin.name()
         if (
             coin_state.spent_height is None
-            or not self.wallet_state_manager.wallet_node.config.get("accept_notifications", False)
-            or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 0)
+            or not self.wallet_state_manager.wallet_node.config.get("enable_notifications", True)
+            or self.wallet_state_manager.wallet_node.config.get("required_notification_amount", 100000000)
             > coin_state.coin.amount
+            or await self.notification_store.notification_exists(coin_name)
         ):
             return False
         else:
-            coin_name: bytes32 = coin_state.coin.name()
             memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
             coin_memos: List[bytes] = memos.get(coin_name, [])
+            if len(coin_memos) == 0 or len(coin_memos[0]) != 32:
+                return False
+            wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                bytes32(coin_memos[0])
+            )
             if (
-                len(coin_memos) == 2
+                wallet_identifier is not None
+                and wallet_identifier.type == WalletType.STANDARD_WALLET
+                and len(coin_memos) == 2
                 and construct_notification(bytes32(coin_memos[0]), uint64(coin_state.coin.amount)).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
+                if len(coin_memos[1]) > 10000:  # 10KB
+                    return False
                 await self.notification_store.add_notification(
                     Notification(
                         coin_state.coin.name(),
@@ -71,9 +84,17 @@ class NotificationManager:
             return True
 
     async def send_new_notification(
-        self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0)
+        self,
+        target: bytes32,
+        msg: bytes,
+        amount: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
-        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee))
+        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
+            uint64(amount + fee), tx_config.coin_selection_config
+        )
         origin_coin: bytes32 = next(iter(coins)).name()
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
@@ -87,11 +108,13 @@ class NotificationManager:
         chia_tx = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
+            tx_config,
             fee,
             coins=coins,
             origin_id=origin_coin,
             coin_announcements_to_consume={Announcement(notification_coin.name(), b"")},
             memos=[target, msg],
+            extra_conditions=extra_conditions,
         )
         full_tx: TransactionRecord = dataclasses.replace(
             chia_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])

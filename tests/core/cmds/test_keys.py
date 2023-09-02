@@ -597,7 +597,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Public key: 92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e"
+                    "Public Key: 92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e"
                     "736234baf9386f7f83"
                 )
             )
@@ -630,7 +630,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Public key: b5e383b8192dacff662455bdb3bbfc433f678f0d7ff7f118149e0d2ad39aa6d59ac4cb3662acf8"
+                    "Public Key: b5e383b8192dacff662455bdb3bbfc433f678f0d7ff7f118149e0d2ad39aa6d59ac4cb3662acf8"
                     "e8307e66069d3a13cc"
                 )
             )
@@ -669,7 +669,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 (
-                    "Public key: "
+                    "Public Key: "
                     "92f15caed8a5495faa7ec25a8af3f223438ef73c974b0aa81e788057b1154870f149739b2c2d0e736234baf9386f7f83"
                 )
             )

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import itertools
-from typing import List, Tuple
+from typing import List
 
 import pytest
 from blspy import G2Element
 
-from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -28,10 +28,8 @@ ACS_PH = ACS.get_tree_hash()
 
 @pytest.mark.asyncio()
 @pytest.mark.parametrize("metadata_updater", ["default"])
-async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updater: str) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> None:
+    async with sim_and_client() as (sim, sim_client):
         if metadata_updater == "default":
             METADATA: Program = metadata_to_program(
                 {
@@ -61,7 +59,9 @@ async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updat
             state_layer_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "State layer only coin - one child created", SpendBundle([generic_spend], G2Element())
+        )
 
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -127,20 +127,18 @@ async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updat
                     ]
                 ),
             )
-            update_bundle = SpendBundle([update_spend], G2Element())
+            update_bundle = cost_logger.add_cost(
+                "State layer only coin (metadata update) - one child created", SpendBundle([update_spend], G2Element())
+            )
             result = await sim_client.push_tx(update_bundle)
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
-    finally:
-        await sim.close()
 
 
 @pytest.mark.asyncio()
-async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_ownership_layer(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, sim_client):
         TARGET_OWNER = bytes32([0] * 32)
         TARGET_TP = Program.to([8])  # (x)
         # (a (i 11 (q 4 19 (c 43 (q ()))) (q 8)) 1) or
@@ -163,7 +161,9 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], []]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "Ownership only coin - one child created", SpendBundle([generic_spend], G2Element())
+        )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -228,7 +228,10 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 ]
             ),
         )
-        update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
+        update_everything_bundle = cost_logger.add_cost(
+            "Ownership only coin (update owner and TP) - one child + 3 announcements created",
+            SpendBundle([update_everything_spend], G2Element()),
+        )
         result = await sim_client.push_tx(update_everything_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -239,15 +242,11 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             TARGET_TP,
             ACS,
         ).get_tree_hash()
-    finally:
-        await sim.close()
 
 
 @pytest.mark.asyncio()
-async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -> None:
-    sim, sim_client = setup_sim
-
-    try:
+async def test_default_transfer_program(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, sim_client):
         # Now make the ownership coin
         FAKE_SINGLETON_MOD = Program.to([2, 5, 11])  # (a 5 11) | (mod (_ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
         FAKE_CAT_MOD = Program.to([2, 11, 23])  # (a 11 23) or (mod (_ _ INNER_PUZ inner_sol) (a INNER_PUZ inner_sol))
@@ -283,7 +282,9 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
             ownership_puzzle,
             Program.to([[[51, ACS_PH, 1]]]),
         )
-        generic_bundle = SpendBundle([generic_spend], G2Element())
+        generic_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created", SpendBundle([generic_spend], G2Element())
+        )
         result = await sim_client.push_tx(generic_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
@@ -327,7 +328,7 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
 
         cat_announcement_spend = CoinSpend(cat_coin, FAKE_CAT, Program.to([[[62, expected_announcement_data]]]))
 
-        # Make sure every combo except all of them work
+        # Make sure every combo except all of them fail
         for i in range(1, 3):
             for announcement_combo in itertools.combinations(
                 [did_announcement_spend, xch_announcement_spend, cat_announcement_spend], i
@@ -336,8 +337,11 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
         # Make sure all of them together pass
-        full_bundle = SpendBundle(
-            [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+        full_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created + update DID + offer CATs + offer XCH",
+            SpendBundle(
+                [ownership_spend, did_announcement_spend, xch_announcement_spend, cat_announcement_spend], G2Element()
+            ),
         )
         result = await sim_client.push_tx(full_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
@@ -359,9 +363,10 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
             new_ownership_puzzle,
             Program.to([[[51, ACS_PH, 1], [-10, [], [], []]]]),
         )
-        empty_bundle = SpendBundle([empty_spend], G2Element())
+        empty_bundle = cost_logger.add_cost(
+            "Ownership only coin (default NFT1 TP) - one child created + clear DID",
+            SpendBundle([empty_spend], G2Element()),
+        )
         result = await sim_client.push_tx(empty_bundle)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
-    finally:
-        await sim.close()

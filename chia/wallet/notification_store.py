@@ -43,8 +43,10 @@ class NotificationStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(" "coin_id blob PRIMARY KEY," "msg blob," "amount blob" ")"
+                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY, msg blob, amount blob)"
             )
+
+            await conn.execute("CREATE TABLE IF NOT EXISTS all_notification_ids(coin_id blob PRIMARY KEY)")
 
             try:
                 await conn.execute("ALTER TABLE notifications ADD COLUMN height bigint DEFAULT 0")
@@ -66,13 +68,17 @@ class NotificationStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications " "(coin_id, msg, amount, height) " "VALUES(?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount, height) VALUES(?, ?, ?, ?)",
                 (
                     notification.coin_id,
                     notification.message,
                     bytes(notification.amount),
                     notification.height,
                 ),
+            )
+            cursor = await conn.execute(
+                "INSERT OR REPLACE INTO all_notification_ids (coin_id) VALUES(?)",
+                (notification.coin_id,),
             )
             await cursor.close()
 
@@ -134,7 +140,6 @@ class NotificationStore:
         ]
 
     async def delete_notifications(self, coin_ids: List[bytes32]) -> None:
-
         coin_ids_str_list = "("
         for _ in coin_ids:
             coin_ids_str_list += "?"
@@ -152,3 +157,13 @@ class NotificationStore:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM notifications")
             await cursor.close()
+
+    async def notification_exists(self, id: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                "SELECT EXISTS (SELECT 1 from all_notification_ids WHERE coin_id=?)", (id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                assert row is not None
+                exists: bool = row[0] > 0
+                return exists
