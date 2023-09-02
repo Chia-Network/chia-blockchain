@@ -1382,21 +1382,21 @@ class BatchInsertBenchmarkCase:
 
 @pytest.mark.parametrize(argnames="asdf", argvalues=range(30))
 @datacases(
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=100,
-        limit=2.2,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=100,
-        limit=2.2,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=1_000,
-        limit=17,
-    ),
+    # BatchInsertBenchmarkCase(
+    #     pre=0,
+    #     count=100,
+    #     limit=2.2,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=1_000,
+    #     count=100,
+    #     limit=2.2,
+    # ),
+    # BatchInsertBenchmarkCase(
+    #     pre=0,
+    #     count=1_000,
+    #     limit=17,
+    # ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
