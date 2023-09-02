@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
-import signal
 import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
 from secrets import token_bytes
+from types import FrameType
 from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple
 
 from chia.cmds.init_funcs import init
@@ -48,6 +48,7 @@ from chia.util.config import config_path_for_filename, load_config, lock_and_loa
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.misc import setup_async_signal_handler
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -429,11 +430,14 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         spawn_process(self_hostname, port, 1, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(lock))
+    async def stop(
+        signal_number: int,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+    setup_async_signal_handler(handler=stop)
 
     yield vdf_task_1
     await kill_processes(lock)
@@ -453,11 +457,14 @@ async def setup_vdf_clients(
         spawn_process(self_hostname, port, 3, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(lock))
+    async def stop(
+        signal_number: int,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+    setup_async_signal_handler(handler=stop)
 
     yield vdf_task_1, vdf_task_2, vdf_task_3
 
