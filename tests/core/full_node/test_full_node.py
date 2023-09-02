@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 import random
 import time
 from secrets import token_bytes
@@ -13,8 +14,10 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
+from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
@@ -28,6 +31,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
@@ -37,6 +41,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -48,7 +53,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
@@ -2079,3 +2084,29 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
 
                 assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
                 assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
+
+
+@pytest.mark.asyncio
+async def test_wallet_sync_task_failure(
+    one_node: SimulatorsAndWalletsServices, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_service], _, _ = one_node
+    full_node = full_node_service._node
+    assert full_node.wallet_sync_task is not None
+    caplog.set_level(logging.DEBUG)
+    peak = Peak(bytes32(32 * b"0"), uint32(0), uint128(0))
+    # WalletUpdate with invalid args to force an exception in FullNode.update_wallets / FullNode.wallet_sync_task
+    bad_wallet_update = WalletUpdate(-10, peak, [], {})  # type: ignore[arg-type]
+    await full_node.wallet_sync_queue.put(bad_wallet_update)
+    await time_out_assert(30, full_node.wallet_sync_queue.empty)
+    assert "update_wallets - fork_height: -10, peak_height: 0" in caplog.text
+    assert "Wallet sync task failure" in caplog.text
+    assert not full_node.wallet_sync_task.done()
+    caplog.clear()
+    # WalletUpdate with valid args to test continued processing after failure
+    good_wallet_update = WalletUpdate(uint32(10), peak, [], {})
+    await full_node.wallet_sync_queue.put(good_wallet_update)
+    await time_out_assert(30, full_node.wallet_sync_queue.empty)
+    assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
+    assert "Wallet sync task failure" not in caplog.text
+    assert not full_node.wallet_sync_task.done()
