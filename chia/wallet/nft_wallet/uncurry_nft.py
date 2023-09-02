@@ -4,8 +4,10 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -87,9 +89,17 @@ class UncurriedNFT(Streamable):
     """
     royalty_address: Optional[bytes32]
     trade_price_percentage: Optional[uint16]
+    coin_state: Optional[CoinState] = None
+    coin_spend: Optional[CoinSpend] = None
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
+    def uncurry(
+        cls: Type[_T_UncurriedNFT],
+        mod: Program,
+        curried_args: Program,
+        coin_state: Optional[CoinState] = None,
+        coin_spend: Optional[CoinSpend] = None,
+    ) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
@@ -195,6 +205,8 @@ class UncurriedNFT(Streamable):
             royalty_address=royalty_address,
             trade_price_percentage=royalty_percentage,
             nft_inner_puzzle_hash=nft_inner_puzzle_mod,
+            coin_state=coin_state,
+            coin_spend=coin_spend,
         )
 
     def get_innermost_solution(self, solution: Program) -> Program:

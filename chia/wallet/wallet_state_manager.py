@@ -737,7 +737,7 @@ class WalletStateManager:
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
+        uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args, parent_coin_state, coin_spend)
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
             return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state), uncurried_nft
 
