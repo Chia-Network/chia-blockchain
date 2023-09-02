@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from blspy import G1Element, G2Element
 from clvm_tools import binutils
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -21,8 +22,8 @@ from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
 P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clsp")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp")
-POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp")
+POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
+POOL_WAITINGROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
 
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -474,7 +475,7 @@ def test_lifecycle_with_coinstore_as_wallet():
     #######
     # farm a coin
 
-    coin_store = CoinStore(int.from_bytes(POOL_REWARD_PREFIX_MAINNET, "big"))
+    coin_store = CoinStore(DEFAULT_CONSTANTS, int.from_bytes(POOL_REWARD_PREFIX_MAINNET, "big"))
     now = CoinTimestamp(10012300, 1)
 
     DELAY_SECONDS = 86400

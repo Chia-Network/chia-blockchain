@@ -5,7 +5,7 @@ import dataclasses
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -26,6 +26,7 @@ from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -52,6 +53,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
@@ -137,6 +139,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             tx_size,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -169,6 +172,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             20000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -205,6 +209,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -216,6 +221,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             40000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -228,6 +234,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             50000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -240,6 +247,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             3000000000000,
             ph,
+            DEFAULT_TX_CONFIG,
         )
         await wallet.push_transaction(tx=tr)
         await time_out_assert(
@@ -268,6 +276,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
+            DEFAULT_TX_CONFIG,
         )
         extra_spend = SpendBundle(
             [
@@ -313,6 +322,7 @@ class TestFullNodeBlockCompression:
         tr: TransactionRecord = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
+            DEFAULT_TX_CONFIG,
         )
         extra_spend = SpendBundle(
             [
@@ -1495,7 +1505,15 @@ class TestFullNodeProtocol:
         # Submit the sub slot, but not the last block
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1, force_overflow=True)
         for ss in blocks[-1].finished_sub_slots:
-            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(ss), peer)
+            challenge_chain = dataclasses.replace(
+                ss.challenge_chain,
+                new_difficulty=20,
+            )
+            slot2 = dataclasses.replace(
+                ss,
+                challenge_chain=challenge_chain,
+            )
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot2), peer)
 
         second_blockchain = empty_blockchain
         for block in blocks:
@@ -1512,7 +1530,6 @@ class TestFullNodeProtocol:
             [],
             peak_2.sub_slot_iters,
         )
-
         # Submits the signage point, cannot add because don't have block
         await full_node_1.respond_signage_point(
             fnp.RespondSignagePoint(4, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof), peer
@@ -1528,7 +1545,8 @@ class TestFullNodeProtocol:
         await full_node_1.full_node.add_block(blocks[-1], peer)
 
         # Now signage point should be added
-        assert full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash()) is not None
+        sp = full_node_1.full_node.full_node_store.get_signage_point(sp.cc_vdf.output.get_hash())
+        assert sp is not None
 
     @pytest.mark.asyncio
     async def test_slot_catch_up_genesis(self, setup_two_nodes_fixture, self_hostname):
@@ -2018,10 +2036,12 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
                 db_version=db_version,
                 reuse_db=True,
             ):
-                await service._api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
+                simulator_api = cast(FullNodeSimulator, service._api)
+                await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
                 expected_height += blocks_per_cycle
-                block_record = service._api.full_node._blockchain.get_peak()
+                assert simulator_api.full_node._blockchain is not None
+                block_record = simulator_api.full_node._blockchain.get_peak()
 
                 assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
                 assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"

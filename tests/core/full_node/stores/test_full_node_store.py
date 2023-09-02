@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 from secrets import token_bytes
-from typing import List, Optional
+from typing import AsyncIterator, List, Optional
 
 import pytest
 import pytest_asyncio
 
-from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.constants import ConsensusConstants
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
@@ -15,9 +17,10 @@ from chia.full_node.full_node_store import FullNodeStore
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewInfusionPointVDF
-from chia.simulator.block_tools import create_block_tools_async, get_signage_point
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
@@ -29,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def custom_block_tools(blockchain_constants):
+async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
         patched_constants = blockchain_constants.replace(
             **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
@@ -37,21 +40,23 @@ async def custom_block_tools(blockchain_constants):
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain(request, blockchain_constants):
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
     patched_constants = blockchain_constants.replace(
         **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
     )
-    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, request.param)
+    bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
 
 
-@pytest_asyncio.fixture(scope="function", params=[1, 2])
-async def empty_blockchain_with_original_constants(request, blockchain_constants):
-    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, request.param)
+@pytest_asyncio.fixture(scope="function")
+async def empty_blockchain_with_original_constants(
+    db_version: int, blockchain_constants: ConsensusConstants
+) -> AsyncIterator[Blockchain]:
+    bc1, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
     yield bc1
     await db_wrapper.close()
     bc1.shut_down()
@@ -59,8 +64,15 @@ async def empty_blockchain_with_original_constants(request, blockchain_constants
 
 
 class TestFullNodeStore:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_basic_store(self, empty_blockchain, custom_block_tools, normalized_to_identity: bool = False):
+    @pytest.mark.parametrize("normalized_to_identity", [False, True])
+    async def test_basic_store(
+        self,
+        empty_blockchain: Blockchain,
+        custom_block_tools: BlockTools,
+        normalized_to_identity: bool,
+    ) -> None:
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
             10,
@@ -141,18 +153,35 @@ class TestFullNodeStore:
         assert store.get_sub_slot(empty_blockchain.constants.GENESIS_CHALLENGE) is None
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
-        assert store.new_finished_sub_slot(sub_slots[1], blockchain, None, None) is None
-        assert store.new_finished_sub_slot(sub_slots[2], blockchain, None, None) is None
+        next_sub_slot_iters = custom_block_tools.constants.SUB_SLOT_ITERS_STARTING
+        next_difficulty = custom_block_tools.constants.DIFFICULTY_STARTING
+        assert (
+            store.new_finished_sub_slot(sub_slots[1], blockchain, None, next_sub_slot_iters, next_difficulty, None)
+            is None
+        )
+        assert (
+            store.new_finished_sub_slot(sub_slots[2], blockchain, None, next_sub_slot_iters, next_difficulty, None)
+            is None
+        )
 
         # Test adding sub-slots after genesis
-        assert store.new_finished_sub_slot(sub_slots[0], blockchain, None, None) is not None
+        assert (
+            store.new_finished_sub_slot(sub_slots[0], blockchain, None, next_sub_slot_iters, next_difficulty, None)
+            is not None
+        )
         sub_slot = store.get_sub_slot(sub_slots[0].challenge_chain.get_hash())
         assert sub_slot is not None
         assert sub_slot[0] == sub_slots[0]
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
-        assert store.new_finished_sub_slot(sub_slots[1], blockchain, None, None) is not None
+        assert (
+            store.new_finished_sub_slot(sub_slots[1], blockchain, None, next_sub_slot_iters, next_difficulty, None)
+            is not None
+        )
         for i in range(len(sub_slots)):
-            assert store.new_finished_sub_slot(sub_slots[i], blockchain, None, None) is not None
+            assert (
+                store.new_finished_sub_slot(sub_slots[i], blockchain, None, next_sub_slot_iters, next_difficulty, None)
+                is not None
+            )
             slot_i = store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())
             assert slot_i is not None
             assert slot_i[0] == sub_slots[i]
@@ -168,11 +197,28 @@ class TestFullNodeStore:
         # Test adding genesis peak
         await _validate_and_add_block(blockchain, blocks[0])
         peak = blockchain.get_peak()
+        assert peak is not None
         peak_full_block = await blockchain.get_full_peak()
+        assert peak_full_block is not None
+        next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+            blockchain.constants, False, peak, blockchain
+        )
+
         if peak.overflow:
-            store.new_peak(peak, peak_full_block, sub_slots[-2], sub_slots[-1], None, blockchain)
+            store.new_peak(
+                peak,
+                peak_full_block,
+                sub_slots[-2],
+                sub_slots[-1],
+                None,
+                blockchain,
+                next_sub_slot_iters,
+                next_difficulty,
+            )
         else:
-            store.new_peak(peak, peak_full_block, None, sub_slots[-1], None, blockchain)
+            store.new_peak(
+                peak, peak_full_block, None, sub_slots[-1], None, blockchain, next_sub_slot_iters, next_difficulty
+            )
 
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
@@ -214,11 +260,19 @@ class TestFullNodeStore:
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
+
         for block in blocks:
             await _validate_and_add_block_no_error(blockchain, block)
             sb = blockchain.block_record(block.header_hash)
-            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, False, sb, blockchain
+            )
+            result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
+            res = store.new_peak(
+                sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )
             assert res.added_eos is None
 
         # Add reorg blocks
@@ -235,15 +289,24 @@ class TestFullNodeStore:
 
             await _validate_and_add_block_no_error(blockchain, block)
 
-            if blockchain.get_peak().header_hash == block.header_hash:
+            peak_here = blockchain.get_peak()
+            assert peak_here is not None
+            if peak_here.header_hash == block.header_hash:
                 sb = blockchain.block_record(block.header_hash)
                 fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
                 if fork > 0:
-                    fork_block = blockchain.height_to_block_record(fork)
+                    fork_block = blockchain.height_to_block_record(uint32(fork))
                 else:
                     fork_block = None
-                sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-                res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, fork_block, blockchain)
+                result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+                assert result is not None
+                sp_sub_slot, ip_sub_slot = result
+                next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    blockchain.constants, False, sb, blockchain
+                )
+                res = store.new_peak(
+                    sb, block, sp_sub_slot, ip_sub_slot, fork_block, blockchain, next_sub_slot_iters, next_difficulty
+                )
                 assert res.added_eos is None
 
         # Add slots to the end
@@ -256,14 +319,27 @@ class TestFullNodeStore:
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
+        peak = blockchain.get_peak()
         for slot in blocks_2[-1].finished_sub_slots:
-            store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak(), await blockchain.get_full_peak())
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, True, peak, blockchain
+            )
+
+            store.new_finished_sub_slot(
+                slot,
+                blockchain,
+                blockchain.get_peak(),
+                next_sub_slot_iters,
+                next_difficulty,
+                await blockchain.get_full_peak(),
+            )
 
         assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash()) is None
 
         # Test adding signage point
         peak = blockchain.get_peak()
+        assert peak is not None
         ss_start_iters = peak.ip_sub_slot_total_iters(custom_block_tools.constants)
         for i in range(
             1, custom_block_tools.constants.NUM_SPS_SUB_SLOT - custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA
@@ -290,22 +366,39 @@ class TestFullNodeStore:
                 normalized_to_identity_cc_sp=normalized_to_identity,
             )
             await _validate_and_add_block(blockchain, blocks[-1])
-            if blockchain.get_peak().header_hash == blocks[-1].header_hash:
+            peak_here = blockchain.get_peak()
+            assert peak_here is not None
+            if peak_here.header_hash == blocks[-1].header_hash:
                 sb = blockchain.block_record(blocks[-1].header_hash)
                 fork = find_fork_point_in_chain(blockchain, peak, blockchain.block_record(sb.header_hash))
                 if fork > 0:
-                    fork_block = blockchain.height_to_block_record(fork)
+                    fork_block = blockchain.height_to_block_record(uint32(fork))
                 else:
                     fork_block = None
-                sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(blocks[-1].header_hash)
+                result = await blockchain.get_sp_and_ip_sub_slots(blocks[-1].header_hash)
+                assert result is not None
+                sp_sub_slot, ip_sub_slot = result
 
-                res = store.new_peak(sb, blocks[-1], sp_sub_slot, ip_sub_slot, fork_block, blockchain)
+                next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    blockchain.constants, False, sb, blockchain
+                )
+                res = store.new_peak(
+                    sb,
+                    blocks[-1],
+                    sp_sub_slot,
+                    ip_sub_slot,
+                    fork_block,
+                    blockchain,
+                    next_sub_slot_iters,
+                    next_difficulty,
+                )
                 assert res.added_eos is None
                 if sb.overflow and sp_sub_slot is not None:
                     assert sp_sub_slot != ip_sub_slot
                     break
 
         peak = blockchain.get_peak()
+        assert peak is not None
         assert peak.overflow
         # Overflow peak should result in 2 finished sub slots
         assert len(store.finished_sub_slots) == 2
@@ -321,7 +414,18 @@ class TestFullNodeStore:
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
         for slot in blocks_2[-1].finished_sub_slots[:-1]:
-            store.new_finished_sub_slot(slot, blockchain, blockchain.get_peak(), await blockchain.get_full_peak())
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, True, peak, blockchain
+            )
+
+            store.new_finished_sub_slot(
+                slot,
+                blockchain,
+                blockchain.get_peak(),
+                next_sub_slot_iters,
+                next_difficulty,
+                await blockchain.get_full_peak(),
+            )
         finished_sub_slots = blocks_2[-1].finished_sub_slots
         assert len(store.finished_sub_slots) == 4
 
@@ -370,7 +474,9 @@ class TestFullNodeStore:
                     custom_block_tools.constants,
                     blockchain,
                     peak,
-                    peak.ip_sub_slot_total_iters(custom_block_tools.constants) + slot_offset * peak.sub_slot_iters,
+                    uint128(
+                        peak.ip_sub_slot_total_iters(custom_block_tools.constants) + slot_offset * peak.sub_slot_iters
+                    ),
                     uint8(i),
                     finished_sub_slots[:slot_offset],
                     peak.sub_slot_iters,
@@ -387,8 +493,10 @@ class TestFullNodeStore:
                 custom_block_tools.constants,
                 blockchain,
                 peak,
-                peak.ip_sub_slot_total_iters(custom_block_tools.constants)
-                + len(finished_sub_slots) * peak.sub_slot_iters,
+                uint128(
+                    peak.ip_sub_slot_total_iters(custom_block_tools.constants)
+                    + len(finished_sub_slots) * peak.sub_slot_iters
+                ),
                 uint8(i),
                 finished_sub_slots[: len(finished_sub_slots)],
                 peak.sub_slot_iters,
@@ -406,7 +514,9 @@ class TestFullNodeStore:
             blocks[1].reward_chain_block.signage_point_index,
             blockchain,
             peak,
-            blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants),
+            uint64(
+                blockchain.block_record(blocks[1].header_hash).sp_sub_slot_total_iters(custom_block_tools.constants)
+            ),
             sp,
         )
 
@@ -455,8 +565,14 @@ class TestFullNodeStore:
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
+        peak = blockchain.get_peak()
+        assert peak is not None
         for slot in blocks_3[-1].finished_sub_slots:
-            store.new_finished_sub_slot(slot, blockchain, None, None)
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, True, peak, blockchain
+            )
+
+            store.new_finished_sub_slot(slot, blockchain, None, next_sub_slot_iters, next_difficulty, None)
         assert len(store.finished_sub_slots) == 3
         finished_sub_slots = blocks_3[-1].finished_sub_slots
 
@@ -469,7 +585,7 @@ class TestFullNodeStore:
                     custom_block_tools.constants,
                     BlockCache({}, {}),
                     None,
-                    slot_offset * peak.sub_slot_iters,
+                    uint128(slot_offset * peak.sub_slot_iters),
                     uint8(i),
                     finished_sub_slots[:slot_offset],
                     peak.sub_slot_iters,
@@ -502,7 +618,11 @@ class TestFullNodeStore:
         await _validate_and_add_block(blockchain, blocks_4[-1], expected_result=AddBlockResult.ADDED_AS_ORPHAN)
 
         sb = blockchain.block_record(blocks_4[-1].header_hash)
-        store.new_peak(sb, blocks_4[-1], None, None, None, blockchain)
+        next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+            blockchain.constants, False, sb, blockchain
+        )
+
+        store.new_peak(sb, blocks_4[-1], None, None, None, blockchain, next_sub_slot_iters, next_difficulty)
         for i in range(
             sb.signage_point_index + custom_block_tools.constants.NUM_SP_INTERVALS_EXTRA,
             custom_block_tools.constants.NUM_SPS_SUB_SLOT,
@@ -549,22 +669,49 @@ class TestFullNodeStore:
         assert len(blocks) >= 2
         dependant_sub_slots = blocks[-1].finished_sub_slots
         peak = blockchain.get_peak()
+        assert peak is not None
         peak_full_block = await blockchain.get_full_peak()
         for block in blocks[:-2]:
             sb = blockchain.block_record(block.header_hash)
-            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+            result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
             peak = sb
             peak_full_block = block
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, False, peak, blockchain
+            )
+
+            res = store.new_peak(
+                sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )
             assert res.added_eos is None
 
-        assert store.new_finished_sub_slot(dependant_sub_slots[0], blockchain, peak, peak_full_block) is None
+        next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+            blockchain.constants, True, peak, blockchain
+        )
+
+        assert (
+            store.new_finished_sub_slot(
+                dependant_sub_slots[0], blockchain, peak, next_sub_slot_iters, next_difficulty, peak_full_block
+            )
+            is None
+        )
         block = blocks[-2]
         sb = blockchain.block_record(block.header_hash)
-        sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-        res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
+        result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+        assert result is not None
+        sp_sub_slot, ip_sub_slot = result
+        next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+            blockchain.constants, False, sb, blockchain
+        )
+
+        res = store.new_peak(
+            sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+        )
         assert res.added_eos == dependant_sub_slots[0]
-        assert res.new_signage_points == res.new_infusion_points == []
+        assert res.new_signage_points == []
+        assert res.new_infusion_points == []
 
         # Test future IP cache
         store.initialize_genesis_sub_slot()
@@ -579,9 +726,16 @@ class TestFullNodeStore:
         for block in blocks[:5]:
             await _validate_and_add_block_no_error(blockchain, block)
             sb = blockchain.block_record(block.header_hash)
+            result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, False, sb, blockchain
+            )
 
-            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
-            res = store.new_peak(sb, block, sp_sub_slot, ip_sub_slot, None, blockchain)
+            res = store.new_peak(
+                sb, block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )
             assert res.added_eos is None
 
         case_0, case_1 = False, False
@@ -600,9 +754,17 @@ class TestFullNodeStore:
             store.add_to_future_ip(new_ip)
 
             await _validate_and_add_block_no_error(blockchain, prev_block)
-            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
+            result = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
             sb = blockchain.block_record(prev_block.header_hash)
-            res = store.new_peak(sb, prev_block, sp_sub_slot, ip_sub_slot, None, blockchain)
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, False, sb, blockchain
+            )
+
+            res = store.new_peak(
+                sb, prev_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )
             if len(block.finished_sub_slots) == 0:
                 case_0 = True
                 assert res.new_infusion_points == [new_ip]
@@ -610,8 +772,16 @@ class TestFullNodeStore:
                 case_1 = True
                 assert res.new_infusion_points == []
                 found_ips: List[timelord_protocol.NewInfusionPointVDF] = []
+                peak = blockchain.get_peak()
+
                 for ss in block.finished_sub_slots:
-                    ipvdf = store.new_finished_sub_slot(ss, blockchain, sb, prev_block)
+                    next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                        blockchain.constants, True, peak, blockchain
+                    )
+
+                    ipvdf = store.new_finished_sub_slot(
+                        ss, blockchain, sb, next_sub_slot_iters, next_difficulty, prev_block
+                    )
                     assert ipvdf is not None
                     found_ips += ipvdf
                 assert found_ips == [new_ip]
@@ -633,8 +803,17 @@ class TestFullNodeStore:
             blocks = custom_block_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             await _validate_and_add_block_no_error(blockchain, blocks[-1])
             peak = blockchain.get_peak()
-            sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
-            store.new_peak(peak, blocks[-1], sub_slots[0], sub_slots[1], None, blockchain)
+            assert peak is not None
+            result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, False, peak, blockchain
+            )
+
+            store.new_peak(
+                peak, blocks[-1], sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )
 
             blocks = custom_block_tools.get_consecutive_blocks(
                 2, block_list_input=blocks, guarantee_transaction_block=True
@@ -653,7 +832,7 @@ class TestFullNodeStore:
                 # We hit all the conditions that we want
                 all_sps: List[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
 
-                def assert_sp_none(sp_index: int, is_none: bool):
+                def assert_sp_none(sp_index: int, is_none: bool) -> None:
                     sp_to_check: Optional[SignagePoint] = all_sps[sp_index]
                     assert sp_to_check is not None
                     assert sp_to_check.cc_vdf is not None
@@ -679,14 +858,25 @@ class TestFullNodeStore:
                 # Adding a new peak clears all SPs after that peak
                 await _validate_and_add_block_no_error(blockchain, blocks[-2])
                 peak = blockchain.get_peak()
-                sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
-                store.new_peak(peak, blocks[-2], sub_slots[0], sub_slots[1], None, blockchain)
+                assert peak is not None
+                result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+                assert result is not None
+                sp_sub_slot, ip_sub_slot = result
+                next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    blockchain.constants, False, peak, blockchain
+                )
+
+                store.new_peak(
+                    peak, blocks[-2], sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+                )
 
                 assert_sp_none(i2, False)
                 assert_sp_none(i2 + 1, False)
                 assert_sp_none(i1, True)
                 assert_sp_none(i1 + 1, True)
-                assert_sp_none(i1 + 4, True)
+                # We load into `all_sps` only up to `NUM_SPS_SUB_SLOT - 3`, so make sure we're not out of range
+                if i1 + 4 < custom_block_tools.constants.NUM_SPS_SUB_SLOT - 3:
+                    assert_sp_none(i1 + 4, True)
 
                 for i in range(i2, custom_block_tools.constants.NUM_SPS_SUB_SLOT):
                     if is_overflow_block(custom_block_tools.constants, uint8(i)):
@@ -716,16 +906,24 @@ class TestFullNodeStore:
 
                 await _validate_and_add_block_no_error(blockchain, blocks[-1])
                 peak = blockchain.get_peak()
-                sub_slots = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+                assert peak is not None
+                result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+                assert result is not None
+                sp_sub_slot, ip_sub_slot = result
+                next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                    blockchain.constants, False, peak, blockchain
+                )
 
                 # Do a reorg, which should remove everything after B2
                 store.new_peak(
                     peak,
                     blocks[-1],
-                    sub_slots[0],
-                    sub_slots[1],
+                    sp_sub_slot,
+                    ip_sub_slot,
                     (await blockchain.get_block_records_at([blocks[-2].height]))[0],
                     blockchain,
+                    next_sub_slot_iters,
+                    next_difficulty,
                 )
 
                 assert_sp_none(i2, False)
@@ -738,22 +936,37 @@ class TestFullNodeStore:
                 for block in blocks[-2:]:
                     await _validate_and_add_block_no_error(blockchain, block)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_basic_store_compact_blockchain(self, empty_blockchain, custom_block_tools):
-        await self.test_basic_store(empty_blockchain, custom_block_tools, True)
-
-    @pytest.mark.asyncio
-    async def test_long_chain_slots(self, empty_blockchain_with_original_constants, default_1000_blocks):
+    async def test_long_chain_slots(
+        self,
+        empty_blockchain_with_original_constants: Blockchain,
+        default_1000_blocks: List[FullBlock],
+    ) -> None:
         blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(blockchain.constants)
-        blocks = default_1000_blocks
         peak = None
         peak_full_block = None
-        for block in blocks:
+        for block in default_1000_blocks:
+            next_sub_slot_iters, next_difficulty = get_next_sub_slot_iters_and_difficulty(
+                blockchain.constants, True, peak, blockchain
+            )
+
             for sub_slot in block.finished_sub_slots:
-                assert store.new_finished_sub_slot(sub_slot, blockchain, peak, peak_full_block) is not None
+                assert (
+                    store.new_finished_sub_slot(
+                        sub_slot, blockchain, peak, next_sub_slot_iters, next_difficulty, peak_full_block
+                    )
+                    is not None
+                )
             await _validate_and_add_block(blockchain, block)
             peak = blockchain.get_peak()
+            assert peak is not None
             peak_full_block = await blockchain.get_full_peak()
-            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
-            store.new_peak(peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain)
+            assert peak_full_block is not None
+            result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            assert result is not None
+            sp_sub_slot, ip_sub_slot = result
+            store.new_peak(
+                peak, peak_full_block, sp_sub_slot, ip_sub_slot, None, blockchain, next_sub_slot_iters, next_difficulty
+            )

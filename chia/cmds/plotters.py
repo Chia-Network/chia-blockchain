@@ -13,5 +13,5 @@ from chia.plotters.plotters import call_plotters
 )
 @click.pass_context
 @click.argument("args", nargs=-1)
-def plotters_cmd(ctx: click.Context, args):
+def plotters_cmd(ctx: click.Context, args: tuple[click.Argument]) -> None:
     call_plotters(ctx.obj["root_path"], args)

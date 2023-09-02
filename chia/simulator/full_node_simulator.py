@@ -9,6 +9,7 @@ import anyio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
@@ -26,6 +27,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -144,7 +146,7 @@ class FullNodeSimulator(FullNodeAPI):
         While reorgs are preferred, this is also an option
         Note: This does not broadcast the changes, and all wallets will need to be wiped.
         """
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
                 raise ValueError("We can't revert without any blocks.")
@@ -179,7 +181,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -228,7 +230,7 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
-        async with self.full_node._blockchain_lock_high_priority:
+        async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
@@ -615,6 +617,7 @@ class FullNodeSimulator(FullNodeAPI):
                         tx = await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
+                            tx_config=DEFAULT_TX_CONFIG,
                             primaries=outputs_group[1:],
                         )
                     await wallet.push_transaction(tx=tx)

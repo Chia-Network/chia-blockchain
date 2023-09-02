@@ -285,9 +285,9 @@ def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, js
 
 def verify(message: str, public_key: str, signature: str, as_bytes: bool) -> None:
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
-    public_key = G1Element.from_bytes(bytes.fromhex(public_key))
-    signature = G2Element.from_bytes(bytes.fromhex(signature))
-    print(AugSchemeMPL.verify(public_key, data, signature))
+    pk = G1Element.from_bytes(bytes.fromhex(public_key))
+    sig = G2Element.from_bytes(bytes.fromhex(signature))
+    print(AugSchemeMPL.verify(pk, data, sig))
 
 
 def as_bytes_from_signing_mode(signing_mode_str: str) -> bool:
@@ -361,6 +361,7 @@ def _search_derived(
 
         if search_address:
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
+            assert child_pk is not None
             # TODO: consider generating addresses using other puzzles
             address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
 
@@ -741,4 +742,7 @@ def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, s
     ):
         return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
     else:
-        return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
+        ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
+        if ret is None:
+            raise ValueError("Abort. No private key")
+        return ret

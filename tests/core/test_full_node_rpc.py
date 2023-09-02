@@ -7,15 +7,19 @@ import pytest
 from blspy import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
+from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -30,6 +34,7 @@ from tests.util.rpc import validate_get_routes
 
 
 class TestRpc:
+    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
     @pytest.mark.asyncio
     async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
         num_blocks = 5
@@ -395,7 +400,7 @@ class TestRpc:
 
             # Do another one but without sending the slot
             await full_node_api_1.full_node.add_block(blocks[-1])
-            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
             selected_eos = blocks[-1].finished_sub_slots[-1]
             await full_node_api_1.full_node.add_block(blocks[-1])
 
@@ -425,5 +430,196 @@ class TestRpc:
 
         finally:
             # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_get_blockchain_state(self, one_wallet_and_one_simulator_services, self_hostname):
+        num_blocks = 5
+        nodes, _, bt = one_wallet_and_one_simulator_services
+        (full_node_service_1,) = nodes
+        full_node_api_1 = full_node_service_1._api
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
+            await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
+            state = await client.get_blockchain_state()
+            assert state["peak"] is None
+            assert not state["sync"]["sync_mode"]
+            assert state["difficulty"] > 0
+            assert state["sub_slot_iters"] > 0
+            assert state["space"] == 0
+            assert state["average_block_time"] is None
+
+            blocks: List[FullBlock] = bt.get_consecutive_blocks(num_blocks)
+            blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
+
+            for block in blocks:
+                unf = UnfinishedBlock(
+                    block.finished_sub_slots,
+                    block.reward_chain_block.get_unfinished(),
+                    block.challenge_chain_sp_proof,
+                    block.reward_chain_sp_proof,
+                    block.foliage,
+                    block.foliage_transaction_block,
+                    block.transactions_info,
+                    block.transactions_generator,
+                    [],
+                )
+                await full_node_api_1.full_node.add_unfinished_block(unf, None)
+                await full_node_api_1.full_node.add_block(block, None)
+
+            state = await client.get_blockchain_state()
+
+            assert state["space"] > 0
+            assert state["average_block_time"] > 0
+
+            block_records: List[BlockRecord] = [
+                await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
+            ]
+            first_non_transaction_block_index = -1
+            for i, b in enumerate(block_records):
+                if not b.is_transaction_block:
+                    first_non_transaction_block_index = i
+                    break
+            # Genesis block(height=0) must be a transaction block
+            # so first_non_transaction_block_index != 0
+            assert first_non_transaction_block_index > 0
+
+            transaction_blocks: List[BlockRecord] = [b for b in block_records if b.is_transaction_block]
+            non_transaction_block: List[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
+            assert len(transaction_blocks) > 0
+            assert len(non_transaction_block) > 0
+            assert transaction_blocks[0] == await get_nearest_transaction_block(
+                full_node_api_1.full_node.blockchain, transaction_blocks[0]
+            )
+
+            nearest_transaction_block = block_records[first_non_transaction_block_index - 1]
+            expected_nearest_transaction_block = await get_nearest_transaction_block(
+                full_node_api_1.full_node.blockchain, block_records[first_non_transaction_block_index]
+            )
+            assert expected_nearest_transaction_block == nearest_transaction_block
+            # When supplying genesis block, there are no older blocks so `None` should be returned
+            assert await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[0], 4608) is None
+            assert (
+                await get_average_block_time(full_node_api_1.full_node.blockchain, block_records[-1], 4608) is not None
+            )
+
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_not_in_request(self, one_node, self_hostname):
+        [full_node_service], _, _ = one_node
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+            with pytest.raises(ValueError, match="No coin_name in request"):
+                await client.fetch("get_mempool_items_by_coin_name", {})
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_not_found_in_mempool(self, one_node, self_hostname):
+        [full_node_service], _, _ = one_node
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+
+            empty_coin_name = bytes32([0] * 32)
+            mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
+            assert mempool_item["success"] == True
+            assert "mempool_items" in mempool_item
+            assert len(mempool_item["mempool_items"]) == 0
+        finally:
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_found_in_mempool(self, one_node, self_hostname):
+        [full_node_service], _, bt = one_node
+        full_node_api = full_node_service._api
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+
+            blocks = bt.get_consecutive_blocks(2)
+            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+
+            for block in blocks:
+                unf = UnfinishedBlock(
+                    block.finished_sub_slots,
+                    block.reward_chain_block.get_unfinished(),
+                    block.challenge_chain_sp_proof,
+                    block.reward_chain_sp_proof,
+                    block.foliage,
+                    block.foliage_transaction_block,
+                    block.transactions_info,
+                    block.transactions_generator,
+                    [],
+                )
+                await full_node_api.full_node.add_unfinished_block(unf, None)
+                await full_node_api.full_node.add_block(block, None)
+
+            wallet = WalletTool(full_node_api.full_node.constants)
+            wallet_receiver = WalletTool(full_node_api.full_node.constants, AugSchemeMPL.key_gen(std_hash(b"123123")))
+            ph = wallet.get_new_puzzlehash()
+            ph_receiver = wallet_receiver.get_new_puzzlehash()
+
+            blocks = bt.get_consecutive_blocks(
+                2,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                farmer_reward_puzzle_hash=ph,
+                pool_reward_puzzle_hash=ph,
+            )
+            for block in blocks[-2:]:
+                await full_node_api.full_node.add_block(block)
+
+            # empty mempool
+            assert len(await client.get_all_mempool_items()) == 0
+
+            coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
+            await client.push_tx(spend_bundle)
+
+            # mempool with one item
+            assert len(await client.get_all_mempool_items()) == 1
+
+            mempool_item = await client.get_mempool_items_by_coin_name(coin_to_spend.name())
+
+            # found coin in coin spends
+            assert mempool_item["success"] == True
+            assert "mempool_items" in mempool_item
+            assert len(mempool_item["mempool_items"]) > 0
+            for item in mempool_item["mempool_items"]:
+                removals = [Coin.from_json_dict(coin) for coin in item["removals"]]
+                assert coin_to_spend.name() in [coin.name() for coin in removals]
+
+        finally:
             client.close()
             await client.await_closed()

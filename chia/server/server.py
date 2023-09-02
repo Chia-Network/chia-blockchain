@@ -8,7 +8,7 @@ import traceback
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -28,6 +28,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
 from chia.protocols.shared_protocol import protocol_version
+from chia.server.api_protocol import ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -38,6 +39,7 @@ from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
 from chia.util.ssl_check import verify_ssl_certs_and_keys
+from chia.util.streamable import Streamable
 
 max_message_size = 50 * 1024 * 1024  # 50MB
 
@@ -122,7 +124,7 @@ class ChiaServer:
     _network_id: str
     _inbound_rate_limit_percent: int
     _outbound_rate_limit_percent: int
-    api: Any
+    api: ApiProtocol
     node: Any
     root_path: Path
     config: Dict[str, Any]
@@ -147,7 +149,7 @@ class ChiaServer:
         cls,
         port: int,
         node: Any,
-        api: Any,
+        api: ApiProtocol,
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
@@ -596,6 +598,15 @@ class ChiaServer:
             connection = self.all_connections[node_id]
             for message in messages:
                 await connection.send_message(message)
+
+    async def call_api_of_specific(
+        self, request_method: Callable[..., Awaitable[Optional[Message]]], message_data: Streamable, node_id: bytes32
+    ) -> Optional[Any]:
+        if node_id in self.all_connections:
+            connection = self.all_connections[node_id]
+            return await connection.call_api(request_method, message_data)
+
+        return None
 
     def get_connections(
         self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None

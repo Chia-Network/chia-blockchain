@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from chia.data_layer.data_layer_util import ClearPendingRootsRequest
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -11,6 +12,11 @@ from chia.util.ints import uint64
 class DataLayerRpcClient(RpcClient):
     async def create_data_store(self, fee: Optional[uint64]) -> Dict[str, Any]:
         response = await self.fetch("create_data_store", {"fee": fee})
+        return response
+
+    async def wallet_log_in(self, fingerprint: int) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"fingerprint": fingerprint}
+        response = await self.fetch("wallet_log_in", request)
         return response
 
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32]) -> Dict[str, Any]:
@@ -119,4 +125,9 @@ class DataLayerRpcClient(RpcClient):
 
     async def check_plugins(self) -> Dict[str, Any]:
         response = await self.fetch("check_plugins", {})
+        return response
+
+    async def clear_pending_roots(self, store_id: bytes32) -> Dict[str, Any]:
+        request = ClearPendingRootsRequest(store_id=store_id)
+        response = await self.fetch("clear_pending_roots", request.marshal())
         return response

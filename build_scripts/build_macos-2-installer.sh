@@ -32,8 +32,14 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "pyinstaller failed!"
 	exit $LAST_EXIT_CODE
 fi
-cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
+
+# Creates a directory of licenses
+echo "Building pip and NPM license directory"
+pwd
+bash ./build_license_directory.sh
+
+cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1
 
@@ -58,8 +64,8 @@ else
 	echo "Not on ci or no secrets so not signing"
 	export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
-echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
-electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
+echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11"
+electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11"
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
@@ -87,8 +93,8 @@ ls -lh final_installer
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit 1
-  notarize-cli --file="$DMG_NAME" --bundle-id net.chia.blockchain \
-	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
+  xcrun notarytool submit --wait --apple-id "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD" --team-id "$APPLE_TEAM_ID" "$DMG_NAME"
+  xcrun stapler staple "$DMG_NAME"
   echo "Notarization step complete"
 else
 	echo "Not on ci or no secrets so skipping Notarize"
@@ -98,12 +104,8 @@ fi
 #
 # Ask for username and password. password should be an app specific password.
 # Generate app specific password https://support.apple.com/en-us/HT204397
-# xcrun altool --notarize-app -f Chia-0.1.X.dmg --primary-bundle-id net.chia.blockchain -u username -p password
-# xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command
-#
-# Wait until following command return a success message".
-# watch -n 20 'xcrun altool --notarization-info  {REQUEST-ID} -u username -p password'.
-# It can take a while, run it every few minutes.
+# xcrun notarytool submit --wait --apple-id username --password password --team-id team-id Chia-0.1.X.dmg
+# Wait until the command returns a success message
 #
 # Once that is successful, execute the following command":
 # xcrun stapler staple Chia-0.1.X.dmg

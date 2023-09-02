@@ -10,7 +10,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.query_filter import FilterMode, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
@@ -216,7 +216,7 @@ class WalletTransactionStore:
                     records.append(record)
                     self.tx_submitted[record.name] = current_time, 1
                 else:
-                    if count < 5:
+                    if count < minimum_send_attempts:
                         records.append(record)
                         self.tx_submitted[record.name] = time_submitted, (count + 1)
             else:
@@ -263,6 +263,7 @@ class WalletTransactionStore:
         end,
         sort_key=None,
         reverse=False,
+        confirmed: Optional[bool] = None,
         to_puzzle_hash: Optional[bytes32] = None,
         type_filter: Optional[TransactionTypeFilter] = None,
     ) -> List[TransactionRecord]:
@@ -286,6 +287,10 @@ class WalletTransactionStore:
         else:
             query_str = SortKey[sort_key].ascending()
 
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
+
         if type_filter is None:
             type_filter_str = ""
         else:
@@ -297,17 +302,36 @@ class WalletTransactionStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 f"SELECT transaction_record FROM transaction_record WHERE wallet_id=?{puzz_hash_where}"
-                f" {type_filter_str} {query_str}, rowid"
+                f" {type_filter_str} {confirmed_str} {query_str}, rowid"
                 f" LIMIT {start}, {limit}",
                 (wallet_id,),
             )
 
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
-    async def get_transaction_count_for_wallet(self, wallet_id) -> int:
+    async def get_transaction_count_for_wallet(
+        self,
+        wallet_id: int,
+        confirmed: Optional[bool] = None,
+        type_filter: Optional[TransactionTypeFilter] = None,
+    ) -> int:
+        confirmed_str = ""
+        if confirmed is not None:
+            confirmed_str = f"AND confirmed={int(confirmed)}"
+
+        if type_filter is None:
+            type_filter_str = ""
+        else:
+            type_filter_str = (
+                f"AND type {'' if type_filter.mode == FilterMode.include else 'NOT'} "
+                f"IN ({','.join([str(x) for x in type_filter.values])})"
+            )
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
-                await conn.execute_fetchall("SELECT COUNT(*) FROM transaction_record where wallet_id=?", (wallet_id,))
+                await conn.execute_fetchall(
+                    f"SELECT COUNT(*) FROM transaction_record where wallet_id=? {type_filter_str} {confirmed_str}",
+                    (wallet_id,),
+                )
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
@@ -363,5 +387,12 @@ class WalletTransactionStore:
     async def delete_unconfirmed_transactions(self, wallet_id: int):
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
-                await conn.execute("DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=?", (wallet_id,))
+                await conn.execute(
+                    "DELETE FROM transaction_record WHERE confirmed=0 AND wallet_id=? AND type not in (?,?)",
+                    (
+                        wallet_id,
+                        TransactionType.INCOMING_CLAWBACK_SEND.value,
+                        TransactionType.INCOMING_CLAWBACK_RECEIVE.value,
+                    ),
+                )
             ).close()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import json
 import logging
@@ -22,7 +23,7 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -39,12 +40,11 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -53,6 +53,7 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import AmountFilter, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -262,7 +263,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     expected_balance_dict["wallet_id"] = wallet.id()
     expected_balance_dict["wallet_type"] = wallet.type()
     expected_balance_dict["fingerprint"] = wallet_node.logged_in_fingerprint
-    if wallet.type() == WalletType.CAT:
+    if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
         expected_balance_dict["asset_id"] = wallet.get_asset_id()
     assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
@@ -302,10 +303,19 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     tx_amount = uint64(15600000)
     with pytest.raises(ValueError):
-        await client.send_transaction(1, uint64(100000000000000001), addr)
+        await client.send_transaction(1, uint64(100000000000000001), addr, DEFAULT_TX_CONFIG)
 
     # Tests sending a basic transaction
-    tx = await client.send_transaction(1, tx_amount, addr, memos=["this is a basic tx"])
+    tx = await client.send_transaction(
+        1,
+        tx_amount,
+        addr,
+        memos=["this is a basic tx"],
+        tx_config=DEFAULT_TX_CONFIG.override(
+            excluded_coin_amounts=[uint64(250000000000)],
+            excluded_coin_ids=[bytes32([0] * 32)],
+        ),
+    )
     transaction_id = tx.name
 
     spend_bundle = tx.spend_bundle
@@ -341,6 +351,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     tx = await client.create_signed_transaction(
         outputs,
+        tx_config=DEFAULT_TX_CONFIG,
         fee=uint64(100),
     )
 
@@ -364,7 +375,7 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     await full_node_api.farm_blocks_to_wallet(2, wallet)
     async with wallet_node.wallet_state_manager.lock:
         cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
+            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
         )
     await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
     await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
@@ -378,18 +389,20 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
-    result = await wallet_rpc_client.get_farmed_amount()
+    get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(2))
 
     expected_result = {
+        "blocks_won": 2,
         "farmed_amount": 4_000_000_000_000,
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 2,
+        "last_time_farmed": get_timestamp_for_height_result,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
-
-    assert result == expected_result
+    assert get_farmed_amount_result == expected_result
 
 
 @pytest.mark.asyncio
@@ -406,6 +419,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     tx = await wallet.generate_signed_transaction(
         amount=uint64(5),
         puzzle_hash=bytes32([0] * 32),
+        tx_config=DEFAULT_TX_CONFIG,
         fee=uint64(fee_amount),
     )
     await wallet.push_transaction(tx)
@@ -470,7 +484,7 @@ async def test_create_signed_transaction(
     if is_cat:
         generated_funds = 10**9
 
-        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds))
+        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds), test=True)
         assert res["success"]
         wallet_id = res["wallet_id"]
 
@@ -491,7 +505,9 @@ async def test_create_signed_transaction(
 
     selected_coin = None
     if select_coin:
-        selected_coin = await wallet_1_rpc.select_coins(amount=amount_total, wallet_id=wallet_id)
+        selected_coin = await wallet_1_rpc.select_coins(
+            amount=amount_total, wallet_id=wallet_id, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+        )
         assert len(selected_coin) == 1
 
     tx = await wallet_1_rpc.create_signed_transaction(
@@ -499,6 +515,10 @@ async def test_create_signed_transaction(
         coins=selected_coin,
         fee=amount_fee,
         wallet_id=wallet_id,
+        # shouldn't actually block it
+        tx_config=DEFAULT_TX_CONFIG.override(
+            excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
+        ),
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
     assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
@@ -506,7 +526,7 @@ async def test_create_signed_transaction(
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
-    push_res = await full_node_rpc.push_tx(spend_bundle)
+    push_res = await wallet_1_rpc.push_transactions([tx])
     assert push_res["success"]
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
@@ -554,7 +574,7 @@ async def test_create_signed_transaction_with_coin_announcement(wallet_rpc_envir
     ]
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
     tx_res: TransactionRecord = await client.create_signed_transaction(
-        outputs, coin_announcements=tx_coin_announcements
+        outputs, tx_config=DEFAULT_TX_CONFIG, coin_announcements=tx_coin_announcements
     )
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
@@ -584,13 +604,15 @@ async def test_create_signed_transaction_with_puzzle_announcement(wallet_rpc_env
         ),
     ]
     outputs = await create_tx_outputs(wallet_2, [(signed_tx_amount, None)])
-    tx_res = await client.create_signed_transaction(outputs, puzzle_announcements=tx_puzzle_announcements)
+    tx_res = await client.create_signed_transaction(
+        outputs, tx_config=DEFAULT_TX_CONFIG, puzzle_announcements=tx_puzzle_announcements
+    )
     assert_tx_amounts(tx_res, outputs, amount_fee=uint64(0), change_expected=True)
     await assert_push_tx_error(client_node, tx_res)
 
 
 @pytest.mark.asyncio
-async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_create_signed_transaction_with_excluded_coins(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1: Wallet = env.wallet_1.wallet
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -599,11 +621,18 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
     await generate_funds(full_node_api, env.wallet_1)
 
     async def it_does_not_include_the_excluded_coins() -> None:
-        selected_coins = await wallet_1_rpc.select_coins(amount=250000000000, wallet_id=1)
+        selected_coins = await wallet_1_rpc.select_coins(
+            amount=250000000000, wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+        )
         assert len(selected_coins) == 1
         outputs = await create_tx_outputs(wallet_1, [(uint64(250000000000), None)])
 
-        tx = await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+        tx = await wallet_1_rpc.create_signed_transaction(
+            outputs,
+            DEFAULT_TX_CONFIG.override(
+                excluded_coin_ids=[c.name() for c in selected_coins],
+            ),
+        )
 
         assert len(tx.removals) == 1
         assert tx.removals[0] != selected_coins[0]
@@ -611,15 +640,128 @@ async def test_create_signed_transaction_with_exclude_coins(wallet_rpc_environme
         await assert_push_tx_error(full_node_rpc, tx)
 
     async def it_throws_an_error_when_all_spendable_coins_are_excluded() -> None:
-        selected_coins = await wallet_1_rpc.select_coins(amount=1750000000000, wallet_id=1)
+        selected_coins = await wallet_1_rpc.select_coins(
+            amount=1750000000000, wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+        )
         assert len(selected_coins) == 1
         outputs = await create_tx_outputs(wallet_1, [(uint64(1750000000000), None)])
 
         with pytest.raises(ValueError):
-            await wallet_1_rpc.create_signed_transaction(outputs, exclude_coins=selected_coins)
+            await wallet_1_rpc.create_signed_transaction(
+                outputs,
+                DEFAULT_TX_CONFIG.override(
+                    excluded_coin_ids=[c.name() for c in selected_coins],
+                ),
+            )
 
     await it_does_not_include_the_excluded_coins()
     await it_throws_an_error_when_all_spendable_coins_are_excluded()
+
+
+@pytest.mark.asyncio
+async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_1_node: WalletNode = env.wallet_1.node
+    wallet_2_node: WalletNode = env.wallet_2.node
+    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
+    wallet_1 = wallet_1_node.wallet_state_manager.main_wallet
+    wallet_2 = wallet_2_node.wallet_state_manager.main_wallet
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_2_api = WalletRpcApi(wallet_2_node)
+
+    generated_funds = await generate_funds(full_node_api, env.wallet_1, 1)
+    await generate_funds(full_node_api, env.wallet_2, 1)
+    wallet_1_puzhash = await wallet_1.get_new_puzzlehash()
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_1_node, timeout=20)
+    wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
+    tx = await wallet_1_rpc.send_transaction(
+        wallet_id=1,
+        amount=uint64(500),
+        address=encode_puzzle_hash(wallet_2_puzhash, "txch"),
+        tx_config=DEFAULT_TX_CONFIG,
+        fee=uint64(0),
+        puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+    )
+    clawback_coin_id_1 = tx.additions[0].name()
+    assert tx.spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_1_node, tx.spend_bundle)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_2_node, timeout=20)
+    tx = await wallet_2_rpc.send_transaction(
+        wallet_id=1,
+        amount=uint64(500),
+        address=encode_puzzle_hash(wallet_1_puzhash, "txch"),
+        tx_config=DEFAULT_TX_CONFIG,
+        fee=uint64(0),
+        puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+    )
+    assert tx.spend_bundle is not None
+    clawback_coin_id_2 = tx.additions[0].name()
+    await farm_transaction(full_node_api, wallet_2_node, tx.spend_bundle)
+    await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_1_rpc, 1)
+    await time_out_assert(20, get_confirmed_balance, generated_funds - 500, wallet_2_rpc, 1)
+    await asyncio.sleep(10)
+    # Test missing coin_ids
+    has_exception = False
+    try:
+        await wallet_2_api.spend_clawback_coins({})
+    except ValueError:
+        has_exception = True
+    assert has_exception
+    # Test coin ID is not a Clawback coin
+    invalid_coin_id = tx.removals[0].name()
+    resp = await wallet_2_rpc.spend_clawback_coins([invalid_coin_id], 500)
+    assert resp["success"]
+    assert resp["transaction_ids"] == []
+    # Test unsupported wallet
+    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_1)
+    assert coin_record is not None
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
+        dataclasses.replace(coin_record, wallet_type=WalletType.CAT)
+    )
+    resp = await wallet_1_rpc.spend_clawback_coins([clawback_coin_id_1], 100)
+    assert resp["success"]
+    assert len(resp["transaction_ids"]) == 0
+    # Test missing metadata
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(dataclasses.replace(coin_record, metadata=None))
+    resp = await wallet_1_rpc.spend_clawback_coins([clawback_coin_id_1], 100)
+    assert resp["success"]
+    assert len(resp["transaction_ids"]) == 0
+    # Test missing incoming tx
+    coin_record = await wallet_1_node.wallet_state_manager.coin_store.get_coin_record(clawback_coin_id_2)
+    assert coin_record is not None
+    fake_coin = Coin(coin_record.coin.parent_coin_info, wallet_2_puzhash, coin_record.coin.amount)
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
+        dataclasses.replace(coin_record, coin=fake_coin)
+    )
+    resp = await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
+    assert resp["transaction_ids"] == []
+    # Test coin puzzle hash doesn't match the puzzle
+    tx = (await wallet_1.wallet_state_manager.tx_store.get_farming_rewards())[0]
+    await wallet_1.wallet_state_manager.tx_store.add_transaction_record(dataclasses.replace(tx, name=fake_coin.name()))
+    await wallet_1_node.wallet_state_manager.coin_store.add_coin_record(
+        dataclasses.replace(coin_record, coin=fake_coin)
+    )
+    resp = await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
+    assert resp["transaction_ids"] == []
+    # Test claim spend
+    await wallet_2_api.set_auto_claim({"enabled": False, "tx_fee": 100, "min_amount": 0, "batch_size": 1})
+    resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1, clawback_coin_id_2], 100)
+    assert resp["success"]
+    assert len(resp["transaction_ids"]) == 2
+    await time_out_assert_not_none(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+    )
+    await time_out_assert_not_none(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][1])
+    )
+    await farm_transaction_block(full_node_api, wallet_2_node)
+    await time_out_assert(20, get_confirmed_balance, generated_funds + 300, wallet_2_rpc, 1)
+    # Test spent coin
+    resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1], 500)
+    assert resp["success"]
+    assert resp["transaction_ids"] == []
 
 
 @pytest.mark.asyncio
@@ -633,7 +775,9 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
-    removals = await client.select_coins(1750000000000, wallet_id=1)  # we want a coin that won't be selected by default
+    removals = await client.select_coins(
+        1750000000000, wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+    )  # we want a coin that won't be selected by default
     outputs = await create_tx_outputs(wallet_2, [(uint64(1), ["memo_1"]), (uint64(2), ["memo_2"])])
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(amount_outputs + 1)
@@ -641,6 +785,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     send_tx_res: TransactionRecord = await client.send_transaction_multi(
         1,
         outputs,
+        DEFAULT_TX_CONFIG,
         coins=removals,
         fee=amount_fee,
     )
@@ -694,8 +839,10 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
     # Test RELEVANCE
+    puzhash = await wallet.get_new_puzzlehash()
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(
-        1, uint64(1), encode_puzzle_hash(await wallet.get_new_puzzlehash(), "txch")
+        1, uint64(1), encode_puzzle_hash(puzhash, "txch"), DEFAULT_TX_CONFIG
     )  # Create a pending tx
 
     all_transactions = await client.get_transactions(1, sort_key=SortKey.RELEVANCE)
@@ -712,10 +859,9 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
 
     # Test get_transactions to address
     ph_by_addr = await wallet.get_new_puzzlehash()
-    await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"))
-    await client.farm_block(encode_puzzle_hash(ph_by_addr, "txch"))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-
+    await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"), DEFAULT_TX_CONFIG)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
@@ -726,6 +872,22 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     )
     assert len(all_transactions) == 5
     assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
+    # Test confirmed filter
+    all_transactions = await client.get_transactions(1, confirmed=True)
+    assert len(all_transactions) == 10
+    assert all(transaction.confirmed for transaction in all_transactions)
+    all_transactions = await client.get_transactions(1, confirmed=False)
+    assert len(all_transactions) == 2
+    assert all(not transaction.confirmed for transaction in all_transactions)
+
+    # Test bypass broken txs
+    await wallet.wallet_state_manager.tx_store.add_transaction_record(
+        dataclasses.replace(all_transactions[0], type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
+    )
+    all_transactions = await client.get_transactions(
+        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]), confirmed=False
+    )
+    assert len(all_transactions) == 1
 
 
 @pytest.mark.asyncio
@@ -741,6 +903,13 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
     assert len(all_transactions) > 0
     transaction_count = await client.get_transaction_count(1)
     assert transaction_count == len(all_transactions)
+    assert await client.get_transaction_count(1, confirmed=False) == 0
+    assert (
+        await client.get_transaction_count(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
+        )
+        == 0
+    )
 
 
 @pytest.mark.asyncio
@@ -757,11 +926,21 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(full_node_api, env.wallet_1, 1)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
+    # Test a deprecated path
+    with pytest.raises(ValueError, match="dropped"):
+        await client.fetch(
+            "create_new_wallet",
+            {
+                "wallet_type": "cat_wallet",
+                "mode": "new",
+            },
+        )
+
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
     await time_out_assert(20, client.get_synced)
 
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_0_id = res["wallet_id"]
     asset_id = bytes32.fromhex(res["asset_id"])
@@ -829,7 +1008,19 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert addr_0 != addr_1
 
     # Test CAT spend without a fee
-    tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
+    with pytest.raises(ValueError):
+        await client.cat_spend(
+            cat_0_id,
+            DEFAULT_TX_CONFIG.override(
+                excluded_coin_amounts=[uint64(20)],
+                excluded_coin_ids=[bytes32([0] * 32)],
+            ),
+            uint64(4),
+            addr_1,
+            uint64(0),
+            ["the cat memo"],
+        )
+    tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(4), addr_1, uint64(0), ["the cat memo"])
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
@@ -839,7 +1030,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction_block(full_node_api, wallet_node)
 
     # Test CAT spend with a fee
-    tx_res = await client.cat_spend(cat_0_id, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
+    tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
@@ -847,8 +1038,12 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test CAT spend with a fee and pre-specified removals / coins
-    removals = await client.select_coins(amount=uint64(2), wallet_id=cat_0_id)
-    tx_res = await client.cat_spend(cat_0_id, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals)
+    removals = await client.select_coins(
+        amount=uint64(2), wallet_id=cat_0_id, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+    )
+    tx_res = await client.cat_spend(
+        cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals
+    )
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
@@ -867,7 +1062,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(20, get_confirmed_balance, 6, client_2, cat_1_id)
 
     # Test CAT coin selection
-    selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
+    selected_coins = await client.select_coins(
+        amount=1, wallet_id=cat_0_id, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+    )
     assert len(selected_coins) > 0
 
 
@@ -884,7 +1081,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await generate_funds(full_node_api, env.wallet_2, 1)
 
     # Creates a CAT wallet with 20 mojos
-    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
@@ -898,7 +1095,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
     wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
     adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
-    tx_res = await wallet_1_rpc.send_transaction_multi(cat_wallet_id, additions=adds, fee=uint64(0))
+    tx_res = await wallet_1_rpc.send_transaction_multi(
+        cat_wallet_id, additions=adds, tx_config=DEFAULT_TX_CONFIG, fee=uint64(0)
+    )
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
@@ -912,7 +1111,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         await wallet_1_rpc.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
-        {uint32(1): -5, cat_asset_id.hex(): 1}, validate_only=True
+        {uint32(1): -5, cat_asset_id.hex(): 1}, DEFAULT_TX_CONFIG, validate_only=True
     )
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 0
@@ -922,6 +1121,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
+        DEFAULT_TX_CONFIG,
         driver_dict=driver_dict,
         fee=uint64(1),
     )
@@ -942,22 +1142,22 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
 
-    trade_record = await wallet_2_rpc.take_offer(offer, fee=uint64(1))
+    trade_record = await wallet_2_rpc.take_offer(offer, DEFAULT_TX_CONFIG, fee=uint64(1))
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
-    await wallet_1_rpc.cancel_offer(offer.name(), secure=False)
+    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, secure=False)
 
     trade_record = await wallet_1_rpc.get_offer(offer.name(), file_contents=True)
     assert trade_record.offer == bytes(offer)
     assert TradeStatus(trade_record.status) == TradeStatus.CANCELLED
 
-    await wallet_1_rpc.cancel_offer(offer.name(), fee=uint64(1), secure=True)
+    await wallet_1_rpc.cancel_offer(offer.name(), DEFAULT_TX_CONFIG, fee=uint64(1), secure=True)
 
     trade_record = await wallet_1_rpc.get_offer(offer.name())
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CANCEL
 
     new_offer, new_trade_record = await wallet_1_rpc.create_offer_for_ids(
-        {uint32(1): -5, cat_wallet_id: 1}, fee=uint64(1)
+        {uint32(1): -5, cat_wallet_id: 1}, DEFAULT_TX_CONFIG, fee=uint64(1)
     )
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 2
@@ -995,27 +1195,144 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len(all_offers) == 2
 
     ###
-    # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
-    # There's also temp code in wallet_rpc_api.py and wallet_funcs.py
-    with pytest.raises(ValueError, match="CAT1s are no longer supported"):
+    # This is temporary code, delete it when we no longer care about incorrectly parsing old offers
+    # There's also temp code in wallet_rpc_api.py
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
         await wallet_1_rpc.fetch(
             "get_offer_summary",
             {
-                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8f"
-                "vtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m"
-                "7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7"
-                "jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u"
-                "2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdn"
-                "dmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm7"
-                "2hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank"
-                "88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cy"
-                "ga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7ue"
-                "gztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnye"
-                "kany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9"
-                "yc449jqxg4mfgx0sw3p9"
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "check_offer_validity",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "take_offer",
+            {
+                "offer": "offer1qqr83wcuu2rykcmqvpsxygqq0qthwpmsrsutadthxda7ppk8wemm74e88h2dh265k7fv7kdk2etmg99xpm0yu8ddl4rkhl73mflmfasl4h75w6lllup4t7urp0mstehm8cnmc6mdxn0rvdejdfpway2ccm6srenn6urvdmgvand96gat25z42f4u2sh7ad7upvhfty77v6ak76dmrdxrzdgn89mlr58ya6j77yax8095r2u2g826yg9jq4q6xzt4g6yveqnhg6r77lrt3weksdwcwz5ava4t5mtdem5syjejwg53q6t5lfd2t5p6dds9dylj7jxw2fmquugdnkvke5jckmsr8ne4akwha9hv9y24x6shezhaxqjegegprjp6h8hua2a24lntev22zkxdkhya5u7k6uhenv2jwwf8nddcs99707290u0yw7jv8w500yarnlew75keam9mwejmanardkdpk6awxj7ndl9ka35zfvydvfj646fuq7j6zv5uzl3czrw76psrnaudu2d65mtez7m9sz9xat52s87v6vmlpmknvju0u4wq5kklflwuamnaczl8vkne284ehyamaaxuzkcdvpjg3tlt7cxhy0r6fammc0arha65nxcv7kpxmra5zck7emrn7v4teuk6473eh7l39mqp5zafdmygm0tf0hp2ug20fhk7mlkmve4atg76xv9mw0xe2ped72mvkqall4hstp0a9jsxyyasz6dl7zmka2kwfx94w0knut43r4x447w3shmw5alldevrdu2gthelcjt8h6775p92ktlmlg846varj62rghj67e2hyhlauwkkv6nhnvt7wm6tt2kh2xw6kze0ttxsqplfct7mk4jvnykm0arw2juvnmkudgyerj59dn4ja8r5avud67zd7mr2cl54skynhs4twu2qgwrcdzcchhfee008e30yazzwu96h2uhaprejkrgns5w8nds244k3uyfhtmmzne29hmmdsvvlrtr02w0nc0thtkpywwmmxuqfc0tsssdflned"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "get_offer_summary",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "check_offer_validity",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
+            },
+        )
+    with pytest.raises(ValueError, match="Old offer format is no longer supported"):
+        await wallet_1_rpc.fetch(
+            "take_offer",
+            {
+                "offer": "offer1qqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqx68z6sprqv0dvdkvr4rv8r8mwlw7mzuyht6gn74y8yx8ta952h2qqqqqqqqqqqqrls9lllq8ls9lllq8ls9l67lllsflczlllsflllqnlstlllqnll7zllxnlstq8lluz07zllszqgpq8lluz0llczlutl7tuqlllsfl6llllsflllqtljalllqnls9lllqnl30luqszqgplllqnll7qhl9tll7p8lqtll7p8lsgp8llllqnlcyptllllsfluzpdlllqyqszqgpq8lluz0lqdllllsfluzq9llllcyl7pq9lllluz0lqs9llll7p8lsg9llluqszqgpqyqszqgpqyqszq0llcylllsrlllllln63hlqtlnx08lluzqrlcpl7qukqhlllljplczllls8lc9lllsrlczlue0llcylup0llcyluxlllcylllshlmulllshle5lujgplllp0lhelllp0lhelllp0lnflevsrlsnq8llu9l7l8lp0ll7zllxnlcpqyqszq0lqyqszqgplllqy9cplcpsrll7qhlluplllezlllsnlllphlstq8ly2q0llcflllsmlctsrlj9q8llu2l79llluqcrluqsrll7q0lp0lstlctlutcplllq8ls3qyqluqcplllqtll7qllp0ll7q0lqtll7qllluylllczluh0llcylup0llcylufllqyqszq0lqstn7q0llcplup074hlluz07qhlluz0llczluflllcyla0lllcylutlllcyluhlllcyl7qmllllqnlcyqtllllsflcml7qgpqyqszqgpq8lluz0lqsp0llcpqyqszq0llcpluygpq8lqxq0llcplup0llcrlutlllcplup0llcrllljpluph7q0llcpsgqhllllq8ls3qyqluqcplllq8ls3qyqluqcpq8lqxq07p8lluz07p0ly7q0llcylll3plctlatcplmhszq0llllqtll7qllqhll7q0lqtll7qllluylllczllls8lllp8l3rl6csrll7q2el7qgplcpsrll7qvp37q0llcplup07fhlluz07qhlluz07r0lluz07zllluz0llcyl7qmnluzq9ucpluqszqgpqyqlllsrlczlaa0llcylup0llcyllls9lllq0ll7z0lz8l43q8lluql7p8ltrll7p8llup07ahlluz07qhlluz07yllluz0720lluz0llctlu607kuqlllsfletl7qgpqyqszqgpleeszq0llcplup0llcrlllsnlc3laugplllq8ls9lllq0ll7g8llup0llcrlllsnlllqyslllcdlu5cpq8lluql7qhlluplllcflllselefl7q07dyqlawgplllq8lszq0lszq07qvql7qgplcpszq0llcpp8ll7q0lpzqgplcpsrll7qgfsrlsrqyqluqcplllqnll7qhlluplllcflugl7kyqlllszk0lszq07qvqlllsflllqtljdlllqnls9lllqnlsmlllqnlshlllqnl30luqszqgpqyql7qgpqyqszqgplcpsrll7q0lqnlcplllqnlcplchszqgplcpsrll7qhllupl7p0lluql7p8lp8ll7qhl2mll7p8lqtll7p8lphll7p8lp0lcpqyqszqgplllqy9cplcpsrlshlmulllshle5lu5gplllp0lhelllp0lhelllp0lnflevsrlstq8llu9l7l8llup07vhlluz07qhlluz07pllluz0llctlu607dyql7qgpqyqsrll7zllxnlcpqyqszq0llczllls8lllqllstq8lluql7zllluqs9lllqtljalllqnls9lllqnlsnluqszqgplllqtljalllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqlllsflllqnlnplllqnl4lluqszq0llczlal0llcylup0llcylllsflllqnljllc9srll7p8ltllcyqtlszq0llcyllls9lexlllsflczlllsflctlllsflc9lllsrluqszqgpqyqlllsflchlllsfluphlll7p8lsgqhllllqnll7qhl9tll7p8lqtll7p8lsgz0llllqnll7qhlwmll7p8lqtll7p8lp8ll7p8lsg90llllqnll7zllxnljmq8lluz0790lszqgpqyqszq0llcyl7ppdlllszqgpqyqsrll7p8lsgzlllllqnlcyzlll7qgpqyqszqgpqyqszqgplczlad0llcylup0llcyla0lllcylualllcyllls9lllq0l30lllq8lsnledllls9le2lllsflczlllsfle8lllsflllqtlhdlllqnls9lllqnljnlllqnl40lllqnll7zllxnlcrwvqlllsfl6el7qgpqyqszqgplllqnlcrdllszqgpqyqszq0lqyqluqcplllqnl30lllqnlstlllqnlcyqhllllsflllqnll7p8l0rll7p8llu807h8llup07thlluz07qhlluz0llcyluhlllcyl7pqzlllszqgpluqszqgpq8lszqgplllqnll7p8lyrll7p8llu9llqdllaw0llczluh0llcylup0llcylllsflc4lllsflllzrlcyqtllll3rluzqt0l72uql7pq9luql7qgpq8lszqgpqyql7qgpq8lzwqgpluqszqgpqyqszqgpq8lqxqgplllqnll7qdqx7l0xc8wskqn8d5at9dfqmwyt5q675phnkk4zh4e2x9tklqa9fa0llcylllsrgqn55h9a7c7aq9zfj2tx6aa5268xz2r2ds5emgu9yut5hhkp96rrmll7p8lluql7qhlluql7qhlptll7p8lqtll7p8lq0lcpqyqsrll7p8lluqlllen8mll7qhllupl7p0lluql7p8lluz07r8lluz0llczlu00llcylup0llcyluyllqyqszq0lqyqsrll7qhlzmll7p8lqtll7p8lr8ll7p8llup07zhlluz07qhlluz07r0lszqgpq8lszqgpqyqsrlcpq8lqxq0llczllls8lc9lllsrlcylllsflcgluycplllqtl3dlllqnls9lllqnlsmlllqnlshluqszqgpqyqlllszzuqluqcplczllls8lllqllstq8lluql7zllluqs9lllqtl3alllqnls9lllqnlsnluqszqgplllqtl3alllqnls9lllqnlsmluqszqgpq8lluql7zllluqsrlc9szq07qvqluqcpq8lqxqgpqyqlll6pm3jc0w0dpj78zznpvxj057m22f2nk94gc3kus29jvxnefjjd4nklll6qehe6qve5g6r23z4txtrxjqhdg8npntzhw2w8yrkg7y50ksplt32lup0llaqvmuaqxv6ydp4g324n93nfqtk5rese43th98rjpmy0z28mgql4c4gpqyqsq00wsa2002kemp6v5g4avmmdc4edymhaj5vjzvnxuupgu00ufh83e8mt9q2autw93k0a55w5wf5mtdfdaxw9d3fk97dfqhtx8m2d32eqqqqqw3499peelczlllsrlczlllsrlczllls8lctlllsrlczllls8lllp8lstlllrhlshlllrmll7zllp0ll7qhlqmll7p8lqtll7p8lzllcpqyqszqgpqyqlllsrlczlutl7tuqlllsrlcgszq07qvqlllsrlcylllsflcylllsflc9lllsflllqtlsdlllqnls9lllqnl30luqszqgpluqszqgplllqtl30le0szqgplcpsrll7p8lluql7vhlqtll7qlllurl7pvqlllsrlctlllszqhllup07phlluz07qhlluz07z0lszqgpq8llup07phlluz07qhlluz07r0lszqgpqyqlllsrlctlllszq0lqkqgplcpsrlsrqyqlllsflllqxcgqwvaass7c74kdmgtgwq3v5kzcf7pdchnqjuw9yqd0agsgjr8tmua30nshgv7ddn8t3xehd0htnk5luqcpq8lsrll7q0lluellg96ufqk9maa268cn0r6xsre3fs33hcp384eu0uxj77w5fa0n8u008lsrq8lluellgyyddvdkw7jgeu9ugpwah0mk34v4un87qgnqaphe48qss0nmf637mlc2w3499pe4q8llu607qvqlllnelaqhyk2jzy6hxkmuzskhzpz5m6mwylj0h0akznfr3r7sw0e9n8ka2ycplll8ll6pp0j4c0pkvfpy06hd4gelhdvdp3798ghlx6m6eawkk5f4dcazw5cszq0lqyq5xlm42y5nv02th262u6tkmtmrq28nggx4mgvj35gewqav8wcn28jfgtphpthhwrs2pqys2s8zmwv6pur6s6vtyytar26hgp0tgcrc2xg0cxkqdfx3zyyckk769hp4p5dmvcfshc9a4j7feww6uvqc2mthvez7ttx"  # noqa: E501
             },
         )
     ###
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        DEFAULT_TX_CONFIG,
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, batch_size=1)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
+
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): -5, cat_asset_id.hex(): 1},
+        DEFAULT_TX_CONFIG,
+        driver_dict=driver_dict,
+    )
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        DEFAULT_TX_CONFIG,
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 2
+    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, cancel_all=True)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    await wallet_1_rpc.create_offer_for_ids(
+        {uint32(1): 5, cat_asset_id.hex(): -1},
+        DEFAULT_TX_CONFIG,
+        driver_dict=driver_dict,
+    )
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=bytes32([0] * 32))
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 1
+    await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=cat_asset_id)
+    assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+
+
+@pytest.mark.asyncio
+async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    wallet_node: WalletNode = env.wallet_1.node
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    store = wallet_node.wallet_state_manager.coin_store
+    full_node_api = env.full_node.api
+    # Generate some funds
+    generated_funds = await generate_funds(full_node_api, env.wallet_1, 5)
+    address = encode_puzzle_hash(await env.wallet_1.wallet.get_new_puzzlehash(), "txch")
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+    # Spend half of it back to the same wallet get some spent coins in the wallet
+    tx = await client.send_transaction(1, uint64(generated_funds / 2), address, DEFAULT_TX_CONFIG)
+    assert tx.spend_bundle is not None
+    await time_out_assert(20, tx_in_mempool, True, client, tx.name)
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+    # Prepare some records and parameters first
+    result = await store.get_coin_records()
+    coins = {record.coin for record in result.records}
+    coins_unspent = {record.coin for record in result.records if not record.spent}
+    coin_ids = [coin.name() for coin in coins]
+    coin_ids_unspent = [coin.name() for coin in coins_unspent]
+    assert len(coin_ids) > 0
+    assert len(coin_ids_unspent) > 0
+    # Do some queries to trigger all parameters
+    # 1. Empty coin_ids
+    assert await client.get_coin_records_by_names([]) == []
+    # 2. All coins
+    rpc_result = await client.get_coin_records_by_names(coin_ids + coin_ids_unspent)
+    assert set(record.coin for record in rpc_result) == {*coins, *coins_unspent}
+    # 3. All spent coins
+    rpc_result = await client.get_coin_records_by_names(coin_ids, include_spent_coins=True)
+    assert set(record.coin for record in rpc_result) == coins
+    # 4. All unspent coins
+    rpc_result = await client.get_coin_records_by_names(coin_ids_unspent, include_spent_coins=False)
+    assert set(record.coin for record in rpc_result) == coins_unspent
+    # 5. Filter start/end height
+    filter_records = result.records[:10]
+    assert len(filter_records) == 10
+    filter_coin_ids = [record.name() for record in filter_records]
+    filter_coins = set(record.coin for record in filter_records)
+    min_height = min(record.confirmed_block_height for record in filter_records)
+    max_height = max(record.confirmed_block_height for record in filter_records)
+    assert min_height != max_height
+    rpc_result = await client.get_coin_records_by_names(filter_coin_ids, start_height=min_height, end_height=max_height)
+    assert set(record.coin for record in rpc_result) == filter_coins
+    # 8. Test the failure case
+    with pytest.raises(ValueError, match="not found"):
+        await client.get_coin_records_by_names(coin_ids, include_spent_coins=False)
 
 
 @pytest.mark.asyncio
@@ -1027,6 +1344,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_1_id = wallet_1.id()
 
@@ -1067,7 +1385,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
-    res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
+    res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1, DEFAULT_TX_CONFIG)
     assert res["success"]
     res = await wallet_1_rpc.get_did_recovery_list(did_wallet_id_0)
     assert res["num_required"] == 1
@@ -1078,8 +1396,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Update metadata
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
-        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"})
-    res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
+        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
+    res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
     assert res["success"]
 
     await farm_transaction_block(full_node_api, wallet_1_node)
@@ -1092,7 +1410,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Transfer DID
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
+    res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True, DEFAULT_TX_CONFIG)
     assert res["success"]
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1118,6 +1436,37 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     metadata = json.loads(did_wallet_2.did_info.metadata)
     assert metadata["Twitter"] == "Https://test"
 
+    last_did_coin = await did_wallet_2.get_coin()
+    bundle = SpendBundle.from_json_dict(
+        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG))["spend_bundle"]
+    )
+    await env.full_node.rpc_client.push_tx(bundle)
+    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_2_node)
+
+    next_did_coin = await did_wallet_2.get_coin()
+    assert next_did_coin.parent_coin_info == last_did_coin.name()
+    last_did_coin = next_did_coin
+
+    bundle = SpendBundle.from_json_dict(
+        (
+            await wallet_2_rpc.did_message_spend(
+                did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+            )
+        )["spend_bundle"]
+    )
+    await env.full_node.rpc_client.push_tx(bundle)
+    await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
+
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_2_node)
+
+    next_did_coin = await did_wallet_2.get_coin()
+    assert next_did_coin.parent_coin_info == last_did_coin.name()
+    assert next_did_coin.puzzle_hash == last_did_coin.puzzle_hash
+
 
 @pytest.mark.asyncio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
@@ -1139,6 +1488,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         None,
         "0xD4584AD463139FA8C0D9F68F4B59F185",
         ["https://www.chia.net/img/branding/chia-logo.svg"],
+        DEFAULT_TX_CONFIG,
     )
     assert res["success"]
 
@@ -1168,7 +1518,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
+    res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0, DEFAULT_TX_CONFIG)
     assert res["success"]
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
@@ -1231,8 +1581,8 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     ph = await wallet.get_new_puzzlehash()
     addr = encode_puzzle_hash(ph, "txch")
     tx_amount = uint64(15600000)
-
-    created_tx = await client.send_transaction(1, tx_amount, addr)
+    await env.full_node.api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+    created_tx = await client.send_transaction(1, tx_amount, addr, DEFAULT_TX_CONFIG)
 
     await time_out_assert(20, tx_in_mempool, True, client, created_tx.name)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 1
@@ -1260,11 +1610,13 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     # Add in reward addresses into farmer and pool for testing delete key checks
     # set farmer to first private key
     sk = await wallet_node.get_key_for_fingerprint(pks[0])
+    assert sk is not None
     test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         # set pool to second private key
         sk = await wallet_node.get_key_for_fingerprint(pks[1])
+        assert sk is not None
         test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
         test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         save_config(wallet_node.root_path, "config.yaml", test_config)
@@ -1290,11 +1642,13 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     # Add in observer reward addresses into farmer and pool for testing delete key checks
     # set farmer to first private key
     sk = await wallet_node.get_key_for_fingerprint(pks[0])
+    assert sk is not None
     test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
         test_config["farmer"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         # set pool to second private key
         sk = await wallet_node.get_key_for_fingerprint(pks[1])
+        assert sk is not None
         test_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(0)).get_g1())
         test_config["pool"]["xch_target_address"] = encode_puzzle_hash(test_ph, "txch")
         save_config(wallet_node.root_path, "config.yaml", test_config)
@@ -1328,7 +1682,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
 
     with pytest.raises(ValueError):
-        await client.send_transaction(wallets[0]["id"], uint64(100), addr)
+        await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
 
     # Delete all keys
     await client.delete_all_keys()
@@ -1349,10 +1703,11 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     coin_300: List[Coin]
-    for tx_amount in [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]:
+    tx_amounts: List[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
+    for tx_amount in tx_amounts:
         funds -= tx_amount
         # create coins for tests
-        tx = await client.send_transaction(1, tx_amount, addr)
+        tx = await client.send_transaction(1, tx_amount, addr, DEFAULT_TX_CONFIG)
         spend_bundle = tx.spend_bundle
         assert spend_bundle is not None
         for coin in spend_bundle.additions():
@@ -1364,41 +1719,94 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         await time_out_assert(20, get_confirmed_balance, funds, client, 1)
 
     # test min coin amount
-    min_coins: List[Coin] = await client_2.select_coins(amount=1000, wallet_id=1, min_coin_amount=uint64(1001))
+    min_coins: List[Coin] = await client_2.select_coins(
+        amount=1000,
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
+    )
     assert min_coins is not None
     assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
 
     # test max coin amount
     max_coins: List[Coin] = await client_2.select_coins(
-        amount=2000, wallet_id=1, min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
+        amount=2000,
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
+        ),
     )
     assert max_coins is not None
     assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
 
     # test excluded coin amounts
+    non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
     excluded_amt_coins: List[Coin] = await client_2.select_coins(
-        amount=1000, wallet_id=1, excluded_amounts=[uint64(1000)]
+        amount=non_1000_amt,
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
     )
     assert excluded_amt_coins is not None
-    assert len(excluded_amt_coins) == 1 and excluded_amt_coins[0].amount == uint64(10000)
+    assert (
+        len(excluded_amt_coins) == len(tuple(a for a in tx_amounts if a != 1000))
+        and sum(c.amount for c in excluded_amt_coins) == non_1000_amt
+    )
 
     # test excluded coins
     with pytest.raises(ValueError):
-        await client_2.select_coins(amount=5000, wallet_id=1, excluded_coins=min_coins)
-    excluded_test = await client_2.select_coins(amount=1300, wallet_id=1, excluded_coins=coin_300)
+        await client_2.select_coins(
+            amount=5000,
+            wallet_id=1,
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+                excluded_coin_ids=[c.name() for c in min_coins]
+            ),
+        )
+    excluded_test = await client_2.select_coins(
+        amount=1300,
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in coin_300]),
+    )
     assert len(excluded_test) == 2
     for coin in excluded_test:
         assert coin != coin_300[0]
 
+    # test backwards compatibility in the RPC
+    identical_test = (
+        await client_2.fetch(
+            "select_coins",
+            {
+                "amount": 1300,
+                "wallet_id": 1,
+                "exclude_coins": [c.to_json_dict() for c in coin_300],
+            },
+        )
+    )["coins"]
+    assert len(identical_test) == 2
+    for coin in identical_test:
+        assert coin != coin_300[0]
+
     # test get coins
     all_coins, _, _ = await client_2.get_spendable_coins(
-        wallet_id=1, excluded_coin_ids=[excluded_amt_coins[0].name().hex()]
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
+            excluded_coin_ids=[c.name() for c in excluded_amt_coins]
+        ),
     )
     assert excluded_amt_coins not in all_coins
-    all_coins_2, _, _ = await client_2.get_spendable_coins(wallet_id=1, max_coin_amount=uint64(999))
+    all_coins, _, _ = await client_2.get_spendable_coins(
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
+    )
+    assert excluded_amt_coins not in all_coins
+    all_coins_2, _, _ = await client_2.get_spendable_coins(
+        wallet_id=1,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(max_coin_amount=uint64(999)),
+    )
     assert all_coins_2[0].coin == coin_300[0]
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
-        await client_2.get_spendable_coins(wallet_id=1, excluded_coin_ids=["a"])
+        await client_2.get_spendable_coins(
+            wallet_id=1,
+            coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[b"a"]),
+        )
 
 
 @pytest.mark.asyncio
@@ -1460,6 +1868,10 @@ async def test_get_coin_records_rpc_limits(
     assert rpc_server is not None
     api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
     store = wallet_node.wallet_state_manager.coin_store
+
+    # Adjust the limits for faster testing
+    WalletRpcApi.max_get_coin_records_limit = uint32(5)
+    WalletRpcApi.max_get_coin_records_filter_items = uint32(5)
 
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
@@ -1751,6 +2163,44 @@ async def test_verify_signature(
 
 
 @pytest.mark.asyncio
+async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    await generate_funds(full_node_api, env.wallet_1)
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
+    has_exception = False
+    try:
+        res = await api.set_auto_claim(req)
+    except ConversionError:
+        has_exception = True
+    assert has_exception
+    req = {"enabled": False, "batch_size": 0, "min_amount": 100}
+    res = await api.set_auto_claim(req)
+    assert not res["enabled"]
+    assert res["tx_fee"] == 0
+    assert res["min_amount"] == 100
+    assert res["batch_size"] == 50
+
+
+@pytest.mark.asyncio
+async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    await generate_funds(full_node_api, env.wallet_1)
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    res = await api.get_auto_claim({})
+    assert not res["enabled"]
+    assert res["tx_fee"] == 0
+    assert res["min_amount"] == 0
+    assert res["batch_size"] == 50
+
+
+@pytest.mark.asyncio
 async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -1766,7 +2216,12 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     nft_wallet_id = nft_wallet["wallet_id"]
     address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
     await wc.mint_nft(
-        nft_wallet_id, royalty_address=address, target_address=address, hash="deadbeef", uris=["http://test.nft"]
+        nft_wallet_id,
+        tx_config=DEFAULT_TX_CONFIG,
+        royalty_address=address,
+        target_address=address,
+        hash="deadbeef",
+        uris=["http://test.nft"],
     )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
@@ -1774,14 +2229,36 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
 
     wallet_node: WalletNode = env.wallet_1.node
     wallet_node_2: WalletNode = env.wallet_2.node
+    # Test Clawback resync
+    tx = await wc.send_transaction(
+        wallet_id=1,
+        amount=uint64(500),
+        address=address,
+        tx_config=DEFAULT_TX_CONFIG,
+        fee=uint64(0),
+        puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+    )
+    clawback_coin_id = tx.additions[0].name()
+    assert tx.spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await time_out_assert(20, wc.get_synced)
+    await asyncio.sleep(10)
+    resp = await wc.spend_clawback_coins([clawback_coin_id], 0)
+    assert resp["success"]
+    assert len(resp["transaction_ids"]) == 1
+    await time_out_assert_not_none(
+        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
+    )
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(20, wc.get_synced)
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
     await client.set_wallet_resync_on_startup()
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
-    # 2 reward coins, 1 DID, 1 NFT
-    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 4
+    # 2 reward coins, 1 DID, 1 NFT, 1 clawbacked coin
+    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 5
     assert await wallet_node._wallet_state_manager.nft_store.count() == 1
     # standard wallet, did wallet, nft wallet, did nft wallet
     assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
@@ -1802,6 +2279,10 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
     # transactions should be the same
     assert after_txs == before_txs
+    # Check clawback
+    clawback_tx = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id)
+    assert clawback_tx is not None
+    assert clawback_tx.confirmed
     # only coin_store was populated in this case, but now should be empty
     assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
     assert await wallet_node_2._wallet_state_manager.nft_store.count() == 0
@@ -1901,7 +2382,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     )
     tx_amount = uint64(100)
 
-    tx = await client.send_transaction(1, tx_amount, addr)
+    tx = await client.send_transaction(1, tx_amount, addr, DEFAULT_TX_CONFIG)
     transaction_id = tx.name
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
@@ -1918,7 +2399,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
                 cat_puzzle,
                 Program.to(
                     [
-                        Program.to([[51, our_ph, tx_amount], [51, None, -113, None, None]]),
+                        Program.to([[51, our_ph, tx_amount, [our_ph]], [51, None, -113, None, None]]),
                         None,
                         cat_coin.name(),
                         coin_as_list(cat_coin),
@@ -1944,6 +2425,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
     tx = await client.cat_spend(
         cat_wallet_id,
         amount=uint64(0),
+        tx_config=DEFAULT_TX_CONFIG,
         inner_address=encode_puzzle_hash(our_ph, "txch"),
         cat_discrepancy=(tx_amount * -1, Program.to(None), Program.to(None)),
     )
@@ -1970,10 +2452,10 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await time_out_assert(20, client.get_synced)
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100))
+    await client.create_new_cat_and_wallet(uint64(100), test=True)
 
     await time_out_assert(20, client.get_synced)
-    res = await client.create_new_cat_and_wallet(uint64(20))
+    res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)

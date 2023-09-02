@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts
+    name: Test Install Scripts - ${{ matrix.development.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,11 @@ jobs:
       matrix:
         python-version: [3.9]
         os: [macOS-latest, ubuntu-latest]
+        development:
+          - name: Non-development
+            value: false
+          - name: Development
+            value: true
 
     steps:
     - name: Checkout Code
@@ -46,9 +51,14 @@ jobs:
     - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-        development: true
+        development: ${{ matrix.development.value }}
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
+
+    - name: Run chia --help
+      run: |
+        chia --help
 
     - name: Run install-gui script
       run: |
@@ -77,10 +87,6 @@ jobs:
 #         - name: centos:8
 #           type: centos
 #           url: "docker://centos:8"
-        - name: debian:buster
-          type: debian
-          # https://packages.debian.org/buster/python/python3 (3.7)
-          url: "docker://debian:buster"
         - name: debian:bullseye
           type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
@@ -104,10 +110,6 @@ jobs:
         - name: rockylinux:8
           type: rocky
           url: "docker://rockylinux:8"
-        - name: ubuntu:bionic (18.04)
-          type: ubuntu
-          # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
-          url: "docker://ubuntu:bionic"
         - name: ubuntu:focal (20.04)
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
@@ -183,7 +185,7 @@ jobs:
         apt-get install --yes git lsb-release sudo
 
     - name: Add safe git directory
-      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
     # after installing git so we use that copy
     - name: Checkout Code
@@ -195,6 +197,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 

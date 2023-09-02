@@ -12,10 +12,21 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: List[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
-async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
+async def call_endpoint(
+    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
+) -> Dict[str, Any]:
+    if service == "daemon":
+        return await call_daemon_command(endpoint, request, config, quiet)
+
+    return await call_rpc_service_endpoint(service, endpoint, request, config)
+
+
+async def call_rpc_service_endpoint(
+    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]
+) -> Dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 
     port: uint16
@@ -44,12 +55,34 @@ async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], co
     return result
 
 
+async def call_daemon_command(
+    command: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
+) -> Dict[str, Any]:
+    from chia.daemon.client import connect_to_daemon_and_validate
+
+    daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config, quiet=quiet)
+
+    if daemon is None:
+        raise Exception("Failed to connect to chia daemon")
+
+    result: Dict[str, Any]
+    try:
+        ws_request = daemon.format_request(command, request)
+        ws_response = await daemon._get(ws_request)
+        result = ws_response["data"]
+    except Exception as e:
+        raise Exception(f"Request failed: {e}")
+    finally:
+        await daemon.close()
+    return result
+
+
 def print_result(json_dict: Dict[str, Any]) -> None:
     print(json.dumps(json_dict, indent=4, sort_keys=True))
 
 
-def get_routes(service: str, config: Dict[str, Any]) -> Dict[str, Any]:
-    return asyncio.run(call_endpoint(service, "get_routes", {}, config))
+def get_routes(service: str, config: Dict[str, Any], quiet: bool = False) -> Dict[str, Any]:
+    return asyncio.run(call_endpoint(service, "get_routes", {}, config, quiet))
 
 
 @click.group("rpc", help="RPC Client")
@@ -64,30 +97,45 @@ def endpoints_cmd(service: str) -> None:
     try:
         routes = get_routes(service, config)
         for route in routes["routes"]:
-            print(route[1:])
+            print(route.lstrip("/"))
     except Exception as e:
         print(e)
 
 
 @rpc_cmd.command("status", help="Print the status of all available RPC services")
-def status_cmd() -> None:
+@click.option("--json-output", "json_output", is_flag=True, help="Output status as JSON")
+def status_cmd(json_output: bool) -> None:
+    import json
+
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
     def print_row(c0: str, c1: str) -> None:
         c0 = "{0:<12}".format(f"{c0}")
         c1 = "{0:<9}".format(f"{c1}")
-        print(f"{c0} | {c1}")
+        print(f"│ {c0} │ {c1} │")
 
-    print_row("SERVICE", "STATUS")
-    print_row("------------", "---------")
+    status_data = {}
     for service in services:
         status = "ACTIVE"
         try:
-            if not get_routes(service, config)["success"]:
+            if not get_routes(service, config, quiet=True)["success"]:
                 raise Exception()
         except Exception:
             status = "INACTIVE"
-        print_row(service, status)
+        status_data[service] = status
+
+    if json_output:
+        # If --json-output option is used, print the status data as JSON
+        print(json.dumps(status_data, indent=4))
+    else:
+        print("╭──────────────┬───────────╮")
+        print_row("SERVICE", "STATUS")
+        print("├──────────────┼───────────┤")
+        for service, status in status_data.items():
+            print_row(service, status)
+            if service != services[-1]:  # Don't print the separator after the last service
+                print("├──────────────┼───────────┤")
+        print("╰──────────────┴───────────╯")
 
 
 def create_commands() -> None:

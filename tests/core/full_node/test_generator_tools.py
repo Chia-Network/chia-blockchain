@@ -10,11 +10,14 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
+parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 phs = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 spends: List[Spend] = [
     Spend(
         coin_ids[0],
+        parent_ids[0],
         phs[0],
+        123,
         None,
         uint64(5),
         None,
@@ -27,11 +30,19 @@ spends: List[Spend] = [
             (phs[4], uint64(0), b"1" * 300),
         ],
         [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
         0,
     ),
     Spend(
         coin_ids[1],
+        parent_ids[1],
         phs[0],
+        123,
         None,
         uint64(2),
         None,
@@ -43,6 +54,12 @@ spends: List[Spend] = [
             (phs[6], uint64(0), b"1" * 300),
             (phs[7], uint64(0), b"1" * 300),
         ],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
         [],
         0,
     ),
