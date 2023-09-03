@@ -1634,7 +1634,7 @@ async def test_plotter_errors(
     ),
     RouteCase(
         route="start_plotting",
-        description="bladebit - cudaplot",
+        description="bladebit - cudaplot - hybrid 128 mode",
         request={
             **plotter_request_ref,
             "plotter": "bladebit",
@@ -1644,6 +1644,25 @@ async def test_plotter_errors(
             "no_cpu_affinity": True,
             "e": False,
             "compress": 1,
+            "disk_128": True,
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="bladebit - cudaplot - hybrid 16 mode",
+        request={
+            **plotter_request_ref,
+            "plotter": "bladebit",
+            "plot_type": "cudaplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "e": False,
+            "compress": 1,
+            "disk_16": True,
         },
         response={
             "success": True,
