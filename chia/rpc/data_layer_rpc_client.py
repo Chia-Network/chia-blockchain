@@ -14,6 +14,11 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("create_data_store", {"fee": fee})
         return response
 
+    async def wallet_log_in(self, fingerprint: int) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"fingerprint": fingerprint}
+        response = await self.fetch("wallet_log_in", request)
+        return response
+
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32]) -> Dict[str, Any]:
         request: Dict[str, Any] = {"id": store_id.hex(), "key": key.hex()}
         if root_hash is not None:

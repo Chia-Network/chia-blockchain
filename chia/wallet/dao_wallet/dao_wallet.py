@@ -82,10 +82,9 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
 
 
-class DAOWallet(WalletProtocol):
+class DAOWallet:
     """
     This is a wallet in the sense that it conforms to the interface needed by WalletStateManager.
     It is not a user-facing wallet. A user cannot spend or receive XCH though a wallet of this type.
@@ -111,7 +110,7 @@ class DAOWallet(WalletProtocol):
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol] = cast("DAOWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[DAOInfo]] = cast("DAOWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -417,7 +416,7 @@ class DAOWallet(WalletProtocol):
             raise ValueError(f"Not enough of asset {asset_id}: {total} < {amount}")
         return coins
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Any]) -> None:
         """
         Notification from wallet state manager that a coin has been received.
         This can be either a treasury coin update or funds added to the treasury
@@ -1611,7 +1610,7 @@ class DAOWallet(WalletProtocol):
 
     async def _create_treasury_fund_transaction(
         self,
-        funding_wallet: WalletProtocol,
+        funding_wallet: WalletProtocol[Any],
         amount: uint64,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),

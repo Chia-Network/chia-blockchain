@@ -20,7 +20,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.misc import VersionedBlob
-from chia.wallet.cat_wallet.cat_info import CRCATInfo
+from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
@@ -191,7 +191,9 @@ class CRCATWallet(CATWallet):
     async def set_tail_program(self, tail_program: str) -> None:  # pragma: no cover
         raise NotImplementedError("set_tail_program is a legacy method and is not available on CR-CAT wallets")
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[CATCoinData]
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CR-CAT wallet has been notified that {coin.name().hex()} was added")
         try:
@@ -884,4 +886,4 @@ class CRCATWallet(CATWallet):
 
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol = CRCATWallet()
+    _dummy: WalletProtocol[CATCoinData] = CRCATWallet()

@@ -56,7 +56,7 @@ class DAOCATWallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol] = cast("DAOCATWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[DAOCATInfo]] = cast("DAOCATWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -145,7 +145,7 @@ class DAOCATWallet:
         await self.wallet_state_manager.add_new_wallet(self)
         return self
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Any]) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAO CAT wallet has been notified that {coin} was added")
         # We can't get the inner puzzle for this coin's puzhash because it has the lockup layer.
