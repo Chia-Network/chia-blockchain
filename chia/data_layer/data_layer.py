@@ -146,7 +146,6 @@ class DataLayer:
             root_path=root_path,
             wallet_rpc_init=wallet_rpc_init,
             log=logging.getLogger(name if name is None else __name__),
-            _shut_down=False,
             db_path=path_from_root(root_path, db_path_replaced),
             server_files_location=path_from_root(root_path, server_files_replaced),
             _server=None,
