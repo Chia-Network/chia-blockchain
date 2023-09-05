@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from tests.wallet.conftest import WalletEnvironment, WalletStateTransition, WalletTestFramework
+from tests.wallet.conftest import BalanceCheckingError, WalletEnvironment, WalletStateTransition, WalletTestFramework
 
 
 @pytest.mark.parametrize(
@@ -60,7 +60,7 @@ async def test_balance_checking(
     await env_0.check_balances()
     await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
     await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
-    with pytest.raises(ValueError, match="2000000000000 compared to balance response 4000000000000"):
+    with pytest.raises(BalanceCheckingError, match="2000000000000 compared to balance response 4000000000000"):
         await env_0.check_balances()
     with pytest.raises(KeyError):
         await env_0.change_balances(
@@ -132,7 +132,7 @@ async def test_balance_checking(
         }
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(BalanceCheckingError):
         await env_0.check_balances()
 
     # Test override
