@@ -4,6 +4,7 @@ import asyncio
 import logging
 import logging.config
 import os
+import signal
 from pathlib import Path
 from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
@@ -240,18 +241,27 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
     def _accept_signal(
         self,
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        self._log.info(f"got signal {signal_number}")
-
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
         global main_pid
-        if os.getpid() != main_pid:
+        ignore = os.getpid() != main_pid
+
+        # TODO: if we remove this conditional behavior, consider moving logging to common signal handling
+        if ignore:
+            message = "ignoring in worker process"
+        else:
+            message = "shutting down"
+
+        self._log.info("Received signal %s (%s), %s.", signal_.name, signal_.value, message)
+
+        if ignore:
             return
+
         self.stop()
 
     def stop(self) -> None:

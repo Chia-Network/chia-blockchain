@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import gc
 import logging
+import signal
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -431,7 +432,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
     )
 
     async def stop(
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
@@ -458,7 +459,7 @@ async def setup_vdf_clients(
     )
 
     async def stop(
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:

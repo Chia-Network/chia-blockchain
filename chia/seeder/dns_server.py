@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 import traceback
 from contextlib import asynccontextmanager
@@ -363,10 +364,11 @@ class DNSServer:
 
     async def _accept_signal(
         self,
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:  # pragma: no cover
+        log.info("Received signal %s (), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
     async def stop(self) -> None:

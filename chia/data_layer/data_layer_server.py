@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -98,11 +99,11 @@ class DataLayerServer:
 
     def _accept_signal(
         self,
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        self.log.info("Got SIGINT or SIGTERM signal - stopping")
+        self.log.info("Received signal %s (), shutting down.", signal_.name, signal_.value)
 
         self.close()
 

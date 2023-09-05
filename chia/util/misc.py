@@ -173,13 +173,21 @@ def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:
 
 
 class Handler(Protocol):
-    def __call__(self, signal_number: int, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
+    def __call__(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         ...
 
 
 class AsyncHandler(Protocol):
     async def __call__(
-        self, signal_number: int, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
     ) -> None:
         ...
 
@@ -194,7 +202,7 @@ def setup_sync_signal_handler(handler: Handler) -> None:
         for signal_ in [signal.SIGINT, signal.SIGTERM]:
             loop.add_signal_handler(
                 signal_,
-                functools.partial(handler, signal_number=signal_, stack_frame=None, loop=loop),
+                functools.partial(handler, sig=signal_, stack_frame=None, loop=loop),
             )
 
 
@@ -203,7 +211,7 @@ signal_handler_tasks: List[asyncio.Task[None]] = []
 
 
 def loop_safe_sync_signal_handler_for_async(
-    signal_number: int,
+    signal_: signal.Signals,
     stack_frame: Optional[FrameType],
     loop: asyncio.AbstractEventLoop,
     handler: AsyncHandler,
@@ -211,13 +219,13 @@ def loop_safe_sync_signal_handler_for_async(
     signal_handler_tasks[:] = (task for task in signal_handler_tasks if not task.done())
 
     task = asyncio.create_task(
-        handler(signal_number=signal_number, stack_frame=stack_frame, loop=loop),
+        handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
     )
     signal_handler_tasks.append(task)
 
 
 def threadsafe_sync_signal_handler_for_async(
-    signal_number: int,
+    sig: signal.Signals,
     stack_frame: Optional[FrameType],
     loop: asyncio.AbstractEventLoop,
     handler: AsyncHandler,
@@ -225,7 +233,7 @@ def threadsafe_sync_signal_handler_for_async(
     loop.call_soon_threadsafe(
         functools.partial(
             loop_safe_sync_signal_handler_for_async,
-            signal_number=signal_number,
+            sig=sig,
             stack_frame=stack_frame,
             loop=loop,
             handler=handler,

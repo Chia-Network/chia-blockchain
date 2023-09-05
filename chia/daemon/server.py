@@ -215,10 +215,11 @@ class WebSocketServer:
 
     async def _accept_signal(
         self,
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
+        self.log.info("Received signal %s (), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
