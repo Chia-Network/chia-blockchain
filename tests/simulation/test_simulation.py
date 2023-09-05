@@ -60,6 +60,7 @@ async def extra_node(self_hostname):
 
 
 class TestSimulation:
+    @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation

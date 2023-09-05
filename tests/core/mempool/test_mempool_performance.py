@@ -13,7 +13,6 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
-from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import assert_runtime
 
@@ -36,14 +35,12 @@ log = logging.getLogger(__name__)
 
 
 class TestMempoolPerformance:
+    @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, consensus_mode: Mode
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
     ):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run benchmarks in PLAIN mode")
-
         blocks = default_400_blocks
         full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]

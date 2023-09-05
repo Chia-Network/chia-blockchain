@@ -59,7 +59,7 @@ _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 class NFTWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("NFTWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[UncurriedNFT]] = cast("NFTWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -157,8 +157,11 @@ class NFTWallet:
             raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
         return nft_coin
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[UncurriedNFT]
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
+        # TODO Use coin_data instead of calling peer API
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
@@ -340,6 +343,7 @@ class NFTWallet:
         did_id: Optional[bytes] = None,
         fee: uint64 = uint64(0),
         push_tx: bool = True,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
@@ -403,6 +407,7 @@ class NFTWallet:
             False,
             announcement_set,
             origin_id=origin.name(),
+            extra_conditions=extra_conditions,
         )
         genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
 
@@ -494,6 +499,7 @@ class NFTWallet:
         uri: str,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[SpendBundle]:
         uncurried_nft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert uncurried_nft is not None
@@ -511,6 +517,7 @@ class NFTWallet:
             fee,
             {nft_coin_info.coin},
             metadata_update=(key, uri),
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.wallet_state_manager.add_pending_transaction(tx)
@@ -622,6 +629,7 @@ class NFTWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         ignore_max_send_amount: bool = False,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         nft_coin: Optional[NFTCoinInfo] = kwargs.get("nft_coin", None)
@@ -655,6 +663,7 @@ class NFTWallet:
             new_did_inner_hash=new_did_inner_hash,
             trade_prices_list=trade_prices_list,
             metadata_update=metadata_update,
+            extra_conditions=extra_conditions,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
@@ -701,6 +710,7 @@ class NFTWallet:
         trade_prices_list: Optional[Program] = None,
         metadata_update: Optional[Tuple[str, str]] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
             if coins is None or not len(coins) == 1:
@@ -730,7 +740,6 @@ class NFTWallet:
             announcement_to_make = None
             chia_tx = None
 
-        extra_conditions: List[Condition] = []
         unft = UncurriedNFT.uncurry(*nft_coin.full_puzzle.uncurry())
         assert unft is not None
         if unft.supports_did:
@@ -743,7 +752,8 @@ class NFTWallet:
                 )
                 if derivation_record is not None:
                     new_owner = unft.owner_did
-            extra_conditions.append(
+            extra_conditions = (
+                *extra_conditions,
                 UnknownCondition(
                     opcode=Program.to(-10),
                     args=[
@@ -751,17 +761,18 @@ class NFTWallet:
                         Program.to(trade_prices_list),
                         Program.to(new_did_inner_hash),
                     ],
-                )
+                ),
             )
         if metadata_update is not None:
-            extra_conditions.append(
+            extra_conditions = (
+                *extra_conditions,
                 UnknownCondition(
                     opcode=Program.to(-24),
                     args=[
                         NFT_METADATA_UPDATER,
                         Program.to(metadata_update),
                     ],
-                )
+                ),
             )
 
         innersol: Program = self.standard_wallet.make_solution(
@@ -1107,6 +1118,7 @@ class NFTWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         announcement_ids: List[bytes32] = [],
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
         did_inner_hash = b""
@@ -1127,6 +1139,7 @@ class NFTWallet:
             puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
             if not first:
                 fee = uint64(0)
+                extra_conditions = tuple()
             nft_tx_record.extend(
                 await self.generate_signed_transaction(
                     [uint64(nft_coin_info.coin.amount)],
@@ -1136,6 +1149,7 @@ class NFTWallet:
                     {nft_coin_info.coin},
                     new_owner=did_id,
                     new_did_inner_hash=did_inner_hash,
+                    extra_conditions=extra_conditions,
                 )
             )
             first = False
@@ -1158,6 +1172,7 @@ class NFTWallet:
         puzzle_hash: bytes32,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         self.log.debug("Transfer NFTs %s to %s", nft_list, puzzle_hash.hex())
         nft_tx_record = []
@@ -1167,6 +1182,7 @@ class NFTWallet:
         for nft_coin_info in nft_list:
             if not first:
                 fee = uint64(0)
+                extra_conditions = tuple()
             nft_tx_record.extend(
                 await self.generate_signed_transaction(
                     [uint64(nft_coin_info.coin.amount)],
@@ -1176,6 +1192,7 @@ class NFTWallet:
                     fee=fee,
                     new_owner=b"",
                     new_did_inner_hash=b"",
+                    extra_conditions=extra_conditions,
                 )
             )
             first = False
@@ -1197,6 +1214,7 @@ class NFTWallet:
         did_id: bytes,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
@@ -1218,6 +1236,7 @@ class NFTWallet:
             new_owner=did_id,
             new_did_inner_hash=did_inner_hash,
             additional_bundles=additional_bundles,
+            extra_conditions=extra_conditions,
         )
         spend_bundle = SpendBundle.aggregate([x.spend_bundle for x in nft_tx_record if x.spend_bundle is not None])
         if spend_bundle:
@@ -1243,6 +1262,7 @@ class NFTWallet:
         did_coin: Optional[Coin] = None,
         did_lineage_parent: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> SpendBundle:
         """
         Minting NFTs from the DID linked wallet, also used for bulk minting NFTs.
@@ -1475,6 +1495,7 @@ class NFTWallet:
             coin_announcements=did_coin_announcement,
             coin_announcements_to_assert=did_announcements,
             puzzle_announcements_to_assert=puzzle_assertions,
+            conditions=extra_conditions,
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
         did_full_puzzle: Program = chia.wallet.singleton.create_singleton_puzzle(
@@ -1524,6 +1545,7 @@ class NFTWallet:
         xch_coins: Optional[Set[Coin]] = None,
         xch_change_ph: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> SpendBundle:
         """
         Minting NFTs from a single XCH spend using intermediate launcher puzzle
@@ -1695,6 +1717,7 @@ class NFTWallet:
                     coin_announcements=xch_announcement if len(xch_coins) > 1 else None,
                     coin_announcements_to_assert=coin_announcements,
                     puzzle_announcements_to_assert=puzzle_assertions,
+                    conditions=extra_conditions,
                 )
                 primary_announcement_hash = Announcement(xch_coin.name(), message).name()
                 first = False
