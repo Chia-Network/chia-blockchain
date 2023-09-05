@@ -4,9 +4,10 @@ import asyncio
 import logging
 import os
 import pathlib
+import signal
 import time
 from types import FrameType
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pkg_resources
 
@@ -95,11 +96,11 @@ async def spawn_all_processes(config: Dict, net_config: Dict, lock: asyncio.Lock
     await asyncio.gather(*awaitables)
 
 
-async def async_main(config, net_config):
+async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
     lock = asyncio.Lock()
 
     async def stop(
-        signal_number: int,
+        signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
