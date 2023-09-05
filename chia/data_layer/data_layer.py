@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -8,7 +9,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 
@@ -123,6 +124,14 @@ class DataLayer:
         self._server = None
         self.downloaders = downloaders
         self.uploaders = uploaders
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback

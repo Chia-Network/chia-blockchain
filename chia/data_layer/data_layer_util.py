@@ -697,7 +697,7 @@ class SyncStatus:
 class PluginRemote:
     url: str
     # repr=False to avoid leaking secrets
-    headers: Dict[str, str] = dataclasses.field(default_factory=dict, repr=False)
+    headers: Dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
