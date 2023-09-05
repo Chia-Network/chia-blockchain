@@ -182,22 +182,27 @@ class WalletTestFramework:
         try:
             for env in self.environments:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
-            for env, transition in zip(self.environments, state_transitions):
-                await env.change_balances(transition.pre_block_balance_updates)
-                await env.check_balances(transition.pre_block_additional_balance_info)
+            for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
+                try:
+                    await env.change_balances(transition.pre_block_balance_updates)
+                    await env.check_balances(transition.pre_block_additional_balance_info)
+                except Exception:
+                    raise ValueError(f"Error with env index {i}")
         except Exception:
             raise ValueError("Error before block was farmed")
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         try:
             for env in self.environments:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
-            for env, transition in zip(self.environments, state_transitions):
-                await env.change_balances(transition.post_block_balance_updates)
-                await env.check_balances(transition.post_block_additional_balance_info)
+            for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
+                try:
+                    await env.change_balances(transition.post_block_balance_updates)
+                    await env.check_balances(transition.post_block_additional_balance_info)
+                except Exception:
+                    raise ValueError(f"Error with env {i}")
         except Exception:
             raise ValueError("Error after block was farmed")
-        for i, env_and_txs in enumerate(zip(self.environments, pending_txs)):
-            env, txs = env_and_txs
+        for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:
