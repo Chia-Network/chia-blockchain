@@ -16,6 +16,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
+from chia.wallet.conditions import Condition, ConditionValidTimes, parse_conditions_non_consensus, parse_timelock_info
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
@@ -77,6 +78,7 @@ class Offer:
     _additions: Dict[Coin, List[Coin]] = field(init=False)
     _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
     _final_spend_bundle: Optional[SpendBundle] = field(init=False)
+    _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -148,6 +150,26 @@ class Offer:
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
+
+    def conditions(self) -> List[Condition]:
+        if self._conditions is None:
+            conditions: Dict[Coin, List[Condition]] = {}
+            max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            for cs in self._bundle.coin_spends:
+                try:
+                    cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+                    max_cost -= cost
+                    conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
+                except Exception:
+                    continue
+                if max_cost < 0:
+                    raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend")
+            object.__setattr__(self, "_conditions", conditions)
+        assert self._conditions is not None, "self._conditions is None"
+        return [c for conditions in self._conditions.values() for c in conditions]
+
+    def valid_times(self) -> ConditionValidTimes:
+        return parse_timelock_info(self.conditions())
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -270,7 +292,7 @@ class Offer:
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]]]:
+    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]], ConditionValidTimes]:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
@@ -287,7 +309,7 @@ class Offer:
         for key, value in self.driver_dict.items():
             driver_dict[key.hex()] = value.info
 
-        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), driver_dict
+        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), driver_dict, self.valid_times()
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends

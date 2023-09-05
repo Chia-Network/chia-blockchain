@@ -880,8 +880,14 @@ class TradeManager:
             ):
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
-        offered, requested, infos = offer.summary()
-        return {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos}
+        offered, requested, infos, valid_times = offer.summary()
+        return {
+            "offered": offered,
+            "requested": requested,
+            "fees": offer.fees(),
+            "infos": infos,
+            "valid_times": valid_times,
+        }
 
     async def check_for_final_modifications(
         self, offer: Offer, solver: Solver, tx_config: TXConfig
