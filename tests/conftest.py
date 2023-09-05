@@ -249,16 +249,6 @@ def default_10000_blocks(bt, consensus_mode):
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt, consensus_mode):
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        pytest.skip("Test cache not available")
-
-    from tests.util.blockchain import persistent_blocks
-
-    return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
-
-
-@pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
     if consensus_mode == ConsensusMode.SOFT_FORK4:
