@@ -2053,11 +2053,13 @@ async def test_issue_15955_deadlock(
                 )
 
 
+@pytest.mark.parametrize("retain", [True, False])
 @pytest.mark.asyncio
 async def test_unsubscribe_removes_files(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
+    retain: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2091,9 +2093,9 @@ async def test_unsubscribe_removes_files(
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
 
-        res = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
+        res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-        assert len(filenames) == 0
+        assert len(filenames) == 2 * update_count if retain else 0
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))

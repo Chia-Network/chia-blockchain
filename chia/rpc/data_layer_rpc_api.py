@@ -282,12 +282,13 @@ class DataLayerRpcApi:
         unsubscribe from singleton
         """
         store_id = request.get("id")
+        retain_files = request.get("retain", False)
         if store_id is None:
             raise Exception("missing store id in request")
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        await self.service.unsubscribe(store_id_bytes)
+        await self.service.unsubscribe(store_id_bytes, retain_files)
         return {}
 
     async def subscriptions(self, request: Dict[str, Any]) -> EndpointResult:

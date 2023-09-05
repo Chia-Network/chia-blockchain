@@ -540,12 +540,12 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
-    async def unsubscribe(self, tree_id: bytes32) -> None:
+    async def unsubscribe(self, tree_id: bytes32, retain_files: bool) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
         filenames: List[str] = []
-        if await self.data_store.tree_id_exists(tree_id):
+        if await self.data_store.tree_id_exists(tree_id) and not retain_files:
             generation = await self.data_store.get_tree_generation(tree_id)
             all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
             for root in all_roots:
