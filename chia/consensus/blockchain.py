@@ -906,6 +906,7 @@ class Blockchain(BlockchainInterface):
             result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
         else:
             # First tries to find the blocks in additional_blocks
+            log.info("this is a reorg")
             reorg_chain: Dict[uint32, FullBlock] = {}
             curr = block
             additional_height_dict = {}
@@ -925,6 +926,7 @@ class Blockchain(BlockchainInterface):
                 prev_block = await self.block_store.get_full_block(previous_block_hash)
                 assert prev_block is not None
                 assert prev_block_record is not None
+                log.info(f"find forkpoint {peak.height} prev {prev_block_record.height}")
                 fork = find_fork_point_in_chain(self, peak, prev_block_record)
                 curr_2: Optional[FullBlock] = prev_block
                 assert curr_2 is not None and isinstance(curr_2, FullBlock)
