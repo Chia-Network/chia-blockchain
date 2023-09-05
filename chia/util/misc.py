@@ -266,7 +266,7 @@ class SignalHandlers:
             for signal_ in [signal.SIGINT, signal.SIGTERM]:
                 loop.add_signal_handler(
                     signal_,
-                    functools.partial(handler, sig=signal_, stack_frame=None, loop=loop),
+                    functools.partial(handler, signal_=signal_, stack_frame=None, loop=loop),
                 )
 
     def setup_async_signal_handler(self, handler: AsyncHandler) -> None:
