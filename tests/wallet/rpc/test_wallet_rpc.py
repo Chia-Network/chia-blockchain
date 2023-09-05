@@ -1148,7 +1148,22 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert id == offer.name()
     id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert id == offer.name()
-    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert summary == {
+        "offered": {"xch": 5},
+        "requested": {cat_asset_id.hex(): 1},
+        "infos": driver_dict,
+        "fees": 1,
+        "valid_times": {
+            "max_blocks_after_created": None,
+            "max_height": None,
+            "max_secs_after_created": None,
+            "max_time": None,
+            "min_blocks_since_created": None,
+            "min_height": None,
+            "min_secs_since_created": None,
+            "min_time": None,
+        },
+    }
     assert advanced_summary == summary
 
     id, valid = await wallet_1_rpc.check_offer_validity(offer)
