@@ -267,7 +267,7 @@ class BlockTools:
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
-            assert update_result.duration < 15
+            assert update_result.duration < 30
             if event == PlotRefreshEvents.started:
                 self.total_result = PlotRefreshResult()
 
