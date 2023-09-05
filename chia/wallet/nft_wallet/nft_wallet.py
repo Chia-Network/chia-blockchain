@@ -164,7 +164,6 @@ class NFTWallet:
         if await self.nft_store.exists(coin.name()):
             # already added
             return
-        assert parent_coin_data is not None, "Parent coin data cannot be none."
         assert isinstance(parent_coin_data, NFTCoinData), f"Invalid NFT coin data: {parent_coin_data}"
         await self.puzzle_solution_received(coin, parent_coin_data, peer)
 
@@ -245,7 +244,7 @@ class NFTWallet:
             None if data.parent_coin_state.spent_height is None else uint32(data.parent_coin_state.spent_height)
         )
 
-        if parent_coin is None or confirmed_height is None:
+        if confirmed_height is None:
             raise ValueError("Error finding parent")
 
         await self.add_coin(
