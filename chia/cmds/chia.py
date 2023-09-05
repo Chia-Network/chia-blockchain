@@ -34,6 +34,7 @@ from chia.util.ssl_check import check_ssl
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
+
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",

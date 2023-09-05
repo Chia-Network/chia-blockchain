@@ -1,16 +1,21 @@
-import click
-from pathlib import Path
-from chia.cmds.init_funcs import chia_init
+from __future__ import annotations
 
+from pathlib import Path
+
+import click
+
+from chia.cmds.init_funcs import chia_init
 
 CHIA_PATH = Path.home() / ".chia"
 CONTEXT_FILE = CHIA_PATH / "context"
+
 
 # Function to list available contexts
 def list_contexts():
     contexts = [dir.name for dir in CHIA_PATH.iterdir() if dir.is_dir()]
     print("Available contexts:")
     print("\n".join(contexts))
+
 
 # Function to get the current context
 def get_context():
@@ -19,11 +24,13 @@ def get_context():
     print(f"Current context: {context}")
     return context
 
+
 # Function to set a new context
 def set_context(new_context):
     with open(CONTEXT_FILE, "w") as file:
         file.write(new_context)
     print(f"Context set to: {new_context}")
+
 
 def create_context(context_type, v1_db=False):
     context_dir = CHIA_PATH / context_type
@@ -56,16 +63,24 @@ def create_context(context_type, v1_db=False):
     set_context(original_context)
     print(f"Switched back to {original_context} context.")
 
+
 def get_default_root_path():
     with open(CONTEXT_FILE, "r") as file:
         context = file.read().strip()
     return Path.home() / ".chia" / context
 
+
 @click.command("context", short_help="Manage Chia blockchain contexts.")
-@click.option('-l', '--list', 'list_option', is_flag=True, help="List available contexts.")
-@click.option('-g', '--get', 'get_option', is_flag=True, help="Get the current context.")
-@click.option('-s', '--set', 'set_option', type=str, help="Set a new context.")
-@click.option('-c', '--create', 'create_option', type=click.Choice(['testnet']), help="Create a new context. Valid argument: testnet.")
+@click.option("-l", "--list", "list_option", is_flag=True, help="List available contexts.")
+@click.option("-g", "--get", "get_option", is_flag=True, help="Get the current context.")
+@click.option("-s", "--set", "set_option", type=str, help="Set a new context.")
+@click.option(
+    "-c",
+    "--create",
+    "create_option",
+    type=click.Choice(["testnet"]),
+    help="Create a new context. Valid argument: testnet.",
+)
 @click.pass_context
 def context_cmd(ctx, list_option, get_option, set_option, create_option):
     """Manage Chia blockchain contexts. Contexts are different networks, such as mainnet, testnets, or custom configurations, that are differentiated by a unique Genesis Puzzle Hash."""
