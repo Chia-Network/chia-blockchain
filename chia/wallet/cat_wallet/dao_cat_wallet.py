@@ -361,7 +361,7 @@ class DAOCATWallet:
         assert isinstance(spend_bundle, SpendBundle)
         return spend_bundle
 
-    async def create_new_dao_cats(
+    async def enter_dao_cat_voting_mode(
         self,
         amount: uint64,
         tx_config: TXConfig,
@@ -369,6 +369,9 @@ class DAOCATWallet:
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
+        """
+        Enter existing CATs for the DAO into voting mode
+        """
         # check there are enough cats to convert
         cat_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.free_cat_wallet_id]
         cat_balance = await cat_wallet.get_spendable_balance()

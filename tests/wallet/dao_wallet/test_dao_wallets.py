@@ -200,7 +200,7 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     # Send some cats to the dao_cat lockup
     dao_cat_amt = uint64(100)
     async with wallet_node_0.wallet_state_manager.lock:
-        txs = await dao_wallet_0.create_new_dao_cats(dao_cat_amt, DEFAULT_TX_CONFIG, push=True)
+        txs = await dao_wallet_0.enter_dao_cat_voting_mode(dao_cat_amt, DEFAULT_TX_CONFIG, push=True)
     sb = txs[0].spend_bundle
     assert isinstance(sb, SpendBundle)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
@@ -374,7 +374,7 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
-    txs_0 = await dao_cat_wallet_0.create_new_dao_cats(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
+    txs_0 = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb_0 = txs_0[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
     await full_node_api.process_transaction_records(records=txs_0)
@@ -576,19 +576,19 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Lockup voting cats for all wallets
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
-    txs_0 = await dao_cat_wallet_0.create_new_dao_cats(dao_cat_0_bal, DEFAULT_TX_CONFIG, True, fee=base_fee)
+    txs_0 = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dao_cat_0_bal, DEFAULT_TX_CONFIG, True, fee=base_fee)
     dao_cat_sb_0 = txs_0[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
     await full_node_api.process_transaction_records(records=txs_0)
 
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
-    txs_1 = await dao_cat_wallet_1.create_new_dao_cats(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
+    txs_1 = await dao_cat_wallet_1.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb_1 = txs_1[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_1.name())
     await full_node_api.process_transaction_records(records=txs_1)
 
     dao_cat_2_bal = await dao_cat_wallet_2.get_votable_balance()
-    txs_2 = await dao_cat_wallet_2.create_new_dao_cats(dao_cat_2_bal, DEFAULT_TX_CONFIG, True)
+    txs_2 = await dao_cat_wallet_2.enter_dao_cat_voting_mode(dao_cat_2_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb_2 = txs_2[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_2.name())
     await full_node_api.process_transaction_records(records=txs_2)
@@ -1070,7 +1070,7 @@ async def test_dao_proposal_partial_vote(
 
     # Create dao cats for voting
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
-    txs = await dao_cat_wallet_0.create_new_dao_cats(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
@@ -1110,7 +1110,7 @@ async def test_dao_proposal_partial_vote(
 
     # Create votable dao cats and add a new vote
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
-    txs = await dao_cat_wallet_1.create_new_dao_cats(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_1.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
@@ -2626,7 +2626,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
     # Create dao cats for voting
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
     assert dao_cat_0_bal == 100000
-    txs = await dao_cat_wallet_0.create_new_dao_cats(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
@@ -2682,11 +2682,11 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
 
     # Create votable dao cats and add a new vote
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
-    txs = await dao_cat_wallet_1.create_new_dao_cats(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_1.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
-    txs = await dao_cat_wallet_2.create_new_dao_cats(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_2.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
@@ -3100,7 +3100,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
     # Create dao cats for voting
     dao_cat_0_bal = await dao_cat_wallet_0.get_votable_balance()
     assert dao_cat_0_bal == 200000
-    txs = await dao_cat_wallet_0.create_new_dao_cats(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dao_cat_0_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)
@@ -3159,7 +3159,7 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
 
     # Create votable dao cats and add a new vote
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
-    txs = await dao_cat_wallet_1.create_new_dao_cats(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
+    txs = await dao_cat_wallet_1.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, True)
     dao_cat_sb = txs[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb.name())
     await full_node_api.process_transaction_records(records=txs)

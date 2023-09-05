@@ -2603,7 +2603,7 @@ class WalletRpcApi:
         )
         amount = uint64(request["amount"])
         fee = uint64(request.get("fee", 0))
-        txs = await dao_cat_wallet.create_new_dao_cats(
+        txs = await dao_cat_wallet.enter_dao_cat_voting_mode(
             amount,
             tx_config,
             push=True,

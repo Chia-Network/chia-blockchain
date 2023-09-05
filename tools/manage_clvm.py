@@ -155,9 +155,6 @@ class ClvmBytes:
             hash=generate_hash_bytes(hex_bytes=hex_bytes),
         )
 
-    def strip(self) -> ClvmBytes:
-        return ClvmBytes(hex=self.hex.strip(b"\n"), hash=self.hash.strip(b"\n"))
-
 
 # These files have the wrong extension for now so we'll just manually exclude them
 excludes: typing.Set[str] = set()
@@ -302,7 +299,7 @@ def check(use_cache: bool) -> int:
 
                     generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
 
-                if generated_bytes.strip() != reference_bytes.strip():
+                if generated_bytes != reference_bytes:
                     file_fail = True
                     error = f"        reference: {reference_bytes!r}\n"
                     error += f"        generated: {generated_bytes!r}"

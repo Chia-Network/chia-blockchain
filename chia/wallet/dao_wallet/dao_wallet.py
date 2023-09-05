@@ -1342,8 +1342,8 @@ class DAOWallet:
             proposal_type, curried_args = get_proposal_args(puzzle_reveal)
             if proposal_type == ProposalType.SPEND:
                 (
-                    _,
-                    _,
+                    TREASURY_SINGLETON_STRUCT,
+                    CAT_MOD_HASH,
                     CONDITIONS,
                     LIST_OF_TAILHASH_CONDITIONS,
                     P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
@@ -1501,12 +1501,12 @@ class DAOWallet:
 
             elif proposal_type == ProposalType.UPDATE:
                 (
-                    _,
-                    _,
-                    _,
-                    _,
+                    TREASURY_MOD_HASH,
+                    VALIDATOR_MOD_HASH,
+                    SINGLETON_STRUCT,
+                    PROPOSAL_SELF_HASH,
                     PROPOSAL_MINIMUM_AMOUNT,
-                    _,
+                    PROPOSAL_EXCESS_PAYOUT_PUZHASH,
                     PROPOSAL_LENGTH,
                     PROPOSAL_SOFTCLOSE_LENGTH,
                     ATTENDANCE_REQUIRED,
@@ -1744,8 +1744,8 @@ class DAOWallet:
                 if proposal_type == ProposalType.SPEND:
                     cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
                     (
-                        _,
-                        _,
+                        TREASURY_SINGLETON_STRUCT,
+                        CAT_MOD_HASH,
                         CONDITIONS,
                         LIST_OF_TAILHASH_CONDITIONS,
                         P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
@@ -1843,14 +1843,14 @@ class DAOWallet:
     def get_cat_wallet_id(self) -> uint32:
         return self.dao_info.cat_wallet_id
 
-    async def create_new_dao_cats(
+    async def enter_dao_cat_voting_mode(
         self,
         amount: uint64,
         tx_config: TXConfig,
         push: bool = False,
     ) -> List[TransactionRecord]:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
-        return await dao_cat_wallet.create_new_dao_cats(amount, tx_config, push)
+        return await dao_cat_wallet.enter_dao_cat_voting_mode(amount, tx_config, push)
 
     @staticmethod
     def get_next_interesting_coin(spend: CoinSpend) -> Optional[Coin]:  # pragma: no cover
