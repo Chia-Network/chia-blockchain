@@ -150,6 +150,7 @@ class Offer:
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
+        object.__setattr__(self, "_conditions", None)
 
     def conditions(self) -> List[Condition]:
         if self._conditions is None:
