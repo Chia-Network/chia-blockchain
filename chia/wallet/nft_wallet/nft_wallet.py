@@ -172,10 +172,6 @@ class NFTWallet:
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
-        assert data is not None
-        assert data.uncurried_nft is not None
-        assert data.parent_coin_state is not None
-        assert data.parent_coin_spend is not None
         uncurried_nft: UncurriedNFT = data.uncurried_nft
         self.log.debug(
             "found the info for NFT coin %s %s %s",

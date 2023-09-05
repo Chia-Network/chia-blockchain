@@ -91,11 +91,7 @@ class UncurriedNFT(Streamable):
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(
-        cls: Type[_T_UncurriedNFT],
-        mod: Program,
-        curried_args: Program,
-    ) -> Optional[_T_UncurriedNFT]:
+    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
