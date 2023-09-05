@@ -225,7 +225,7 @@ def loop_safe_sync_signal_handler_for_async(
 
 
 def threadsafe_sync_signal_handler_for_async(
-    sig: signal.Signals,
+    signal_: signal.Signals,
     stack_frame: Optional[FrameType],
     loop: asyncio.AbstractEventLoop,
     handler: AsyncHandler,
@@ -233,7 +233,7 @@ def threadsafe_sync_signal_handler_for_async(
     loop.call_soon_threadsafe(
         functools.partial(
             loop_safe_sync_signal_handler_for_async,
-            sig=sig,
+            signal_=signal_,
             stack_frame=stack_frame,
             loop=loop,
             handler=handler,
