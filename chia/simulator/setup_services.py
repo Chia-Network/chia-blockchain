@@ -480,10 +480,10 @@ async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    b_tools: BlockTools,
+    config: Dict[str, Any],
+    root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
-    config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
@@ -493,7 +493,7 @@ async def setup_timelord(
     service_config["rpc_port"] = uint16(0)
 
     service = create_timelord_service(
-        b_tools.root_path,
+        root_path,
         config,
         consensus_constants,
         connect_to_daemon=False,

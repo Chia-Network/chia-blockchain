@@ -411,10 +411,20 @@ async def setup_full_system_inner(
                     vdf1_port = uint16(find_available_listen_port("vdf1"))
                     vdf2_port = uint16(find_available_listen_port("vdf2"))
                     async with setup_timelord(
-                        full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port
+                        full_node_0_port,
+                        False,
+                        consensus_constants,
+                        b_tools.config,
+                        b_tools.root_path,
+                        vdf_port=vdf1_port,
                     ) as timelord:
                         async with setup_timelord(
-                            uint16(1000), True, consensus_constants, b_tools_1, vdf_port=vdf2_port
+                            uint16(1000),
+                            True,
+                            consensus_constants,
+                            b_tools_1.config,
+                            b_tools_1.root_path,
+                            vdf_port=vdf2_port,
                         ) as timelord_bluebox_service:
 
                             async def num_connections() -> int:

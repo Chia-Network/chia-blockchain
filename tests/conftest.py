@@ -871,8 +871,14 @@ async def introducer_service(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def timelord(bt):
+    async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as service:
+        yield service._api, service._node.server
+
+
+@pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async with setup_timelord(uint16(0), False, bt.constants, bt) as _:
+    async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
 

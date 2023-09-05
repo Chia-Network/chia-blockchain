@@ -554,19 +554,6 @@ class ChiaServer:
             if on_disconnect is not None:
                 on_disconnect(connection)
 
-    async def send_to_others(
-        self,
-        messages: List[Message],
-        node_type: NodeType,
-        origin_peer: WSChiaConnection,
-    ) -> None:
-        for node_id, connection in self.all_connections.items():
-            if node_id == origin_peer.peer_node_id:
-                continue
-            if connection.connection_type is node_type:
-                for message in messages:
-                    await connection.send_message(message)
-
     async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
         for message in messages:
             if message_requires_reply(ProtocolMessageTypes(message.type)):

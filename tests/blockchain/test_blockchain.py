@@ -1366,10 +1366,16 @@ class TestBlockHeaderValidation:
                 return None
             attempts += 1
 
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK3,
+        ],
+        reason="Skipped ConsensusMode.SOFT_FORK4 temporarily until adding more pool plots.",
+    )
     @pytest.mark.asyncio
     async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
-        if consensus_mode == ConsensusMode.SOFT_FORK4:
-            pytest.skip("Skipped temporarily until adding more pool plots.")
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
