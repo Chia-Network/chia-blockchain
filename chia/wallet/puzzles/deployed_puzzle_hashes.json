@@ -42,7 +42,6 @@
     "p2_1_of_n": "46b29fd87fbeb6737600c4543931222a6c1ed3db6fa5601a3ca284a9f4efe780",
     "p2_announced_delegated_puzzle": "c4d24c3c5349376f3e8f3aba202972091713b4ec4915f0f26192ae4ace0bd04d",
     "p2_conditions": "1c77d7d5efde60a7a1d2d27db6d746bc8e568aea1ef8586ca967a0d60b83cc36",
-    "p2_conditions_curryable": "a12871fee210fb8619291eaea194581cbd2531e4b23759d225f6806923f63222",
     "p2_delegated_conditions": "0ff94726f1a8dea5c3f70d3121945190778d3b2b3fcda3735a1f290977e98341",
     "p2_delegated_puzzle": "542cde70d1102cd1b763220990873efc8ab15625ded7eae22cc11e21ef2e2f7c",
     "p2_delegated_puzzle_or_hidden_puzzle": "e9aaa49f45bad5c889b86ee3341550c155cfdd10c3a6757de618d20612fffd52",

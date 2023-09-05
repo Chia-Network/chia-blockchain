@@ -40,8 +40,6 @@ DAO_CAT_TAIL: Program = load_clvm(
 )
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
 DAO_CAT_LAUNCHER: Program = load_clvm("dao_cat_launcher.clsp")
-P2_CONDITIONS_MOD: Program = load_clvm("p2_conditions_curryable.clsp")
-P2_CONDITIONS_MOD_HASH: bytes32 = P2_CONDITIONS_MOD.get_tree_hash()
 P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 DAO_UPDATE_PROPOSAL_MOD: Program = load_clvm("dao_update_proposal.clsp")

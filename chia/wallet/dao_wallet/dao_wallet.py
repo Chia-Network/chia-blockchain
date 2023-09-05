@@ -328,9 +328,6 @@ class DAOWallet(WalletProtocol):
                 parent_info = ccparent
         return parent_info
 
-    async def get_frozen_amount(self) -> uint64:
-        return uint64(0)  # pragma: no cover
-
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)  # pragma: no cover
 
@@ -1852,7 +1849,7 @@ class DAOWallet(WalletProtocol):
         amount: uint64,
         tx_config: TXConfig,
         push: bool = False,
-    ) -> Tuple[List[TransactionRecord], Optional[List[Coin]]]:
+    ) -> List[TransactionRecord]:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         return await dao_cat_wallet.create_new_dao_cats(amount, tx_config, push)
 
