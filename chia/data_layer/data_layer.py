@@ -71,11 +71,11 @@ class DataLayer:
     root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    none_bytes: bytes32
     _server: Optional[ChiaServer]
     downloaders: List[str]
     uploaders: List[str]
     server_files_location: Path
+    none_bytes: bytes32 = bytes32([0] * 32)
     initialized: bool = False
     _data_store: Optional[DataStore] = None
     state_changed_callback: Optional[StateChangedProtocol] = None
@@ -149,7 +149,6 @@ class DataLayer:
             _shut_down=False,
             db_path=path_from_root(root_path, db_path_replaced),
             server_files_location=path_from_root(root_path, server_files_replaced),
-            none_bytes=bytes32([0] * 32),
             _server=None,
             downloaders=downloaders,
             uploaders=uploaders,
