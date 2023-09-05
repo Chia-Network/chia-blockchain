@@ -318,9 +318,6 @@ jobs:
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
       run: |
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/install/
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
@@ -334,6 +331,7 @@ jobs:
       run: |
         gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
+
     - name: Mark installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
@@ -341,10 +339,10 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='$RELEASE_TAG'
+            chia_ref='${{ env.RELEASE_TAG }}'
         }
         $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
     - name: Remove Windows exe and installer to exclude from cache
       run: |
