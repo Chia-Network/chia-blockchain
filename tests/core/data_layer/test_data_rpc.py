@@ -2095,7 +2095,7 @@ async def test_unsubscribe_removes_files(
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-        assert len(filenames) == 2 * update_count if retain else 0
+        assert len(filenames) == (2 * update_count if retain else 0)
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
