@@ -89,16 +89,12 @@ class UncurriedNFT(Streamable):
     """
     royalty_address: Optional[bytes32]
     trade_price_percentage: Optional[uint16]
-    coin_state: Optional[CoinState] = None
-    coin_spend: Optional[CoinSpend] = None
 
     @classmethod
     def uncurry(
         cls: Type[_T_UncurriedNFT],
         mod: Program,
         curried_args: Program,
-        coin_state: Optional[CoinState] = None,
-        coin_spend: Optional[CoinSpend] = None,
     ) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
@@ -205,8 +201,6 @@ class UncurriedNFT(Streamable):
             royalty_address=royalty_address,
             trade_price_percentage=royalty_percentage,
             nft_inner_puzzle_hash=nft_inner_puzzle_mod,
-            coin_state=coin_state,
-            coin_spend=coin_spend,
         )
 
     def get_innermost_solution(self, solution: Program) -> Program:
@@ -215,3 +209,11 @@ class UncurriedNFT(Streamable):
             return state_layer_inner_solution.first()  # type: ignore
         else:
             return state_layer_inner_solution
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCoinData(Streamable):
+    uncurried_nft: UncurriedNFT
+    parent_coin_state: CoinState
+    parent_coin_spend: CoinSpend
