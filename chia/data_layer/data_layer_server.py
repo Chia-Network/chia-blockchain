@@ -103,7 +103,7 @@ class DataLayerServer:
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        self.log.info("Received signal %s (), shutting down.", signal_.name, signal_.value)
+        self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
 
         self.close()
 

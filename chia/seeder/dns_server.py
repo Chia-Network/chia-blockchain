@@ -368,7 +368,7 @@ class DNSServer:
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:  # pragma: no cover
-        log.info("Received signal %s (), shutting down.", signal_.name, signal_.value)
+        log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
     async def stop(self) -> None:
