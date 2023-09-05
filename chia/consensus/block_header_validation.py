@@ -513,7 +513,7 @@ def validate_unfinished_header_block(
                     curr_optional_block_record.pos_ss_cc_challenge_hash,
                     curr_optional_block_record.cc_sp_hash,
                 ):
-                    return None, ValidationError(Err.INVALID_POSPACE, f"Chip-13 Block Failed: {height}")
+                    return None, ValidationError(Err.CHIP_0013_VALIDATION, f"CHIP-0013 Block Failed: {height}")
 
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash

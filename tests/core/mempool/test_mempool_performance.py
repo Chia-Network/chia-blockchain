@@ -13,7 +13,6 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
-from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import assert_runtime
 

@@ -23,7 +23,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
-from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
+from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
@@ -69,7 +69,7 @@ QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 class CATWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("CATWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[CATCoinData]] = cast("CATWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -349,7 +349,10 @@ class CATWallet:
             )
         )
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[CATCoinData]
+    ) -> None:
+        # TODO Use coin_data instead of calling peer API
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
 
@@ -618,6 +621,7 @@ class CATWallet:
         coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -681,19 +685,18 @@ class CATWallet:
         announcement: Announcement
 
         for coin in cat_coins:
-            extra_conditions: List[Condition] = []
             if cat_discrepancy is not None:
-                extra_conditions.append(
-                    UnknownCondition(
-                        opcode=Program.to(51),
-                        args=[
-                            Program.to(None),
-                            Program.to(-113),
-                            tail_reveal,
-                            tail_solution,
-                        ],
-                    )
+                cat_condition = UnknownCondition(
+                    opcode=Program.to(51),
+                    args=[
+                        Program.to(None),
+                        Program.to(-113),
+                        tail_reveal,
+                        tail_solution,
+                    ],
                 )
+                if first:
+                    extra_conditions = (*extra_conditions, cat_condition)
             if first:
                 first = False
                 announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
@@ -778,6 +781,7 @@ class CATWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         # (extra_delta, tail_reveal, tail_solution)
@@ -807,6 +811,7 @@ class CATWallet:
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+            extra_conditions=extra_conditions,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records
