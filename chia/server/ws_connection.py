@@ -570,12 +570,6 @@ class WSChiaConnection:
 
         return result
 
-    async def send_messages(self, messages: List[Message]) -> None:
-        if self.closed:
-            return None
-        for message in messages:
-            await self.outgoing_queue.put(message)
-
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
             await asyncio.sleep(1)
