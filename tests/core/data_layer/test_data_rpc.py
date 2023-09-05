@@ -2058,8 +2058,11 @@ async def test_unsubscribe_removes_files(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
-    manage_data_interval = 5,
 ) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
     async with init_data_layer(
         wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
     ) as data_layer:
