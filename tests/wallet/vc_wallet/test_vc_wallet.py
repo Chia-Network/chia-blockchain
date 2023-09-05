@@ -165,6 +165,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         # Does pending_coin_removal_count attempt to show the number of current pending removals
                         # Or does it intend to just mean all pending removals that we should eventually get states for?
                         "pending_coin_removal_count": 4,  # 3 for VC mint, 1 for DID mint
+                        "<=#spendable_balance": -202,
+                        "<=#max_send_amount": -202,
                         "set_remainder": True,
                     },
                     "did": {"init": True, "set_remainder": True},
@@ -215,6 +217,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         "unconfirmed_wallet_balance": -100,
                         "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -100,
+                        "<=#max_send_amount": -100,
                         "set_remainder": True,
                     },
                     "did": {
@@ -285,6 +289,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 pre_block_balance_updates={
                     "xch": {
                         "unconfirmed_wallet_balance": -100,
+                        "<=#spendable_balance": -100,
+                        "<=#max_send_amount": -100,
                         "set_remainder": True,
                     },
                 },
@@ -344,6 +350,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         "unconfirmed_wallet_balance": -2000000000,
                         "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -2000000000,
+                        "<=#max_send_amount": -2000000000,
                         "set_remainder": True,
                     },
                     "vc": {
@@ -446,6 +454,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         "unconfirmed_wallet_balance": -90,
                         "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -90,
+                        "<=#max_send_amount": -90,
                         "set_remainder": True,
                     },
                     "vc": {
@@ -509,6 +519,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         "unconfirmed_wallet_balance": 20,
                         "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": 20,
+                        "<=#max_send_amount": 20,
                         "set_remainder": True,
                     },
                     "vc": {
@@ -553,6 +565,8 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         "unconfirmed_wallet_balance": -1,
                         "pending_coin_removal_count": 1,
+                        "<=#spendable_balance": -1,
+                        "<=#max_send_amount": -1,
                         "set_remainder": True,
                     },
                     "did": {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import operator
 from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field
 from typing import Any, AsyncIterator, Dict, List, Union
@@ -18,6 +19,8 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
 
 class BalanceCheckingError(Exception):
@@ -114,6 +117,7 @@ class WalletEnvironment:
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
 
             new_values: Dict[str, int] = {}
+            existing_values: Balance = await self.wallet_node.get_balance(wallet_id)
             if "init" in kwargs and kwargs["init"]:
                 new_values = {k: v for k, v in kwargs.items() if k not in ("set_remainder", "init")}
             elif wallet_id not in self.wallet_states:
@@ -125,7 +129,22 @@ class WalletEnvironment:
                 for key, change in kwargs.items():
                     if key in "set_remainder":
                         continue
-                    new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
+                    if "#" in key:
+                        opp: str = key[0 : key.index("#")]
+                        key_str: str = key[key.index("#") + 1 :]
+                        if OPP_DICT[opp](
+                            getattr(existing_values, key_str),
+                            getattr(self.wallet_states[wallet_id].balance, key_str) + change,
+                        ):
+                            new_values[key_str] = getattr(existing_values, key_str)
+                        else:
+                            raise ValueError(
+                                f"Setting {key_str} on {self.alias_wallet_id(wallet_id)} failed because "
+                                f"{getattr(existing_values, key_str)} is not {opp} "
+                                f"{getattr(self.wallet_states[wallet_id].balance, key_str)} + {change}"
+                            )
+                    else:
+                        new_values[key] = getattr(self.wallet_states[wallet_id].balance, key) + change
 
             self.wallet_states = {
                 **self.wallet_states,
@@ -135,7 +154,7 @@ class WalletEnvironment:
                         "balance": Balance(
                             **{
                                 **(
-                                    asdict(await self.wallet_node.get_balance(wallet_id))
+                                    asdict(existing_values)
                                     if "set_remainder" in kwargs and kwargs["set_remainder"]
                                     else {}
                                     if "init" in kwargs and kwargs["init"]

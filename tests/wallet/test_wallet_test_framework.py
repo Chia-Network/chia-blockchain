@@ -140,3 +140,88 @@ async def test_balance_checking(
 
     await env_0.change_balances({"cat": {"init": True, "set_remainder": True}})
     await env_0.check_balances()
+
+    # Test special operators
+    await wallet_environments.full_node.farm_blocks_to_wallet(count=1, wallet=env_0.xch_wallet)
+    await wallet_environments.full_node.wait_for_wallet_synced(wallet_node=env_0.wallet_node, timeout=20)
+    with pytest.raises(ValueError, match=r"\+ 2000000000000"):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    "<#confirmed_wallet_balance": 2_000_000_000_000,
+                }
+            }
+        )
+        await env_0.check_balances()
+
+    with pytest.raises(ValueError, match=r"\+ 2000000000000"):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    ">#confirmed_wallet_balance": 2_000_000_000_000,
+                }
+            }
+        )
+
+    with pytest.raises(ValueError, match=r"\+ 1999999999999"):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    "<=#confirmed_wallet_balance": 1_999_999_999_999,
+                }
+            }
+        )
+
+    with pytest.raises(ValueError, match=r"\+ 2000000000001"):
+        await env_0.change_balances(
+            {
+                "xch": {
+                    ">=#confirmed_wallet_balance": 2_000_000_000_001,
+                }
+            }
+        )
+
+    wallet_states_save = env_0.wallet_states.copy()
+
+    await env_0.change_balances(
+        {
+            "xch": {
+                "<#confirmed_wallet_balance": 2_000_000_000_001,
+                "set_remainder": True,
+            }
+        }
+    )
+    await env_0.check_balances()
+    env_0.wallet_states = wallet_states_save
+
+    await env_0.change_balances(
+        {
+            "xch": {
+                ">#confirmed_wallet_balance": 1_999_999_999_999,
+                "set_remainder": True,
+            }
+        }
+    )
+    await env_0.check_balances()
+    env_0.wallet_states = wallet_states_save
+
+    await env_0.change_balances(
+        {
+            "xch": {
+                ">=#confirmed_wallet_balance": 2_000_000_000_000,
+                "set_remainder": True,
+            }
+        }
+    )
+    await env_0.check_balances()
+    env_0.wallet_states = wallet_states_save
+
+    await env_0.change_balances(
+        {
+            "xch": {
+                "<=#confirmed_wallet_balance": 2_000_000_000_000,
+                "set_remainder": True,
+            }
+        }
+    )
+    await env_0.check_balances()
