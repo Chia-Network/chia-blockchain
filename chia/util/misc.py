@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import functools
 import signal
@@ -8,7 +9,20 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import FrameType
-from typing import Any, Collection, Dict, Generic, Iterator, List, Optional, Sequence, TypeVar, Union
+from typing import (
+    Any,
+    AsyncIterator,
+    Collection,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    final,
+)
 
 from typing_extensions import Protocol
 
@@ -192,61 +206,77 @@ class AsyncHandler(Protocol):
         ...
 
 
-def setup_sync_signal_handler(handler: Handler) -> None:
-    loop = asyncio.get_event_loop()
+@final
+@dataclasses.dataclass
+class SignalHandlers:
+    tasks: List[asyncio.Task[None]] = dataclasses.field(default_factory=list)
 
-    if sys.platform == "win32" or sys.platform == "cygwin":
-        for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
-            signal.signal(signal_, functools.partial(handler, loop=loop))
-    else:
-        for signal_ in [signal.SIGINT, signal.SIGTERM]:
-            loop.add_signal_handler(
-                signal_,
-                functools.partial(handler, sig=signal_, stack_frame=None, loop=loop),
-            )
+    @classmethod
+    @contextlib.asynccontextmanager
+    async def manage(cls) -> AsyncIterator[SignalHandlers]:
+        self = cls()
+        try:
+            yield self
+        finally:
+            # TODO: log errors?
+            # TODO: return to previous signal handlers?
+            await asyncio.gather(*self.tasks)
 
+    def remove_done_handlers(self) -> None:
+        self.tasks = [task for task in self.tasks if not task.done()]
 
-# signals are a global thing so...  global task reference maintenance is "ok" i guess
-signal_handler_tasks: List[asyncio.Task[None]] = []
+    def loop_safe_sync_signal_handler_for_async(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+        handler: AsyncHandler,
+    ) -> None:
+        self.remove_done_handlers()
 
+        task = asyncio.create_task(
+            handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
+        )
+        self.tasks.append(task)
 
-def loop_safe_sync_signal_handler_for_async(
-    signal_: signal.Signals,
-    stack_frame: Optional[FrameType],
-    loop: asyncio.AbstractEventLoop,
-    handler: AsyncHandler,
-) -> None:
-    signal_handler_tasks[:] = (task for task in signal_handler_tasks if not task.done())
+    def threadsafe_sync_signal_handler_for_async(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+        handler: AsyncHandler,
+    ) -> None:
+        loop.call_soon_threadsafe(
+            functools.partial(
+                self.loop_safe_sync_signal_handler_for_async,
+                signal_=signal_,
+                stack_frame=stack_frame,
+                loop=loop,
+                handler=handler,
+            ),
+        )
 
-    task = asyncio.create_task(
-        handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
-    )
-    signal_handler_tasks.append(task)
+    def setup_sync_signal_handler(self, handler: Handler) -> None:
+        loop = asyncio.get_event_loop()
 
+        if sys.platform == "win32" or sys.platform == "cygwin":
+            for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
+                signal.signal(signal_, functools.partial(handler, loop=loop))
+        else:
+            for signal_ in [signal.SIGINT, signal.SIGTERM]:
+                loop.add_signal_handler(
+                    signal_,
+                    functools.partial(handler, sig=signal_, stack_frame=None, loop=loop),
+                )
 
-def threadsafe_sync_signal_handler_for_async(
-    signal_: signal.Signals,
-    stack_frame: Optional[FrameType],
-    loop: asyncio.AbstractEventLoop,
-    handler: AsyncHandler,
-) -> None:
-    loop.call_soon_threadsafe(
-        functools.partial(
-            loop_safe_sync_signal_handler_for_async,
-            signal_=signal_,
-            stack_frame=stack_frame,
-            loop=loop,
-            handler=handler,
-        ),
-    )
+    def setup_async_signal_handler(self, handler: AsyncHandler) -> None:
+        # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.add_signal_handler
+        # > a callback registered with this function is allowed to interact with the event
+        # > loop
+        #
+        # This is a bit vague so let's just use a thread safe call for Windows
+        # compatibility.
 
-
-def setup_async_signal_handler(handler: AsyncHandler) -> None:
-    # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.add_signal_handler
-    # > a callback registered with this function is allowed to interact with the event
-    # > loop
-    #
-    # This is a bit vague so let's just use a thread safe call for Windows
-    # compatibility.
-
-    setup_sync_signal_handler(handler=functools.partial(threadsafe_sync_signal_handler_for_async, handler=handler))
+        self.setup_sync_signal_handler(
+            handler=functools.partial(self.threadsafe_sync_signal_handler_for_async, handler=handler)
+        )

@@ -49,7 +49,7 @@ from chia.util.config import config_path_for_filename, load_config, lock_and_loa
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
-from chia.util.misc import setup_async_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -438,10 +438,10 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
     ) -> None:
         await kill_processes(lock)
 
-    setup_async_signal_handler(handler=stop)
-
-    yield vdf_task_1
-    await kill_processes(lock)
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
+        yield vdf_task_1
+        await kill_processes(lock)
 
 
 async def setup_vdf_clients(
@@ -465,11 +465,13 @@ async def setup_vdf_clients(
     ) -> None:
         await kill_processes(lock)
 
-    setup_async_signal_handler(handler=stop)
+    signal_handlers = SignalHandlers()
+    async with signal_handlers.manage():
+        signal_handlers.setup_async_signal_handler(handler=stop)
 
-    yield vdf_task_1, vdf_task_2, vdf_task_3
+        yield vdf_task_1, vdf_task_2, vdf_task_3
 
-    await kill_processes(lock)
+        await kill_processes(lock)
 
 
 async def setup_timelord(

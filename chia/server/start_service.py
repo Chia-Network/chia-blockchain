@@ -22,7 +22,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
-from chia.util.misc import setup_sync_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
@@ -229,7 +229,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
 
-    async def setup_process_global_state(self) -> None:
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         # Being async forces this to be run from within an active event loop as is
         # needed for the signal handler setup.
         proctitle_name = f"chia_{self._service_name}"
@@ -237,7 +237,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
         global main_pid
         main_pid = os.getpid()
-        setup_sync_signal_handler(handler=self._accept_signal)
+        signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
     def _accept_signal(
         self,

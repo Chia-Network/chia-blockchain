@@ -20,7 +20,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import setup_async_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
@@ -359,8 +359,8 @@ class DNSServer:
             await self.stop()
             log.info("DNS server stopped.")
 
-    async def setup_process_global_state(self) -> None:
-        setup_async_signal_handler(handler=self._accept_signal)
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
     async def _accept_signal(
         self,
@@ -515,9 +515,10 @@ class DNSServer:
 
 
 async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
-    await dns_server.setup_process_global_state()
-    async with dns_server.run():
-        await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
+    async with SignalHandlers.manage() as signal_handlers:
+        await dns_server.setup_process_global_state(signal_handlers=signal_handlers)
+        async with dns_server.run():
+            await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 
 
 def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSServer:

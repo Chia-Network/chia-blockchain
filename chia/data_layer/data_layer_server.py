@@ -17,7 +17,7 @@ from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import setup_sync_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
@@ -41,11 +41,11 @@ class DataLayerServer:
     webserver: Optional[WebServer] = None
     upnp: UPnP = field(default_factory=UPnP)
 
-    async def start(self) -> None:
+    async def start(self, signal_handlers: SignalHandlers) -> None:
         if self.webserver is not None:
             raise RuntimeError("DataLayerServer already started")
 
-        setup_sync_signal_handler(handler=self._accept_signal)
+        signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
         self.log.info("Starting Data Layer HTTP Server.")
 
@@ -125,9 +125,10 @@ async def async_start(root_path: Path) -> int:
     )
 
     data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
-    await data_layer_server.start()
-    await shutdown_event.wait()
-    await data_layer_server.await_closed()
+    async with SignalHandlers.manage() as signal_handlers:
+        await data_layer_server.start(signal_handlers=signal_handlers)
+        await shutdown_event.wait()
+        await data_layer_server.await_closed()
 
     return 0
 

@@ -13,7 +13,7 @@ import pkg_resources
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import setup_async_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
@@ -105,12 +105,13 @@ async def async_main(config, net_config):
     ) -> None:
         await kill_processes(lock)
 
-    setup_async_signal_handler(handler=stop)
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
 
-    try:
-        await spawn_all_processes(config, net_config, lock)
-    finally:
-        log.info("Launcher fully closed.")
+        try:
+            await spawn_all_processes(config, net_config, lock)
+        finally:
+            log.info("Launcher fully closed.")
 
 
 def main():

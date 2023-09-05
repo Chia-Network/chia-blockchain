@@ -39,7 +39,7 @@ from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
-from chia.util.misc import setup_async_signal_handler
+from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -210,8 +210,8 @@ class WebSocketServer:
                 await self.stop()
             await self.exit()
 
-    async def setup_process_global_state(self) -> None:
-        setup_async_signal_handler(handler=self._accept_signal)
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
     async def _accept_signal(
         self,
@@ -1519,9 +1519,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 key_path,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
-            await ws_server.setup_process_global_state()
-            async with ws_server.run():
-                await ws_server.shutdown_event.wait()
+            async with SignalHandlers.manage() as signal_handlers:
+                await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+                async with ws_server.run():
+                    await ws_server.shutdown_event.wait()
 
             if beta_metrics is not None:
                 await beta_metrics.stop_logging()
