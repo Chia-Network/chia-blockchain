@@ -21,7 +21,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_service import Service
-from chia.simulator.block_tools import BlockTools, get_plot_dir
+from chia.simulator.block_tools import BlockTools, get_plot_dir, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.simulator.simulator_protocol import ReorgProtocol
@@ -96,12 +96,9 @@ OneWalletNodeAndRpc = Tuple[WalletRpcClient, Any, FullNodeSimulator, int, BlockT
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node_and_rpc(
-    trusted: bool,
-    self_hostname: str,
-) -> AsyncIterator[OneWalletNodeAndRpc]:
+async def one_wallet_node_and_rpc(trusted: bool, self_hostname: str) -> AsyncIterator[OneWalletNodeAndRpc]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
+    async for nodes in setup_simulators_and_wallets_service(1, 1, test_constants):
         full_nodes, wallets, bt = nodes
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         wallet_service = wallets[0]
