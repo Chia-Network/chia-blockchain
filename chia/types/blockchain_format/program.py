@@ -76,6 +76,15 @@ class Program(SExp):
         return v
 
     def to_structured_tree(self) -> "Program":
+        """
+        Turns a list into a structured tree.
+        This function does not recurse down, only doing the top layer list if sublists exist.
+
+        Example:
+        Program.to([100, 200, 300, 400, 500, 600, 700]).to_structured_tree()
+        is equal to
+        Program.to(((100, (200, 300)), ((400, 500), (600, 700))))
+        """
         my_len = len(list(self.as_python()))
         if my_len == 1:
             return self.first()
