@@ -160,9 +160,7 @@ class S3Plugin:
             if full_tree_id is None and diff_tree_id != store_id:
                 return web.json_response({"uploaded": False})
 
-            full_tree_path = (
-                None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
-            )
+            full_tree_path = None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
             diff_path = self.server_files_path.joinpath(diff_name)
 
             try:
