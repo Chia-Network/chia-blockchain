@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.0.1 Chia blockchain 2023-09-06
+
+### Fixed
+
+- Fix issue with GUI and `chia plotters` on Linux when making compressed plots (Fixes #16187)
+
 ## 2.0.0 Chia blockchain 2023-08-24
 
 ### Added
