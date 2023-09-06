@@ -674,8 +674,9 @@ data_layer:
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
 
-  uploaders: []
-  downloaders: []
+  plugins:
+    uploaders: []
+    downloaders: []
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True
