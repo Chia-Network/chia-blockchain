@@ -51,7 +51,7 @@ def create_data_layer_service(
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
 
-    data_layer = DataLayer(
+    data_layer = DataLayer.create(
         config=service_config,
         root_path=root_path,
         wallet_rpc_init=wallet_rpc_init,
