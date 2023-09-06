@@ -10,7 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 
-- Fix issue with GUI and chia plotters when making compressed plots
+- Fix issue with GUI and `chia plotters` on Linux when making compressed plots
 
 ## 2.0.0 Chia blockchain 2023-08-24
 
