@@ -71,10 +71,10 @@ class DataLayer:
     root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    _server: Optional[ChiaServer]
     downloaders: List[str]
     uploaders: List[str]
     server_files_location: Path
+    _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
     initialized: bool = False
     _data_store: Optional[DataStore] = None
@@ -148,7 +148,6 @@ class DataLayer:
             log=logging.getLogger(name if name is None else __name__),
             db_path=path_from_root(root_path, db_path_replaced),
             server_files_location=path_from_root(root_path, server_files_replaced),
-            _server=None,
             downloaders=downloaders,
             uploaders=uploaders,
         )
