@@ -115,6 +115,7 @@ def create_data_store(
     data_rpc_port: int,
     fee: Optional[str],
     verbose: bool,
+    fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
