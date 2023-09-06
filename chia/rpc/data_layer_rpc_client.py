@@ -10,8 +10,8 @@ from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):
-    async def create_data_store(self, fee: Optional[uint64]) -> Dict[str, Any]:
-        response = await self.fetch("create_data_store", {"fee": fee})
+    async def create_data_store(self, fee: Optional[uint64], verbose: bool) -> Dict[str, Any]:
+        response = await self.fetch("create_data_store", {"fee": fee, "verbose": verbose})
         return response
 
     async def wallet_log_in(self, fingerprint: int) -> Dict[str, Any]:

@@ -109,15 +109,17 @@ def create_fee_option() -> Callable[[FC], FC]:
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
+@click.option("--verbose", is_flag=True, help="Enable verbose output.")
 @options.create_fingerprint()
 def create_data_store(
     data_rpc_port: int,
     fee: Optional[str],
+    verbose: bool,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_data_store_cmd(data_rpc_port, fee, fingerprint=fingerprint))
+    run(create_data_store_cmd(data_rpc_port, fee, verbose, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_value", help="Get the value for a given key and store")
