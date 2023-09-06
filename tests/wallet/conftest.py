@@ -4,7 +4,7 @@ import json
 import operator
 from contextlib import AsyncExitStack
 from dataclasses import asdict, dataclass, field, replace
-from typing import Any, AsyncIterator, Dict, List, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import pytest
 import pytest_asyncio
@@ -15,6 +15,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
@@ -177,6 +178,17 @@ class WalletTestFramework:
     tx_config: TXConfig = DEFAULT_TX_CONFIG
 
     async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
+        # First, let's take note of the number of puzzle hashes if we're supposed to be reusing
+        if self.tx_config.reuse_puzhash:
+            puzzle_hash_indexes: List[Dict[uint32, Optional[DerivationRecord]]] = []
+            for env in self.environments:
+                ph_indexes: Dict[uint32, Optional[DerivationRecord]] = {}
+                for wallet_id in env.wallet_state_manager.wallets:
+                    ph_indexes[
+                        wallet_id
+                    ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                puzzle_hash_indexes.append(ph_indexes)
+
         pending_txs: List[List[TransactionRecord]] = []
         for env in self.environments:
             pending_txs.append(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
@@ -212,6 +224,14 @@ class WalletTestFramework:
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )
+
+        # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
+        if self.tx_config.reuse_puzhash:
+            for env, ph_indexes_before in zip(self.environments, puzzle_hash_indexes):
+                for wallet_id, ph_index in zip(env.wallet_state_manager.wallets, ph_indexes_before):
+                    assert ph_indexes_before[wallet_id] == (
+                        await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                    )
 
 
 @pytest.fixture(scope="function", params=[True, False])
