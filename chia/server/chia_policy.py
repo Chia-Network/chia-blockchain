@@ -142,13 +142,13 @@ class PausableServer(BaseEventsServer):
 
     def _attach(self) -> None:
         super()._attach()
-        logging.getLogger(__name__).debug("New connection. Total connections: %s", self._active_count)
+        logging.getLogger(__name__).debug(f"New connection. Total connections: {self._active_count}")
         if not self._paused and self._active_count >= self.max_concurrent_connections:
             self._chia_pause()
 
     def _detach(self) -> None:
         super()._detach()
-        logging.getLogger(__name__).debug("Connection lost. Total connections: %s", self._active_count)
+        logging.getLogger(__name__).debug(f"Connection lost. Total connections: {self._active_count}")
         if (
             self._active_count > 0
             and self._sockets is not None
