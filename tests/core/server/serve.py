@@ -13,6 +13,7 @@ from typing import List, Optional, final
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
 from chia.util.misc import SignalHandlers
+from tests.util.misc import create_logger
 
 if sys.platform == "win32":
     import _winapi
@@ -46,16 +47,7 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.DEBUG)
-    stream_handler = logging.StreamHandler(stream=sys.stdout)
-    log_date_format = "%Y-%m-%dT%H:%M:%S"
-    file_log_formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-        datefmt=log_date_format,
-    )
-    stream_handler.setFormatter(file_log_formatter)
-    logger.addHandler(hdlr=stream_handler)
+    logger = create_logger()
 
     async with SignalHandlers.manage() as signal_handlers:
         if thread_end_event is None:

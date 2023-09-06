@@ -5,9 +5,11 @@ import dataclasses
 import enum
 import functools
 import gc
+import logging
 import math
 import os
 import subprocess
+import sys
 from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
@@ -367,3 +369,18 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     else:
         memos = []
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
+
+
+def create_logger() -> logging.Logger:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
+    return logger

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 import pathlib
 import random
 import signal
@@ -18,6 +17,7 @@ import pytest
 from chia.server import chia_policy
 from chia.simulator.time_out_assert import adjusted_timeout
 from tests.core.server import serve
+from tests.util.misc import create_logger
 
 here = pathlib.Path(__file__).parent
 
@@ -149,16 +149,7 @@ class ServeInThread:
 @pytest.mark.only
 @pytest.mark.asyncio
 async def test_loop() -> None:
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.DEBUG)
-    stream_handler = logging.StreamHandler(stream=sys.stdout)
-    log_date_format = "%Y-%m-%dT%H:%M:%S"
-    file_log_formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-        datefmt=log_date_format,
-    )
-    stream_handler.setFormatter(file_log_formatter)
-    logger.addHandler(hdlr=stream_handler)
+    logger = create_logger()
 
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
