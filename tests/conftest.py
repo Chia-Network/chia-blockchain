@@ -563,22 +563,6 @@ async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes_mainnet(db_version, blockchain_constants: ConsensusConstants):
-    async_gen = setup_simulators_and_wallets(2, 1, blockchain_constants, db_version=db_version)
-    nodes, wallets, bt = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt
-
-    async for _ in async_gen:
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
     async for _ in setup_simulators_and_wallets(3, 2, blockchain_constants):
         yield _
