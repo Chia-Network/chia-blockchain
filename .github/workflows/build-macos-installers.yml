@@ -46,7 +46,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
         os:
           - runs-on: macos-11
             name: intel
@@ -202,10 +202,10 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
-      - name: Setup Node 16.x
+      - name: Setup Node 18.x
         uses: actions/setup-node@v3
         with:
-          node-version: '16.x'
+          node-version: '18.x'
 
       - name: Prepare GUI cache
         id: gui-ref

@@ -37,7 +37,7 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
 
     log_path = tmp_chia_root.joinpath("log", "data_sql.log")
 
-    data_layer = DataLayer(
+    data_layer = DataLayer.create(
         config=config["data_layer"],
         root_path=tmp_chia_root,
         wallet_rpc_init=create_sufficient_wallet_rpc_client(),
@@ -125,7 +125,7 @@ async def test_plugin_requests_use_custom_headers(
         headers={header_key: header_value},
     )
 
-    data_layer = DataLayer(
+    data_layer = DataLayer.create(
         config=config["data_layer"],
         root_path=tmp_chia_root,
         # not presently used for this test

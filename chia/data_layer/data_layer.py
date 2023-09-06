@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import json
 import logging
 import os
@@ -9,7 +10,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast, final
 
 import aiohttp
 
@@ -68,20 +69,26 @@ async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Di
         return plugin_remote, {"error": f"ClientError: {e}"}
 
 
+@final
+@dataclasses.dataclass
 class DataLayer:
-    data_store: DataStore
     db_path: Path
     config: Dict[str, Any]
     root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    state_changed_callback: Optional[StateChangedProtocol] = None
-    wallet_id: uint64
-    initialized: bool
-    none_bytes: bytes32
-    _server: Optional[ChiaServer]
     downloaders: List[PluginRemote]
     uploaders: List[PluginRemote]
+    server_files_location: Path
+    _server: Optional[ChiaServer] = None
+    none_bytes: bytes32 = bytes32([0] * 32)
+    initialized: bool = False
+    _data_store: Optional[DataStore] = None
+    state_changed_callback: Optional[StateChangedProtocol] = None
+    _shut_down: bool = False
+    periodically_manage_data_task: Optional[asyncio.Task[None]] = None
+    _wallet_rpc: Optional[WalletRpcClient] = None
+    subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
 
     @property
     def server(self) -> ChiaServer:
@@ -92,38 +99,60 @@ class DataLayer:
 
         return self._server
 
-    def __init__(
-        self,
+    @property
+    def data_store(self) -> DataStore:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._data_store is None:
+            raise RuntimeError("data_store not assigned")
+
+        return self._data_store
+
+    @property
+    def wallet_rpc(self) -> WalletRpcClient:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._wallet_rpc is None:
+            raise RuntimeError("wallet_rpc not assigned")
+
+        return self._wallet_rpc
+
+    @classmethod
+    def create(
+        cls,
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
         downloaders: List[PluginRemote],
         uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
-    ):
+    ) -> DataLayer:
         if name == "":
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-        self.initialized = False
-        self.config = config
-        self.root_path = root_path
-        self.connection = None
-        self.wallet_rpc_init = wallet_rpc_init
-        self.log = logging.getLogger(name if name is None else __name__)
-        self._shut_down: bool = False
-        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(self.root_path, db_path_replaced)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
-        self.server_files_location = path_from_root(self.root_path, server_files_replaced)
+
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+
+        self = cls(
+            config=config,
+            root_path=root_path,
+            wallet_rpc_init=wallet_rpc_init,
+            log=logging.getLogger(name if name is None else __name__),
+            db_path=path_from_root(root_path, db_path_replaced),
+            server_files_location=path_from_root(root_path, server_files_replaced),
+            downloaders=downloaders,
+            uploaders=uploaders,
+        )
+
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
-        self.none_bytes = bytes32([0] * 32)
-        self._server = None
-        self.downloaders = downloaders
-        self.uploaders = uploaders
+
+        return self
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
@@ -151,31 +180,29 @@ class DataLayer:
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
-        self.data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
-        self.wallet_rpc = await self.wallet_rpc_init
-        self.subscription_lock: asyncio.Lock = asyncio.Lock()
+        self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
+        self._wallet_rpc = await self.wallet_rpc_init
 
-        self.periodically_manage_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_manage_data())
+        self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
-        self.wallet_rpc.close()
+        if self._wallet_rpc is not None:
+            self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
-        if self.connection is not None:
-            await self.connection.close()
-        try:
-            self.periodically_manage_data_task.cancel()
-        except asyncio.CancelledError:
-            pass
-        await self.data_store.close()
-        await self.wallet_rpc.await_closed()
+        if self.periodically_manage_data_task is not None:
+            try:
+                self.periodically_manage_data_task.cancel()
+            except asyncio.CancelledError:
+                pass
+        if self._data_store is not None:
+            await self.data_store.close()
+        if self._wallet_rpc is not None:
+            await self.wallet_rpc.await_closed()
 
     async def wallet_log_in(self, fingerprint: int) -> int:
-        if self.wallet_rpc is None:
-            raise Exception("DataLayer wallet RPC connection not initialized")
-
         result = await self.wallet_rpc.log_in(fingerprint)
         if not result.get("success", False):
             wallet_error = result.get("error", "no error message provided")

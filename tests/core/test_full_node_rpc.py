@@ -18,6 +18,8 @@ from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -27,7 +29,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.conftest import Mode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
@@ -511,5 +512,114 @@ class TestRpc:
 
         finally:
             # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_not_in_request(self, one_node, self_hostname):
+        [full_node_service], _, _ = one_node
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+            with pytest.raises(ValueError, match="No coin_name in request"):
+                await client.fetch("get_mempool_items_by_coin_name", {})
+        finally:
+            # Checks that the RPC manages to stop the node
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_not_found_in_mempool(self, one_node, self_hostname):
+        [full_node_service], _, _ = one_node
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+
+            empty_coin_name = bytes32([0] * 32)
+            mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
+            assert mempool_item["success"] == True
+            assert "mempool_items" in mempool_item
+            assert len(mempool_item["mempool_items"]) == 0
+        finally:
+            client.close()
+            await client.await_closed()
+
+    @pytest.mark.asyncio
+    async def test_coin_name_found_in_mempool(self, one_node, self_hostname):
+        [full_node_service], _, bt = one_node
+        full_node_api = full_node_service._api
+
+        try:
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            )
+
+            blocks = bt.get_consecutive_blocks(2)
+            blocks = bt.get_consecutive_blocks(2, block_list_input=blocks, guarantee_transaction_block=True)
+
+            for block in blocks:
+                unf = UnfinishedBlock(
+                    block.finished_sub_slots,
+                    block.reward_chain_block.get_unfinished(),
+                    block.challenge_chain_sp_proof,
+                    block.reward_chain_sp_proof,
+                    block.foliage,
+                    block.foliage_transaction_block,
+                    block.transactions_info,
+                    block.transactions_generator,
+                    [],
+                )
+                await full_node_api.full_node.add_unfinished_block(unf, None)
+                await full_node_api.full_node.add_block(block, None)
+
+            wallet = WalletTool(full_node_api.full_node.constants)
+            wallet_receiver = WalletTool(full_node_api.full_node.constants, AugSchemeMPL.key_gen(std_hash(b"123123")))
+            ph = wallet.get_new_puzzlehash()
+            ph_receiver = wallet_receiver.get_new_puzzlehash()
+
+            blocks = bt.get_consecutive_blocks(
+                2,
+                block_list_input=blocks,
+                guarantee_transaction_block=True,
+                farmer_reward_puzzle_hash=ph,
+                pool_reward_puzzle_hash=ph,
+            )
+            for block in blocks[-2:]:
+                await full_node_api.full_node.add_block(block)
+
+            # empty mempool
+            assert len(await client.get_all_mempool_items()) == 0
+
+            coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+            spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
+            await client.push_tx(spend_bundle)
+
+            # mempool with one item
+            assert len(await client.get_all_mempool_items()) == 1
+
+            mempool_item = await client.get_mempool_items_by_coin_name(coin_to_spend.name())
+
+            # found coin in coin spends
+            assert mempool_item["success"] == True
+            assert "mempool_items" in mempool_item
+            assert len(mempool_item["mempool_items"]) > 0
+            for item in mempool_item["mempool_items"]:
+                removals = [Coin.from_json_dict(coin) for coin in item["removals"]]
+                assert coin_to_spend.name() in [coin.name() for coin in removals]
+
+        finally:
             client.close()
             await client.await_closed()

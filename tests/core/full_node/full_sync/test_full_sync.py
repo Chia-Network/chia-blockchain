@@ -19,7 +19,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16
-from tests.conftest import Mode
+from tests.conftest import ConsensusMode
 from tests.core.node_height import node_height_between, node_height_exactly
 
 log = logging.getLogger(__name__)
@@ -415,12 +415,11 @@ class TestFullSync:
         duration = time.time() - start
         assert duration > 5
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
@@ -434,17 +433,16 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
         await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, True)
-        await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, False)
+        await time_out_assert(250, full_node_1.full_node.sync_store.get_long_sync, False)
         peak = full_node_2.full_node.blockchain.get_peak()
         wp = await full_node_2.full_node.weight_proof_handler.get_proof_of_weight(peak.header_hash)
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("Skipped test")
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
         full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)

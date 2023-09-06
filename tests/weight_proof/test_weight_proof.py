@@ -440,7 +440,7 @@ class TestWeightProof:
         wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
         assert wp is not None
         wpf_not_synced = WeightProofHandler(
-            blockchain_constants, BlockCache(sub_blocks, height_to_hash, header_cache, {})
+            blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {})
         )
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
