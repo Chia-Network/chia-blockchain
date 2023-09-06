@@ -75,6 +75,32 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
+    def to_structured_tree(self) -> "Program":
+        my_len = len(list(self.as_python()))
+        if my_len == 1:
+            return self.first()
+        elif self == Program.to(0):
+            return self
+        mid_index = my_len // 2
+        i = 0
+        left_subtree = []
+        right_subtree = []
+        midway = False
+        for item in self.as_iter():
+            i = i + 1
+            if midway:
+                right_subtree.append(item)
+            else:
+                left_subtree.append(item)
+            if i == mid_index:
+                midway = True
+        return Program.to(
+            (
+                Program.to(left_subtree).to_structured_tree(),
+                Program.to(right_subtree).to_structured_tree()
+            )
+        )
+
     def replace(self, **kwargs) -> "Program":
         """
         Create a new program replacing the given paths (using `at` syntax).

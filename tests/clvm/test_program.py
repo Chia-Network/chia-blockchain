@@ -45,6 +45,10 @@ class TestProgram(TestCase):
         self.assertRaises(ValueError, lambda: p1.replace(q=105))
         self.assertRaises(ValueError, lambda: p1.replace(rq=105))
 
+    def test_to_structured_program(self):
+        p1 = Program.to([100, 200, 300, 400]).to_structured_tree()
+        self.assertEqual(p1, Program.to(((100, 200), (300, 400))))
+
 
 def check_idempotency(f, *args):
     prg = Program.to(f)
