@@ -5,6 +5,7 @@ import gc
 import logging
 import signal
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from secrets import token_bytes
@@ -173,8 +174,24 @@ async def setup_full_node(
     await service.wait_closed()
     if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+
+        # 3.11 switched to using functools.lru_cache for the statement cache.
+        # See #87028. This introduces a reference cycle involving the connection
+        # object, so the connection object no longer gets immediately
+        # deallocated, not until, for example, gc.collect() is called to break
+        # the cycle.
         gc.collect()
-        db_path.unlink()
+        for _ in range(10):
+            try:
+                db_path.unlink()
+                break
+            except PermissionError as e:
+                print(f"db_path.unlink(): {e}")
+                time.sleep(0.1)
+                # filesystem operations are async on windows
+                # [WinError 32] The process cannot access the file because it is
+                # being used by another process
+                pass
 
 
 async def setup_crawler(
@@ -451,10 +468,10 @@ async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    b_tools: BlockTools,
+    config: Dict[str, Any],
+    root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
-    config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
@@ -464,7 +481,7 @@ async def setup_timelord(
     service_config["rpc_port"] = uint16(0)
 
     service = create_timelord_service(
-        b_tools.root_path,
+        root_path,
         config,
         consensus_constants,
         connect_to_daemon=False,

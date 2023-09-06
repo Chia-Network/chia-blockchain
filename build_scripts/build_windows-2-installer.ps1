@@ -35,7 +35,6 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$Env:Path = $(npm bin) + ";" + $Env:Path
 
 Set-Location -Path "..\..\" -PassThru
 
@@ -68,14 +67,33 @@ mv temp.json package.json
 Write-Output "   ---"
 
 Write-Output "   ---"
-Write-Output "electron-builder"
-electron-builder build --win --x64 --config.productName="Chia"
+Write-Output "electron-builder create package directory"
+npx electron-builder build --win --x64 --config.productName="Chia" --dir
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {
    Write-Output "   ---"
-   Write-Output "Sign App"
+   Write-Output "Sign all EXEs"
+   Get-ChildItem ".\dist\win-unpacked" -Recurse | Where-Object { $_.Extension -eq ".exe" } | ForEach-Object {
+      $exePath = $_.FullName
+      Write-Output "Signing $exePath"
+      signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
+      Write-Output "Verify signature"
+      signtool.exe verify /v /pa $exePath
+  }
+}    Else    {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
+}
+
+Write-Output "   ---"
+Write-Output "electron-builder create installer"
+npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
+Write-Output "   ---"
+
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign Final Installer App"
    signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\ChiaSetup-$packageVersion.exe
    Write-Output "   ---"
    Write-Output "Verify signature"

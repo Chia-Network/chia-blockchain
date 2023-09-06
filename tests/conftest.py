@@ -99,27 +99,30 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class Mode(Enum):
+class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
     SOFT_FORK3 = 2
     SOFT_FORK4 = 3
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3, Mode.SOFT_FORK4])
+@pytest.fixture(
+    scope="session",
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3, ConsensusMode.SOFT_FORK4],
+)
 def consensus_mode(request):
     return request.param
 
 
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
-    if consensus_mode == Mode.PLAIN:
+    if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == Mode.SOFT_FORK3:
+    if consensus_mode == ConsensusMode.SOFT_FORK3:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3)
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
-    if consensus_mode == Mode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
         )
@@ -188,7 +191,7 @@ saved_blocks_version = "rc5"
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -199,7 +202,7 @@ def default_400_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -210,7 +213,7 @@ def default_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -227,7 +230,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -239,26 +242,16 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt, consensus_mode):
-    if consensus_mode == Mode.SOFT_FORK4:
-        pytest.skip("Test cache not available")
-
-    from tests.util.blockchain import persistent_blocks
-
-    return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
-
-
-@pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -276,7 +269,7 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -297,7 +290,7 @@ def default_2000_blocks_compact(bt, consensus_mode):
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,
@@ -327,6 +320,33 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
     @pytest.hookimpl(tryfirst=True)
     def pytest_internalerror(excinfo):
         raise excinfo.value
+
+
+def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
+    # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
+    removed = []
+    kept = []
+    limit_consensus_modes_problems: List[str] = []
+    for item in items:
+        limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
+        if limit_consensus_modes_marker is not None:
+            mode = item.callspec.params.get("consensus_mode")
+            if mode is None:
+                limit_consensus_modes_problems.append(item.name)
+
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [ConsensusMode.PLAIN])
+            if mode not in modes:
+                removed.append(item)
+                continue
+
+        kept.append(item)
+    if removed:
+        config.hook.pytest_deselected(items=removed)
+        items[:] = kept
+
+    if len(limit_consensus_modes_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
+        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -368,12 +388,21 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
 async def wallet_nodes(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     constants = blockchain_constants
     async_gen = setup_simulators_and_wallets(
         2,
@@ -405,12 +434,21 @@ async def two_nodes_sim_and_wallets():
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     async for _ in setup_simulators_and_wallets_service(
         2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
     ):
@@ -666,10 +704,15 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    params=[
+        pytest.param(
+            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+        )
+    ],
+)
 async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -863,13 +906,13 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield _
 
 
@@ -950,9 +993,7 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(consensus_mode, bt):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
+async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 

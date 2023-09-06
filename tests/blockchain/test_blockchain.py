@@ -56,7 +56,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
-from tests.conftest import Mode
+from tests.conftest import ConsensusMode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -142,11 +142,9 @@ class TestGenesisBlock:
 
 
 class TestBlockHeaderValidation:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_long_chain(self, empty_blockchain, default_1000_blocks, consensus_mode: Mode):
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
-
+    async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
         for block in blocks:
             if (
@@ -1368,10 +1366,16 @@ class TestBlockHeaderValidation:
                 return None
             attempts += 1
 
+    @pytest.mark.limit_consensus_modes(
+        allowed=[
+            ConsensusMode.PLAIN,
+            ConsensusMode.HARD_FORK_2_0,
+            ConsensusMode.SOFT_FORK3,
+        ],
+        reason="Skipped ConsensusMode.SOFT_FORK4 temporarily until adding more pool plots.",
+    )
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: Mode):
-        if consensus_mode == Mode.SOFT_FORK4:
-            pytest.skip("Skipped temporarily until adding more pool plots.")
+    async def test_pool_target_contract(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
@@ -1996,18 +2000,20 @@ class TestBodyValidation:
             (False, (AddBlockResult.NEW_PEAK, None, 2)),
         ],
     )
-    async def test_aggsig_garbage(self, empty_blockchain, opcode, with_garbage, expected, bt, consensus_mode: Mode):
+    async def test_aggsig_garbage(
+        self, empty_blockchain, opcode, with_garbage, expected, bt, consensus_mode: ConsensusMode
+    ):
         # in the 2.0 hard fork, we relax the strict 2-parameters rule of
         # AGG_SIG_* conditions, in consensus mode. In mempool mode we always
         # apply strict rules.
-        if consensus_mode == Mode.HARD_FORK_2_0 and with_garbage:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0 and with_garbage:
             expected = (AddBlockResult.NEW_PEAK, None, 2)
 
         # before the 2.0 hard fork, these conditions do not exist
         # but WalletTool still lets us create them, and aggregate them into the
         # block signature. When the pre-hard fork node sees them, the conditions
         # are ignored, but the aggregate signature is corrupt.
-        if consensus_mode != Mode.HARD_FORK_2_0 and opcode in [
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0 and opcode in [
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -2070,21 +2076,24 @@ class TestBodyValidation:
     @pytest.mark.parametrize(
         "opcode,lock_value,expected",
         [
+            # we don't allow any birth assertions, not
+            # relative time locks on ephemeral coins. This test is only for
+            # ephemeral coins, so these cases should always fail
             # MY BIRHT HEIGHT
             (co.ASSERT_MY_BIRTH_HEIGHT, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_HEIGHT, 2, rbr.INVALID_BLOCK),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.NEW_PEAK),
+            (co.ASSERT_MY_BIRTH_HEIGHT, 3, rbr.INVALID_BLOCK),
             # MY BIRHT SECONDS
             (co.ASSERT_MY_BIRTH_SECONDS, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10029, rbr.INVALID_BLOCK),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.NEW_PEAK),
+            (co.ASSERT_MY_BIRTH_SECONDS, 10030, rbr.INVALID_BLOCK),
             (co.ASSERT_MY_BIRTH_SECONDS, 10031, rbr.INVALID_BLOCK),
             # SECONDS RELATIVE
             # genesis timestamp is 10000 and each block is 10 seconds
-            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.NEW_PEAK),
-            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_SECONDS_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_SECONDS_RELATIVE, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_SECONDS_RELATIVE, 1, rbr.INVALID_BLOCK),
             # BEFORE SECONDS RELATIVE
@@ -2095,8 +2104,8 @@ class TestBodyValidation:
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, rbr.INVALID_BLOCK),
             (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x10000000000000000, rbr.INVALID_BLOCK),
             # HEIGHT RELATIVE
-            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.NEW_PEAK),
-            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.NEW_PEAK),
+            (co.ASSERT_HEIGHT_RELATIVE, -2, rbr.INVALID_BLOCK),
+            (co.ASSERT_HEIGHT_RELATIVE, -1, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 0, rbr.INVALID_BLOCK),
             (co.ASSERT_HEIGHT_RELATIVE, 1, rbr.INVALID_BLOCK),
             # BEFORE HEIGHT RELATIVE
@@ -2131,17 +2140,6 @@ class TestBodyValidation:
         ],
     )
     async def test_ephemeral_timelock(self, opcode, lock_value, expected, with_garbage, bt):
-        # we don't allow any birth assertions, not
-        # relative time locks on ephemeral coins. This test is only for
-        # ephemeral coins, so these cases should always fail
-        if opcode in [
-            ConditionOpcode.ASSERT_MY_BIRTH_HEIGHT,
-            ConditionOpcode.ASSERT_MY_BIRTH_SECONDS,
-            ConditionOpcode.ASSERT_SECONDS_RELATIVE,
-            ConditionOpcode.ASSERT_HEIGHT_RELATIVE,
-        ]:
-            expected = AddBlockResult.INVALID_BLOCK
-
         async with make_empty_blockchain(bt.constants) as b:
             blocks = bt.get_consecutive_blocks(
                 3,
@@ -2409,7 +2407,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_TRANSACTIONS_GENERATOR_HASH)
 
     @pytest.mark.asyncio
-    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: Mode):
+    async def test_invalid_transactions_ref_list(self, empty_blockchain, bt, consensus_mode: ConsensusMode):
         # No generator should have [1]s for the root
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
@@ -2459,7 +2457,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        if consensus_mode == Mode.HARD_FORK_2_0:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert generator_arg is None
@@ -2474,7 +2472,7 @@ class TestBodyValidation:
             previous_generator=generator_arg,
         )
         block = blocks[-1]
-        if consensus_mode == Mode.HARD_FORK_2_0:
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # once the hard for activates, we don't use this form of block
             # compression anymore
             assert len(block.transactions_generator_ref_list) == 0
@@ -3614,15 +3612,15 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 @pytest.mark.parametrize("unique_plots_window", [1, 2])
 @pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
 @pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
+@pytest.mark.limit_consensus_modes
 @pytest.mark.asyncio
 async def test_soft_fork4_activation(
-    consensus_mode, blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
+    blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
 ):
-    # We don't run Mode.SOFT_FORK4, since this is already parametrized by this test.
-    # Additionally, Mode.HARD_FORK_2_0 mode is incopatible with this test, since plot filter size would be zero,
-    # blocks won't ever be produced (we'll pass every consecutive plot filter, hence no block would pass CHIP-13).
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipped test")
+    # We don't run ConsensusMode.SOFT_FORK4, since this is already parametrized by this test.
+    # Additionally, ConsensusMode.HARD_FORK_2_0 mode is incopatible with this test, since
+    # plot filter size would be zero, blocks won't ever be produced (we'll pass every
+    # consecutive plot filter, hence no block would pass CHIP-13).
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
             constants=blockchain_constants.replace(
@@ -3635,7 +3633,7 @@ async def test_soft_fork4_activation(
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
-            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.INVALID_POSPACE])
+            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.CHIP_0013_VALIDATION])
             peak = b.get_peak()
             assert peak is not None
             if peak.height != height:

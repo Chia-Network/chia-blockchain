@@ -237,23 +237,24 @@ class FarmerRpcApi:
         return payloads
 
     async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
-        sp_hash = hexstr_to_bytes(request["sp_hash"])
-        for _, sps in self.service.sps.items():
-            for sp in sps:
-                if sp.challenge_chain_sp == sp_hash:
-                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
-                    return {
-                        "signage_point": {
-                            "challenge_hash": sp.challenge_hash,
-                            "challenge_chain_sp": sp.challenge_chain_sp,
-                            "reward_chain_sp": sp.reward_chain_sp,
-                            "difficulty": sp.difficulty,
-                            "sub_slot_iters": sp.sub_slot_iters,
-                            "signage_point_index": sp.signage_point_index,
-                        },
-                        "proofs": pospaces,
-                    }
-        raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp_hash = bytes32.from_hexstr(request["sp_hash"])
+        sps = self.service.sps.get(sp_hash)
+        if sps is None or len(sps) < 1:
+            raise ValueError(f"Signage point {sp_hash.hex()} not found")
+        sp = sps[0]
+        assert sp_hash == sp.challenge_chain_sp
+        pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+        return {
+            "signage_point": {
+                "challenge_hash": sp.challenge_hash,
+                "challenge_chain_sp": sp.challenge_chain_sp,
+                "reward_chain_sp": sp.reward_chain_sp,
+                "difficulty": sp.difficulty,
+                "sub_slot_iters": sp.sub_slot_iters,
+                "signage_point_index": sp.signage_point_index,
+            },
+            "proofs": pospaces,
+        }
 
     async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
         result: List[Dict[str, Any]] = []
