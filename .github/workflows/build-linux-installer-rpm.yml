@@ -42,15 +42,18 @@ jobs:
     name: Linux amd64 RPM Installer
     runs-on: ubuntu-latest
     container:
-      image: chianetwork/centos7-builder:latest
+      image: chianetwork/rocky8-builder:latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
+    - name: Add safe git directory
+      uses: Chia-Network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
@@ -159,6 +162,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        skip-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 

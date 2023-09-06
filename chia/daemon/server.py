@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import json
 import logging
 import os
@@ -16,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
+from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
 from blspy import G1Element
@@ -39,6 +39,7 @@ from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -209,21 +210,17 @@ class WebSocketServer:
                 await self.stop()
             await self.exit()
 
-    async def setup_process_global_state(self) -> None:
-        try:
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
-        except NotImplementedError:
-            self.log.info("Not implemented")
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame=None):
-        asyncio.create_task(self.stop())
+    async def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
+        await self.stop()
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -865,15 +862,12 @@ class WebSocketServer:
         # Options only applicable for cudaplot
         if plot_type == "cudaplot":
             device_index = request.get("device", None)
-            no_direct_downloads = request.get("no_direct_downloads", False)
             t1 = request.get("t", None)  # Temp directory
             t2 = request.get("t2", None)  # Temp2 directory
 
             if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
                 command_args.append(str(device_index))
-            if no_direct_downloads:
-                command_args.append("--no-direct-downloads")
             if t1 is not None:
                 command_args.append("-t")
                 command_args.append(t1)
@@ -1522,9 +1516,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 key_path,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
-            await ws_server.setup_process_global_state()
-            async with ws_server.run():
-                await ws_server.shutdown_event.wait()
+            async with SignalHandlers.manage() as signal_handlers:
+                await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+                async with ws_server.run():
+                    await ws_server.shutdown_event.wait()
 
             if beta_metrics is not None:
                 await beta_metrics.stop_logging()

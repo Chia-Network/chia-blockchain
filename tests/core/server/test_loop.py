@@ -145,6 +145,11 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
+@pytest.mark.xfail(
+    condition=sys.platform == "win32",
+    reason="known failure, being worked on in https://github.com/Chia-Network/chia-blockchain/pull/16207",
+)
+# TODO: remove this
 @pytest.mark.only
 @pytest.mark.asyncio
 async def test_loop() -> None:
