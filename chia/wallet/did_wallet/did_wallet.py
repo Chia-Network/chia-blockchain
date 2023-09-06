@@ -346,7 +346,6 @@ class DIDWallet:
     # or only call it in the recovery spend case
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: Optional[DIDCoinData]):
         """Notification from wallet state manager that wallet has been received."""
-        # TODO Use coin_data instead of calling peer API
         parent = self.get_parent_for_coin(coin)
         if parent_coin_data is not None:
             assert isinstance(parent_coin_data, DIDCoinData)
