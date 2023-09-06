@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
+from chia.data_layer.data_layer_util import PluginRemote
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -31,8 +32,8 @@ log = logging.getLogger(__name__)
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
-    downloaders: List[str],
-    uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
+    downloaders: List[PluginRemote],
+    uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     connect_to_daemon: bool = True,
 ) -> Service[DataLayer, DataLayerAPI]:
@@ -101,8 +102,22 @@ async def async_main() -> int:
         overwrite=False,
     )
 
-    uploaders: List[str] = config["data_layer"].get("uploaders", [])
-    downloaders: List[str] = config["data_layer"].get("downloaders", [])
+    plugins_config = config["data_layer"].get("plugins", {})
+
+    old_uploaders = config["data_layer"].get("uploaders", [])
+    new_uploaders = plugins_config.get("uploaders", [])
+    uploaders: List[PluginRemote] = [
+        *(PluginRemote(url=url) for url in old_uploaders),
+        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
+    ]
+
+    old_downloaders = config["data_layer"].get("downloaders", [])
+    new_downloaders = plugins_config.get("downloaders", [])
+    downloaders: List[PluginRemote] = [
+        *(PluginRemote(url=url) for url in old_downloaders),
+        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
+    ]
+
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
