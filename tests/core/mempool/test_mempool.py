@@ -2098,21 +2098,23 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
+        generator_base_cost = 20470
+
         # this max cost is exactly enough for the create coin condition
         npc_result = generator_condition_tester(
             f'(51 "{puzzle_hash}" 10) ',
-            max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value,
+            max_cost=generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value,
             height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.cost == 20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
+        assert npc_result.cost == generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value
         assert len(npc_result.conds.spends) == 1
         assert len(npc_result.conds.spends[0].create_coin) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
             f'(51 "{puzzle_hash}" 10) ',
-            max_cost=20470 + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1,
+            max_cost=generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1,
             height=softfork_height,
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
@@ -2121,20 +2123,22 @@ class TestGeneratorConditions:
         # AGG_SIG_ME
         pubkey = "abababababababababababababababababababababababab"
 
+        generator_base_cost = 20512
+
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
             f'(49 "{pubkey}" "foobar") ',
-            max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value,
+            max_cost=generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value,
             height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.cost == 20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
+        assert npc_result.cost == generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
         assert len(npc_result.conds.spends) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
             f'(49 "{pubkey}" "foobar") ',
-            max_cost=20512 + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value - 1,
+            max_cost=generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value - 1,
             height=softfork_height,
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]

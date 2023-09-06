@@ -918,7 +918,7 @@ class PoolWallet:
         await self.publish_transactions(absorb_transaction, fee_tx)
         return absorb_transaction, fee_tx
 
-    async def new_peak(self, peak_height: uint64) -> None:
+    async def new_peak(self, peak_height: uint32) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
 
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()

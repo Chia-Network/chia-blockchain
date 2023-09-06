@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -7,6 +8,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 from blspy import PrivateKey
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.time_out_assert import time_out_assert
@@ -16,6 +18,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint16, uint32, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.wallet_node import Balance, WalletNode
+from tests.util.misc import CoinGenerator
 
 
 @pytest.mark.asyncio
@@ -384,3 +387,39 @@ async def test_get_balance(
     # Restart one more time and make sure the balance is still correct after start
     await restart_with_fingerprint(initial_fingerprint)
     assert await wallet_node.get_balance(wallet_id) == expected_more_balance
+
+
+@pytest.mark.asyncio
+async def test_add_states_from_peer_reorg_failure(
+    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    coin_generator = CoinGenerator()
+    coin_states = [CoinState(coin_generator.get().coin, None, None)]
+    with caplog.at_level(logging.DEBUG):
+        full_node_peer = list(wallet_server.all_connections.values())[0]
+        # Close the connection to trigger a state processing failure during reorged coin processing.
+        await full_node_peer.close()
+        assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
+        assert "Processing reorged states failed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_add_states_from_peer_untrusted_shutdown(
+    simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    # Close to trigger the shutdown
+    wallet_node._close()
+    coin_generator = CoinGenerator()
+    # Generate enough coin states to fill up the max number validation/add tasks.
+    coin_states = [CoinState(coin_generator.get().coin, i, i) for i in range(3000)]
+    with caplog.at_level(logging.INFO):
+        assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
+        assert "Terminating receipt and validation due to shut down request" in caplog.text

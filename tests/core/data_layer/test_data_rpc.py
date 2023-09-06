@@ -803,7 +803,11 @@ async def offer_setup_fixture(
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
     if count > 0:
-        for store_setup, value_prefix in {offer_setup.maker: b"\x01", offer_setup.taker: b"\x02"}.items():
+        setups: Tuple[Tuple[StoreSetup, bytes], Tuple[StoreSetup, bytes]] = (
+            (offer_setup.maker, b"\x01"),
+            (offer_setup.taker, b"\x02"),
+        )
+        for store_setup, value_prefix in setups:
             await store_setup.api.batch_update(
                 {
                     "id": store_setup.id.hex(),
