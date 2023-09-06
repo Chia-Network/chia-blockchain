@@ -130,10 +130,11 @@ async def unsubscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
     fingerprint: Optional[int],
+    retain: bool,
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.unsubscribe(store_id=store_id_bytes)
+        res = await client.unsubscribe(store_id=store_id_bytes, retain=retain)
         print(json.dumps(res, indent=4, sort_keys=True))
 
 

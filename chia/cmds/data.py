@@ -253,14 +253,16 @@ def remove_subscription(
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
+@click.option("--retain", is_flag=True, help="Retain .dat files")
 def unsubscribe(
     id: str,
     data_rpc_port: int,
     fingerprint: Optional[int],
+    retain: bool,
 ) -> None:
     from chia.cmds.data_funcs import unsubscribe_cmd
 
-    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
+    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, retain=retain))
 
 
 @data_cmd.command(

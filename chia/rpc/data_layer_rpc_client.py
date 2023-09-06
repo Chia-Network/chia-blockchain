@@ -70,8 +70,8 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("remove_subscriptions", {"id": store_id.hex(), "urls": urls})
         return response
 
-    async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("unsubscribe", {"id": store_id.hex()})
+    async def unsubscribe(self, store_id: bytes32, retain: bool) -> Dict[str, Any]:
+        response = await self.fetch("unsubscribe", {"id": store_id.hex(), "retain": retain})
         return response
 
     async def add_missing_files(

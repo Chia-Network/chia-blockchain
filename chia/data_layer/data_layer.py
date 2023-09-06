@@ -38,7 +38,12 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.data_layer.download_data import (
+    get_delta_filename,
+    get_full_tree_filename,
+    insert_from_delta_file,
+    write_files_for_root,
+)
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -588,14 +593,28 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
-    async def unsubscribe(self, tree_id: bytes32) -> None:
+    async def unsubscribe(self, tree_id: bytes32, retain_files: bool) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
+        filenames: List[str] = []
+        if await self.data_store.tree_id_exists(tree_id) and not retain_files:
+            generation = await self.data_store.get_tree_generation(tree_id)
+            all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
+            for root in all_roots:
+                root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
+                filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
+                filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
         self.log.info(f"Unsubscribed to {tree_id}")
+        for filename in filenames:
+            file_path = self.server_files_location.joinpath(filename)
+            try:
+                file_path.unlink()
+            except FileNotFoundError:
+                pass
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
