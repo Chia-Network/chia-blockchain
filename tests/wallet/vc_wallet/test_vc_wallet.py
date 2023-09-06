@@ -151,7 +151,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Mint a VC
     vc_record, _ = await client_0.vc_mint(
-        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
 
     await wallet_environments.process_pending_states(
@@ -206,7 +206,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     proof_root: bytes32 = proofs.root()
     await client_0.vc_spend(
         vc_record.vc.launcher_id,
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         new_proof_hash=proof_root,
         fee=uint64(100),
     )
@@ -254,7 +254,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated.vc.proof_hash == proof_root
 
     # Do a mundane spend
-    await client_0.vc_spend(vc_record.vc.launcher_id, DEFAULT_TX_CONFIG)
+    await client_0.vc_spend(vc_record.vc.launcher_id, wallet_environments.tx_config)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -336,7 +336,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     wallet_1_addr: str = encode_puzzle_hash(await wallet_1.get_new_puzzlehash(), "txch")
     tx = await client_0.cat_spend(
         cr_cat_wallet_0.id(),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         uint64(90),
         wallet_1_addr,
         uint64(2000000000),
@@ -413,7 +413,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
 
     # Send the VC to wallet_1 to use for the CR-CATs
     await client_0.vc_spend(
-        vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_puzhash=await wallet_1.get_new_puzzlehash()
+        vc_record.vc.launcher_id, wallet_environments.tx_config, new_puzhash=await wallet_1.get_new_puzzlehash()
     )
     await wallet_environments.process_pending_states(
         [
@@ -443,7 +443,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     await client_1.crcat_approve_pending(
         env_1.dealias_wallet_id("crcat"),
         uint64(90),
-        DEFAULT_TX_CONFIG,
+        wallet_environments.tx_config,
         fee=uint64(90),
     )
     await wallet_environments.process_pending_states(
@@ -496,7 +496,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     with pytest.raises(ValueError):
         await client_0.cat_spend(
             cr_cat_wallet_0.id(),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
             uint64(10),
             wallet_1_addr,
         )
@@ -504,7 +504,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Test melting a CRCAT
     tx = await client_1.cat_spend(
         env_1.dealias_wallet_id("crcat"),
-        DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
+        wallet_environments.tx_config,
         uint64(20),
         wallet_1_addr,
         uint64(0),
@@ -557,7 +557,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated is not None
 
     # Revoke VC
-    await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(1))
+    await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(1))
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -634,7 +634,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
     vc_record, _ = await client_0.vc_mint(
-        did_id, DEFAULT_TX_CONFIG, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
     )
     await wallet_environments.process_pending_states(
         [
@@ -659,11 +659,14 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
         await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-            new_vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_proof_hash=bytes32([0] * 32), self_revoke=True
+            new_vc_record.vc.launcher_id,
+            wallet_environments.tx_config,
+            new_proof_hash=bytes32([0] * 32),
+            self_revoke=True,
         )
 
     # Send the DID to oblivion
-    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -676,7 +679,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Make sure revoking still works
-    await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, DEFAULT_TX_CONFIG, uint64(0))
+    await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(0))
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

@@ -22,7 +22,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -38,17 +38,45 @@ from tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 # To pin down the behavior that we intend to eventually deprecate, it only gets one test case.
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "wallet_environments,reuse_puzhash,credential_restricted,active_softfork_height",
+    "wallet_environments,credential_restricted,active_softfork_height",
     [
-        ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1]}, True, True, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1]}, True, False, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1]}, False, True, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": False, "blocks_needed": [1, 1]}, True, True, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": False, "blocks_needed": [1, 1]}, False, False, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": False, "blocks_needed": [1, 1]}, True, False, SOFTFORK_HEIGHTS[0]),
-        ({"num_environments": 2, "trusted": False, "blocks_needed": [1, 1]}, False, True, SOFTFORK_HEIGHTS[0]),
+        (
+            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            True,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            False,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            True,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            True,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            False,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": True},
+            False,
+            SOFTFORK_HEIGHTS[0],
+        ),
+        (
+            {"num_environments": 2, "trusted": False, "blocks_needed": [1, 1], "reuse_puzhash": False},
+            True,
+            SOFTFORK_HEIGHTS[0],
+        ),
         *(
-            ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1]}, False, False, height)
+            ({"num_environments": 2, "trusted": True, "blocks_needed": [1, 1], "reuse_puzhash": False}, False, height)
             for height in SOFTFORK_HEIGHTS
         ),
     ],
@@ -56,7 +84,6 @@ from tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 )
 async def test_cat_trades(
     wallet_environments: WalletTestFramework,
-    reuse_puzhash: bool,
     credential_restricted: bool,
     active_softfork_height: uint32,
 ):
@@ -76,9 +103,7 @@ async def test_cat_trades(
     # Because making/taking CR-CATs is asymetrical, approving the hacked together aggregation test will fail
     # The taker is "making" offers that it is approving with a VC which multiple actual makers would never do
     # This is really a test of CATOuterPuzzle anyways and is not correlated with any of our params
-    test_aggregation = not credential_restricted and not reuse_puzhash and trusted
-
-    tx_config: TXConfig = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
+    test_aggregation = not credential_restricted and not wallet_environments.tx_config.reuse_puzhash and trusted
 
     # Create two new CATs, one in each wallet
     if credential_restricted:
@@ -183,10 +208,10 @@ async def test_cat_trades(
 
         # Mint some VCs that can spend the CR-CATs
         vc_record_maker, _ = await client_maker.vc_mint(
-            did_id_maker, tx_config, target_address=await wallet_maker.get_new_puzzlehash()
+            did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
         )
         vc_record_taker, _ = await client_taker.vc_mint(
-            did_id_taker, tx_config, target_address=await wallet_taker.get_new_puzzlehash()
+            did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
         )
         await wallet_environments.process_pending_states(
             [
@@ -218,7 +243,7 @@ async def test_cat_trades(
         proof_root_maker: bytes32 = proofs_maker.root()
         await client_maker.vc_spend(
             vc_record_maker.vc.launcher_id,
-            tx_config,
+            wallet_environments.tx_config,
             new_proof_hash=proof_root_maker,
         )
 
@@ -226,7 +251,7 @@ async def test_cat_trades(
         proof_root_taker: bytes32 = proofs_taker.root()
         await client_taker.vc_spend(
             vc_record_taker.vc.launcher_id,
-            tx_config,
+            wallet_environments.tx_config,
             new_proof_hash=proof_root_taker,
         )
         await wallet_environments.process_pending_states(
@@ -274,7 +299,7 @@ async def test_cat_trades(
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
                 uint64(100),
-                tx_config,
+                wallet_environments.tx_config,
             )
 
         async with wallet_node_taker.wallet_state_manager.lock:
@@ -283,7 +308,7 @@ async def test_cat_trades(
                 wallet_taker,
                 {"identifier": "genesis_by_id"},
                 uint64(100),
-                tx_config,
+                wallet_environments.tx_config,
             )
 
         await wallet_environments.process_pending_states(
@@ -416,7 +441,9 @@ async def test_cat_trades(
     taker_unused_index = taker_unused_dr.index
     # Execute all of the trades
     # chia_for_cat
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, tx_config, fee=uint64(1))
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        chia_for_cat, wallet_environments.tx_config, fee=uint64(1)
+    )
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -425,7 +452,7 @@ async def test_cat_trades(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
         fee=uint64(1),
     )
     assert trade_take is not None
@@ -579,7 +606,7 @@ async def test_cat_trades(
             ]
         )
 
-    if reuse_puzhash:
+    if wallet_environments.tx_config.reuse_puzhash:
         # Check if unused index changed
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
             uint32(1)
@@ -621,7 +648,9 @@ async def test_cat_trades(
     )
 
     # cat_for_chia
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, tx_config)
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        cat_for_chia, wallet_environments.tx_config
+    )
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -629,7 +658,7 @@ async def test_cat_trades(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
     )
     assert trade_take is not None
     assert tx_records is not None
@@ -736,14 +765,16 @@ async def test_cat_trades(
     )
     assert taker_unused_dr is not None
     taker_unused_index = taker_unused_dr.index
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat, tx_config)
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        cat_for_cat, wallet_environments.tx_config
+    )
     assert error is None
     assert success is True
     assert trade_make is not None
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
     )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
@@ -894,7 +925,7 @@ async def test_cat_trades(
             ]
         )
 
-    if reuse_puzhash:
+    if wallet_environments.tx_config.reuse_puzhash:
         # Check if unused index changed
         maker_unused_dr = await wallet_maker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
             uint32(1)
@@ -921,7 +952,7 @@ async def test_cat_trades(
     # chia_for_multiple_cat
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
         chia_for_multiple_cat,
-        tx_config,
+        wallet_environments.tx_config,
         driver_dict=driver_dict,
     )
     assert error is None
@@ -931,7 +962,7 @@ async def test_cat_trades(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
     )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
@@ -1162,7 +1193,7 @@ async def test_cat_trades(
     # multiple_cat_for_chia
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
         multiple_cat_for_chia,
-        tx_config,
+        wallet_environments.tx_config,
     )
     assert error is None
     assert success is True
@@ -1170,7 +1201,7 @@ async def test_cat_trades(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
     )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
@@ -1286,7 +1317,7 @@ async def test_cat_trades(
     # chia_and_cat_for_cat
     success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
         chia_and_cat_for_cat,
-        tx_config,
+        wallet_environments.tx_config,
     )
     assert error is None
     assert success is True
@@ -1295,7 +1326,7 @@ async def test_cat_trades(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer),
         peer,
-        tx_config,
+        wallet_environments.tx_config,
     )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import operator
 from contextlib import AsyncExitStack
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, AsyncIterator, Dict, List, Union
 
 import pytest
@@ -16,6 +16,7 @@ from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -173,6 +174,7 @@ class WalletTestFramework:
     full_node: FullNodeSimulator
     trusted_full_node: bool
     environments: List[WalletEnvironment]
+    tx_config: TXConfig = DEFAULT_TX_CONFIG
 
     async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
         pending_txs: List[List[TransactionRecord]] = []
@@ -218,11 +220,21 @@ def trusted_full_node(request: Any) -> bool:
     return trusted
 
 
+@pytest.fixture(scope="function", params=[True, False])
+def tx_config(request: Any) -> TXConfig:
+    return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
+
+
 @pytest_asyncio.fixture(scope="function")
-async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIterator[WalletTestFramework]:
+async def wallet_environments(
+    trusted_full_node: bool, tx_config: TXConfig, request: Any
+) -> AsyncIterator[WalletTestFramework]:
     if "trusted" in request.param:
         if request.param["trusted"] != trusted_full_node:
             pytest.skip("Skipping not specified trusted mode")
+    if "reuse_puzhash" in request.param:
+        if request.param["reuse_puzhash"] != tx_config.reuse_puzhash:
+            pytest.skip("Skipping not specified reuse_puzhash mode")
     assert len(request.param["blocks_needed"]) == request.param["num_environments"]
     if "config_overrides" in request.param:
         config_overrides: Dict[str, Any] = request.param["config_overrides"]
@@ -293,4 +305,5 @@ async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIte
                     )
                     for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
                 ],
+                tx_config,
             )
