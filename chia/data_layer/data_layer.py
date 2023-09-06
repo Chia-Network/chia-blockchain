@@ -82,7 +82,7 @@ class DataLayer:
     _shut_down: bool = False
     periodically_manage_data_task: Optional[asyncio.Task[None]] = None
     _wallet_rpc: Optional[WalletRpcClient] = None
-    _subscription_lock: Optional[asyncio.Lock] = None
+    subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
 
     @property
     def server(self) -> ChiaServer:
@@ -110,15 +110,6 @@ class DataLayer:
             raise RuntimeError("wallet_rpc not assigned")
 
         return self._wallet_rpc
-
-    @property
-    def subscription_lock(self) -> asyncio.Lock:
-        # This is a stop gap until the class usage is refactored such the values of
-        # integral attributes are known at creation of the instance.
-        if self._subscription_lock is None:
-            raise RuntimeError("subscription_lock not assigned")
-
-        return self._subscription_lock
 
     @classmethod
     def create(
@@ -177,7 +168,6 @@ class DataLayer:
 
         self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
         self._wallet_rpc = await self.wallet_rpc_init
-        self._subscription_lock = asyncio.Lock()
 
         self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
 
