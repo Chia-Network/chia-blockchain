@@ -24,7 +24,7 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
+from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -2193,11 +2193,11 @@ class WalletStateManager:
 
         return filtered
 
-    async def new_peak(self, peak: NewPeakWallet) -> None:
+    async def new_peak(self, height: uint32) -> None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.POOLING_WALLET:
                 assert isinstance(wallet, PoolWallet)
-                await wallet.new_peak(uint64(peak.height))
+                await wallet.new_peak(height)
         current_time = int(time.time())
 
         if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:
