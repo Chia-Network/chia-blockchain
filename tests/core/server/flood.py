@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import itertools
-import signal
-import sys
 import time
+
+from chia.util.misc import SignalHandlers
 
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
@@ -46,38 +45,19 @@ async def main() -> None:
     def dun(*args: object, **kwargs: object) -> None:
         task.cancel()
 
-    async def setup_process_global_state() -> None:
-        # Being async forces this to be run from within an active event loop as is
-        # needed for the signal handler setup.
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_sync_signal_handler(handler=dun)
 
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, dun)
-            signal.signal(signal.SIGINT, dun)
-            signal.signal(signal.SIGTERM, dun)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(dun, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(dun, signal_number=signal.SIGTERM),
-            )
+        async def f() -> None:
+            await asyncio.gather(*[tcp_echo_client(task_counter="{}".format(i)) for i in range(0, NUM_CLIENTS)])
 
-    await setup_process_global_state()
-
-    async def f() -> None:
-        await asyncio.gather(*[tcp_echo_client(task_counter="{}".format(i)) for i in range(0, NUM_CLIENTS)])
-
-    task = asyncio.create_task(f())
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
-    finally:
-        print("leaving flood")
+        task = asyncio.create_task(f())
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            print("leaving flood")
 
 
 asyncio.run(main())

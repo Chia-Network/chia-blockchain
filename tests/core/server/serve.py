@@ -6,13 +6,13 @@ import asyncio.protocols
 import dataclasses
 import functools
 import logging.config
-import signal
 import sys
 import threading
 from typing import List, Optional, final
 
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
+from chia.util.misc import SignalHandlers
 
 if sys.platform == "win32":
     import _winapi
@@ -57,56 +57,37 @@ async def async_main(
     stream_handler.setFormatter(file_log_formatter)
     logger.addHandler(hdlr=stream_handler)
 
-    async def setup_process_global_state() -> None:
-        # Being async forces this to be run from within an active event loop as is
-        # needed for the signal handler setup.
-
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, dun)
-            signal.signal(signal.SIGINT, dun)
-            signal.signal(signal.SIGTERM, dun)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(dun, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(dun, signal_number=signal.SIGTERM),
-            )
-
-    if thread_end_event is None:
-        thread_end_event = threading.Event()
+    async with SignalHandlers.manage() as signal_handlers:
+        if thread_end_event is None:
+            thread_end_event = threading.Event()
 
         def dun(*args: object, **kwargs: object) -> None:
             thread_end_event.set()
 
-        await setup_process_global_state()
+        signal_handlers.setup_sync_signal_handler(handler=dun)
 
-    loop = asyncio.get_event_loop()
-    server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
-    if port_holder is not None:
-        [server_socket] = server.sockets
-        # TODO: review if this is general enough, such as for ipv6
-        port_holder.append(server_socket.getsockname()[1])
-    logger.info("serving on {}".format(server.sockets[0].getsockname()))
+        loop = asyncio.get_event_loop()
+        server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
+        if port_holder is not None:
+            [server_socket] = server.sockets
+            # TODO: review if this is general enough, such as for ipv6
+            port_holder.append(server_socket.getsockname()[1])
+        logger.info("serving on {}".format(server.sockets[0].getsockname()))
 
-    try:
-        while not thread_end_event.is_set():
-            await asyncio.sleep(0.1)
-        logger.info("exit: thread end event set")
-    except KeyboardInterrupt:
-        logger.info("exit: keyboard interrupt")
-    except asyncio.CancelledError:
-        logger.info("exit: cancelled")
-    finally:
-        logger.info("closing server")
-        server.close()
-        await server.wait_closed()
-        logger.info("server closed")
-        # await asyncio.sleep(5)
+        try:
+            while not thread_end_event.is_set():
+                await asyncio.sleep(0.1)
+            logger.info("exit: thread end event set")
+        except KeyboardInterrupt:
+            logger.info("exit: keyboard interrupt")
+        except asyncio.CancelledError:
+            logger.info("exit: cancelled")
+        finally:
+            logger.info("closing server")
+            server.close()
+            await server.wait_closed()
+            logger.info("server closed")
+            # await asyncio.sleep(5)
 
 
 def main(connection_limit: int = 25) -> None:
