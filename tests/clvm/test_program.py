@@ -48,6 +48,11 @@ class TestProgram(TestCase):
     def test_to_structured_program(self):
         p1 = Program.to([100, 200, 300, 400]).to_structured_tree()
         self.assertEqual(p1, Program.to(((100, 200), (300, 400))))
+        p2 = Program.to([100, [200, 250, 275], 300]).to_structured_tree()
+        self.assertEqual(p2, Program.to((100, ([200, 250, 275], 300))))
+        p3 = Program.to([100, 200, 300, 400, 500, 600, 700]).to_structured_tree()
+        result = Program.to(((100, (200, 300)), ((400, 500), (600, 700))))
+        self.assertEqual(p3, result)
 
 
 def check_idempotency(f, *args):
