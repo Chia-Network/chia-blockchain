@@ -700,7 +700,8 @@ class WalletStateManager:
         for record in unconfirmed_tx:
             for coin in record.removals:
                 removals[coin.name()] = coin
-        return removals
+        trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
+        return removals | {coin_id: cr.coin for coin_id, cr in trade_removals.items() if cr.wallet_id == wallet_id}
 
     async def determine_coin_type(
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
