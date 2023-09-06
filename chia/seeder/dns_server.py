@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
+from types import FrameType
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 
 import aiosqlite
@@ -19,6 +20,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.misc import SignalHandlers
 from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
@@ -267,7 +269,7 @@ class DNSServer:
     shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
     crawl_store: Optional[CrawlStore] = field(init=False, default=None)
     reliable_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
-    shutdown_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
+    shutting_down: bool = field(init=False, default=False)
     udp_transport_ipv4: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
     udp_protocol_ipv4: Optional[UDPDNSServerProtocol] = field(init=False, default=None)
     udp_transport_ipv6: Optional[asyncio.DatagramTransport] = field(init=False, default=None)
@@ -357,20 +359,23 @@ class DNSServer:
             await self.stop()
             log.info("DNS server stopped.")
 
-    async def setup_process_global_state(self) -> None:
-        try:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(signal.SIGINT, self._accept_signal)
-            loop.add_signal_handler(signal.SIGTERM, self._accept_signal)
-        except NotImplementedError:
-            log.warning("signal handlers unsupported on this platform")
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        signal_handlers.setup_async_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self) -> None:  # pragma: no cover
-        if self.shutdown_task is None:  # otherwise we are already shutting down, so we ignore the signal
-            self.shutdown_task = asyncio.create_task(self.stop())
+    async def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:  # pragma: no cover
+        log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
+        await self.stop()
 
     async def stop(self) -> None:
         log.info("Stopping DNS server...")
+        if self.shutting_down:
+            return
+        self.shutting_down = True
         if self.reliable_task is not None:
             self.reliable_task.cancel()  # cancel the peer update task
         if self.crawl_store is not None:
@@ -510,9 +515,10 @@ class DNSServer:
 
 
 async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
-    await dns_server.setup_process_global_state()
-    async with dns_server.run():
-        await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
+    async with SignalHandlers.manage() as signal_handlers:
+        await dns_server.setup_process_global_state(signal_handlers=signal_handlers)
+        async with dns_server.run():
+            await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 
 
 def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSServer:
