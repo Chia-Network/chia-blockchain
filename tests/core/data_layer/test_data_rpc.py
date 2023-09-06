@@ -2110,6 +2110,9 @@ async def test_wallet_log_in_changes_active_fingerprint(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     layer: InterfaceLayer,
 ) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
 
     mnemonic = create_mnemonic()
