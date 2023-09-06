@@ -45,6 +45,16 @@ class StoreConfig:
         return {"store_id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
 
 
+def check_filename(filename: Optional[str], store_id: bytes32) -> bool:
+    if filename is None:
+        return True
+    if is_filename_valid(filename):
+        file_id = bytes32.fromhex(filename[:64])
+        if file_id == store_id:
+            return True
+    return False
+
+
 class S3Plugin:
     boto_resource: boto3.resource
     port: int
@@ -142,32 +152,31 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            full_tree_name: str = data["full_tree_filename"]
-            diff_name: str = data["diff_filename"]
+            full_tree_name = data.get("full_tree_filename", None)
+            diff_name = data.get("diff_filename", None)
 
-            # filenames must follow the DataLayer naming convention
-            if not is_filename_valid(full_tree_name) or not is_filename_valid(diff_name):
+            if full_tree_name is None and diff_name is None:
+                log.error(f"Must include one of full_tree_filename or diff_filename (or both) in request {request}")
                 return web.json_response({"uploaded": False})
 
-            # Pull the store_id from the filename to make sure we only upload for configured stores
-            full_tree_id = bytes32.fromhex(full_tree_name[:64])
-            diff_tree_id = bytes32.fromhex(diff_name[:64])
-
-            if not (full_tree_id == diff_tree_id == store_id):
+            if not check_filename(full_tree_name, store_id=store_id) or not check_filename(
+                diff_name, store_id=store_id
+            ):
                 return web.json_response({"uploaded": False})
-
-            full_tree_path = self.server_files_path.joinpath(full_tree_name)
-            diff_path = self.server_files_path.joinpath(diff_name)
 
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    await asyncio.get_running_loop().run_in_executor(
-                        pool,
-                        functools.partial(my_bucket.upload_file, full_tree_path, full_tree_path.name),
-                    )
-                    await asyncio.get_running_loop().run_in_executor(
-                        pool, functools.partial(my_bucket.upload_file, diff_path, diff_path.name)
-                    )
+                    if full_tree_name is not None:
+                        full_tree_path = self.server_files_path.joinpath(full_tree_name)
+                        await asyncio.get_running_loop().run_in_executor(
+                            pool,
+                            functools.partial(my_bucket.upload_file, full_tree_path, full_tree_path.name),
+                        )
+                    if diff_name is not None:
+                        diff_path = self.server_files_path.joinpath(diff_name)
+                        await asyncio.get_running_loop().run_in_executor(
+                            pool, functools.partial(my_bucket.upload_file, diff_path, diff_path.name)
+                        )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {type(e).__name__} {e}")
                 return web.json_response({"uploaded": False})
