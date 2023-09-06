@@ -73,7 +73,7 @@ class DataLayer:
     wallet_rpc_init: Awaitable[WalletRpcClient]
     downloaders: List[str]
     uploaders: List[str]
-    full_file_storage_window: int,
+    full_file_storage_window: int
     server_files_location: Path
     _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
