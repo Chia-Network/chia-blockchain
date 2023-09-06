@@ -42,15 +42,18 @@ jobs:
     name: Linux amd64 RPM Installer
     runs-on: ubuntu-latest
     container:
-      image: chianetwork/centos7-builder:latest
+      image: chianetwork/rocky8-builder:latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
+    - name: Add safe git directory
+      uses: Chia-Network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
@@ -159,6 +162,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        skip-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -274,12 +278,12 @@ jobs:
     - name: Mark pre-release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
       run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO-prerelease/$RELEASE_TAG/success/build-linux-rpm
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-linux-rpm
 
     - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-linux-rpm
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-linux-rpm
 
     - name: Remove working files to exclude from cache
       run: |

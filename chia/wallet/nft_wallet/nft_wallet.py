@@ -59,7 +59,7 @@ _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
 class NFTWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("NFTWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[UncurriedNFT]] = cast("NFTWallet", None)
 
     wallet_state_manager: Any
     log: logging.Logger
@@ -157,8 +157,11 @@ class NFTWallet:
             raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
         return nft_coin
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[UncurriedNFT]
+    ) -> None:
         """Notification from wallet state manager that wallet has been received."""
+        # TODO Use coin_data instead of calling peer API
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.get_name())
         if await self.nft_store.exists(coin.name()):
             # already added
