@@ -65,20 +65,26 @@ async def async_main(
             # TODO: review if this is general enough, such as for ipv6
             port_holder.append(server_socket.getsockname()[1])
         logger.info("serving on {}".format(server.sockets[0].getsockname()))
+        logger.handlers[0].flush()
 
         try:
             while not thread_end_event.is_set():
                 await asyncio.sleep(0.1)
             logger.info("exit: thread end event set")
+            logger.handlers[0].flush()
         except KeyboardInterrupt:
             logger.info("exit: keyboard interrupt")
+            logger.handlers[0].flush()
         except asyncio.CancelledError:
             logger.info("exit: cancelled")
+            logger.handlers[0].flush()
         finally:
             logger.info("closing server")
+            logger.handlers[0].flush()
             server.close()
             await server.wait_closed()
             logger.info("server closed")
+            logger.handlers[0].flush()
             # await asyncio.sleep(5)
 
 
