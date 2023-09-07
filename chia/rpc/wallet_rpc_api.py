@@ -2549,6 +2549,7 @@ class WalletRpcApi:
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2559,14 +2560,16 @@ class WalletRpcApi:
         assert amount
         if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:  # pragma: no cover
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
-        funding_tx = await dao_wallet.create_add_money_to_treasury_spend(
+        funding_tx = await dao_wallet.create_add_funds_to_treasury_spend(
             uint64(amount),
             tx_config,
             fee=uint64(request.get("fee", 0)),
             funding_wallet_id=funding_wallet_id,
             extra_conditions=extra_conditions,
         )
-        return {"success": True, "tx_id": funding_tx.name}
+        if push:
+            await self.service.wallet_state_manager.add_pending_transaction(funding_tx)
+        return {"success": True, "tx_id": funding_tx.name, "tx": funding_tx}
 
     async def dao_get_treasury_balance(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2594,6 +2597,7 @@ class WalletRpcApi:
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2606,13 +2610,16 @@ class WalletRpcApi:
         txs = await dao_cat_wallet.enter_dao_cat_voting_mode(
             amount,
             tx_config,
-            push=True,
             fee=fee,
             extra_conditions=extra_conditions,
         )
+        if push:
+            for tx in txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
         return {
             "success": True,
             "tx_id": txs[0].name,
+            "txs": txs,
         }
 
     async def dao_get_proposals(self, request: Dict[str, Any]) -> EndpointResult:
@@ -2640,6 +2647,7 @@ class WalletRpcApi:
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2661,20 +2669,22 @@ class WalletRpcApi:
                 if lci.active_votes == []:
                     coins.append(lci)
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await dao_cat_wallet.exit_vote_state(
+        exit_tx = await dao_cat_wallet.exit_vote_state(
             coins,
             tx_config,
             fee=fee,
             extra_conditions=extra_conditions,
         )
-        assert spend_bundle is not None
-        return {"success": True, "spend_bundle_id": spend_bundle.name()}
+        if push:
+            await self.service.wallet_state_manager.add_pending_transaction(exit_tx)
+        return {"success": True, "tx_id": exit_tx.name, "tx": exit_tx}
 
     @tx_endpoint
     async def dao_create_proposal(
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2729,16 +2739,17 @@ class WalletRpcApi:
 
         vote_amount = request.get("vote_amount")
         fee = uint64(request.get("fee", 0))
-        tx = await dao_wallet.generate_new_proposal(
+        proposal_tx = await dao_wallet.generate_new_proposal(
             proposed_puzzle,
             tx_config,
             vote_amount=vote_amount,
             fee=fee,
             extra_conditions=extra_conditions,
         )
-        assert tx is not None
-        assert isinstance(tx.removals, List)
-        for coin in tx.removals:
+        assert proposal_tx is not None
+        await self.service.wallet_state_manager.add_pending_transaction(proposal_tx)
+        assert isinstance(proposal_tx.removals, List)
+        for coin in proposal_tx.removals:
             if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                 proposal_id = coin.name()
                 break
@@ -2746,8 +2757,9 @@ class WalletRpcApi:
             raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
-            "tx_id": tx.name.hex(),
             "proposal_id": proposal_id,
+            "tx_id": proposal_tx.name.hex(),
+            "tx": proposal_tx,
         }
 
     @tx_endpoint
@@ -2755,6 +2767,7 @@ class WalletRpcApi:
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2764,17 +2777,18 @@ class WalletRpcApi:
         if "vote_amount" in request:
             vote_amount = uint64(request["vote_amount"])
         fee = uint64(request.get("fee", 0))
-        sb = await dao_wallet.generate_proposal_vote_spend(
+        vote_tx = await dao_wallet.generate_proposal_vote_spend(
             bytes32.from_hexstr(request["proposal_id"]),
             vote_amount,
             request["is_yes_vote"],  # bool
             tx_config,
             fee,
-            push=True,
             extra_conditions=extra_conditions,
         )
-        assert sb is not None
-        return {"success": True, "spend_bundle_name": sb.name()}
+        assert vote_tx is not None
+        if push:
+            await self.service.wallet_state_manager.add_pending_transaction(vote_tx)
+        return {"success": True, "tx_id": vote_tx.name, "tx": vote_tx}
 
     async def dao_parse_proposal(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2790,6 +2804,7 @@ class WalletRpcApi:
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -2806,32 +2821,34 @@ class WalletRpcApi:
             tx_config,
             genesis_id,
             fee=fee,
-            push=True,
             self_destruct=self_destruct,
             extra_conditions=extra_conditions,
         )
         assert tx is not None
-        return {"success": True, "tx_id": tx.name()}
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {"success": True, "tx_id": tx.name, "tx": tx}
 
     @tx_endpoint
     async def dao_free_coins_from_finished_proposals(
         self,
         request: Dict[str, Any],
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         fee = uint64(request.get("fee", 0))
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
-        spend_bundle = await dao_wallet.free_coins_from_finished_proposals(
+        tx = await dao_wallet.free_coins_from_finished_proposals(
             tx_config,
             fee=fee,
             extra_conditions=extra_conditions,
         )
-        assert spend_bundle is not None
+        assert tx is not None
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
 
-        return {"success": True, "spend_bundle_id": spend_bundle.name()}
+        return {"success": True, "tx_id": tx.name, "tx": tx}
 
     ##########################################################################################
     # NFT Wallet

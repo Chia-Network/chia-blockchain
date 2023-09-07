@@ -365,7 +365,6 @@ class DAOCATWallet:
         self,
         amount: uint64,
         tx_config: TXConfig,
-        push: bool = False,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -390,9 +389,6 @@ class DAOCATWallet:
         cat_puzzle_hash: bytes32 = construct_cat_puzzle(
             CAT_MOD, self.dao_cat_info.limitations_program_hash, lockup_puzzle
         ).get_tree_hash()
-        if push:
-            for tx in txs:
-                await self.wallet_state_manager.add_pending_transaction(tx)
         await self.wallet_state_manager.add_interested_puzzle_hashes([cat_puzzle_hash], [self.id()])
         return txs
 
@@ -401,9 +397,8 @@ class DAOCATWallet:
         coins: List[LockedCoinInfo],
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
-        push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> TransactionRecord:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
@@ -471,40 +466,38 @@ class DAOCATWallet:
         else:
             full_spend = spend_bundle
 
-        if push:
-            record = TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=new_inner_puzhash,
-                amount=uint64(total_amt),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(10),
-                spend_bundle=full_spend,
-                additions=full_spend.additions(),
-                removals=full_spend.removals(),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=bytes32(token_bytes()),
-                memos=[],
-            )
-            await self.wallet_state_manager.add_pending_transaction(record)
+        record = TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=new_inner_puzhash,
+            amount=uint64(total_amt),
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=full_spend,
+            additions=full_spend.additions(),
+            removals=full_spend.removals(),
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32(token_bytes()),
+            memos=[],
+        )
 
-            # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to
-            # check if we're adding CATs from our DAO CAT wallet and update the locked coin list
-            # accordingly
-            new_locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin not in spent_coins]
-            dao_cat_info: DAOCATInfo = DAOCATInfo(
-                self.dao_cat_info.dao_wallet_id,
-                self.dao_cat_info.free_cat_wallet_id,
-                self.dao_cat_info.limitations_program_hash,
-                self.dao_cat_info.my_tail,
-                new_locked_coins,
-            )
-            await self.save_info(dao_cat_info)
-        return spend_bundle
+        # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to
+        # check if we're adding CATs from our DAO CAT wallet and update the locked coin list
+        # accordingly
+        new_locked_coins = [x for x in self.dao_cat_info.locked_coins if x.coin not in spent_coins]
+        dao_cat_info: DAOCATInfo = DAOCATInfo(
+            self.dao_cat_info.dao_wallet_id,
+            self.dao_cat_info.free_cat_wallet_id,
+            self.dao_cat_info.limitations_program_hash,
+            self.dao_cat_info.my_tail,
+            new_locked_coins,
+        )
+        await self.save_info(dao_cat_info)
+        return record
 
     async def remove_active_proposal(
         self, proposal_id_list: List[bytes32], fee: uint64 = uint64(0), push: bool = True
