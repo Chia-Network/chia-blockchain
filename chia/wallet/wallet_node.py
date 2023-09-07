@@ -66,7 +66,6 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_r
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_header_blocks_in_range,
-    fetch_last_tx_from_peer,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
@@ -1008,12 +1007,26 @@ class WalletNode:
         if cached_timestamp is not None:
             return cached_timestamp
 
-        last_tx_block = await fetch_last_tx_from_peer(height, peer)
+        last_tx_block = None
+        request_height: int = height
+        while request_height >= 0:
+            response: Optional[List[HeaderBlock]] = await request_header_blocks(
+                peer, uint32(request_height), uint32(request_height)
+            )
+            if response is not None and len(response) > 0:
+                cache.add_to_blocks(response[0])
+                if response[0].is_transaction_block:
+                    last_tx_block = response[0]
+                    break
+            elif request_height < height:
+                # The peer might be slightly behind others but still synced, so we should allow fetching one more block
+                break
+            request_height -= 1
+
         if last_tx_block is None:
             return None
 
         assert last_tx_block.foliage_transaction_block is not None
-        self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
         return last_tx_block.foliage_transaction_block.timestamp
 
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
