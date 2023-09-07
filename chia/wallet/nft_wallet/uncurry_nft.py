@@ -4,8 +4,10 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -203,3 +205,11 @@ class UncurriedNFT(Streamable):
             return state_layer_inner_solution.first()  # type: ignore
         else:
             return state_layer_inner_solution
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCoinData(Streamable):
+    uncurried_nft: UncurriedNFT
+    parent_coin_state: CoinState
+    parent_coin_spend: CoinSpend

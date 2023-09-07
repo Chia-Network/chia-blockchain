@@ -27,7 +27,7 @@ def wrap_http_handler(f) -> Callable:
             tb = traceback.format_exc()
             log.warning(f"Error while handling message: {tb}")
             if len(e.args) > 0:
-                res_object = {"success": False, "error": f"{e.args[0]}"}
+                res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
             else:
                 res_object = {"success": False, "error": f"{e}"}
 
