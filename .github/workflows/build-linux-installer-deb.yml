@@ -285,12 +285,12 @@ jobs:
     - name: Mark pre-release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
       run: |
-        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO-prerelease/$RELEASE_TAG/success/${{ matrix.os.glue-name }}
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
     - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
-        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "$RELEASE_TAG"}' ${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/${{ matrix.os.glue-name }}
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
     - name: Remove working files to exclude from cache
       run: |

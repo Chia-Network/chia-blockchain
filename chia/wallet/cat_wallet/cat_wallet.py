@@ -15,7 +15,6 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
@@ -350,9 +349,8 @@ class CATWallet:
         )
 
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[CATCoinData]
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, parent_coin_data: Optional[CATCoinData]
     ) -> None:
-        # TODO Use coin_data instead of calling peer API
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin.name().hex()} was added")
 
@@ -364,26 +362,37 @@ class CATWallet:
 
         if lineage is None:
             try:
-                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                    [coin.parent_coin_info], peer=peer
-                )
-                assert coin_state[0].coin.name() == coin.parent_coin_info
-                coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
-                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
+                if parent_coin_data is None:
+                    # The method is not triggered after the determine_coin_type, no pre-fetched data
+                    coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
+                        [coin.parent_coin_info], peer=peer
+                    )
+                    assert coin_state[0].coin.name() == coin.parent_coin_info
+                    coin_spend = await fetch_coin_spend_for_coin_state(coin_state[0], peer)
+                    cat_curried_args = match_cat_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
+                    if cat_curried_args is not None:
+                        cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
+                        parent_coin_data = CATCoinData(
+                            cat_mod_hash.atom,
+                            tail_program_hash.atom,
+                            cat_inner_puzzle,
+                            coin_state[0].coin.parent_coin_info,
+                            uint64(coin_state[0].coin.amount),
+                        )
+                await self.puzzle_solution_received(coin, parent_coin_data)
             except Exception as e:
                 self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin) -> None:
-        coin_name = coin_spend.coin.name()
-        puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        args = match_cat_puzzle(uncurry_puzzle(puzzle))
-        if args is not None:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = args
-            self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
+    async def puzzle_solution_received(self, coin: Coin, parent_coin_data: Optional[CATCoinData]) -> None:
+        coin_name = coin.parent_coin_info
+        if parent_coin_data is not None:
+            assert isinstance(parent_coin_data, CATCoinData)
+            data: CATCoinData = parent_coin_data
+            self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {data.inner_puzzle}")
 
             await self.add_lineage(
                 coin_name,
-                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)),
+                LineageProof(data.parent_coin_id, data.inner_puzzle.get_tree_hash(), data.amount),
             )
         else:
             # The parent is not a CAT which means we need to scrub all of its children from our DB

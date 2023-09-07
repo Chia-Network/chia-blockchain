@@ -120,8 +120,12 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
+        verbose = request.get("verbose", False)
         txs, value = await self.service.create_store(uint64(fee))
-        return {"txs": txs, "id": value.hex()}
+        if verbose:
+            return {"txs": txs, "id": value.hex()}
+        else:
+            return {"id": value.hex()}
 
     async def get_owned_stores(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -282,12 +286,13 @@ class DataLayerRpcApi:
         unsubscribe from singleton
         """
         store_id = request.get("id")
+        retain_files = request.get("retain", False)
         if store_id is None:
             raise Exception("missing store id in request")
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        await self.service.unsubscribe(store_id_bytes)
+        await self.service.unsubscribe(store_id_bytes, retain_files)
         return {}
 
     async def subscriptions(self, request: Dict[str, Any]) -> EndpointResult:
