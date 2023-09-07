@@ -2124,7 +2124,11 @@ async def test_unsubscribe_removes_files(
     )
     manage_data_interval = 5
     async with init_data_layer(
-        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        manage_data_interval=manage_data_interval,
+        full_file_storage_window=100,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
