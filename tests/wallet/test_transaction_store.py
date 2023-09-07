@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from secrets import token_bytes
+import random
 from typing import Any, List, Optional, Tuple
 
 import pytest
@@ -17,14 +17,17 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
 from tests.util.db_connection import DBConnection
 
-coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(1234))
-coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(12312 - 1234))
+module_seeded_random = random.Random()
+module_seeded_random.seed(a=0, version=2)
+
+coin_1 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_2 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(1234))
+coin_3 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312 - 1234))
 
 tr1 = TransactionRecord(
     uint32(0),  # confirmed height
     uint64(1000),  # created_at_time
-    bytes32(token_bytes(32)),  # to_puzzle_hash
+    bytes32(bytes32.random(module_seeded_random)),  # to_puzzle_hash
     uint64(1234),  # amount
     uint64(12),  # fee_amount
     False,  # confirmed
@@ -34,9 +37,9 @@ tr1 = TransactionRecord(
     [coin_1],  # removals
     uint32(1),  # wallet_id
     [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
-    bytes32(token_bytes(32)),  # trade_id
+    bytes32(bytes32.random(module_seeded_random)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
-    bytes32(token_bytes(32)),  # name
+    bytes32(bytes32.random(module_seeded_random)),  # name
     [],  # List[Tuple[bytes32, List[bytes]]] memos
 )
 
@@ -76,12 +79,15 @@ async def test_set_confirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_increment_sent_noop() -> None:
+async def test_increment_sent_noop(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         assert (
-            await store.increment_sent(bytes32(token_bytes(32)), "peer1", MempoolInclusionStatus.PENDING, None) is False
+            await store.increment_sent(
+                bytes32(bytes32.random(seeded_random)), "peer1", MempoolInclusionStatus.PENDING, None
+            )
+            is False
         )
 
 
@@ -173,12 +179,12 @@ async def test_tx_reorged_add() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_tx_record() -> None:
+async def test_get_tx_record(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32))
+        tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
+        tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
 
         assert await store.get_transaction_record(tr1.name) is None
         await store.add_transaction_record(tr1)
@@ -198,7 +204,7 @@ async def test_get_tx_record() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_farming_rewards() -> None:
+async def test_get_farming_rewards(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
@@ -217,7 +223,7 @@ async def test_get_farming_rewards() -> None:
                 test_trs.append(
                     dataclasses.replace(
                         tr1,
-                        name=token_bytes(32),
+                        name=bytes32.random(seeded_random),
                         confirmed=conf,
                         confirmed_at_height=uint32(100 if conf else 0),
                         type=type,
@@ -235,11 +241,13 @@ async def test_get_farming_rewards() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_all_unconfirmed() -> None:
+async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
+        tr2 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
+        )
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
 
@@ -247,13 +255,15 @@ async def test_get_all_unconfirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_unconfirmed_for_wallet() -> None:
+async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
-        tr4 = dataclasses.replace(tr2, name=token_bytes(32), wallet_id=2)
+        tr2 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(100)
+        )
+        tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=2)
+        tr4 = dataclasses.replace(tr2, name=bytes32.random(seeded_random), wallet_id=2)
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
         await store.add_transaction_record(tr3)
@@ -264,22 +274,22 @@ async def test_get_unconfirmed_for_wallet() -> None:
 
 
 @pytest.mark.asyncio
-async def test_transaction_count_for_wallet() -> None:
+async def test_transaction_count_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
+        tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=2)
 
         # 5 transactions in wallet_id 1
         await store.add_transaction_record(tr1)
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=bytes32.random(seeded_random)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=bytes32.random(seeded_random)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=bytes32.random(seeded_random)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=bytes32.random(seeded_random)))
 
         # 2 transactions in wallet_id 2
         await store.add_transaction_record(tr2)
-        await store.add_transaction_record(dataclasses.replace(tr2, name=token_bytes(32)))
+        await store.add_transaction_record(dataclasses.replace(tr2, name=bytes32.random(seeded_random)))
 
         assert await store.get_transaction_count_for_wallet(1) == 5
         assert await store.get_transaction_count_for_wallet(2) == 2
@@ -304,7 +314,7 @@ async def test_transaction_count_for_wallet() -> None:
 
 
 @pytest.mark.asyncio
-async def test_all_transactions_for_wallet() -> None:
+async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
@@ -318,7 +328,9 @@ async def test_all_transactions_for_wallet() -> None:
                 TransactionType.INCOMING_TRADE,
                 TransactionType.OUTGOING_TRADE,
             ]:
-                test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), wallet_id=wallet_id, type=type))
+                test_trs.append(
+                    dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=wallet_id, type=type)
+                )
 
         for tr in test_trs:
             await store.add_transaction_record(tr)
@@ -348,14 +360,14 @@ def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
 
 
 @pytest.mark.asyncio
-async def test_get_all_transactions() -> None:
+async def test_get_all_transactions(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
         assert await store.get_all_transactions() == []
         for wallet_id in [1, 2, 3, 4]:
-            test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), wallet_id=wallet_id))
+            test_trs.append(dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=wallet_id))
 
         for tr in test_trs:
             await store.add_transaction_record(tr)
@@ -365,14 +377,16 @@ async def test_get_all_transactions() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transaction_above() -> None:
+async def test_get_transaction_above(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
         assert await store.get_transaction_above(uint32(0)) == []
         for height in range(10):
-            test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(height)))
+            test_trs.append(
+                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
+            )
 
         for tr in test_trs:
             await store.add_transaction_record(tr)
@@ -383,13 +397,13 @@ async def test_get_transaction_above() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_tx_by_trade_id() -> None:
+async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), trade_id=token_bytes(32))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), trade_id=token_bytes(32))
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32))
+        tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
+        tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), trade_id=bytes32.random(seeded_random))
+        tr4 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
 
         assert await store.get_transactions_by_trade_id(tr1.trade_id) == []
         await store.add_transaction_record(tr1)
@@ -415,13 +429,15 @@ async def test_get_tx_by_trade_id() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rollback_to_block() -> None:
+async def test_rollback_to_block(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
         for height in range(10):
-            test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(height)))
+            test_trs.append(
+                dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
+            )
 
         for tr in test_trs:
             await store.add_transaction_record(tr)
@@ -436,15 +452,18 @@ async def test_rollback_to_block() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_unconfirmed() -> None:
+async def test_delete_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True)
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, wallet_id=2)
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
+        tr2 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed=True)
+        tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed=True, wallet_id=2)
+        tr4 = dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=2)
         tr5 = dataclasses.replace(
-            tr1, name=token_bytes(32), wallet_id=2, type=uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE.value)
+            tr1,
+            name=bytes32.random(seeded_random),
+            wallet_id=2,
+            type=uint32(TransactionType.INCOMING_CLAWBACK_RECEIVE.value),
         )
 
         await store.add_transaction_record(tr1)
@@ -461,16 +480,27 @@ async def test_delete_unconfirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_confirmed() -> None:
+async def test_get_transactions_between_confirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2))
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(3))
-        tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(4))
+        tr2 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
+        )
+        tr3 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(2)
+        )
+        tr4 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(3)
+        )
+        tr5 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(4)
+        )
         tr6 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed_at_height=uint32(5), type=uint32(TransactionType.COINBASE_REWARD.value)
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed_at_height=uint32(5),
+            type=uint32(TransactionType.COINBASE_REWARD.value),
         )
 
         await store.add_transaction_record(tr1)
@@ -542,34 +572,42 @@ async def test_get_transactions_between_confirmed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_relevance() -> None:
+async def test_get_transactions_between_relevance(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         t1 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=1000
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=False,
+            confirmed_at_height=uint32(2),
+            created_at_time=1000,
         )
         t2 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=999
+            tr1, name=bytes32.random(seeded_random), confirmed=False, confirmed_at_height=uint32(2), created_at_time=999
         )
         t3 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=1000
+            tr1,
+            name=bytes32.random(seeded_random),
+            confirmed=False,
+            confirmed_at_height=uint32(1),
+            created_at_time=1000,
         )
         t4 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=999
+            tr1, name=bytes32.random(seeded_random), confirmed=False, confirmed_at_height=uint32(1), created_at_time=999
         )
 
         t5 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=1000
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(2), created_at_time=1000
         )
         t6 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=999
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(2), created_at_time=999
         )
         t7 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=1000
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1), created_at_time=1000
         )
         t8 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=999
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1), created_at_time=999
         )
 
         await store.add_transaction_record(t1)
@@ -641,17 +679,25 @@ async def test_get_transactions_between_relevance() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_transactions_between_to_puzzle_hash() -> None:
+async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        ph1 = token_bytes(32)
-        ph2 = token_bytes(32)
+        ph1 = bytes32.random(seeded_random)
+        ph2 = bytes32.random(seeded_random)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(1), to_puzzle_hash=ph1)
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(2), to_puzzle_hash=ph1)
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3), to_puzzle_hash=ph2)
-        tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4), to_puzzle_hash=ph2)
+        tr2 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(1), to_puzzle_hash=ph1
+        )
+        tr3 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(2), to_puzzle_hash=ph1
+        )
+        tr4 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(3), to_puzzle_hash=ph2
+        )
+        tr5 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(4), to_puzzle_hash=ph2
+        )
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
@@ -679,13 +725,15 @@ async def test_get_transactions_between_to_puzzle_hash() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_not_sent() -> None:
+async def test_get_not_sent(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))
-        tr3 = dataclasses.replace(tr1, name=token_bytes(32))
-        tr4 = dataclasses.replace(tr1, name=token_bytes(32))
+        tr2 = dataclasses.replace(
+            tr1, name=bytes32.random(seeded_random), confirmed=True, confirmed_at_height=uint32(1)
+        )
+        tr3 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
+        tr4 = dataclasses.replace(tr1, name=bytes32.random(seeded_random))
 
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)

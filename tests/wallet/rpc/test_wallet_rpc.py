@@ -4,8 +4,8 @@ import asyncio
 import dataclasses
 import json
 import logging
+import random
 from operator import attrgetter
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
@@ -1859,7 +1859,7 @@ async def test_get_coin_records_rpc(
 
 @pytest.mark.asyncio
 async def test_get_coin_records_rpc_limits(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
+    wallet_rpc_environment: WalletRpcTestEnvironment, seeded_random: random.Random
 ) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_node: WalletNode = env.wallet_1.node
@@ -1876,8 +1876,10 @@ async def test_get_coin_records_rpc_limits(
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
-            Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
-            uint32(uint32.from_bytes(token_bytes(4))),
+            Coin(
+                bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))
+            ),
+            uint32(seeded_random.randrange(2**32)),
             uint32(0),
             False,
             False,
@@ -1931,7 +1933,7 @@ async def test_get_coin_records_rpc_limits(
 
 @pytest.mark.asyncio
 async def test_get_coin_records_rpc_failures(
-    wallet_rpc_environment: WalletRpcTestEnvironment,
+    wallet_rpc_environment: WalletRpcTestEnvironment, seeded_random: random.Random
 ) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1939,9 +1941,9 @@ async def test_get_coin_records_rpc_failures(
     assert rpc_server is not None
     api = cast(WalletRpcApi, rpc_server.rpc_api)
 
-    too_many_hashes = [bytes32(token_bytes(32)) for _ in range(api.max_get_coin_records_filter_items + 1)]
+    too_many_hashes = [bytes32.random(seeded_random) for _ in range(api.max_get_coin_records_filter_items + 1)]
     too_many_amounts = [
-        uint64(uint64.from_bytes(token_bytes(8))) for _ in range(api.max_get_coin_records_filter_items + 1)
+        uint64(uint64(seeded_random.randrange(2**64))) for _ in range(api.max_get_coin_records_filter_items + 1)
     ]
     # Run requests which exceeds the allowed limit and contain too much filter items
     for name, request in {

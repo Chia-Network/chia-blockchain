@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
+import random
+from typing import BinaryIO, Iterable, Optional, SupportsBytes, Type, TypeVar, Union
 
 from typing_extensions import SupportsIndex
 
@@ -51,6 +52,15 @@ class SizedBytes(bytes):
         if input_str.startswith("0x") or input_str.startswith("0X"):
             return cls.fromhex(input_str[2:])
         return cls.fromhex(input_str)
+
+    @classmethod
+    def random(cls: Type[_T_SizedBytes], r: Optional[random.Random] = None) -> _T_SizedBytes:
+        if r is None:
+            getrandbits = random.getrandbits
+        else:
+            getrandbits = r.getrandbits
+
+        return cls(getrandbits(cls._size * 8).to_bytes(cls._size, "big"))
 
     def __str__(self) -> str:
         return self.hex()

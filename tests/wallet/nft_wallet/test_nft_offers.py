@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from secrets import token_bytes
+import random
 from typing import Any, Dict, Optional
 
 import pytest
@@ -39,7 +39,9 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, trusted: Any, reuse_puzhash: bool) -> None:
+async def test_nft_offer_with_fee(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, reuse_puzhash: bool, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -52,7 +54,7 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
-    token_ph = bytes32(token_bytes())
+    token_ph = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -232,7 +234,9 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_cancellations(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -243,7 +247,7 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
-    token_ph = bytes32(token_bytes())
+    token_ph = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -343,7 +347,9 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_with_metadata_update(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -354,7 +360,7 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
-    token_ph = bytes32(token_bytes())
+    token_ph = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -490,6 +496,7 @@ async def test_nft_offer_nft_for_cat(
     two_wallet_nodes: Any,
     trusted: Any,
     reuse_puzhash: bool,
+    seeded_random: random.Random,
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -501,7 +508,7 @@ async def test_nft_offer_nft_for_cat(
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
-    token_ph = bytes32(token_bytes())
+    token_ph = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -746,7 +753,9 @@ async def test_nft_offer_nft_for_cat(
     [False],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_nft_for_nft(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -757,7 +766,7 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
 
     maker_ph = await wallet_maker.get_new_puzzlehash()
     taker_ph = await wallet_taker.get_new_puzzlehash()
-    token_ph = bytes32(token_bytes())
+    token_ph = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {

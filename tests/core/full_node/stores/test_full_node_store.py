@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from secrets import token_bytes
+import random
 from typing import AsyncIterator, List, Optional
 
 import pytest
@@ -72,6 +72,7 @@ class TestFullNodeStore:
         empty_blockchain: Blockchain,
         custom_block_tools: BlockTools,
         normalized_to_identity: bool,
+        seeded_random: random.Random,
     ) -> None:
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
@@ -114,7 +115,7 @@ class TestFullNodeStore:
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None
 
         # Test seen unfinished blocks
-        h_hash_1 = bytes32(token_bytes(32))
+        h_hash_1 = bytes32.random(seeded_random)
         assert not store.seen_unfinished_block(h_hash_1)
         assert store.seen_unfinished_block(h_hash_1)
         store.clear_seen_unfinished_blocks()

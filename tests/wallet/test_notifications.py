@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 import tempfile
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any
 
 import pytest
@@ -54,7 +54,9 @@ async def test_notification_store_backwards_compat() -> None:
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_notifications(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -67,7 +69,7 @@ async def test_notifications(self_hostname: str, two_wallet_nodes: Any, trusted:
 
     ph_1 = await wallet_1.get_new_puzzlehash()
     ph_2 = await wallet_2.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_1.config["trusted_peers"] = {

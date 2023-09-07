@@ -71,6 +71,13 @@ from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
 
 
+@pytest.fixture(name="seeded_random")
+def seeded_random_fixture() -> random.Random:
+    seeded_random = random.Random()
+    seeded_random.seed(a=0, version=2)
+    return seeded_random
+
+
 @pytest.fixture(name="node_name_for_file")
 def node_name_for_file_fixture(request: SubRequest) -> str:
     # TODO: handle other characters banned on windows
