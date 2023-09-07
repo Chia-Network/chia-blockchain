@@ -330,9 +330,15 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
     for item in items:
         limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
         if limit_consensus_modes_marker is not None:
-            mode = item.callspec.params.get("consensus_mode")
+            callspec = getattr(item, "callspec", None)
+            if callspec is None:
+                limit_consensus_modes_problems.append(item.name)
+                continue
+
+            mode = callspec.params.get("consensus_mode")
             if mode is None:
                 limit_consensus_modes_problems.append(item.name)
+                continue
 
             modes = limit_consensus_modes_marker.kwargs.get("allowed", [ConsensusMode.PLAIN])
             if mode not in modes:
