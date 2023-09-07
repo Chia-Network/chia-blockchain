@@ -93,6 +93,7 @@ def get_name_puzzle_conditions(
             | ALLOW_BACKREFS
         )
 
+    if height >= constants.HARD_FORK_FIX_HEIGHT:
         run_block = run_block_generator2
 
     try:

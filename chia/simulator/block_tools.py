@@ -155,6 +155,10 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MAX_FUTURE_TIME2": 3600 * 24 * 10,
         "MEMPOOL_BLOCK_BUFFER": 6,
         "UNIQUE_PLOTS_WINDOW": 2,
+        # we deliberately make this different from HARD_FORK_HEIGHT in the
+        # tests, to ensure they operate independently (which they need to do for
+        # testnet10)
+        "HARD_FORK_FIX_HEIGHT": 5496100,
     }
 )
 
