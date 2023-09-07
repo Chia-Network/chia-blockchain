@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import OutputType, get_any_service_client
 from chia.cmds.units import units
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -41,11 +41,16 @@ async def create_data_store_cmd(
     rpc_port: Optional[int],
     fee: Optional[str],
     fingerprint: Optional[int],
+    output_type: OutputType,
 ) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.create_data_store(fee=final_fee)
-        print(json.dumps(res, indent=4, sort_keys=True))
+        if output_type == OutputType.json:
+            print(json.dumps(res, indent=4, sort_keys=True))
+        else:
+            id_str = bytes32.from_hexstr(res["id"]).hex()
+            print(f"Store ID: {id_str}")
 
 
 async def get_value_cmd(

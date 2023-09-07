@@ -7,6 +7,7 @@ import click
 
 from chia import __version__
 from chia.cmds.beta import beta_cmd
+from chia.cmds.cmds_util import OutputType
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd
 from chia.cmds.data import data_cmd
@@ -44,10 +45,20 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphrase from")
+@click.option(
+    "--output",
+    "output_type",
+    default=OutputType.human,
+    help="Output type",
+    type=click.Choice([t.value for t in OutputType], case_sensitive=False),
+    show_default=True,
+    callback=lambda ctx, param, value: OutputType(value),
+)
 @click.pass_context
 def cli(
     ctx: click.Context,
     root_path: str,
+    output_type: OutputType,
     keys_root_path: Optional[str] = None,
     passphrase_file: Optional[TextIOWrapper] = None,
 ) -> None:
@@ -55,6 +66,7 @@ def cli(
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
+    ctx.obj["output_type"] = output_type
 
     # keys_root_path and passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options

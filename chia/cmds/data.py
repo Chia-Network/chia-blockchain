@@ -8,6 +8,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Unio
 import click
 
 from chia.cmds import options
+from chia.cmds.cmds_util import OutputType
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 _T = TypeVar("_T")
@@ -110,14 +111,17 @@ def create_fee_option() -> Callable[[FC], FC]:
 @create_rpc_port_option()
 @create_fee_option()
 @options.create_fingerprint()
+@click.pass_context
 def create_data_store(
+    ctx: click.Context,
     data_rpc_port: int,
     fee: Optional[str],
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_data_store_cmd(data_rpc_port, fee, fingerprint=fingerprint))
+    output_type: OutputType = ctx.obj["output_type"]
+    run(create_data_store_cmd(data_rpc_port, fee, fingerprint=fingerprint, output_type=output_type))
 
 
 @data_cmd.command("get_value", help="Get the value for a given key and store")
