@@ -7,7 +7,6 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import aiosqlite
@@ -1559,7 +1558,7 @@ class WalletStateManager:
                                     sent_to=[],
                                     trade_id=None,
                                     type=uint32(tx_type),
-                                    name=bytes32(token_bytes()),
+                                    name=bytes32.secret(),
                                     memos=[],
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)

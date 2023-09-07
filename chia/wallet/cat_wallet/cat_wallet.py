@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 import traceback
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -167,7 +166,7 @@ class CATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=[],
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)

@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import time
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -616,7 +615,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -712,7 +711,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -832,7 +831,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -913,7 +912,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
@@ -1041,7 +1040,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
@@ -1282,7 +1281,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=[],
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
