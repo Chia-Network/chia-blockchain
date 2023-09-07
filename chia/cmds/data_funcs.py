@@ -40,11 +40,12 @@ async def wallet_log_in_cmd(
 async def create_data_store_cmd(
     rpc_port: Optional[int],
     fee: Optional[str],
+    verbose: bool,
     fingerprint: Optional[int],
 ) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.create_data_store(fee=final_fee)
+        res = await client.create_data_store(fee=final_fee, verbose=verbose)
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
@@ -130,10 +131,11 @@ async def unsubscribe_cmd(
     rpc_port: Optional[int],
     store_id: str,
     fingerprint: Optional[int],
+    retain: bool,
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.unsubscribe(store_id=store_id_bytes)
+        res = await client.unsubscribe(store_id=store_id_bytes, retain=retain)
         print(json.dumps(res, indent=4, sort_keys=True))
 
 
