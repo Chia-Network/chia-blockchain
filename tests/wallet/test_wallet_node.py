@@ -329,7 +329,7 @@ async def test_get_timestamp_for_height_from_peer(
 
     await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
-    await full_node_api.farm_rewards_to_wallet(1, wallet)
+    await full_node_api.farm_blocks_to_wallet(2, wallet)
     full_node_peer = list(wallet_server.all_connections.values())[0]
     # There should be no timestamp available for height 10
     assert await get_timestamp(10) is None
@@ -353,6 +353,24 @@ async def test_get_timestamp_for_height_from_peer(
     # After the clearing the cache it should fetch the actual timestamp again
     cache.clear_after_height(0)
     assert await get_timestamp(peak.height) == timestamp_at_peak
+    # Test block cache usage
+    cache.clear_after_height(0)
+    with caplog.at_level(logging.DEBUG):
+        await get_timestamp(1)
+    for i in [0, 1]:
+        block = cache.get_block(uint32(i))
+        assert block is not None
+        if i == 0:
+            assert block.is_transaction_block
+        else:
+            assert not block.is_transaction_block
+        assert f"get_timestamp_for_height_from_peer cache miss for height {i}" in caplog.text
+        assert f"get_timestamp_for_height_from_peer add to cache for height {i}" in caplog.text
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG):
+        await get_timestamp(1)
+    assert f"get_timestamp_for_height_from_peer use cached block for height {0}" not in caplog.text
+    assert f"get_timestamp_for_height_from_peer use cached block for height {1}" in caplog.text
 
 
 @pytest.mark.asyncio

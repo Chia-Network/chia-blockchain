@@ -1003,30 +1003,33 @@ class WalletNode:
         a transaction block
         """
         cache = self.get_cache_for_peer(peer)
-        last_tx_block = None
         request_height: int = height
         while request_height >= 0:
             cached_timestamp = cache.get_height_timestamp(uint32(request_height))
             if cached_timestamp is not None:
                 return cached_timestamp
-            response: Optional[List[HeaderBlock]] = await request_header_blocks(
-                peer, uint32(request_height), uint32(request_height)
-            )
-            if response is not None and len(response) > 0:
-                cache.add_to_blocks(response[0])
-                if response[0].is_transaction_block:
-                    last_tx_block = response[0]
+            block = cache.get_block(uint32(request_height))
+            if block is None:
+                self.log.debug(f"get_timestamp_for_height_from_peer cache miss for height {request_height}")
+                response: Optional[List[HeaderBlock]] = await request_header_blocks(
+                    peer, uint32(request_height), uint32(request_height)
+                )
+                if response is not None and len(response) > 0:
+                    self.log.debug(f"get_timestamp_for_height_from_peer add to cache for height {request_height}")
+                    cache.add_to_blocks(response[0])
+                    block = response[0]
+                elif request_height < height:
+                    # The peer might be slightly behind but still synced, so we should allow fetching one more block
                     break
-            elif request_height < height:
-                # The peer might be slightly behind others but still synced, so we should allow fetching one more block
-                break
+            else:
+                self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
+
+            if block is not None and block.foliage_transaction_block is not None:
+                return block.foliage_transaction_block.timestamp
+
             request_height -= 1
 
-        if last_tx_block is None:
-            return None
-
-        assert last_tx_block.foliage_transaction_block is not None
-        return last_tx_block.foliage_transaction_block.timestamp
+        return None
 
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         for peer in self.get_full_node_peers_in_order():
