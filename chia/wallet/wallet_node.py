@@ -1003,13 +1003,12 @@ class WalletNode:
         a transaction block
         """
         cache = self.get_cache_for_peer(peer)
-        cached_timestamp = cache.get_height_timestamp(height)
-        if cached_timestamp is not None:
-            return cached_timestamp
-
         last_tx_block = None
         request_height: int = height
         while request_height >= 0:
+            cached_timestamp = cache.get_height_timestamp(uint32(request_height))
+            if cached_timestamp is not None:
+                return cached_timestamp
             response: Optional[List[HeaderBlock]] = await request_header_blocks(
                 peer, uint32(request_height), uint32(request_height)
             )
