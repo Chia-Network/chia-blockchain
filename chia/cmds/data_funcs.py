@@ -40,12 +40,11 @@ async def wallet_log_in_cmd(
 async def create_data_store_cmd(
     rpc_port: Optional[int],
     fee: Optional[str],
-    verbose: bool,
     fingerprint: Optional[int],
 ) -> None:
     final_fee = None if fee is None else uint64(int(Decimal(fee) * units["chia"]))
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
-        res = await client.create_data_store(fee=final_fee, verbose=verbose)
+        res = await client.create_data_store(fee=final_fee)
         print(json.dumps(res, indent=4, sort_keys=True))
 
 

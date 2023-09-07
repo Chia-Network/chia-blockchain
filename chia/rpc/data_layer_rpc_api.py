@@ -120,12 +120,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
-        verbose = request.get("verbose", False)
         txs, value = await self.service.create_store(uint64(fee))
-        if verbose:
-            return {"txs": txs, "id": value.hex()}
-        else:
-            return {"id": value.hex()}
+        return {"txs": txs, "id": value.hex()}
 
     async def get_owned_stores(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
