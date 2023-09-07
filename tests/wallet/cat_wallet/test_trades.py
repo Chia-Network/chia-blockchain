@@ -303,7 +303,7 @@ async def test_cat_trades(
             )
 
         async with wallet_node_taker.wallet_state_manager.lock:
-            await CATWallet.create_new_cat_wallet(
+            new_cat_wallet_taker = await CATWallet.create_new_cat_wallet(
                 wallet_node_taker.wallet_state_manager,
                 wallet_taker,
                 {"identifier": "genesis_by_id"},
