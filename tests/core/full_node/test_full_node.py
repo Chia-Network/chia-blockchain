@@ -168,12 +168,13 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
+        template = detect_potential_template_generator(uint32(5), program)
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
-            assert detect_potential_template_generator(uint32(5), program) is None
+            assert template is None
         else:
-            assert detect_potential_template_generator(uint32(5), program) is not None
+            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
@@ -203,12 +204,13 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(6), program) is None
+        num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
-            assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+            assert num_blocks == 0
         else:
-            assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+            assert num_blocks > 0
 
         # Farm two empty blocks
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -283,12 +285,13 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
+        num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
-            assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
+            assert num_blocks == 0
         else:
-            assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+            assert num_blocks > 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
@@ -377,12 +380,13 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
+        template = detect_potential_template_generator(uint32(11), program)
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
-            assert detect_potential_template_generator(uint32(11), program) is None
+            assert template is None
         else:
-            assert detect_potential_template_generator(uint32(11), program) is not None
+            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         height = full_node_1.full_node.blockchain.get_peak().height
@@ -391,12 +395,13 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
+        template = full_node_1.full_node.full_node_store.previous_generator
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
-            assert full_node_1.full_node.full_node_store.previous_generator is None
+            assert template is None
         else:
-            assert full_node_1.full_node.full_node_store.previous_generator is not None
+            assert template is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
