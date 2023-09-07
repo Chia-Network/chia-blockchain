@@ -394,11 +394,11 @@ class DIDWallet:
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
-
+        print(f"wallet {self.get_name()} {did_data.num_verification} {self.did_info.num_of_backup_ids_needed}")
         new_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
-            uint64(did_data.num_verification),
+            self.did_info.num_of_backup_ids_needed,
             self.did_info.parent_info,
             inner_puzzle,
             None,
