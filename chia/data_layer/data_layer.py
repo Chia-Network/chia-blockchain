@@ -83,8 +83,8 @@ class DataLayer:
     root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    downloaders: List[str]
-    uploaders: List[str]
+    downloaders: List[PluginRemote]
+    uploaders: List[PluginRemote]
     full_file_storage_window: int
     server_files_location: Path
     _server: Optional[ChiaServer] = None
