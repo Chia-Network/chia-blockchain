@@ -104,10 +104,7 @@ async def init_data_layer(
     full_file_storage_window: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, full_file_storage_window
-) -> AsyncIterator[DataLayer]:
-    async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval
+        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, full_file_storage_window
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
