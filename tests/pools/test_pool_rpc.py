@@ -34,8 +34,10 @@ from chia.util.config import load_config
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -63,16 +65,15 @@ async def manage_temporary_pool_plot(
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path: Path = Path(tmpdir)
         bt.add_plot_directory(tmp_path)
-        plot_id = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
-        assert plot_id is not None
-        await bt.refresh_plots()
-
-        plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=plot_id)
-
+        bt_plot = await bt.new_plot(p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         try:
+            await bt.refresh_plots()
+
+            plot = TemporaryPoolPlot(bt=bt, p2_singleton_puzzle_hash=p2_singleton_puzzle_hash, plot_id=bt_plot.plot_id)
+
             yield plot
         finally:
-            await bt.delete_plot(plot_id)
+            await bt.delete_plot(bt_plot.plot_id)
 
 
 PREFARMED_BLOCKS = 4
@@ -137,7 +138,9 @@ Setup = Tuple[FullNodeSimulator, WalletNode, bytes32, int, WalletRpcClient]
 
 @pytest_asyncio.fixture(scope="function")
 async def setup(
-    one_wallet_and_one_simulator_services: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools],
+    one_wallet_and_one_simulator_services: Tuple[
+        List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
+    ],
     trusted: bool,
     self_hostname: str,
 ) -> AsyncIterator[Setup]:
@@ -362,7 +365,7 @@ class TestPoolWalletRpc:
 
         for i in range(5):
             await time_out_assert(10, mempool_empty)
-            res = await client.create_new_cat_and_wallet(uint64(20))
+            res = await client.create_new_cat_and_wallet(uint64(20), test=True)
             assert res["success"]
             cat_0_id = res["wallet_id"]
             asset_id = bytes.fromhex(res["asset_id"])
@@ -400,7 +403,7 @@ class TestPoolWalletRpc:
                                 [some_wallet.wallet_state_manager.private_key], status.current.owner_pubkey
                             )
                             assert owner_sk is not None
-                            assert owner_sk != auth_sk
+                            assert owner_sk[0] != auth_sk
 
     @pytest.mark.asyncio
     async def test_absorb_self(
@@ -467,7 +470,7 @@ class TestPoolWalletRpc:
             assert len(await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
 
             tr: TransactionRecord = await client.send_transaction(
-                1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch")
+                1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
             )
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tr])

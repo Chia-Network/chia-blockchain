@@ -11,12 +11,12 @@ from chia.farmer.farmer_api import FarmerAPI
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.peer_info import PeerInfo
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
-from chia.util.network import get_host_addr
+from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -31,15 +31,11 @@ def create_farmer_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[Farmer]:
+) -> Service[Farmer, FarmerAPI]:
     service_config = config[SERVICE_NAME]
 
-    connect_peers = []
     fnp = service_config.get("full_node_peer")
-    if fnp is not None:
-        connect_peers.append(
-            PeerInfo(str(get_host_addr(fnp["host"], prefer_ipv6=config.get("prefer_ipv6", False))), fnp["port"])
-        )
+    connect_peers = set() if fnp is None else {UnresolvedPeerInfo(fnp["host"], fnp["port"])}
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -60,7 +56,6 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         on_connect_callback=farmer.on_connect,
         network_id=network_id,
@@ -78,8 +73,9 @@ async def async_main() -> int:
     config["pool"] = config_pool
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_farmer_service(DEFAULT_ROOT_PATH, config, config_pool, DEFAULT_CONSTANTS)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

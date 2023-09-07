@@ -1,0 +1,163 @@
+; This layer is an outer puzzle that keeps some metadata that must be reaffirmed by a "transfer program" on every spend.
+;
+; In a way, this puzzle acts as a p2_merkle_tree puzzle where there are always two leaves and BOTH must run every spend.
+;
+; The inner puzzle runs first and actually supplies the solution to the transfer program.
+;
+; Likely, the transfer program is placed into the EML by a party who does not currently control the coin, to enforce
+; that certain behaviors regarding the curried metadata are followed.
+(mod
+  (
+    THIS_MOD_HASH
+    METADATA  ; The metadata can be anything. It is passed to the transfer program and new metadata is returned.
+    TRANSFER_PROGRAM  ; Runs every spend, solution supplied by the inner puzzle
+    TRANSFER_PROGRAM_HASH  ; we also include the hash for efficiency's sake when re-calculating our own hash
+    INNER_PUZZLE
+    inner_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include utility_macros.clib)
+
+  (defun-inline nft_ownership_layer_puzzle_hash
+    (
+      THIS_MOD_HASH
+      new_owner
+      TRANSFER_PROGRAM_HASH
+      inner_puzzle_hash
+    )
+    (puzzle-hash-of-curried-function THIS_MOD_HASH
+      inner_puzzle_hash
+      (sha256 ONE TRANSFER_PROGRAM_HASH)
+      TRANSFER_PROGRAM_HASH
+      (sha256tree new_owner)
+      (sha256 ONE THIS_MOD_HASH)
+    )
+  )
+
+  (defun-inline construct_end_conditions
+    (
+      THIS_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      odd_args
+      (new_owner new_tp_hash conditions)
+    )
+    (c
+      (c
+        CREATE_COIN
+        (c
+          (nft_ownership_layer_puzzle_hash
+            THIS_MOD_HASH
+            new_owner
+            (if new_tp_hash new_tp_hash TRANSFER_PROGRAM_HASH)
+            (f odd_args)
+          )
+          (r odd_args)
+        )
+      )
+      conditions
+    )
+  )
+
+  (defun process_conditions
+    (
+      THIS_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      all_conditions
+      conditions
+      ; These args all start at ()
+      (
+        odd_args
+        tp_output
+        condition_to_prepend
+      )
+    )
+    ; This loop works a bit differently than most condition wrapping loops
+    ;
+    ; We expect an invalid condition (-10) that we must strip out, but we must also wrap the odd create coin based on
+    ; information from that condition.
+    ;
+    ; To facilitate this, each iteration of the loop calls the next iteration with the condition it wishes to prepend
+    ; to the list. If we want to strip out a condition, we call the next iteration with () as condition_to_prepend
+    ; which will cause an empty REMARK condition to be prepended as a no-op instead. The two conditions that will
+    ; trigger this are the magic condition (-10) and the odd create coin condition. The magic condition never makes it
+    ; back into the list, but the CREATE_COIN is re-created wrapped by construct_end_conditions.
+    (c
+      (i condition_to_prepend condition_to_prepend (list REMARK))
+      (if conditions
+          (process_conditions
+            THIS_MOD_HASH
+            TRANSFER_PROGRAM
+            TRANSFER_PROGRAM_HASH
+            METADATA
+            all_conditions
+            (r conditions)
+            (if (= (f (f conditions)) CREATE_COIN)
+                (if (logand (f (r (r (f conditions)))) 1)
+                    (assert (not odd_args)
+                      ; then
+                      (list (r (f conditions)) tp_output ())
+                    )
+                    ; else - amount is not odd
+                    (list odd_args tp_output (f conditions))
+                )
+                ; else - condition is not a create coin
+                (if (= (f (f conditions)) -10)  ; -10 is "magic" opcode for running transfer program
+                    (assert (not tp_output)
+                      ; then
+                      (list
+                        odd_args
+                        (a TRANSFER_PROGRAM (list METADATA all_conditions (r (f conditions))))
+                        ()
+                      )
+                    )
+                    ; else - condition is not a create coin nor a NEW_OWNER_CONDITION
+                    (list odd_args tp_output (f conditions))
+                )
+            )
+          )
+          ; else - we have no more conditions
+          ; odd_args and tp_solution are guaranteed to not be nil or else we'll have a path into atom error
+          (construct_end_conditions
+            THIS_MOD_HASH
+            TRANSFER_PROGRAM
+            TRANSFER_PROGRAM_HASH
+            odd_args
+            tp_output
+          )
+      )
+    )
+  )
+
+  (defun main
+    (
+      THIS_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      conditions
+    )
+    (process_conditions
+      THIS_MOD_HASH
+      TRANSFER_PROGRAM
+      TRANSFER_PROGRAM_HASH
+      METADATA
+      conditions
+      conditions
+      (list () () ())
+    )
+  )
+
+  ; main
+  (main
+    THIS_MOD_HASH
+    TRANSFER_PROGRAM
+    TRANSFER_PROGRAM_HASH
+    METADATA
+    (a INNER_PUZZLE inner_solution)
+  )
+)

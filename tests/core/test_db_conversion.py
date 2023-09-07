@@ -29,6 +29,7 @@ def rand_bytes(num) -> bytes:
 class TestDbUpgrade:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("with_hints", [True, False])
+    @pytest.mark.skip("we no longer support DB v1")
     async def test_blocks(self, default_1000_blocks, with_hints: bool):
         blocks = default_1000_blocks
 
@@ -77,7 +78,7 @@ class TestDbUpgrade:
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
                     results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _ = await bc.receive_block(block, results)
+                    result, err, _ = await bc.add_block(block, results)
                     assert err is None
             finally:
                 await db_wrapper1.close()

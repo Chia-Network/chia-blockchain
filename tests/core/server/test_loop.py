@@ -109,14 +109,14 @@ class ServeInThread:
 
     def _run(self) -> None:
         # TODO: yuck yuck, messes with a single global
+        original_event_loop_policy = asyncio.get_event_loop_policy()
         asyncio.set_event_loop_policy(chia_policy.ChiaPolicy())
-        asyncio.run(self.main())
-        # new_loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(new_loop)
-        # new_loop.run_until_complete(self.main())
+        try:
+            asyncio.run(self.main())
+        finally:
+            asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
-        self.loop = asyncio.get_event_loop()
         self.server_task = asyncio.create_task(
             serve.async_main(
                 ip=self.ip,
@@ -143,9 +143,13 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
+@pytest.mark.xfail(
+    condition=sys.platform == "win32",
+    reason="known failure, being worked on in https://github.com/Chia-Network/chia-blockchain/pull/16207",
+)
 @pytest.mark.asyncio
 async def test_loop() -> None:
-    allowed_over_connections = 0 if sys.platform == "win32" and sys.version_info >= (3, 8) else 100
+    allowed_over_connections = 0 if sys.platform == "win32" else 100
 
     print(" ==== launching serve.py")
     with subprocess.Popen(
@@ -221,10 +225,6 @@ async def test_loop() -> None:
     print(" ==== all checks passed")
 
 
-@pytest.mark.skipif(
-    condition=sys.platform == "win32" and sys.version_info < (3, 8),
-    reason="test code errors out with selector event loop",
-)
 @pytest.mark.parametrize(
     # repeating in case there are races or flakes to expose
     argnames="repetition",

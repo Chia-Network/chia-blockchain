@@ -34,9 +34,7 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-OFFER_MOD_OLD = load_clvm_maybe_recompile("settlement_payments_old.clvm")
-OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
-OFFER_MOD_OLD_HASH = OFFER_MOD_OLD.get_tree_hash()
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
 
@@ -73,11 +71,12 @@ class Offer:
     ]  # The key is the asset id of the asset being requested
     _bundle: SpendBundle
     driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
-    old: bool = False
 
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -107,18 +106,15 @@ class Offer:
     def calculate_announcements(
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
         driver_dict: Dict[bytes32, PuzzleInfo],
-        old: bool = False,
     ) -> List[Announcement]:
         announcements: List[Announcement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
                 if asset_id not in driver_dict:
                     raise ValueError("Cannot calculate announcements without driver of requested item")
-                settlement_ph: bytes32 = construct_puzzle(
-                    driver_dict[asset_id], OFFER_MOD_OLD if old else OFFER_MOD
-                ).get_tree_hash()
+                settlement_ph: bytes32 = construct_puzzle(driver_dict[asset_id], OFFER_MOD).get_tree_hash()
             else:
-                settlement_ph = OFFER_MOD_OLD_HASH if old else OFFER_MOD_HASH
+                settlement_ph = OFFER_MOD_HASH
 
             msg: bytes32 = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
@@ -173,7 +169,7 @@ class Offer:
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
-    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+    def _get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
@@ -195,7 +191,7 @@ class Offer:
                 expected_num_matches: int = 0
                 offered_amounts: List[int] = []
                 for condition in conditions.as_iter():
-                    if condition.first() == 51 and condition.rest().first() in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]:
+                    if condition.first() == 51 and condition.rest().first() == OFFER_MOD_HASH:
                         expected_num_matches += 1
                         offered_amounts.append(condition.rest().rest().first().as_int())
 
@@ -213,14 +209,9 @@ class Offer:
                         a
                         for a in matching_spend_additions
                         if a.puzzle_hash
-                        in [
-                            construct_puzzle(puzzle_driver, OFFER_MOD_OLD_HASH).get_tree_hash_precalc(  # type: ignore
-                                OFFER_MOD_OLD_HASH
-                            ),
-                            construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
-                                OFFER_MOD_HASH
-                            ),
-                        ]
+                        == construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
+                            OFFER_MOD_HASH
+                        )
                     ]
                     if len(matching_spend_additions) == expected_num_matches:
                         coins_for_this_spend.extend(matching_spend_additions)
@@ -229,9 +220,7 @@ class Offer:
             else:
                 # It's much easier if the asset is bare XCH
                 asset_id = None
-                coins_for_this_spend.extend(
-                    [a for a in additions if a.puzzle_hash in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]]
-                )
+                coins_for_this_spend.extend([a for a in additions if a.puzzle_hash == OFFER_MOD_HASH])
 
             # We only care about unspent coins
             coins_for_this_spend = [c for c in coins_for_this_spend if c not in self._bundle.removals()]
@@ -239,8 +228,15 @@ class Offer:
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
                 offered_coins[asset_id].extend(coins_for_this_spend)
-
         return offered_coins
+
+    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+        try:
+            if self._offered_coins is not None:
+                return self._offered_coins
+        except AttributeError:
+            object.__setattr__(self, "_offered_coins", self._get_offered_coins())
+        return self._offered_coins
 
     def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
@@ -399,8 +395,7 @@ class Offer:
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
         total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
-        old: bool = False
-        for i, offer in enumerate(offers):
+        for offer in offers:
             # First check for any overlap in inputs
             total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
             offer_inputs: Set[Coin] = {cs.coin for cs in offer._bundle.coin_spends}
@@ -420,13 +415,8 @@ class Offer:
 
             total_bundle = SpendBundle.aggregate([total_bundle, offer._bundle])
             total_driver_dict.update(offer.driver_dict)
-            if i == 0:
-                old = offer.old
-            else:
-                if offer.old != old:
-                    raise ValueError("Attempting to aggregate two offers with different mods")
 
-        return cls(total_requested_payments, total_bundle, total_driver_dict, old)
+        return cls(total_requested_payments, total_bundle, total_driver_dict)
 
     # Validity is defined by having enough funds within the offer to satisfy both sides
     def is_valid(self) -> bool:
@@ -434,7 +424,7 @@ class Offer:
 
     # A "valid" spend means that this bundle can be pushed to the network and will succeed
     # This differs from the `to_spend_bundle` method which deliberately creates an invalid SpendBundle
-    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None) -> SpendBundle:
+    def to_valid_spend(self, arbitrage_ph: Optional[bytes32] = None, solver: Solver = Solver({})) -> SpendBundle:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
@@ -450,7 +440,7 @@ class Offer:
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
                 assert arbitrage_ph is not None
-                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount), []))
+                all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             # Some assets need to know about siblings so we need to collect all spends first to be able to use them
             coin_to_spend_dict: Dict[Coin, CoinSpend] = {}
@@ -471,17 +461,11 @@ class Offer:
 
             for coin in offered_coins:
                 if asset_id:
-                    if coin.puzzle_hash == construct_puzzle(
-                        self.driver_dict[asset_id], OFFER_MOD_OLD_HASH  # type: ignore
-                    ).get_tree_hash_precalc(OFFER_MOD_OLD_HASH):
-                        offer_mod: Program = OFFER_MOD_OLD
-                    else:
-                        offer_mod = OFFER_MOD
                     siblings: str = "("
                     sibling_spends: str = "("
                     sibling_puzzles: str = "("
                     sibling_solutions: str = "("
-                    disassembled_offer_mod: str = disassemble(offer_mod)
+                    disassembled_offer_mod: str = disassemble(OFFER_MOD)
                     for sibling_coin in offered_coins:
                         if sibling_coin != coin:
                             siblings += (
@@ -512,22 +496,19 @@ class Offer:
                                 "sibling_spends": sibling_spends,
                                 "sibling_puzzles": sibling_puzzles,
                                 "sibling_solutions": sibling_solutions,
+                                **solver.info,
                             }
                         ),
-                        offer_mod,
+                        OFFER_MOD,
                         Program.to(coin_to_solution_dict[coin]),
                     )
                 else:
-                    if coin.puzzle_hash == OFFER_MOD_OLD_HASH:
-                        offer_mod = OFFER_MOD_OLD
-                    else:
-                        offer_mod = OFFER_MOD
                     solution = Program.to(coin_to_solution_dict[coin])
 
                 completion_spends.append(
                     CoinSpend(
                         coin,
-                        construct_puzzle(self.driver_dict[asset_id], offer_mod) if asset_id else offer_mod,
+                        construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD,
                         solution,
                     )
                 )
@@ -535,7 +516,12 @@ class Offer:
         return SpendBundle.aggregate([SpendBundle(completion_spends, G2Element()), self._bundle])
 
     def to_spend_bundle(self) -> SpendBundle:
-        # Before we serialze this as a SpendBundle, we need to serialze the `requested_payments` as dummy CoinSpends
+        try:
+            if self._final_spend_bundle is not None:
+                return self._final_spend_bundle
+        except AttributeError:
+            pass
+        # Before we serialize this as a SpendBundle, we need to serialize the `requested_payments` as dummy CoinSpends
         additional_coin_spends: List[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
@@ -557,12 +543,14 @@ class Offer:
                 )
             )
 
-        return SpendBundle.aggregate(
+        sb = SpendBundle.aggregate(
             [
                 SpendBundle(additional_coin_spends, G2Element()),
                 self._bundle,
             ]
         )
+        object.__setattr__(self, "_final_spend_bundle", sb)
+        return sb
 
     @classmethod
     def from_spend_bundle(cls, bundle: SpendBundle) -> Offer:
@@ -570,11 +558,7 @@ class Offer:
         requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
-        old: bool = False
         for coin_spend in bundle.coin_spends:
-            if not old and bytes(OFFER_MOD_OLD) in bytes(coin_spend):
-                old = True
-
             driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
             if driver is not None:
                 asset_id = create_asset_id(driver)
@@ -595,10 +579,15 @@ class Offer:
             else:
                 leftover_coin_spends.append(coin_spend)
 
-        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict, old)
+        return cls(requested_payments, SpendBundle(leftover_coin_spends, bundle.aggregated_signature), driver_dict)
 
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Offer):
+            return False  # don't attempt to compare against unrelated types
+        return self.name() == other.name()
 
     def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()

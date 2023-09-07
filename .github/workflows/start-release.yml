@@ -10,13 +10,17 @@ jobs:
     name: Starts release process in Glue API
     runs-on: [glue-notify]
     steps:
-      - name: Get tag name
-        if: "!github.event.release.prerelease"
-        id: tag-name
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start pre-release
+        if: "github.event.release.prerelease"
         run: |
-          echo "TAG_NAME=$(echo ${{ github.ref }} | cut -d'/' -f 3)" >> $GITHUB_OUTPUT
-          echo "REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f 2)" >> $GITHUB_OUTPUT
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/start
+
       - name: Start release
         if: "!github.event.release.prerelease"
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/start
+          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/start

@@ -10,12 +10,12 @@ from chia.cmds.db_upgrade_func import db_upgrade_func
 from chia.cmds.db_validate_func import db_validate_func
 
 
-@click.group("db", short_help="Manage the blockchain database")
+@click.group("db", help="Manage the blockchain database")
 def db_cmd() -> None:
     pass
 
 
-@db_cmd.command("upgrade", short_help="upgrade a v1 database to v2")
+@db_cmd.command("upgrade", help="upgrade a v1 database to v2")
 @click.option("--input", "in_db_path", default=None, type=click.Path(), help="specify input database file")
 @click.option("--output", "out_db_path", default=None, type=click.Path(), help="specify output database file")
 @click.option(
@@ -51,7 +51,7 @@ def db_upgrade_cmd(
         print(f"FAILED: {e}")
 
 
-@db_cmd.command("validate", short_help="validate the (v2) blockchain database. Does not verify proofs")
+@db_cmd.command("validate", help="validate the (v2) blockchain database. Does not verify proofs")
 @click.option("--db", "in_db_path", default=None, type=click.Path(), help="Specifies which database file to validate")
 @click.option(
     "--validate-blocks",
@@ -71,7 +71,7 @@ def db_validate_cmd(ctx: click.Context, in_db_path: Optional[str], validate_bloc
         print(f"FAILED: {e}")
 
 
-@db_cmd.command("backup", short_help="backup the blockchain database using VACUUM INTO command")
+@db_cmd.command("backup", help="backup the blockchain database using VACUUM INTO command")
 @click.option("--backup_file", "db_backup_file", default=None, type=click.Path(), help="Specifies the backup file")
 @click.option("--no_indexes", default=False, is_flag=True, help="Create backup without indexes")
 @click.pass_context

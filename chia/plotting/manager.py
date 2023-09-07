@@ -9,12 +9,19 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
-from chiapos import DiskProver
+from chiapos import DiskProver, decompressor_context_queue
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plotting.cache import Cache, CacheEntry
-from chia.plotting.util import PlotInfo, PlotRefreshEvents, PlotRefreshResult, PlotsRefreshParameter, get_plot_filenames
-from chia.util.generator_tools import list_to_batches
+from chia.plotting.util import (
+    HarvestingMode,
+    PlotInfo,
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    get_plot_filenames,
+)
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +45,8 @@ class PlotManager:
     _refreshing_enabled: bool
     _refresh_callback: Callable
     _initial: bool
+    max_compression_level_allowed: int
+    context_count: int
 
     def __init__(
         self,
@@ -55,7 +64,11 @@ class PlotManager:
         self.no_key_filenames = set()
         self.farmer_public_keys = []
         self.pool_public_keys = []
-        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager.dat")
+        # Since `compression_level` property was added to Cache structure,
+        # previous cache file formats needs to be reset
+        # When user downgrades harvester, it looks 'plot_manager.dat` while
+        # latest harvester reads/writes 'plot_manager_v2.dat`
+        self.cache = Cache(self.root_path.resolve() / "cache" / "plot_manager_v2.dat")
         self.match_str = match_str
         self.open_no_key_filenames = open_no_key_filenames
         self.last_refresh_time = 0
@@ -66,12 +79,51 @@ class PlotManager:
         self._refreshing_enabled = False
         self._refresh_callback = refresh_callback
         self._initial = True
+        self.max_compression_level_allowed = 0
+        self.context_count = 0
 
     def __enter__(self):
         self._lock.acquire()
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self._lock.release()
+
+    def configure_decompressor(
+        self,
+        context_count: int,
+        thread_count: int,
+        disable_cpu_affinity: bool,
+        max_compression_level_allowed: int,
+        use_gpu_harvesting: bool,
+        gpu_index: int,
+        enforce_gpu_index: bool,
+        decompressor_timeout: int,
+    ) -> HarvestingMode:
+        if max_compression_level_allowed > 7:
+            log.error(
+                "Currently only compression levels up to 7 are allowed, "
+                f"while {max_compression_level_allowed} was specified."
+                "Setting max_compression_level_allowed to 7."
+            )
+            max_compression_level_allowed = 7
+        is_using_gpu = decompressor_context_queue.init(
+            context_count,
+            thread_count,
+            disable_cpu_affinity,
+            max_compression_level_allowed,
+            use_gpu_harvesting,
+            gpu_index,
+            enforce_gpu_index,
+            decompressor_timeout,
+        )
+        if not is_using_gpu and use_gpu_harvesting:
+            log.error(
+                "GPU harvesting failed initialization. "
+                f"Falling back to CPU harvesting: {context_count} decompressors count, {thread_count} threads."
+            )
+        self.max_compression_level_allowed = max_compression_level_allowed
+        self.context_count = context_count
+        return HarvestingMode.GPU if is_using_gpu else HarvestingMode.CPU
 
     def reset(self) -> None:
         with self:
@@ -180,19 +232,19 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
-                    batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
+                for batch in to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
+                    batch_result: PlotRefreshResult = self.refresh_batch(batch.entries, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
                         break
                     # Set the remaining files since `refresh_batch()` doesn't know them but we want to report it
-                    batch_result.remaining = remaining
+                    batch_result.remaining = batch.remaining
                     total_result.loaded += batch_result.loaded
                     total_result.processed += batch_result.processed
                     total_result.duration += batch_result.duration
 
                     self._refresh_callback(PlotRefreshEvents.batch_processed, batch_result)
-                    if remaining == 0:
+                    if batch.remaining == 0:
                         break
                     batch_sleep = self.refresh_parameter.batch_sleep_milliseconds
                     self.log.debug(f"refresh_plots: Sleep {batch_sleep} milliseconds")
@@ -280,17 +332,38 @@ class PlotManager:
                     # TODO: consider checking if the file was just written to (which would mean that the file is still
                     # being copied). A segfault might happen in this edge case.
 
-                    if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
-                        log.warning(
-                            f"Not farming plot {file_path}. Size is {stat_info.st_size / (1024 ** 3)} GiB, but expected"
-                            f" at least: {expected_size / (1024 ** 3)} GiB. We assume the file is being copied."
-                        )
-                        return None
+                    level = prover.get_compression_level()
+                    if level == 0:
+                        if prover.get_size() >= 30 and stat_info.st_size < 0.98 * expected_size:
+                            log.warning(
+                                f"Not farming plot {file_path}. "
+                                f"Size is {stat_info.st_size / (1024 ** 3)} GiB, "
+                                f"but expected at least: {expected_size / (1024 ** 3)} GiB. "
+                                "We assume the file is being copied."
+                            )
+                            return None
 
                     cache_entry = CacheEntry.from_disk_prover(prover)
                     self.cache.update(file_path, cache_entry)
 
                 assert cache_entry is not None
+
+                level = cache_entry.prover.get_compression_level()
+                if level > self.max_compression_level_allowed:
+                    log.warning(
+                        f"Not farming plot {file_path}. Plot compression level: {level}, "
+                        f"max compression level allowed: {self.max_compression_level_allowed}."
+                    )
+                    return None
+
+                if level > 0 and self.context_count == 0:
+                    log.warning(
+                        f"Not farming compressed plot {file_path}. Plot compression level: {level}, "
+                        f"because parallel_decompressor_count is set to 0 in config.yaml. Use a non-zero value"
+                        " to start harvesting compressed plots."
+                    )
+                    return None
+
                 # Only use plots that correct keys associated with them
                 if cache_entry.farmer_public_key not in self.farmer_public_keys:
                     log.warning(f"Plot {file_path} has a farmer public key that is not in the farmer's pk list.")

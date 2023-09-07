@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts
+    name: Test Install Scripts - ${{ matrix.development.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,6 +31,11 @@ jobs:
       matrix:
         python-version: [3.9]
         os: [macOS-latest, ubuntu-latest]
+        development:
+          - name: Non-development
+            value: false
+          - name: Development
+            value: true
 
     steps:
     - name: Checkout Code
@@ -46,9 +51,14 @@ jobs:
     - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-        development: true
+        development: ${{ matrix.development.value }}
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
+
+    - name: Run chia --help
+      run: |
+        chia --help
 
     - name: Run install-gui script
       run: |
@@ -77,10 +87,6 @@ jobs:
 #         - name: centos:8
 #           type: centos
 #           url: "docker://centos:8"
-        - name: debian:buster
-          type: debian
-          # https://packages.debian.org/buster/python/python3 (3.7)
-          url: "docker://debian:buster"
         - name: debian:bullseye
           type: debian
           # https://packages.debian.org/bullseye/python/python3 (3.9)
@@ -104,10 +110,6 @@ jobs:
         - name: rockylinux:8
           type: rocky
           url: "docker://rockylinux:8"
-        - name: ubuntu:bionic (18.04)
-          type: ubuntu
-          # https://packages.ubuntu.com/bionic/python3.7 (18.04, 3.7)
-          url: "docker://ubuntu:bionic"
         - name: ubuntu:focal (20.04)
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
@@ -116,41 +118,6 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
           url: "docker://ubuntu:jammy"
-        - name: linuxmintd/mint19.1-amd64 (Tessa)
-          type: mint
-          # 3.6 default with an option for 3.7
-          url: "docker://linuxmintd/mint19.1-amd64"
-        - name: linuxmintd/mint19.2-amd64 (Tina)
-          type: mint
-          # 3.6 default with an option for 3.7
-          url: "docker://linuxmintd/mint19.2-amd64"
-        - name: linuxmintd/mint19.3-amd64 (Tricia)
-          type: mint
-          # 3.6 default with an option for 3.7
-          url: "docker://linuxmintd/mint19.3-amd64"
-        - name: linuxmintd/mint20-amd64 (Ulyana)
-          type: mint
-          # 3.8
-          url: "docker://linuxmintd/mint20-amd64"
-        - name: linuxmintd/mint20.1-amd64 (Ulyssa)
-          type: mint
-          # 3.8
-          url: "docker://linuxmintd/mint20.1-amd64"
-        - name: linuxmintd/mint20.2-amd64 (Uma)
-          type: mint
-          # 3.8
-          url: "docker://linuxmintd/mint20.2-amd64"
-        - name: linuxmintd/mint20.3-amd64 (Una)
-          type: mint
-          # 3.8
-          url: "docker://linuxmintd/mint20.3-amd64"
-#        The Linux Mint 21 docker image reports as 20.3 but has different Python.
-#        Uncomment after adapting to handle this or upstream fixing it.
-#        Also, Linux Mint 21 is not released as of this change.
-#        - name: linuxmintd/mint21-amd64
-#          type: linuxmint
-#          # 3.10 default with an option for 3.9
-#          url: "docker://linuxmintd/mint21-amd64"
 
     steps:
     - name: Prepare Amazon Linux
@@ -217,27 +184,8 @@ jobs:
         apt-get --yes update
         apt-get install --yes git lsb-release sudo
 
-    - name: Prepare Linux Mint
-      if: ${{ matrix.distribution.type == 'mint' }}
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        # for 19.*
-        apt-get --yes update
-        # for 19.3 to avoid
-        # Setting up software-properties-common (2.0.0.2) ...
-        # Traceback (most recent call last):
-        #   File "/usr/lib/linuxmint/mintSources/mintSources.py", line 11, in <module>
-        #     import requests
-        # ModuleNotFoundError: No module named 'requests'
-        apt-get install --yes python3-requests
-        apt-get install --yes software-properties-common
-        add-apt-repository --yes ppa:git-core/ppa
-        apt-get --yes update
-        apt-get install --yes git lsb-release sudo
-
     - name: Add safe git directory
-      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
     # after installing git so we use that copy
     - name: Checkout Code
@@ -249,6 +197,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 

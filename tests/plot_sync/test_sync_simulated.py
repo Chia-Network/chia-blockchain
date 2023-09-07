@@ -13,8 +13,10 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import pytest
 from blspy import G1Element
 
-from chia.farmer.farmer_api import Farmer
+from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
 from chia.plot_sync.util import Constants
@@ -28,8 +30,8 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.generator_tools import list_to_batches
-from chia.util.ints import int16, uint64
+from chia.util.ints import int16, uint8, uint64
+from chia.util.misc import to_batches
 from tests.plot_sync.util import start_harvester_service
 
 log = logging.getLogger(__name__)
@@ -107,8 +109,8 @@ class TestData:
             sync_id = self.plot_sync_sender._sync_id
             if len(loaded) == 0:
                 self.harvester.plot_sync_sender.process_batch([], 0)
-            for remaining, batch in list_to_batches(loaded, batch_size):
-                self.harvester.plot_sync_sender.process_batch(batch, remaining)
+            for batch in to_batches(loaded, batch_size):
+                self.harvester.plot_sync_sender.process_batch(batch.entries, batch.remaining)
             self.harvester.plot_sync_sender.sync_done(removed_paths, 0)
 
         await self.event_loop.run_in_executor(None, run_internal)
@@ -239,8 +241,8 @@ async def _testable_process(
 
 
 async def create_test_runner(
-    harvester_services: List[Service[Harvester]],
-    farmer_service: Service[Farmer],
+    harvester_services: List[Service[Harvester, HarvesterAPI]],
+    farmer_service: Service[Farmer, FarmerAPI],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> TestRunner:
     await farmer_service.start()
@@ -273,9 +275,12 @@ def create_example_plots(count: int) -> List[PlotInfo]:
         def get_size(self) -> int:
             return self.size
 
+        def get_compression_level(self) -> uint8:
+            return uint8(0)
+
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), x % 255),
+            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), 25 + x % 26),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),
@@ -288,7 +293,9 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
 @pytest.mark.asyncio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_three_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
@@ -367,7 +374,9 @@ async def test_sync_simulated(
 )
 @pytest.mark.asyncio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_one_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
@@ -392,7 +401,9 @@ async def test_farmer_error_simulation(
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.asyncio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
+    farmer_one_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:

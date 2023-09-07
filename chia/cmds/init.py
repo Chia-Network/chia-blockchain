@@ -3,7 +3,7 @@ from __future__ import annotations
 import click
 
 
-@click.command("init", short_help="Create or migrate the configuration")
+@click.command("init", help="Create or migrate the configuration")
 @click.option(
     "--create-certs",
     "-c",
