@@ -85,7 +85,7 @@ class DataLayer:
     wallet_rpc_init: Awaitable[WalletRpcClient]
     downloaders: List[PluginRemote]
     uploaders: List[PluginRemote]
-    full_file_storage_window: int
+    maximum_full_file_count: int
     server_files_location: Path
     _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
@@ -154,7 +154,7 @@ class DataLayer:
             server_files_location=path_from_root(root_path, server_files_replaced),
             downloaders=downloaders,
             uploaders=uploaders,
-            full_file_storage_window=config.get("full_file_storage_window", 1),
+            maximum_full_file_count=config.get("maximum_full_file_count", 1),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -521,7 +521,7 @@ class DataLayer:
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         latest_generation = root.generation
         # Don't store full tree files before this generation.
-        full_tree_first_publish_generation = max(0, latest_generation - self.full_file_storage_window + 1)
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
@@ -581,7 +581,7 @@ class DataLayer:
     async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
         root = await self.data_store.get_tree_root(tree_id=store_id)
         latest_generation = root.generation
-        full_tree_first_publish_generation = max(0, latest_generation - self.full_file_storage_window + 1)
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")

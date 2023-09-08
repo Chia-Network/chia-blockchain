@@ -68,7 +68,7 @@ async def init_data_layer_service(
     db_path: Optional[Path] = None,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     manage_data_interval: int = 5,
-    full_file_storage_window: Optional[int] = None,
+    maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -77,8 +77,8 @@ async def init_data_layer_service(
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
-    if full_file_storage_window is not None:
-        config["data_layer"]["full_file_storage_window"] = full_file_storage_window
+    if maximum_full_file_count is not None:
+        config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
         config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     config["data_layer"]["manage_data_interval"] = manage_data_interval
@@ -101,10 +101,10 @@ async def init_data_layer(
     db_path: Path,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     manage_data_interval: int = 5,
-    full_file_storage_window: Optional[int] = None,
+    maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, full_file_storage_window
+        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
@@ -2062,13 +2062,13 @@ async def test_issue_15955_deadlock(
                 )
 
 
-@pytest.mark.parametrize(argnames="full_file_storage_window", argvalues=[1, 5, 100])
+@pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
 @pytest.mark.asyncio
-async def test_full_file_storage_window(
+async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
-    full_file_storage_window: int,
+    maximum_full_file_count: int,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2079,7 +2079,7 @@ async def test_full_file_storage_window(
         bt=bt,
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
-        full_file_storage_window=full_file_storage_window,
+        maximum_full_file_count=maximum_full_file_count,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -2099,13 +2099,13 @@ async def test_full_file_storage_window(
             root_hashes.append(root_hash["hash"])
             with os.scandir(data_layer.server_files_location) as entries:
                 filenames = {entry.name for entry in entries}
-                expected_files_count = min(batch_count, full_file_storage_window) + batch_count
+                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
                 assert len(filenames) == expected_files_count
                 for generation, hash in enumerate(root_hashes):
                     filename = get_delta_filename(store_id, hash, generation + 1)
                     assert filename in filenames
                     filename = get_full_tree_filename(store_id, hash, generation + 1)
-                    if generation + 1 > batch_count - full_file_storage_window:
+                    if generation + 1 > batch_count - maximum_full_file_count:
                         assert filename in filenames
                     else:
                         assert filename not in filenames
@@ -2128,7 +2128,7 @@ async def test_unsubscribe_removes_files(
         bt=bt,
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
-        full_file_storage_window=100,
+        maximum_full_file_count=100,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
