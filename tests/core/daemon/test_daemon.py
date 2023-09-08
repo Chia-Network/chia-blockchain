@@ -73,7 +73,7 @@ class KeysForPlotCase:
 
 
 @dataclass
-class ChiaPlotterBladebitArgsCase:
+class ChiaPlottersBladebitArgsCase:
     case_id: str
     plot_type: str
     count: int = 1
@@ -1961,15 +1961,15 @@ async def test_plotter_stop_plotting(
 
 
 @datacases(
-    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot"),
-    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=16),
-    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=128),
+    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot"),
+    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=16),
+    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=128),
 )
 def test_run_plotter_bladebit(
     mocker: MockerFixture,
     mock_daemon_with_config_and_keys,
     bt: BlockTools,
-    case: ChiaPlotterBladebitArgsCase,
+    case: ChiaPlottersBladebitArgsCase,
 ) -> None:
     root_path = bt.root_path
 
