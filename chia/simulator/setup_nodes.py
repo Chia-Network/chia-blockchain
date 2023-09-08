@@ -146,8 +146,7 @@ async def setup_simulators_and_wallets(
             xch_spam_amount,
             config_overrides,
             disable_capabilities,
-        ) as res:
-            bt_tools, simulators, wallets_services = res
+        ) as (bt_tools, simulators, wallets_services):
             wallets = []
             for wallets_servic in wallets_services:
                 wallets.append((wallets_servic._node, wallets_servic._node.server))
@@ -189,8 +188,7 @@ async def setup_simulators_and_wallets_service(
             xch_spam_amount,
             config_overrides,
             disable_capabilities,
-        ) as res:
-            bt_tools, simulators, wallets_services = res
+        ) as (bt_tools, simulators, wallets_services):
             yield simulators, wallets_services, bt_tools[0]
 
 
@@ -365,89 +363,99 @@ async def setup_full_system_inner(
         b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
         b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
-    # Start the introducer first so we can find out the port, and use that for the nodes
-    async with setup_introducer(shared_b_tools, uint16(0)) as introducer_service:
+    async with AsyncExitStack() as astack:
+        # Start the introducer first so we can find out the port, and use that for the nodes
+        introducer_service = await astack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
-        async with AsyncExitStack() as astack:
-            # Then start the full node so we can use the port for the farmer and timelord
-            nodes = [
-                await astack.enter_async_context(
-                    setup_full_node(
-                        consensus_constants,
-                        f"blockchain_test_{i}.db",
-                        shared_b_tools.config["self_hostname"],
-                        b_tools if i == 0 else b_tools_1,
-                        introducer_server._port,
-                        False,
-                        10,
-                        True,
-                        connect_to_daemon=connect_to_daemon,
-                        db_version=db_version,
-                    )
+
+        # Then start the full node so we can use the port for the farmer and timelord
+        nodes = [
+            await astack.enter_async_context(
+                setup_full_node(
+                    consensus_constants,
+                    f"blockchain_test_{i}.db",
+                    shared_b_tools.config["self_hostname"],
+                    b_tools if i == 0 else b_tools_1,
+                    introducer_server._port,
+                    False,
+                    10,
+                    True,
+                    connect_to_daemon=connect_to_daemon,
+                    db_version=db_version,
                 )
-                for i in range(2)
-            ]
-            node_apis = [fni._api for fni in nodes]
-            full_node_0_port = node_apis[0].full_node.server.get_port()
-            async with setup_farmer(
+            )
+            for i in range(2)
+        ]
+        node_apis = [fni._api for fni in nodes]
+        full_node_0_port = node_apis[0].full_node.server.get_port()
+        farmer_service = await astack.enter_async_context(
+            setup_farmer(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
                 shared_b_tools.config["self_hostname"],
                 consensus_constants,
                 full_node_0_port,
-            ) as farmer_service:
-                async with setup_harvester(
-                    shared_b_tools,
-                    shared_b_tools.root_path / "harvester",
-                    UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
-                    consensus_constants,
-                ) as harvester_service:
-                    harvester = harvester_service._node
+            )
+        )
+        harvester_service = await astack.enter_async_context(
+            setup_harvester(
+                shared_b_tools,
+                shared_b_tools.root_path / "harvester",
+                UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+                consensus_constants,
+            )
+        )
+        harvester = harvester_service._node
 
-                    vdf1_port = uint16(find_available_listen_port("vdf1"))
-                    vdf2_port = uint16(find_available_listen_port("vdf2"))
-                    async with setup_timelord(
-                        full_node_0_port,
-                        False,
-                        consensus_constants,
-                        b_tools.config,
-                        b_tools.root_path,
-                        vdf_port=vdf1_port,
-                    ) as timelord:
-                        async with setup_timelord(
-                            uint16(1000),
-                            True,
-                            consensus_constants,
-                            b_tools_1.config,
-                            b_tools_1.root_path,
-                            vdf_port=vdf2_port,
-                        ) as timelord_bluebox_service:
+        vdf1_port = uint16(find_available_listen_port("vdf1"))
+        vdf2_port = uint16(find_available_listen_port("vdf2"))
 
-                            async def num_connections() -> int:
-                                count = len(harvester.server.all_connections.items())
-                                return count
+        timelord = await astack.enter_async_context(
+            setup_timelord(
+                full_node_0_port,
+                False,
+                consensus_constants,
+                b_tools.config,
+                b_tools.root_path,
+                vdf_port=vdf1_port,
+            )
+        )
+        timelord_bluebox_service = await astack.enter_async_context(
+            setup_timelord(
+                uint16(1000),
+                True,
+                consensus_constants,
+                b_tools_1.config,
+                b_tools_1.root_path,
+                vdf_port=vdf2_port,
+            )
+        )
 
-                            await time_out_assert_custom_interval(10, 3, num_connections, 1)
-                            async with setup_vdf_clients(
-                                shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port
-                            ) as vdf_clients:
-                                async with setup_vdf_client(
-                                    shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port
-                                ) as vdf_bluebox_clients:
-                                    timelord_bluebox = timelord_bluebox_service._api
-                                    timelord_bluebox_server = timelord_bluebox_service._node.server
-                                    ret = (
-                                        node_apis[0],
-                                        node_apis[1],
-                                        harvester,
-                                        farmer_service._node,
-                                        introducer,
-                                        timelord,
-                                        vdf_clients,
-                                        vdf_bluebox_clients,
-                                        timelord_bluebox,
-                                        timelord_bluebox_server,
-                                    )
-                                    async with setup_daemon(btools=b_tools) as daemon_ws:
-                                        yield daemon_ws, ret
+        async def num_connections() -> int:
+            count = len(harvester.server.all_connections.items())
+            return count
+
+        await time_out_assert_custom_interval(10, 3, num_connections, 1)
+        vdf_clients = await astack.enter_async_context(
+            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port)
+        )
+        vdf_bluebox_clients = await astack.enter_async_context(
+            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port)
+        )
+        timelord_bluebox = timelord_bluebox_service._api
+        timelord_bluebox_server = timelord_bluebox_service._node.server
+        ret = (
+            node_apis[0],
+            node_apis[1],
+            harvester,
+            farmer_service._node,
+            introducer,
+            timelord,
+            vdf_clients,
+            vdf_bluebox_clients,
+            timelord_bluebox,
+            timelord_bluebox_server,
+        )
+        daemon_ws = await astack.enter_async_context(setup_daemon(btools=b_tools))
+        yield daemon_ws, ret
