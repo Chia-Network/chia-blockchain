@@ -15,11 +15,11 @@ if __name__ == "__main__":
     print(f"sys.path: {repr(sys.path)}", file=sys.stderr)
     print(f"os.getcwd(): {repr(os.getcwd())}", file=sys.stderr)
     print(f'os.environ.get("PATH"): {repr(os.environ.get("PATH"))}', file=sys.stderr)
-    
+
     print("environment: ======", file=sys.stderr)
     max_name_length = max(len(name) for name in os.environ.keys())
     for name, value in sorted(os.environ.items()):
-        print(f"{repr(name):max_name_length}: {repr(value)}", file=sys.stderr)
+        print(f"{repr(name):{max_name_length}}: {repr(value)}", file=sys.stderr)
 
 import time
 import traceback
