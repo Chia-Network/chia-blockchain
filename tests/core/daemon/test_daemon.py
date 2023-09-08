@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 import aiohttp
 import pkg_resources
 import pytest
+from pytest_mock import MockerFixture
 from aiohttp.web_ws import WebSocketResponse
 
 from chia.daemon.client import connect_to_daemon
@@ -22,6 +23,7 @@ from chia.daemon.keychain_server import (
     SetLabelRequest,
 )
 from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
+from chia.plotters.plotters import call_plotters
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
@@ -1893,3 +1895,39 @@ async def test_plotter_stop_plotting(
     # 5) Finally, get the "ack" for the stop_plotting payload
     response = await ws.receive()
     assert_response(response, {"success": True}, stop_plotting_request_id)
+
+
+plotter_basic_args = [
+    "-n",
+    "1",
+    "-r",
+    "0",
+    "-c",
+    "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "--compress",
+    "0",
+    "--device",
+    "0",
+]
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["bladebit", "cudaplot", "--disk-128"],
+    ],
+)
+def test_run_plotter_bladebit(
+    mocker: MockerFixture,
+    mock_daemon_with_config_and_keys,
+    bt: BlockTools,
+    args: List[str],
+) -> None:
+    root_path = bt.root_path
+    plot_dir = bt.plot_dir
+
+    args += plotter_basic_args + ["-d", str(plot_dir)]
+
+    mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter", return_value=None)
+    call_plotters(root_path, args)
+    mock_run_plotter.assert_called_once()
