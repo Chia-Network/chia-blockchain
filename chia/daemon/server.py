@@ -12,6 +12,8 @@ import sys
 
 print(f"sys.executable: {repr(sys.executable)}")
 print(f"sys.path: {repr(sys.path)}")
+print(f"os.getcwd(): {repr(os.getcwd())}")
+print(f'os.environ.get("PATH"): {repr(os.environ.get("PATH"))}')
 
 import time
 import traceback
