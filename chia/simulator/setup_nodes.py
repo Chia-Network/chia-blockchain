@@ -100,9 +100,9 @@ async def setup_n_nodes(
     """
     with ExitStack() as stack:
         keychains = [stack.enter_context(TempKeyring(populate=True)) for _ in range(n)]
-        async with AsyncExitStack() as astack:
+        async with AsyncExitStack() as async_exit_stack:
             nodes = [
-                await astack.enter_async_context(
+                await async_exit_stack.enter_async_context(
                     setup_full_node(
                         consensus_constants,
                         f"blockchain_test_{i}.db",
@@ -209,7 +209,7 @@ async def setup_simulators_and_wallets_inner(
 ) -> AsyncIterator[
     Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]]]
 ]:
-    async with AsyncExitStack() as astack:
+    async with AsyncExitStack() as async_exit_stack:
         bt_tools: List[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
             for _ in range(0, simulator_count)
@@ -223,7 +223,7 @@ async def setup_simulators_and_wallets_inner(
                 )
 
         simulators: List[Service[FullNode, FullNodeSimulator]] = [
-            await astack.enter_async_context(
+            await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
                 setup_full_node(  # type: ignore[arg-type]
                     consensus_constants=bt_tools[index].constants,
@@ -239,7 +239,7 @@ async def setup_simulators_and_wallets_inner(
         ]
 
         wallets: List[Service[WalletNode, WalletNodeAPI]] = [
-            await astack.enter_async_context(
+            await async_exit_stack.enter_async_context(
                 setup_wallet_node(
                     bt_tools[index].config["self_hostname"],
                     bt_tools[index].constants,
@@ -266,8 +266,8 @@ async def setup_farmer_multi_harvester(
     *,
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]]:
-    async with AsyncExitStack() as astack:
-        farmer_service = await astack.enter_async_context(
+    async with AsyncExitStack() as async_exit_stack:
+        farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(
                 block_tools,
                 temp_dir / "farmer",
@@ -282,7 +282,7 @@ async def setup_farmer_multi_harvester(
         else:
             farmer_peer = None
         harvester_services = [
-            await astack.enter_async_context(
+            await async_exit_stack.enter_async_context(
                 setup_harvester(
                     block_tools,
                     temp_dir / f"harvester_{i}",
@@ -363,15 +363,15 @@ async def setup_full_system_inner(
         b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
         b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
-    async with AsyncExitStack() as astack:
+    async with AsyncExitStack() as async_exit_stack:
         # Start the introducer first so we can find out the port, and use that for the nodes
-        introducer_service = await astack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
+        introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
 
         # Then start the full node so we can use the port for the farmer and timelord
         nodes = [
-            await astack.enter_async_context(
+            await async_exit_stack.enter_async_context(
                 setup_full_node(
                     consensus_constants,
                     f"blockchain_test_{i}.db",
@@ -389,7 +389,7 @@ async def setup_full_system_inner(
         ]
         node_apis = [fni._api for fni in nodes]
         full_node_0_port = node_apis[0].full_node.server.get_port()
-        farmer_service = await astack.enter_async_context(
+        farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
@@ -398,7 +398,7 @@ async def setup_full_system_inner(
                 full_node_0_port,
             )
         )
-        harvester_service = await astack.enter_async_context(
+        harvester_service = await async_exit_stack.enter_async_context(
             setup_harvester(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
@@ -411,7 +411,7 @@ async def setup_full_system_inner(
         vdf1_port = uint16(find_available_listen_port("vdf1"))
         vdf2_port = uint16(find_available_listen_port("vdf2"))
 
-        timelord = await astack.enter_async_context(
+        timelord = await async_exit_stack.enter_async_context(
             setup_timelord(
                 full_node_0_port,
                 False,
@@ -421,7 +421,7 @@ async def setup_full_system_inner(
                 vdf_port=vdf1_port,
             )
         )
-        timelord_bluebox_service = await astack.enter_async_context(
+        timelord_bluebox_service = await async_exit_stack.enter_async_context(
             setup_timelord(
                 uint16(1000),
                 True,
@@ -437,10 +437,10 @@ async def setup_full_system_inner(
             return count
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
-        vdf_clients = await astack.enter_async_context(
+        vdf_clients = await async_exit_stack.enter_async_context(
             setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port)
         )
-        vdf_bluebox_clients = await astack.enter_async_context(
+        vdf_bluebox_clients = await async_exit_stack.enter_async_context(
             setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port)
         )
         timelord_bluebox = timelord_bluebox_service._api
@@ -457,5 +457,5 @@ async def setup_full_system_inner(
             timelord_bluebox,
             timelord_bluebox_server,
         )
-        daemon_ws = await astack.enter_async_context(setup_daemon(btools=b_tools))
+        daemon_ws = await async_exit_stack.enter_async_context(setup_daemon(btools=b_tools))
         yield daemon_ws, ret
