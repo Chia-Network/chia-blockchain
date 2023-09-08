@@ -193,7 +193,7 @@ async def test_loop() -> None:
         logger.info(" ====           flood.py done")
         logger.handlers[0].flush()
 
-        await asyncio.sleep(adjusted_timeout(600))
+        await asyncio.sleep(adjusted_timeout(30))
 
         writer = None
         post_connection_error: Optional[str] = None
