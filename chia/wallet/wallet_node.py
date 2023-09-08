@@ -291,6 +291,8 @@ class WalletNode:
             "all_notification_ids",
             "key_val_store",
             "trade_records",
+            "trade_record_times",
+            "tx_times",
             "pool_state_transitions",
             "singleton_records",
             "mirrors",

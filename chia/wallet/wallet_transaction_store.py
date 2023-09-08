@@ -87,7 +87,7 @@ class WalletTransactionStore:
             try:
                 await conn.execute("CREATE TABLE tx_times(txid blob PRIMARY KEY, valid_times blob)")
                 async with await conn.execute("SELECT bundle_id from transaction_record") as cursor:
-                    txids: List[bytes32] = [bytes32.from_hexstr(row) for row in await cursor.fetchall()]
+                    txids: List[bytes32] = [bytes32(row[0]) for row in await cursor.fetchall()]
                     await conn.executemany(
                         "INSERT INTO tx_times (txid, valid_times) VALUES(?, ?)",
                         [(id, bytes(ConditionValidTimes())) for id in txids],

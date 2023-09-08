@@ -145,7 +145,7 @@ class TradeStore:
             try:
                 await conn.execute("CREATE TABLE trade_record_times(trade_id blob PRIMARY KEY, valid_times blob)")
                 async with await conn.execute("SELECT trade_id from trade_records") as cursor:
-                    trade_ids: List[bytes32] = [bytes32.from_hexstr(row) for row in await cursor.fetchall()]
+                    trade_ids: List[bytes32] = [bytes32.from_hexstr(row[0]) for row in await cursor.fetchall()]
                     await conn.executemany(
                         "INSERT INTO trade_record_times (trade_id, valid_times) VALUES(?, ?)",
                         [(id, bytes(ConditionValidTimes())) for id in trade_ids],
