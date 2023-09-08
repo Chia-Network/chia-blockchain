@@ -272,6 +272,7 @@ async def test_loop() -> None:
 
     logger.info(" ==== all checks passed")
     logger.handlers[0].flush()
+    assert False, "just making sure we get output"
 
 
 @pytest.mark.parametrize(
