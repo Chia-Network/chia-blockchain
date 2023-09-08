@@ -198,13 +198,13 @@ async def test_loop() -> None:
         writer = None
         post_connection_error: Optional[str] = None
         try:
-            with anyio.fail_after(delay=adjusted_timeout(15)):
-                logger.info(" ==== attempting a single new connection")
-                logger.handlers[0].flush()
+            logger.info(" ==== attempting a single new connection")
+            logger.handlers[0].flush()
+            with anyio.fail_after(delay=adjusted_timeout(1)):
                 reader, writer = await asyncio.open_connection(IP, PORT)
-                logger.info(" ==== connection succeeded")
-                logger.handlers[0].flush()
-                post_connection_succeeded = True
+            logger.info(" ==== connection succeeded")
+            logger.handlers[0].flush()
+            post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
             post_connection_succeeded = False
             post_connection_error = f"{type(e).__name__}: {e}"
