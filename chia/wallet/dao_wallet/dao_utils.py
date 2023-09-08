@@ -10,7 +10,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -737,3 +737,65 @@ def match_dao_cat_puzzle(uncurried: UncurriedPuzzle) -> Optional[Iterator[Progra
 
         print(f"exception: {traceback.format_exc()}")
     return None
+
+
+def generate_simple_proposal_innerpuz(
+    treasury_id: bytes32,
+    recipient_puzhashes: List[bytes32],
+    amounts: List[uint64],
+    asset_types: List[Optional[bytes32]] = [None],
+) -> Program:
+    if len(recipient_puzhashes) != len(amounts) != len(asset_types):  # pragma: no cover
+        raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
+    xch_conds = []
+    cat_conds = []
+    for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
+        if asset_type:
+            cat_conds.append([asset_type, [[51, recipient_puzhash, amount]]])
+        else:
+            xch_conds.append([51, recipient_puzhash, amount])
+    puzzle = get_spend_p2_singleton_puzzle(treasury_id, Program.to(xch_conds), Program.to(cat_conds))
+    return puzzle
+
+
+async def generate_update_proposal_innerpuz(
+    current_treasury_innerpuz: Program,
+    new_dao_rules: DAORules,
+    new_proposal_validator: Optional[Program] = None,
+) -> Program:
+    if not new_proposal_validator:
+        assert isinstance(current_treasury_innerpuz, Program)
+        new_proposal_validator = get_proposal_validator(
+            current_treasury_innerpuz, new_dao_rules.proposal_minimum_amount
+        )
+    return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
+
+
+async def generate_mint_proposal_innerpuz(
+    treasury_id: bytes32,
+    cat_tail_hash: bytes32,
+    amount_of_cats_to_create: uint64,
+    cats_new_innerpuzhash: bytes32,
+) -> Program:
+    if amount_of_cats_to_create % 2 == 1:  # pragma: no cover
+        raise ValueError("Minting proposals must mint an even number of CATs")
+    cat_launcher = create_cat_launcher_for_singleton_id(treasury_id)
+
+    # cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
+    # cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
+    eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
+    full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
+    xch_conditions = [
+        [
+            51,
+            cat_launcher.get_tree_hash(),
+            uint64(amount_of_cats_to_create),
+            [cats_new_innerpuzhash],
+        ],  # create cat_launcher coin
+        [
+            60,
+            Program.to([ProposalType.MINT.value, full_puz.get_tree_hash()]).get_tree_hash(),
+        ],  # make an announcement for the launcher to assert
+    ]
+    puzzle = get_spend_p2_singleton_puzzle(treasury_id, Program.to(xch_conditions), [])
+    return puzzle

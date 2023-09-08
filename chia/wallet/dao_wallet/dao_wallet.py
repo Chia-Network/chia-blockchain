@@ -55,12 +55,9 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_proposal_args,
     get_proposal_puzzle,
     get_proposal_timer_puzzle,
-    get_proposal_validator,
     get_proposed_puzzle_reveal_from_solution,
-    get_spend_p2_singleton_puzzle,
     get_treasury_puzzle,
     get_treasury_rules_from_puzzle,
-    get_update_proposal_puzzle,
     match_funding_puzzle,
     uncurry_proposal,
     uncurry_treasury,
@@ -608,26 +605,6 @@ class DAOWallet:
 
         return
 
-    async def create_tandem_xch_tx(
-        self,
-        fee: uint64,
-        tx_config: TXConfig,
-        announcement_to_assert: Optional[Announcement] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
-        chia_coins = await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config)
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
-            uint64(0),
-            (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
-            tx_config,
-            fee=fee,
-            coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
-            extra_conditions=extra_conditions,
-        )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
-
     async def generate_new_dao(
         self,
         amount_of_cats_to_create: Optional[uint64],
@@ -862,64 +839,6 @@ class DAOWallet:
         await self.save_info(dao_info)
         await self.wallet_state_manager.singleton_store.add_spend(self.id(), eve_coin_spend)
         return eve_spend_bundle
-
-    def generate_simple_proposal_innerpuz(
-        self,
-        recipient_puzhashes: List[bytes32],
-        amounts: List[uint64],
-        asset_types: List[Optional[bytes32]] = [None],
-    ) -> Program:
-        if len(recipient_puzhashes) != len(amounts) != len(asset_types):  # pragma: no cover
-            raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
-        xch_conds = []
-        cat_conds = []
-        for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
-            if asset_type:
-                cat_conds.append([asset_type, [[51, recipient_puzhash, amount]]])
-            else:
-                xch_conds.append([51, recipient_puzhash, amount])
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conds), Program.to(cat_conds))
-        return puzzle
-
-    async def generate_update_proposal_innerpuz(
-        self,
-        new_dao_rules: DAORules,
-        new_proposal_validator: Optional[Program] = None,
-    ) -> Program:
-        if not new_proposal_validator:
-            assert isinstance(self.dao_info.current_treasury_innerpuz, Program)
-            new_proposal_validator = get_proposal_validator(
-                self.dao_info.current_treasury_innerpuz, new_dao_rules.proposal_minimum_amount
-            )
-        return get_update_proposal_puzzle(new_dao_rules, new_proposal_validator)
-
-    async def generate_mint_proposal_innerpuz(
-        self,
-        amount_of_cats_to_create: uint64,
-        cats_new_innerpuzhash: bytes32,
-    ) -> Program:
-        if amount_of_cats_to_create % 2 == 1:  # pragma: no cover
-            raise ValueError("Minting proposals must mint an even number of CATs")
-        cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
-
-        cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
-        cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-        eve_puz_hash = curry_cat_eve(cats_new_innerpuzhash)
-        full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puz_hash)
-        xch_conditions = [
-            [
-                51,
-                cat_launcher.get_tree_hash(),
-                uint64(amount_of_cats_to_create),
-                [cats_new_innerpuzhash],
-            ],  # create cat_launcher coin
-            [
-                60,
-                Program.to([ProposalType.MINT.value, full_puz.get_tree_hash()]).get_tree_hash(),
-            ],  # make an announcement for the launcher to assert
-        ]
-        puzzle = get_spend_p2_singleton_puzzle(self.dao_info.treasury_id, Program.to(xch_conditions), [])
-        return puzzle
 
     async def generate_new_proposal(
         self,
@@ -1187,10 +1106,9 @@ class DAOWallet:
         list_of_coinspends = [CoinSpend(proposal_info.current_coin, full_proposal_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
-                extra_conditions=extra_conditions,
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
@@ -1544,7 +1462,7 @@ class DAOWallet:
         else:
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee, tx_config, extra_conditions=extra_conditions)
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
@@ -1697,7 +1615,7 @@ class DAOWallet:
 
         full_spend = SpendBundle.aggregate(spends)
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee, tx_config, extra_conditions=extra_conditions)
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)
             assert chia_tx.spend_bundle is not None
             full_spend = full_spend.aggregate([full_spend, chia_tx.spend_bundle])
 

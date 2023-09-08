@@ -47,7 +47,12 @@ from chia.wallet.cat_wallet.dao_cat_info import LockedCoinInfo
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.conditions import Condition
 from chia.wallet.dao_wallet.dao_info import DAORules
-from chia.wallet.dao_wallet.dao_utils import get_treasury_rules_from_puzzle
+from chia.wallet.dao_wallet.dao_utils import (
+    generate_mint_proposal_innerpuz,
+    generate_simple_proposal_innerpuz,
+    generate_update_proposal_innerpuz,
+    get_treasury_rules_from_puzzle,
+)
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -2714,7 +2719,9 @@ class WalletRpcApi:
                     asset_types.append(bytes32.from_hexstr(request["asset_id"]))
                 else:
                     asset_types.append(None)
-            proposed_puzzle = dao_wallet.generate_simple_proposal_innerpuz(puzzle_hashes, amounts, asset_types)
+            proposed_puzzle = generate_simple_proposal_innerpuz(
+                dao_wallet.dao_info.treasury_id, puzzle_hashes, amounts, asset_types
+            )
 
         elif request["proposal_type"] == "update":
             rules = dao_wallet.dao_rules
@@ -2729,11 +2736,21 @@ class WalletRpcApi:
                 oracle_spend_delay=prop.get("oracle_spend_delay") or rules.oracle_spend_delay,
             )
 
-            proposed_puzzle = await dao_wallet.generate_update_proposal_innerpuz(new_rules)
+            current_innerpuz = dao_wallet.dao_info.current_treasury_innerpuz
+            assert current_innerpuz is not None
+            proposed_puzzle = await generate_update_proposal_innerpuz(current_innerpuz, new_rules)
         elif request["proposal_type"] == "mint":
             amount_of_cats = uint64(request["amount"])
             mint_address = decode_puzzle_hash(request["cat_target_address"])
-            proposed_puzzle = await dao_wallet.generate_mint_proposal_innerpuz(amount_of_cats, mint_address)
+            cat_wallet = self.service.wallet_state_manager.get_wallet(
+                id=dao_wallet.dao_info.cat_wallet_id, required_type=CATWallet
+            )
+            proposed_puzzle = await generate_mint_proposal_innerpuz(
+                dao_wallet.dao_info.treasury_id,
+                cat_wallet.cat_info.limitations_program_hash,
+                amount_of_cats,
+                mint_address,
+            )
         else:  # pragma: no cover
             return {"success": False, "error": "Unknown proposal type."}
 

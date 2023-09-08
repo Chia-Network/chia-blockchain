@@ -21,6 +21,11 @@ from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.dao_wallet.dao_info import DAORules
+from chia.wallet.dao_wallet.dao_utils import (
+    generate_mint_proposal_innerpuz,
+    generate_simple_proposal_innerpuz,
+    generate_update_proposal_innerpuz,
+)
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -386,7 +391,8 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await full_node_api.process_transaction_records(records=txs_0)
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
     proposal_amount_1 = uint64(10000)
-    xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id,
         [recipient_puzzle_hash],
         [proposal_amount_1],
         [None],
@@ -639,7 +645,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     # Proposal 0: Spend xch to wallet_2.
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
     proposal_amount_1 = uint64(9998)
-    xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id,
         [recipient_puzzle_hash],
         [proposal_amount_1],
         [None],
@@ -663,7 +670,9 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Proposal 1: Mint new CATs
     new_mint_amount = uint64(1000)
-    mint_proposal_inner = await dao_wallet_0.generate_mint_proposal_innerpuz(
+    mint_proposal_inner = await generate_mint_proposal_innerpuz(
+        treasury_id,
+        cat_wallet_0.cat_info.limitations_program_hash,
         new_mint_amount,
         recipient_puzzle_hash,
     )
@@ -692,7 +701,9 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
         oracle_spend_delay=uint64(5),
         proposal_minimum_amount=uint64(1),
     )
-    update_inner = await dao_wallet_0.generate_update_proposal_innerpuz(new_dao_rules)
+    current_innerpuz = dao_wallet_0.dao_info.current_treasury_innerpuz
+    assert current_innerpuz is not None
+    update_inner = await generate_update_proposal_innerpuz(current_innerpuz, new_dao_rules)
     proposal_tx = await dao_wallet_0.generate_new_proposal(update_inner, DEFAULT_TX_CONFIG, dao_cat_0_bal, fee=base_fee)
     await wallet_0.wallet_state_manager.add_pending_transaction(proposal_tx)
     assert isinstance(proposal_tx, TransactionRecord)
@@ -707,8 +718,8 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
 
     # Proposal 3: Spend xch to wallet_2 (this prop will close as failed)
     proposal_amount_2 = uint64(500)
-    xch_proposal_inner = dao_wallet_1.generate_simple_proposal_innerpuz(
-        [recipient_puzzle_hash], [proposal_amount_2], [None]
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id, [recipient_puzzle_hash], [proposal_amount_2], [None]
     )
     proposal_tx = await dao_wallet_0.generate_new_proposal(
         xch_proposal_inner, DEFAULT_TX_CONFIG, dao_cat_0_bal, fee=base_fee
@@ -1145,7 +1156,9 @@ async def test_dao_proposal_partial_vote(
     # Create a mint proposal
     recipient_puzzle_hash = await cat_wallet_1.get_new_inner_hash()
     new_mint_amount = uint64(500)
-    mint_proposal_inner = await dao_wallet_0.generate_mint_proposal_innerpuz(
+    mint_proposal_inner = await generate_mint_proposal_innerpuz(
+        treasury_id,
+        cat_wallet_0.cat_info.limitations_program_hash,
         new_mint_amount,
         recipient_puzzle_hash,
     )
@@ -2715,7 +2728,8 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
     # Create a proposal for xch spend
     recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
     proposal_amount = uint64(10000)
-    xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id,
         [recipient_puzzle_hash],
         [proposal_amount],
         [None],
@@ -3202,7 +3216,8 @@ async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWal
     # Create a proposal for xch spend
     recipient_puzzle_hash = await wallet.get_new_puzzlehash()
     proposal_amount = uint64(10000)
-    xch_proposal_inner = dao_wallet_0.generate_simple_proposal_innerpuz(
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id,
         [recipient_puzzle_hash],
         [proposal_amount],
         [None],
