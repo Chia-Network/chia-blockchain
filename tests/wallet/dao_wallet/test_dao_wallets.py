@@ -29,6 +29,7 @@ from chia.wallet.dao_wallet.dao_utils import (
 from chia.wallet.dao_wallet.dao_wallet import DAOWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from tests.conftest import ConsensusMode
 from tests.util.rpc import validate_get_routes
 
 
@@ -75,12 +76,15 @@ async def rpc_state(
 puzzle_hash_0 = bytes32(32 * b"0")
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+async def test_dao_creation(
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
@@ -260,12 +264,15 @@ async def test_dao_creation(self_hostname: str, three_wallet_nodes: SimulatorsAn
     assert create_dao_wallet_from_info
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+async def test_dao_funding(
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
@@ -441,12 +448,15 @@ async def test_dao_funding(self_hostname: str, three_wallet_nodes: SimulatorsAnd
     await time_out_assert(30, dao_wallet_1.get_balance_by_asset_type, cat_funds, cat_id)
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+async def test_dao_proposals(
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
     """
     Test a set of proposals covering:
     - the spend, update, and mint types.
@@ -1007,13 +1017,14 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: SimulatorsA
     await time_out_assert(20, len, 0, dao_wallet_0.dao_info.proposals_list)
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
 async def test_dao_proposal_partial_vote(
-    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
     num_blocks = 1
     full_nodes, wallets, _ = three_wallet_nodes
@@ -1255,12 +1266,15 @@ async def test_dao_proposal_partial_vote(
     await time_out_assert(20, cat_wallet_0.get_spendable_balance, old_balance + balance + new_mint_amount)
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_dao_rpc_api(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 2  # use 2 here so the test doesn't become flaky if things get slow
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
@@ -1779,13 +1793,17 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
     assert resp["treasury_id"] == treasury_id
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
 async def test_dao_rpc_client(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: bool,
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
 ) -> None:
     num_blocks = 3
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
@@ -2179,13 +2197,17 @@ async def test_dao_rpc_client(
         await client_1.await_closed()
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
 async def test_dao_complex_spends(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: bool,
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
 ) -> None:
     num_blocks = 3
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
@@ -2548,12 +2570,15 @@ async def test_dao_complex_spends(
         await client_1.await_closed()
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+async def test_dao_concurrency(
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
@@ -2821,13 +2846,17 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: Simulator
     assert (dao_cat_1_bal == 100000 and dao_cat_2_bal == 0) or (dao_cat_1_bal == 0 and dao_cat_2_bal == 100000)
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
 async def test_dao_cat_exits(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: bool,
+    self_hostname: str,
+    consensus_mode: ConsensusMode,
 ) -> None:
     num_blocks = 3  # We're using the rpc client, so use 3 blocks to ensure we stay synced
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
@@ -3033,12 +3062,15 @@ async def test_dao_cat_exits(
         await client_1.await_closed()
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_dao_reorgs(self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool) -> None:
+async def test_dao_reorgs(
+    self_hostname: str, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
     num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
