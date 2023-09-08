@@ -952,8 +952,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             },
         )
 
-    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100), test=True)
+    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos and fee=10
+    await client.create_new_cat_and_wallet(uint64(100), fee=uint64(10), test=True)
     await time_out_assert(20, client.get_synced)
 
     res = await client.create_new_cat_and_wallet(uint64(20), test=True)
