@@ -16,7 +16,7 @@ from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import (
@@ -53,10 +53,6 @@ def cleanup_keyring(keyring: TempKeyring) -> None:
 
 
 log = logging.getLogger(__name__)
-
-
-def constants_for_dic(dic: Dict[str, int]) -> ConsensusConstants:
-    return test_constants.replace(**dic)
 
 
 async def _teardown_nodes(node_aiters: List[AsyncGenerator[Any, None]]) -> None:

@@ -1,6 +1,7 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import multiprocessing
 import os
@@ -119,12 +120,16 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
     if consensus_mode == ConsensusMode.SOFT_FORK4:
-        return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-        return test_constants.replace(
-            HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
+        return dataclasses.replace(
+            test_constants,
+            HARD_FORK_HEIGHT=2,
+            PLOT_FILTER_128_HEIGHT=10,
+            PLOT_FILTER_64_HEIGHT=15,
+            PLOT_FILTER_32_HEIGHT=20,
         )
     raise AssertionError("Invalid Blockchain mode in simulation")
 
