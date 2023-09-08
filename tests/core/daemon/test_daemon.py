@@ -72,6 +72,69 @@ class KeysForPlotCase:
     marks: Marks = ()
 
 
+@dataclass
+class ChiaPlotterBladebitArgsCase:
+    case_id: str
+    plot_type: str
+    count: int = 1
+    threads: int = 0
+    pool_contract: str = "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    compress: Optional[int] = None
+    device: Optional[int] = None
+    hybrid_disk_mode: Optional[int] = None
+    farmer_pk: str = ""
+    final_dir: str = ""
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self.case_id
+
+    def to_command_array(self) -> List[str]:
+        command: List[str] = ["bladebit", self.plot_type]
+        command += ["-r", str(self.threads)]
+        command += ["-n", str(self.count)]
+        command += ["-c", self.pool_contract]
+        if len(self.farmer_pk) == 0:
+            raise ValueError("Farmer pk is required")
+        command += ["-f", self.farmer_pk]
+        if self.compress is not None:
+            command += ["--compress", str(self.compress)]
+        if self.plot_type == "cudaplot":
+            if self.hybrid_disk_mode is not None:
+                command += [f"--disk-{self.hybrid_disk_mode}"]
+            if self.device is not None:
+                command += ["--device", str(self.device)]
+        if len(self.final_dir) == 0:
+            raise ValueError("Final dir is required")
+        command += ["-d", str(self.final_dir)]
+
+        return command
+
+    def expected_raw_command_args(self):
+        raw_args = []
+        raw_args += [
+            "--threads",
+            str(self.threads),
+            "--count",
+            str(self.count),
+            "--farmer-key",
+            str(self.farmer_pk),
+            "--pool-contract",
+            str(self.pool_contract),
+        ]
+        # --compress is "1" by default
+        raw_args += ["--compress", str(self.compress) if self.compress is not None else "1"]
+        raw_args += [self.plot_type]
+        if self.plot_type == "cudaplot":
+            # --device is "0" by default
+            raw_args += ["--device", str(self.device) if self.device is not None else "0"]
+            if self.hybrid_disk_mode is not None:
+                raw_args += [f"--disk-{self.hybrid_disk_mode}"]
+        raw_args += [str(self.final_dir)]
+        return raw_args
+
+
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
 @dataclass
 class Service:
@@ -1897,37 +1960,25 @@ async def test_plotter_stop_plotting(
     assert_response(response, {"success": True}, stop_plotting_request_id)
 
 
-plotter_basic_args = [
-    "-n",
-    "1",
-    "-r",
-    "0",
-    "-c",
-    "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "--compress",
-    "0",
-    "--device",
-    "0",
-]
-
-
-@pytest.mark.parametrize(
-    "args",
-    [
-        ["bladebit", "cudaplot", "--disk-128"],
-    ],
+@datacases(
+    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot"),
+    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=16),
+    ChiaPlotterBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=128),
 )
 def test_run_plotter_bladebit(
     mocker: MockerFixture,
     mock_daemon_with_config_and_keys,
     bt: BlockTools,
-    args: List[str],
+    case: ChiaPlotterBladebitArgsCase,
 ) -> None:
     root_path = bt.root_path
-    plot_dir = bt.plot_dir
 
-    args += plotter_basic_args + ["-d", str(plot_dir)]
+    case.farmer_pk = bytes(bt.farmer_pk).hex()
+    case.final_dir = str(bt.plot_dir)
 
-    mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter", return_value=None)
-    call_plotters(root_path, args)
+    mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter")
+    call_plotters(root_path, case.to_command_array())
+    assert mock_run_plotter.call_args.args[0] == root_path
+    assert mock_run_plotter.call_args.args[1] == "bladebit"
+    assert mock_run_plotter.call_args.args[2][1:] == case.expected_raw_command_args()
     mock_run_plotter.assert_called_once()
