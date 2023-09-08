@@ -559,6 +559,14 @@ async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def one_node(
+    blockchain_constants: ConsensusConstants,
+) -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+    async with setup_simulators_and_wallets_service(1, 0, blockchain_constants) as _:
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
