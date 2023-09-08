@@ -11,7 +11,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -26,8 +26,8 @@ from tests.util.key_tool import KeyTool
 from ..core.make_block_generator import int_to_public_key
 from .coin_store import CoinStore, CoinTimestamp
 
-T1 = CoinTimestamp(1, 10000000)
-T2 = CoinTimestamp(5, 10003000)
+T1 = CoinTimestamp(1, uint32(10000000))
+T2 = CoinTimestamp(5, uint32(10003000))
 
 MAX_BLOCK_COST_CLVM = int(1e18)
 

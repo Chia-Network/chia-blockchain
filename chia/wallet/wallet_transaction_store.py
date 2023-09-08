@@ -206,7 +206,7 @@ class WalletTransactionStore:
             record = TransactionRecord.from_bytes(row[0])
             if include_accepted_txs:
                 # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
-                record = dataclasses.replace(record, sent=1, sent_to=filter_ok_mempool_status(record.sent_to))
+                record = dataclasses.replace(record, sent=uint32(1), sent_to=filter_ok_mempool_status(record.sent_to))
                 await self.add_transaction_record(record)
                 self.tx_submitted[record.name] = current_time, 1
                 records.append(record)
