@@ -288,12 +288,23 @@ class WebSocketServer:
                 if len(service_names) == 0:
                     service_names = ["Unknown"]
 
-                if msg.type == WSMsgType.CLOSE:
-                    self.log.info(f"ConnectionClosed. Closing websocket with {service_names}")
+                closing_message = f"Closing websocket with {service_names}."
+
+                level = logging.INFO
+                if msg.type == WSMsgType.CLOSED:
+                    message = f"Connection closed. {closing_message}"
+                elif msg.type == WSMsgType.CLOSING:
+                    message = f"Connection closing. {closing_message}"
+                elif msg.type == WSMsgType.CLOSE:
+                    message = f"Connection close requested. {closing_message}"
                 elif msg.type == WSMsgType.ERROR:
-                    self.log.info(f"Websocket exception. Closing websocket with {service_names}. {ws.exception()}")
+                    level = logging.ERROR
+                    message = f"Websocket exception. {closing_message} {ws.exception()}"
                 else:
-                    self.log.info(f"Unexpected message type. Closing websocket with {service_names}. {msg.type}")
+                    level = logging.ERROR
+                    message = f"Unexpected message type. {closing_message} {msg.type}"
+
+                self.log.log(level=level, msg=message)
 
                 await ws.close()
                 break

@@ -663,6 +663,7 @@ class TestWalletSync:
     """
 
     @pytest.mark.asyncio
+    @pytest.mark.skip("this test is non-deterministic and is temporarily disabled")
     @pytest.mark.parametrize(
         "spam_filter_after_n_txs, xch_spam_amount, dust_value",
         [

@@ -122,7 +122,7 @@ async def setup_n_nodes(
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
@@ -135,7 +135,7 @@ async def setup_simulators_and_wallets(
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
             db_version,
-            dic,
+            consensus_constants,
             initial_num_public_keys,
             key_seed,
             keychain1,
@@ -163,7 +163,7 @@ async def setup_simulators_and_wallets(
 async def setup_simulators_and_wallets_service(
     simulator_count: int,
     wallet_count: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
@@ -178,7 +178,7 @@ async def setup_simulators_and_wallets_service(
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
             db_version,
-            dic,
+            consensus_constants,
             initial_num_public_keys,
             key_seed,
             keychain1,
@@ -197,7 +197,7 @@ async def setup_simulators_and_wallets_service(
 @asynccontextmanager
 async def setup_simulators_and_wallets_inner(
     db_version: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     initial_num_public_keys: int,
     key_seed: Optional[bytes32],
     keychain1: Keychain,
@@ -211,19 +211,16 @@ async def setup_simulators_and_wallets_inner(
 ) -> AsyncIterator[
     Tuple[List[BlockTools], List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]]]
 ]:
-    consensus_constants: ConsensusConstants = constants_for_dic(dic)
     async with AsyncExitStack() as astack:
         bt_tools: List[BlockTools] = [
-            await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
-            )
+            await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
             for _ in range(0, simulator_count)
         ]
         if wallet_count > simulator_count:
             for _ in range(0, wallet_count - simulator_count):
                 bt_tools.append(
                     await create_block_tools_async(
-                        consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
+                        consensus_constants, keychain=keychain2, config_overrides=config_overrides
                     )
                 )
 
