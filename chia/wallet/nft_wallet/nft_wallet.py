@@ -308,7 +308,9 @@ class NFTWallet:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
-                    did_bundle = await wallet.create_message_spend(tx_config, puzzle_announcements=nft_ids)
+                    did_bundle = (
+                        await wallet.create_message_spend(tx_config, puzzle_announcements=nft_ids)
+                    ).spend_bundle
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
