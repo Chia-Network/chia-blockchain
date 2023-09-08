@@ -9,6 +9,10 @@ import signal
 import ssl
 import subprocess
 import sys
+
+print(f"sys.executable: {repr(sys.executable)}")
+print(f"sys.path: {repr(sys.path)}")
+
 import time
 import traceback
 import uuid
