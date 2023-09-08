@@ -9,7 +9,7 @@ from chia.util.misc import SignalHandlers
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
 PORT = 8444
-NUM_CLIENTS = 50
+NUM_CLIENTS = 500
 
 
 async def tcp_echo_client(task_counter: str) -> None:
