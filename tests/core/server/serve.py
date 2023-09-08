@@ -68,8 +68,13 @@ async def async_main(
         logger.handlers[0].flush()
 
         try:
-            while not thread_end_event.is_set():
-                await asyncio.sleep(0.1)
+            try:
+                while not thread_end_event.is_set():
+                    await asyncio.sleep(0.1)
+            finally:
+                # the test checks explicitly for this
+                logger.info("exit: shutting down")
+                logger.handlers[0].flush()
             logger.info("exit: thread end event set")
             logger.handlers[0].flush()
         except KeyboardInterrupt:

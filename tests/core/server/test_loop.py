@@ -238,10 +238,14 @@ async def test_loop() -> None:
     shutdown_lines: List[str] = []
     for line in server_output_lines:
         if not found_shutdown:
-            if line.casefold().endswith("shutting down"):
-                found_shutdown = True
-            continue
+            if not line.casefold().endswith("shutting down"):
+                continue
+
+            found_shutdown = True
         shutdown_lines.append(line)
+
+    assert len(shutdown_lines) > 0, "shutdown message is missing from log, unable to verify timing of connections"
+
     for line in server_output_lines:
         mark = "Total connections:"
         if mark in line:
@@ -264,7 +268,7 @@ async def test_loop() -> None:
     assert post_connection_succeeded, post_connection_error
     assert all(
         "new connection" not in line.casefold() for line in shutdown_lines
-    ), "new connection found during shutting down"
+    ), "new connection found during shut down"
 
     logger.info(" ==== all checks passed")
     logger.handlers[0].flush()

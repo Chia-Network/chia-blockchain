@@ -26,11 +26,11 @@ async def tcp_echo_client(task_counter: str) -> None:
                 await asyncio.sleep(15)
             except asyncio.CancelledError as e:
                 t2 = time.monotonic()
-                print(f"Cancelled connection {label}: {e}. Time: {t2 - t1}")
+                print(f"Cancelled connection {label}: {e}. Time: {t2 - t1:.3f}")
                 break
             except Exception as e:
                 t2 = time.monotonic()
-                print(f"Closed connection {label}: {e}. Time: {t2 - t1}")
+                print(f"Closed connection {label}: {e}. Time: {t2 - t1:.3f}")
             finally:
                 print(f"--- {label} a")
                 if writer is not None:
