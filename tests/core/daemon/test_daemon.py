@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 import aiohttp
 import pkg_resources
 import pytest
-from pytest_mock import MockerFixture
 from aiohttp.web_ws import WebSocketResponse
+from pytest_mock import MockerFixture
 
 from chia.daemon.client import connect_to_daemon
 from chia.daemon.keychain_server import (
