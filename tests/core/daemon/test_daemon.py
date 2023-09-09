@@ -80,8 +80,8 @@ class ChiaPlottersBladebitArgsCase:
     count: int = 1
     threads: int = 0
     pool_contract: str = "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    compress: Optional[int] = None
-    device: Optional[int] = None
+    compress: int = 1
+    device: int = 0
     hybrid_disk_mode: Optional[int] = None
     farmer_pk: str = ""
     final_dir: str = ""
@@ -96,18 +96,12 @@ class ChiaPlottersBladebitArgsCase:
         command += ["-r", str(self.threads)]
         command += ["-n", str(self.count)]
         command += ["-c", self.pool_contract]
-        if len(self.farmer_pk) == 0:
-            raise ValueError("Farmer pk is required")
         command += ["-f", self.farmer_pk]
-        if self.compress is not None:
-            command += ["--compress", str(self.compress)]
+        command += ["--compress", str(self.compress)]
         if self.plot_type == "cudaplot":
+            command += ["--device", str(self.device)]
             if self.hybrid_disk_mode is not None:
                 command += [f"--disk-{self.hybrid_disk_mode}"]
-            if self.device is not None:
-                command += ["--device", str(self.device)]
-        if len(self.final_dir) == 0:
-            raise ValueError("Final dir is required")
         command += ["-d", str(self.final_dir)]
 
         return command
@@ -1978,11 +1972,7 @@ def test_run_plotter_bladebit(
     case.final_dir = str(bt.plot_dir)
 
     def bladebit_exists(x: Path) -> bool:
-        if not isinstance(x, Path):
-            return mocker.DEFAULT
-        if x.parent == root_path / "plotters":
-            return True
-        return mocker.DEFAULT
+        return True if isinstance(x, Path) and x.parent == root_path / "plotters" else mocker.DEFAULT
 
     def get_bladebit_version(_: Path) -> Tuple[bool, List[str]]:
         return True, ["3", "0", "0"]
