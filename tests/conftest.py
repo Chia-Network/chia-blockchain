@@ -418,7 +418,7 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
     async_gen = setup_simulators_and_wallets(
         2,
         1,
-        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
+        dataclasses.replace(blockchain_constants, MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]

@@ -3624,7 +3624,8 @@ async def test_soft_fork4_activation(
     # consecutive plot filter, hence no block would pass CHIP-13).
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
-            constants=blockchain_constants.replace(
+            constants=dataclasses.replace(
+                blockchain_constants,
                 SOFT_FORK4_HEIGHT=(0 if bt_respects_soft_fork4 else 10000),
                 UNIQUE_PLOTS_WINDOW=unique_plots_window,
             ),
