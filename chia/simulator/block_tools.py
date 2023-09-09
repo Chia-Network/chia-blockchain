@@ -1844,7 +1844,7 @@ def conditions_cost(conds: Program, hard_fork: bool) -> uint64:
     return uint64(condition_cost)
 
 
-def compute_cost_test(generator: BlockGenerator, cost_per_byte: int, hard_fork: bool = False) -> uint64:
+def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
     # this function cannot *validate* the block or any of the transactions. We
     # deliberately create invalid blocks as parts of the tests, and we still
     # need to be able to compute the cost of it
@@ -1852,33 +1852,32 @@ def compute_cost_test(generator: BlockGenerator, cost_per_byte: int, hard_fork: 
     condition_cost = 0
     clvm_cost = 0
 
-    if hard_fork:
+    if height >= constants.HARD_FORK_FIX_HEIGHT:
         blocks = [bytes(g) for g in generator.generator_refs]
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, DESERIALIZE_MOD, blocks)
         clvm_cost += cost
 
         for spend in result.first().as_iter():
-            spend = spend.rest()  # skip parent coin id
-            puzzle = spend.first()
-            spend = spend.rest()  # skip puzzle
-            spend = spend.rest()  # skip amount
-            solution = spend.first()
+            # each spend is a list of:
+            # (parent-coin-id puzzle amount solution)
+            puzzle = spend.at("rf")
+            solution = spend.at("rrrf")
 
             cost, result = puzzle._run(INFINITE_COST, MEMPOOL_MODE, solution)
             clvm_cost += cost
-            condition_cost += conditions_cost(result, hard_fork)
+            condition_cost += conditions_cost(result, height >= constants.HARD_FORK_HEIGHT)
 
     else:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
         clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, generator.program, block_program_args)
 
         for res in result.first().as_iter():
-            res = res.rest()  # skip parent coin id
-            res = res.rest()  # skip puzzle hash
-            res = res.rest()  # skip amount
-            condition_cost += conditions_cost(res.first(), hard_fork)
+            # each condition item is:
+            # (parent-coin-id puzzle-hash amount conditions)
+            conditions = res.at("rrrf")
+            condition_cost += conditions_cost(conditions, height >= constants.HARD_FORK_HEIGHT)
 
-    size_cost = len(bytes(generator.program)) * cost_per_byte
+    size_cost = len(bytes(generator.program)) * constants.COST_PER_BYTE
 
     return uint64(clvm_cost + size_cost + condition_cost)
 
@@ -1975,9 +1974,7 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            cost = compute_cost_test(
-                block_generator, constants.COST_PER_BYTE, hard_fork=height >= constants.HARD_FORK_HEIGHT
-            )
+            cost = compute_cost_test(block_generator, constants, height)
 
             removal_amount = 0
             addition_amount = 0

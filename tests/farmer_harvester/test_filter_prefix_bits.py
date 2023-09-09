@@ -21,9 +21,15 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
+from tests.conftest import ConsensusMode
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 
 
+# these numbers are only valid for chains farmed with the fixed original plot
+# filter. The HARD_FORK_2_0 consensus mode uses a chain where blocks are farmed
+# with wider filters. i.e. some valid blocks may still not pass the filter in
+# this test
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
     argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)]
 )

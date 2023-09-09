@@ -151,6 +151,8 @@ class TestConditions:
             # before the hard fork, all unknown conditions have 0 cost
             expected_cost = 0
 
+        # once the hard fork activates, blocks no longer pay the cost of the ROM
+        # generator (which includes hashing all puzzles).
         if consensus_mode == ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 756064
         else:
@@ -175,6 +177,8 @@ class TestConditions:
             expected_cost = 0
             block_base_cost = 737056
         else:
+            # once the hard fork activates, blocks no longer pay the cost of the ROM
+            # generator (which includes hashing all puzzles).
             block_base_cost = 732064
 
         # the block_base_cost includes the cost of the bytes for the condition

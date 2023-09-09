@@ -254,10 +254,14 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == ConsensusMode.SOFT_FORK4 or consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
 
-    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
+    version = ""
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
+    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
@@ -306,11 +310,16 @@ def default_2000_blocks_compact(bt, consensus_mode):
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == ConsensusMode.SOFT_FORK4 or consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
+
+    version = ""
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
     return persistent_blocks(
         10000,
-        f"test_blocks_10000_compact_{saved_blocks_version}.db",
+        f"test_blocks_10000_compact_{saved_blocks_version}{version}.db",
         bt,
         normalized_to_identity_cc_eos=True,
         normalized_to_identity_icc_eos=True,
