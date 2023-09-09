@@ -1512,7 +1512,7 @@ class TestBlockHeaderValidation:
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
         # default for this test
-        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
+        constants = dataclasses.replace(bt.constants, MAX_FUTURE_TIME2=2 * 60)
         time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
@@ -3631,7 +3631,11 @@ async def test_soft_fork4_activation(
             ),
             keychain=keychain,
         )
-        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=0, SOFT_FORK4_HEIGHT=soft_fork4_height)
+        blockchain_constants = dataclasses.replace(
+            bt.constants,
+            SOFT_FORK3_HEIGHT=0,
+            SOFT_FORK4_HEIGHT=soft_fork4_height,
+        )
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):
