@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import unittest
 from dataclasses import replace
 from secrets import token_bytes
 from typing import Callable, List, Optional, Tuple
@@ -41,7 +40,7 @@ public_key = G1Element.from_bytes(
 )
 
 
-class TestKeychain(unittest.TestCase):
+class TestKeychain:
     def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
@@ -60,12 +59,8 @@ class TestKeychain(unittest.TestCase):
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
         bad_mnemonic[6] = "ZZZZZZ"
-        self.assertRaisesRegex(
-            ValueError,
-            "'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled",
-            bytes_from_mnemonic,
-            " ".join(bad_mnemonic),
-        )
+        with pytest.raises(ValueError, match="'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled"):
+            bytes_from_mnemonic(" ".join(bad_mnemonic))
 
         kc.add_private_key(mnemonic)
         assert kc._get_free_private_key_index() == 1
