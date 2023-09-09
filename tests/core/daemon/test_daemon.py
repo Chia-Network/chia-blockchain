@@ -1978,6 +1978,8 @@ def test_run_plotter_bladebit(
     case.final_dir = str(bt.plot_dir)
 
     def bladebit_exists(x: Path) -> bool:
+        if not isinstance(x, Path):
+            return mocker.DEFAULT
         if x.parent == root_path / "plotters":
             return True
         return mocker.DEFAULT
