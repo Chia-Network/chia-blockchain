@@ -2683,13 +2683,17 @@ class TestBodyValidation:
         pass
         #
         # with TempKeyring() as keychain:
-        #     new_test_constants = bt.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     new_test_constants = dataclasses.replace(
+        #         bt.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = bt_2.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     bt_2.constants = dataclasses.replace(
+        #         bt_2.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     blocks = bt_2.get_consecutive_blocks(
         #         3,
