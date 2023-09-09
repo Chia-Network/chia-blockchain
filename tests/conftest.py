@@ -1039,23 +1039,12 @@ def database_uri_fixture() -> str:
 
 @pytest.fixture(name="empty_temp_file_keyring")
 def empty_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
-    """
-    Decorator that will create a temporary directory with a temporary keyring that is
-    automatically cleaned-up after invoking the decorated function. If `populate` is
-    true, the newly created keyring will be populated with a payload containing 0 keys
-    using the default passphrase.
-    """
     with TempKeyring(populate=False) as keyring:
         yield keyring
 
 
 @pytest.fixture(name="populated_temp_file_keyring")
 def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
-    """
-    Decorator that will create a temporary directory with a temporary keyring that is
-    automatically cleaned-up after invoking the decorated function. If `populate` is
-    true, the newly created keyring will be populated with a payload containing 0 keys
-    using the default passphrase.
-    """
+    """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
