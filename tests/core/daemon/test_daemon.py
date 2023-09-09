@@ -1977,14 +1977,20 @@ def test_run_plotter_bladebit(
     case.farmer_pk = bytes(bt.farmer_pk).hex()
     case.final_dir = str(bt.plot_dir)
 
-    def bladebit_exists(x: Path):
-        if x == root_path / "plotters" / "bladebit" or x == root_path / "plotters" / "bladebit_cuda":
+    def bladebit_exists(x: Path) -> bool:
+        if x.parent == root_path / "plotters":
             return True
         return mocker.DEFAULT
 
+    def get_bladebit_version(_: Path) -> Tuple[bool, List[str]]:
+        return True, ["3", "0", "0"]
+
     mocker.patch("os.path.exists", side_effect=bladebit_exists)
+    mocker.patch("chia.plotters.bladebit.get_bladebit_version", side_effect=get_bladebit_version)
     mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter")
+
     call_plotters(root_path, case.to_command_array())
+
     assert mock_run_plotter.call_args.args[0] == root_path
     assert mock_run_plotter.call_args.args[1] == "bladebit"
     assert mock_run_plotter.call_args.args[2][1:] == case.expected_raw_command_args()
