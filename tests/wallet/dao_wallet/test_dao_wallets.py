@@ -3148,10 +3148,10 @@ async def test_dao_reorgs(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-    assert (await dao_wallet_0.get_confirmed_balance()) == uint128(1)
-    assert (await dao_wallet_0.get_unconfirmed_balance()) == uint128(1)
-    assert (await dao_wallet_0.get_pending_change_balance()) == uint64(0)
-    assert (await dao_wallet_0.get_spendable_balance()) == uint128(1)
+    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
+    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
+    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
+    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
 
     # Test Reorg on creation
     height = full_node_api.full_node.blockchain.get_peak_height()
@@ -3160,10 +3160,10 @@ async def test_dao_reorgs(
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 10), uint32(height + 1), puzzle_hash_0, None)
     )
-    assert (await dao_wallet_0.get_confirmed_balance()) == uint128(1)
-    assert (await dao_wallet_0.get_unconfirmed_balance()) == uint128(1)
-    assert (await dao_wallet_0.get_pending_change_balance()) == uint64(0)
-    assert (await dao_wallet_0.get_spendable_balance()) == uint128(1)
+    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
+    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
+    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
+    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
