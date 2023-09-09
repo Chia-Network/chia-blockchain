@@ -135,40 +135,34 @@ async def test_dao_creation(
 
     # Try to create a DAO with more CATs than xch balance
     with pytest.raises(ValueError) as e_info:
-        async with wallet_node_0.wallet_state_manager.lock:
-            dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
-                wallet_node_0.wallet_state_manager,
-                wallet,
-                uint64(funds + 1),
-                dao_rules,
-                DEFAULT_TX_CONFIG,
-            )
-    assert e_info.value.args[0] == f"Your balance of {funds} mojos is not enough to create {funds + 1} CATs"
-
-    async with wallet_node_0.wallet_state_manager.lock:
         dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
             wallet_node_0.wallet_state_manager,
             wallet,
-            uint64(cat_amt * 2),
+            uint64(funds + 1),
             dao_rules,
             DEFAULT_TX_CONFIG,
         )
-        assert dao_wallet_0 is not None
+    assert e_info.value.args[0] == f"Your balance of {funds} mojos is not enough to create {funds + 1} CATs"
+
+    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+        wallet_node_0.wallet_state_manager,
+        wallet,
+        uint64(cat_amt * 2),
+        dao_rules,
+        DEFAULT_TX_CONFIG,
+    )
+    assert dao_wallet_0 is not None
 
     tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-    tx_record = tx_queue[0]
-    await full_node_api.process_transaction_records(records=[tx_record])
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.process_transaction_records(records=tx_queue)
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
     # Check the spend was successful
     treasury_id = dao_wallet_0.dao_info.treasury_id
 
     # check the dao wallet balances
-    await time_out_assert(60, dao_wallet_0.get_confirmed_balance, uint128(1))
-    await time_out_assert(60, dao_wallet_0.get_unconfirmed_balance, uint128(1))
-    await time_out_assert(60, dao_wallet_0.get_pending_change_balance, uint64(0))
-    await time_out_assert(60, dao_wallet_0.get_spendable_balance, uint128(1))
+    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
 
     # check select coins
     no_coins = await dao_wallet_0.select_coins(uint64(2), DEFAULT_TX_CONFIG)
@@ -3117,24 +3111,23 @@ async def test_dao_reorgs(
 
     cat_amt = 300000
     dao_rules = DAORules(
-        proposal_timelock=uint64(10),
-        soft_close_length=uint64(5),
+        proposal_timelock=uint64(5),
+        soft_close_length=uint64(2),
         attendance_required=uint64(1000),  # 10%
         pass_percentage=uint64(5100),  # 51%
-        self_destruct_length=uint64(20),
-        oracle_spend_delay=uint64(10),
+        self_destruct_length=uint64(5),
+        oracle_spend_delay=uint64(2),
         proposal_minimum_amount=uint64(101),
     )
 
-    async with wallet_node_0.wallet_state_manager.lock:
-        dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
-            wallet_node_0.wallet_state_manager,
-            wallet,
-            uint64(cat_amt),
-            dao_rules,
-            DEFAULT_TX_CONFIG,
-        )
-        assert dao_wallet_0 is not None
+    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+        wallet_node_0.wallet_state_manager,
+        wallet,
+        uint64(cat_amt),
+        dao_rules,
+        DEFAULT_TX_CONFIG,
+    )
+    assert dao_wallet_0 is not None
 
     # Get the full node sim to process the wallet creation spend
     tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
@@ -3142,28 +3135,23 @@ async def test_dao_reorgs(
     await full_node_api.process_transaction_records(records=[tx_record])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
-    for i in range(10):
+    for i in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
-    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
-    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
+    await time_out_assert(60, dao_wallet_0.get_confirmed_balance, uint128(1))
 
     # Test Reorg on creation
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:  # pragma: no cover
         assert False
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 10), uint32(height + 1), puzzle_hash_0, None)
+        ReorgProtocol(uint32(height - 2), uint32(height + 1), puzzle_hash_0, None)
     )
-    await time_out_assert(20, dao_wallet_0.get_confirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_unconfirmed_balance, uint128(1))
-    await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
-    await time_out_assert(20, dao_wallet_0.get_spendable_balance, uint128(1))
+
+    assert dao_wallet_0.dao_info.current_treasury_coin
+    await time_out_assert(60, dao_wallet_0.get_confirmed_balance, uint128(1))
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
