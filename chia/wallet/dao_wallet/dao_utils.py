@@ -218,7 +218,7 @@ def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] =
 
 
 def get_lockup_puzzle(
-    cat_tail_hash: bytes32, previous_votes_list: List[Optional[bytes32]], innerpuz: Program
+    cat_tail_hash: bytes32, previous_votes_list: List[Optional[bytes32]], innerpuz: Optional[Program]
 ) -> Program:
     self_hash: Program = DAO_LOCKUP_MOD.curry(
         SINGLETON_MOD_HASH,
@@ -270,8 +270,12 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
     return Program(ACTIVE_VOTES)
 
 
-def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
-    curried_args, c_a = uncurry_lockup(lockup_puzzle)
+def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Optional[Program]:
+    try:
+        curried_args, c_a = uncurry_lockup(lockup_puzzle)
+    except Exception as e:
+        log.debug("Could not uncurry inner puzzle from lockup: %s", e)
+        return None
     (
         _SINGLETON_MOD_HASH,
         _SINGLETON_LAUNCHER_HASH,
@@ -606,7 +610,7 @@ def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
         log.debug("Cannot uncurry lockup puzzle: error: %s", e)
         raise e
     if mod != DAO_LOCKUP_MOD:
-        raise ValueError("Not a dao cat lockup mod.")
+        log.debug("Puzzle is not a dao cat lockup mod")
     return curried_args, c_a
 
 

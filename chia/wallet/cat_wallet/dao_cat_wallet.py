@@ -157,9 +157,10 @@ class DAOCATWallet:
 
         record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
         if record:
-            inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
+            inner_puzzle: Optional[Program] = self.standard_wallet.puzzle_for_pk(record.pubkey)
         else:
             inner_puzzle = get_innerpuz_from_lockup_puzzle(cat_inner)
+            assert isinstance(inner_puzzle, Program)
             active_votes_list = get_active_votes_from_lockup_puzzle(cat_inner)
             active_votes_list = [x.as_atom() for x in active_votes_list.as_iter()]
 
@@ -272,7 +273,9 @@ class DAOCATWallet:
             coin = lci.coin
             vote_info = 0
             new_innerpuzzle = add_proposal_to_active_list(lci.inner_puzzle, proposal_id)
+            assert new_innerpuzzle is not None
             standard_inner_puz = get_innerpuz_from_lockup_puzzle(new_innerpuzzle)
+            assert isinstance(standard_inner_puz, Program)
             # add_proposal_to_active_list also verifies that the lci.inner_puzzle is accurate
             # We must create either: one coin with the new puzzle and all our value
             # OR

@@ -992,11 +992,11 @@ class DAOWallet:
                     get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
                 )
             )
-            lockup_inner_puzhashes.append(
-                get_innerpuz_from_lockup_puzzle(
-                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
-                ).get_tree_hash()
+            lockup_inner_puz = get_innerpuz_from_lockup_puzzle(
+                get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
             )
+            assert isinstance(lockup_inner_puz, Program)
+            lockup_inner_puzhashes.append(lockup_inner_puz.get_tree_hash())
         inner_sol = Program.to(
             [
                 vote_amounts,
@@ -1074,11 +1074,11 @@ class DAOWallet:
                     get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
                 )
             )
-            lockup_inner_puzhashes.append(
-                get_innerpuz_from_lockup_puzzle(
-                    get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
-                ).get_tree_hash()
+            lockup_inner_puz = get_innerpuz_from_lockup_puzzle(
+                get_innerpuzzle_from_cat_puzzle(Program.from_bytes(bytes(spend.puzzle_reveal)))
             )
+            assert isinstance(lockup_inner_puz, Program)
+            lockup_inner_puzhashes.append(lockup_inner_puz.get_tree_hash())
         inner_sol = Program.to(
             [
                 vote_amounts,
