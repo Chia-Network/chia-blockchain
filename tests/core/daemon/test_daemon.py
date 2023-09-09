@@ -3,7 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os.path
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
@@ -1962,8 +1964,8 @@ async def test_plotter_stop_plotting(
 
 @datacases(
     ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot"),
-    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=16),
-    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot", hybrid_disk_mode=128),
+    ChiaPlottersBladebitArgsCase(case_id="2", plot_type="cudaplot", hybrid_disk_mode=16),
+    ChiaPlottersBladebitArgsCase(case_id="3", plot_type="cudaplot", hybrid_disk_mode=128),
 )
 def test_run_plotter_bladebit(
     mocker: MockerFixture,
@@ -1976,6 +1978,12 @@ def test_run_plotter_bladebit(
     case.farmer_pk = bytes(bt.farmer_pk).hex()
     case.final_dir = str(bt.plot_dir)
 
+    def bladebit_exists(x: Path):
+        if x == root_path / "plotters" / "bladebit" or x == root_path / "plotters" / "bladebit_cuda":
+            return True
+        return mocker.DEFAULT
+
+    mocker.patch("os.path.exists", side_effect=bladebit_exists)
     mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter")
     call_plotters(root_path, case.to_command_array())
     assert mock_run_plotter.call_args.args[0] == root_path
