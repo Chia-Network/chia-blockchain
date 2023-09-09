@@ -10,7 +10,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -695,9 +695,13 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
 
 
 # This is used in WSM to determine whether we have a dao funding spend
-def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Coin) -> Optional[bool]:
+def match_funding_puzzle(
+    uncurried: UncurriedPuzzle, solution: Program, coin: Coin, dao_ids: List[bytes32] = []
+) -> Optional[bool]:
+    if not dao_ids:
+        return None
     try:
-        if match_cat_puzzle(uncurried):
+        if uncurried.mod == CAT_MOD:
             conditions = solution.at("frfr").as_iter()
         elif uncurried.mod == MOD:
             conditions = solution.at("rfr").as_iter()
@@ -712,10 +716,10 @@ def match_funding_puzzle(uncurried: UncurriedPuzzle, solution: Program, coin: Co
             return None  # pragma: no cover
         else:
             return None
+        fund_puzhashes = [get_p2_singleton_puzhash(dao_id) for dao_id in dao_ids]
         for cond in conditions:
             if (cond.list_len() == 4) and (cond.first().as_int() == 51):
-                maybe_treasury_id = cond.at("rrrff")
-                if cond.at("rf") == get_p2_singleton_puzhash(maybe_treasury_id):
+                if cond.at("rrrff") in fund_puzhashes:
                     return True
     except (ValueError, EvalError):
         import traceback

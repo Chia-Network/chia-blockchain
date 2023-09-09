@@ -148,9 +148,6 @@ class DAOCATWallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Any]) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"DAO CAT wallet has been notified that {coin} was added")
-        # We can't get the inner puzzle for this coin's puzhash because it has the lockup layer.
-        # So look for it's parent coin, and get the inner puzzle for it, which should be the same as
-        # the one contained in the lockup.
         wallet_node: Any = self.wallet_state_manager.wallet_node
         parent_coin = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
         parent_spend = await fetch_coin_spend(height, parent_coin.coin, peer)

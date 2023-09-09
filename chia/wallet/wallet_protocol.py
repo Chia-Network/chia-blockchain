@@ -85,7 +85,6 @@ class GSTOptionalArgs(TypedDict):
     announce_new_state: NotRequired[bool]
     # CATWallet
     cat_discrepancy: NotRequired[Optional[Tuple[int, Program, Program]]]
-    override_memos: NotRequired[Optional[bool]]
     # NFTWallet
     nft_coin: NotRequired[Optional[NFTCoinInfo]]
     new_owner: NotRequired[Optional[bytes]]

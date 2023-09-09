@@ -243,8 +243,8 @@ class DAOWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.DAO.value, info_as_string
         )
-        await self.resync_treasury_state()
         await self.wallet_state_manager.add_new_wallet(self)
+        await self.resync_treasury_state()
         await self.save_info(self.dao_info)
         self.wallet_id = self.wallet_info.id
 
@@ -261,7 +261,10 @@ class DAOWallet:
         await self.save_info(dao_info)
 
         # add treasury id to interested puzzle hashes. This is hinted in funding coins so we can track them
-        await self.wallet_state_manager.add_interested_puzzle_hashes([self.dao_info.treasury_id], [self.id()])
+        funding_inner_hash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+        await self.wallet_state_manager.add_interested_puzzle_hashes(
+            [self.dao_info.treasury_id, funding_inner_hash], [self.id(), self.id()]
+        )
         return self
 
     @staticmethod
@@ -436,7 +439,7 @@ class DAOWallet:
             puzzle = Program.from_bytes(bytes(parent_spend.puzzle_reveal))
             solution = Program.from_bytes(bytes(parent_spend.solution))
             uncurried = uncurry_puzzle(puzzle)
-            matched_funding_puz = match_funding_puzzle(uncurried, solution, coin)
+            matched_funding_puz = match_funding_puzzle(uncurried, solution, coin, [self.dao_info.treasury_id])
             if matched_funding_puz:
                 # funding coin
                 xch_funds_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
@@ -796,6 +799,9 @@ class DAOWallet:
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
         await self.wallet_state_manager.add_pending_transaction(treasury_record)
+
+        funding_inner_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([funding_inner_puzhash], [self.id()])
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_coin.name()], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([launcher_coin.name()], [self.wallet_id])
 
@@ -1354,12 +1360,13 @@ class DAOWallet:
                         lineage_proof = await self.fetch_cat_lineage_proof(cat_coin)
                         if cat_coin == cat_coins[-1]:  # the last coin is the one that makes the conditions
                             if sum_of_coins - sum_of_conditions > 0:
+                                p2_singleton_puzhash = p2_singleton_puzzle.get_tree_hash()
                                 change_condition = Program.to(
                                     [
                                         51,
-                                        p2_singleton_puzzle.get_tree_hash(),
+                                        p2_singleton_puzhash,
                                         sum_of_coins - sum_of_conditions,
-                                        [self.dao_info.treasury_id],
+                                        [p2_singleton_puzhash],
                                     ]
                                 )
                                 delegated_puzzle = Program.to((1, change_condition.cons(conditions)))
@@ -1533,7 +1540,7 @@ class DAOWallet:
                 p2_singleton_puzhash,
                 tx_config,
                 fee=fee,
-                memos=[self.dao_info.treasury_id],
+                memos=[p2_singleton_puzhash],
             )
         elif funding_wallet.type() == WalletType.CAT.value:
             cat_wallet: CATWallet = funding_wallet  # type: ignore[assignment]
@@ -1545,8 +1552,6 @@ class DAOWallet:
                 [p2_singleton_puzhash],
                 tx_config,
                 fee=fee,
-                memos=[[self.dao_info.treasury_id]],
-                override_memos=True,
                 extra_conditions=extra_conditions,
             )
             return tx_records[0]

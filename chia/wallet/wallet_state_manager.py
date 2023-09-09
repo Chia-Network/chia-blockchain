@@ -68,6 +68,7 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.conditions import Condition
 from chia.wallet.dao_wallet.dao_utils import (
+    get_p2_singleton_puzhash,
     match_dao_cat_puzzle,
     match_finished_puzzle,
     match_funding_puzzle,
@@ -761,7 +762,13 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
-        funding_puzzle_check = match_funding_puzzle(uncurried, solution, coin_state.coin)
+        dao_ids = []
+        wallets = self.wallets.values()
+        for wallet in wallets:
+            if wallet.type() == WalletType.DAO.value:
+                assert isinstance(wallet, DAOWallet)
+                dao_ids.append(wallet.dao_info.treasury_id)
+        funding_puzzle_check = match_funding_puzzle(uncurried, solution, coin_state.coin, dao_ids)
         if funding_puzzle_check:
             return await self.get_dao_wallet_from_coinspend_hint(coin_spend, coin_state), None
 
@@ -1350,7 +1357,7 @@ class WalletStateManager:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:
                     assert isinstance(wallet, DAOWallet)
-                    if wallet.dao_info.treasury_id == hinted_coin.hint:
+                    if get_p2_singleton_puzhash(wallet.dao_info.treasury_id) == hinted_coin.hint:
                         return WalletIdentifier.create(wallet)
         return None
 

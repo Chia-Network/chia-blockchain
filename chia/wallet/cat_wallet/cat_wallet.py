@@ -795,7 +795,6 @@ class CATWallet:
     ) -> List[TransactionRecord]:
         # (extra_delta, tail_reveal, tail_solution)
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
-        override_memos: Optional[bool] = kwargs.get("override_memos", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
@@ -804,11 +803,8 @@ class CATWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            if override_memos:
-                memos_with_hint: List[bytes] = memo_list
-            else:
-                memos_with_hint = [puzhash]
-                memos_with_hint.extend(memo_list)
+            memos_with_hint: List[bytes] = [puzhash]
+            memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])

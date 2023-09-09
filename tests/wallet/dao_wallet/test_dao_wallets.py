@@ -1945,6 +1945,13 @@ async def test_dao_rpc_client(
             lambda x: x["balances"][new_cat_asset_id.hex()],
             new_cat_amt,
         )
+        await rpc_state(
+            20,
+            client_0.dao_get_treasury_balance,
+            [dao_id_0],
+            lambda x: x["balances"]["xch"],
+            xch_funds,
+        )
 
         # send cats to wallet 1
         await client_0.cat_spend(
