@@ -142,7 +142,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
         print("Transaction not yet submitted to nodes")  # pragma: no cover
@@ -347,7 +347,7 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp:
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
         print("Transaction not yet submitted to nodes")  # pragma: no cover
@@ -378,7 +378,7 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
         print("Transaction not yet submitted to nodes")  # pragma: no cover
 
@@ -409,7 +409,7 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
         print("Transaction not yet submitted to nodes")  # pragma: no cover
 

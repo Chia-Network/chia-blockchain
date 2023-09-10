@@ -334,24 +334,12 @@ class DAOWallet:
         return uint128(0)  # pragma: no cover
 
     async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id, unspent_records
-        )
-        xch_balance = await self.get_balance_by_asset_type()
-        return uint128(spendable_am - xch_balance)
+        # No spendable or receivable value
+        return uint128(1)
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        if record_list is None:
-            record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
-
-        amount: uint128 = uint128(0)
-        for record in record_list:
-            parent = self.get_parent_for_coin(record.coin)
-            if parent is not None:
-                amount = uint128(amount + record.coin.amount)
-
-        self.log.info(f"Confirmed balance for dao wallet is {amount}")
-        return uint128(amount)
+        # No spendable or receivable value
+        return uint128(1)
 
     async def select_coins(
         self,
@@ -394,9 +382,8 @@ class DAOWallet:
         return uint64(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
-        unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
-        xch_bal = await self.get_balance_by_asset_type()
-        return uint128(unc_bal - xch_bal)
+        # No spendable or receivable value
+        return uint128(1)
 
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
@@ -1124,7 +1111,8 @@ class DAOWallet:
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend, chia_tx.spend_bundle])
-        spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
+        else:
+            spend_bundle = unsigned_spend_bundle.aggregate([unsigned_spend_bundle, dao_cat_spend])
 
         record = TransactionRecord(
             confirmed_at_height=uint32(0),
