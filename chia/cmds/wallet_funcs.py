@@ -808,8 +808,6 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  
 def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only: bool = False) -> str:
     if decimal_only:  # dont use scientific notation.
         final_amount = f"{amount / scale:.12f}"
-    elif scale == 1:
-        final_amount = f"{int(amount)} mojo"
     else:
         final_amount = f"{amount / scale}"
     ret = f"{final_amount} {address_prefix} "
