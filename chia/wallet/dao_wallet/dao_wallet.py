@@ -2149,25 +2149,3 @@ class DAOWallet:
             raise ValueError(f"Unsupported spend in DAO Wallet: {self.id()}")
 
         return True
-
-    async def new_peak(self, peak_height: uint64) -> None:
-        """
-        new_peak is called from the WalletStateManager whenever there is a new peak
-        # This is where we can attempt to push spends, check on time locks, etc.
-        """
-
-        dao_info = DAOInfo(
-            self.dao_info.treasury_id,
-            self.dao_info.cat_wallet_id,
-            self.dao_info.dao_cat_wallet_id,
-            self.dao_info.proposals_list,
-            self.dao_info.parent_info,
-            self.dao_info.current_treasury_coin,
-            self.dao_info.current_treasury_innerpuz,
-            self.dao_info.singleton_block_height,
-            self.dao_info.filter_below_vote_amount,
-            self.dao_info.assets,
-            self.dao_info.current_height,
-        )
-        await self.save_info(dao_info)
-        pass

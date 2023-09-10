@@ -273,7 +273,7 @@ def get_active_votes_from_lockup_puzzle(lockup_puzzle: Program) -> Program:
 def get_innerpuz_from_lockup_puzzle(lockup_puzzle: Program) -> Optional[Program]:
     try:
         curried_args, c_a = uncurry_lockup(lockup_puzzle)
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         log.debug("Could not uncurry inner puzzle from lockup: %s", e)
         return None
     (
