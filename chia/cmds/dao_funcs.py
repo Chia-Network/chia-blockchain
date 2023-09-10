@@ -44,6 +44,12 @@ async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
 
 
 async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+    proposal_minimum = uint64(int(Decimal(args["proposal_minimum_amount"]) * units["chia"]))
+
+    if proposal_minimum % 2 == 0:
+        proposal_minimum = uint64(1 + proposal_minimum)
+        print("Adding 1 mojo to proposal minimum amount")
+
     dao_rules = {
         "proposal_timelock": args["proposal_timelock"],
         "soft_close_length": args["soft_close_length"],
@@ -51,7 +57,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
         "pass_percentage": args["pass_percentage"],
         "self_destruct_length": args["self_destruct_length"],
         "oracle_spend_delay": args["oracle_spend_delay"],
-        "proposal_minimum_amount": args["proposal_minimum_amount"],
+        "proposal_minimum_amount": proposal_minimum,
     }
     amount_of_cats = args["amount_of_cats"]
     filter_amount = args["filter_amount"]
@@ -131,7 +137,6 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
 
         tx_id = res["tx_id"]
         start = time.time()
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
             tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
@@ -366,11 +371,16 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
         )
-        if res["success"]:
-            spend_bundle_id = res["spend_bundle_id"]
-            print(f"Transaction submitted with spend bundle ID: {spend_bundle_id}.")
-        else:  # pragma: no cover
-            print("Transaction failed.")
+        tx_id = res["tx_id"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_id))
+                return None
+        print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
 async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -392,11 +402,16 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
         )
-        if res["success"]:
-            spend_bundle_id = res["spend_bundle_id"]
-            print(f"Transaction submitted with spend bundle ID: {spend_bundle_id}.")
-        else:  # pragma: no cover
-            print("Transaction failed.")
+        tx_id = res["tx_id"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_id))
+                return None
+        print("Transaction not yet submitted to nodes")  # pragma: no cover
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:

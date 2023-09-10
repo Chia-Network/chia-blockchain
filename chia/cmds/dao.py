@@ -37,7 +37,7 @@ def dao_cmd(ctx: click.Context) -> None:
     required=True,
 )
 @click.option(
-    "-fa",
+    "-a",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
     type=int,
@@ -77,7 +77,6 @@ def dao_add_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-n", "--name", help="Set the DAO wallet name", type=str)
 @click.option(
-    "-pt",
     "--proposal-timelock",
     help="The minimum number of blocks before a proposal can close",
     type=int,
@@ -85,7 +84,6 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-sc",
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
     type=int,
@@ -93,14 +91,12 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-ar",
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
     type=int,
     required=True,
 )
 @click.option(
-    "-pp",
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
     type=int,
@@ -108,7 +104,6 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-sd",
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
     type=int,
@@ -116,7 +111,6 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-od",
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
     type=int,
@@ -124,15 +118,13 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-pm",
     "--proposal-minimum",
-    help="The minimum amount (in mojos) that a proposal must use to be created",
-    type=int,
-    default=1,
+    help="The minimum amount (in xch) that a proposal must use to be created",
+    type=str,
+    default="0.000000000001",
     show_default=True,
 )
 @click.option(
-    "-fa",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
     type=int,
@@ -140,7 +132,6 @@ def dao_add_cmd(
     show_default=True,
 )
 @click.option(
-    "-ca",
     "--cat-amount",
     help="The number of DAO CATs (in mojos) to create when initializing the DAO",
     type=int,
@@ -150,6 +141,14 @@ def dao_add_cmd(
     "-m",
     "--fee",
     help="Set the fees per transaction, in XCH.",
+    type=str,
+    default="0",
+    show_default=True,
+    callback=validate_fee,
+)
+@click.option(
+    "--fee-for-cat",
+    help="Set the fees for the CAT creation transaction, in XCH.",
     type=str,
     default="0",
     show_default=True,
@@ -165,11 +164,12 @@ def dao_create_cmd(
     pass_percentage: int,
     self_destruct: int,
     oracle_delay: int,
-    proposal_minimum: int,
+    proposal_minimum: str,
     filter_amount: int,
     cat_amount: int,
     name: Optional[str],
     fee: str,
+    fee_for_cat: str,
     min_coin_amount: Optional[str],
     max_coin_amount: Optional[str],
     coins_to_exclude: Sequence[str],
@@ -178,13 +178,11 @@ def dao_create_cmd(
 ) -> None:
     from .dao_funcs import create_dao_wallet
 
-    if proposal_minimum % 2 == 0:
-        raise ValueError("Please use an odd mojo amount for proposal minimum amount")
-
     print("Creating new DAO")
 
     extra_params = {
         "fee": fee,
+        "fee_for_cat": fee_for_cat,
         "name": name,
         "proposal_timelock": proposal_timelock,
         "soft_close_length": soft_close,
@@ -723,7 +721,6 @@ def dao_proposal(ctx: click.Context) -> None:
     required=True,
 )
 @click.option(
-    "-id",
     "--asset-id",
     help="The asset id of the funds the proposal will send. Leave blank for xch",
     type=str,
@@ -801,7 +798,6 @@ def dao_create_spend_proposal_cmd(
     required=True,
 )
 @click.option(
-    "-pt",
     "--proposal-timelock",
     help="The new minimum number of blocks before a proposal can close",
     type=int,
@@ -809,7 +805,6 @@ def dao_create_spend_proposal_cmd(
     required=False,
 )
 @click.option(
-    "-sc",
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
     type=int,
@@ -817,7 +812,6 @@ def dao_create_spend_proposal_cmd(
     required=False,
 )
 @click.option(
-    "-ar",
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
     type=int,
@@ -825,7 +819,6 @@ def dao_create_spend_proposal_cmd(
     required=False,
 )
 @click.option(
-    "-pp",
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
     type=int,
@@ -833,7 +826,6 @@ def dao_create_spend_proposal_cmd(
     required=False,
 )
 @click.option(
-    "-sd",
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
     type=int,
@@ -841,7 +833,6 @@ def dao_create_spend_proposal_cmd(
     required=False,
 )
 @click.option(
-    "-od",
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
     type=int,

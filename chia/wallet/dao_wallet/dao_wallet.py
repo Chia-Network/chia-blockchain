@@ -127,6 +127,7 @@ class DAOWallet:
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
+        fee_for_cat: uint64 = uint64(0),
     ) -> DAOWallet:
         """
         Create a brand new DAO wallet
@@ -138,6 +139,7 @@ class DAOWallet:
         :param filter_amount: Min votes to see proposal (user defined)
         :param name: Wallet name
         :param fee: transaction fee
+        :param fee_for_cat: transaction fee for creating the CATs
         :return: DAO wallet
         """
 
@@ -179,6 +181,7 @@ class DAOWallet:
                 amount_of_cats,
                 tx_config,
                 fee=fee,
+                fee_for_cat=fee_for_cat,
             )
         except Exception as e_info:  # pragma: no cover
             await wallet_state_manager.user_store.delete_wallet(self.id())
@@ -334,7 +337,8 @@ class DAOWallet:
         spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.wallet_info.id, unspent_records
         )
-        return uint128(spendable_am)
+        xch_balance = await self.get_balance_by_asset_type()
+        return uint128(spendable_am - xch_balance)
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
@@ -391,7 +395,8 @@ class DAOWallet:
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         unc_bal = await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
-        return uint128(unc_bal)
+        xch_bal = await self.get_balance_by_asset_type()
+        return uint128(unc_bal - xch_bal)
 
     # if asset_id == None: then we get normal XCH
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
@@ -614,6 +619,7 @@ class DAOWallet:
         tx_config: TXConfig,
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
+        fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[SpendBundle]:
         """
@@ -657,7 +663,7 @@ class DAOWallet:
         if cat_tail_hash is None:
             assert amount_of_cats_to_create is not None
             different_coins = await self.standard_wallet.select_coins(
-                uint64(amount_of_cats_to_create),
+                uint64(amount_of_cats_to_create + fee_for_cat),
                 coin_selection_config=tx_config.coin_selection_config.override(
                     excluded_coin_ids=[*tx_config.coin_selection_config.excluded_coin_ids, origin.name()]
                 ),

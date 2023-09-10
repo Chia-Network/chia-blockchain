@@ -49,35 +49,53 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
 
     inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["dao", "create", FINGERPRINT_ARG, "-n test", "-ar", "1000", "-ca", "100000", "-m0.1", "--reuse"]
+    command_args = [
+        "dao",
+        "create",
+        FINGERPRINT_ARG,
+        "-n test",
+        "--attendance-required",
+        "1000",
+        "--cat-amount",
+        "100000",
+        "-m0.1",
+        "--reuse",
+    ]
     # these are various things that should be in the output
     assert_list = ["Successfully created DAO Wallet", "DAO Wallet ID: 2", "CAT Wallet ID: 3", "DAOCAT Wallet ID: 4"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
     # Check command raises if proposal minimum is even
-    bad_command_args = [
+    odd_pm_command_args = [
         "dao",
         "create",
         FINGERPRINT_ARG,
         "-n test",
-        "-ar",
+        "--attendance-required",
         "1000",
-        "-ca",
+        "--cat-amount",
         "100000",
-        "-pm",
+        "--proposal-minimum",
         "10",
         "-m0.1",
         "--reuse",
     ]
-    error_assert_list = [
-        "Please use an odd mojo amount for proposal minimum amount",
+    extra_assert_list = [
+        "Adding 1 mojo to proposal minimum amount",
     ]
-    with pytest.raises(ValueError) as e_info:
-        run_cli_command_and_assert(capsys, root_dir, bad_command_args, error_assert_list)
-    assert e_info.value.args[0] == "Please use an odd mojo amount for proposal minimum amount"
+    run_cli_command_and_assert(capsys, root_dir, odd_pm_command_args, extra_assert_list)
 
     # Add wallet for existing DAO
-    add_command_args = ["dao", "add", FINGERPRINT_ARG, "-n test", "-t", bytes32(token_bytes(32)).hex(), "-fa", "1"]
+    add_command_args = [
+        "dao",
+        "add",
+        FINGERPRINT_ARG,
+        "-n test",
+        "-t",
+        bytes32(token_bytes(32)).hex(),
+        "--filter-amount",
+        "1",
+    ]
     run_cli_command_and_assert(capsys, root_dir, add_command_args, assert_list)
 
 
@@ -338,7 +356,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "10",
         "-v",
         "1000",
-        "-id",
+        "--asset-id",
         "0xFEEDBEEF",
         "-m 0.1",
         "--reuse",
@@ -356,7 +374,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         address,
         "-v",
         "1000",
-        "-id",
+        "--asset-id",
         "0xFEEDBEEF",
         "-m 0.1",
         "--reuse",
@@ -375,7 +393,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "-i 2",
         "-v",
         "1000",
-        "-pt",
+        "--proposal-timelock",
         "4",
         "-m 0.1",
         "--reuse",
@@ -423,7 +441,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, int]]:
-            return {"success": True, "spend_bundle_id": bytes32(b"x" * 32).hex()}
+            return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
 
         async def dao_exit_lockup(
             self,
@@ -433,7 +451,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, int]]:
-            return {"success": True, "spend_bundle_id": bytes32(b"x" * 32).hex()}
+            return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
 
         async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
             return TransactionRecord(
@@ -462,10 +480,10 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     run_cli_command_and_assert(capsys, root_dir, lockup_args, lockup_asserts)
 
     release_args = ["dao", "release_coins", FINGERPRINT_ARG, "-i 2", "-m 0.1", "--reuse"]
-    spend_bundle_id = bytes32(b"x" * 32).hex()
-    release_asserts = [f"Transaction submitted with spend bundle ID: {spend_bundle_id}"]
+    # tx_id = bytes32(b"x" * 32).hex()
+    release_asserts = ["Transaction submitted to nodes"]
     run_cli_command_and_assert(capsys, root_dir, release_args, release_asserts)
 
     exit_args = ["dao", "exit_lockup", FINGERPRINT_ARG, "-i 2", "-m 0.1", "--reuse"]
-    exit_asserts = [f"Transaction submitted with spend bundle ID: {spend_bundle_id}"]
+    exit_asserts = ["Transaction submitted to nodes"]
     run_cli_command_and_assert(capsys, root_dir, exit_args, exit_asserts)

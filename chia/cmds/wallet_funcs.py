@@ -808,6 +808,8 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:  
 def print_balance(amount: int, scale: int, address_prefix: str, *, decimal_only: bool = False) -> str:
     if decimal_only:  # dont use scientific notation.
         final_amount = f"{amount / scale:.12f}"
+    elif scale == 1:
+        final_amount = f"{int(amount)} mojo"
     else:
         final_amount = f"{amount / scale}"
     ret = f"{final_amount} {address_prefix} "
@@ -878,6 +880,10 @@ async def print_balances(
                     my_did = get_did_response["did_id"]
                     if my_did is not None and len(my_did) > 0:
                         print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
+                elif typ == WalletType.DAO:
+                    get_id_response = await wallet_client.dao_get_treasury_id(wallet_id)
+                    treasury_id = get_id_response["treasury_id"][2:]
+                    print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
                 print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")
