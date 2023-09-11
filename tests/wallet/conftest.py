@@ -9,6 +9,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Union
 import pytest
 import pytest_asyncio
 
+from chia.consensus.constants import ConsensusConstants
 from chia.rpc.rpc_client import client_as_context_manager
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -305,7 +306,7 @@ def tx_config(request: Any) -> TXConfig:
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(
-    trusted_full_node: bool, tx_config: TXConfig, request: Any
+    trusted_full_node: bool, tx_config: TXConfig, blockchain_constants: ConsensusConstants, request: Any
 ) -> AsyncIterator[WalletTestFramework]:
     if "trusted" in request.param:
         if request.param["trusted"] != trusted_full_node:
@@ -318,7 +319,9 @@ async def wallet_environments(
         config_overrides: Dict[str, Any] = request.param["config_overrides"]
     else:
         config_overrides = {}
-    async with setup_simulators_and_wallets_service(1, request.param["num_environments"], {}) as wallet_nodes_services:
+    async with setup_simulators_and_wallets_service(
+        1, request.param["num_environments"], blockchain_constants
+    ) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
