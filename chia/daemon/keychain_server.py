@@ -24,6 +24,8 @@ keychain_commands = [
     "get_key_for_fingerprint",
     "get_key",
     "get_keys",
+    "get_public_key",
+    "get_public_keys",
     "set_label",
     "delete_label",
 ]
@@ -72,6 +74,50 @@ class GetKeysRequest(Streamable):
 
     def run(self, keychain: Keychain) -> GetKeysResponse:
         return GetKeysResponse(keys=keychain.get_keys(self.include_secrets))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeyRequest(Streamable):
+    fingerprint: uint32
+
+    def run(self, keychain: Keychain) -> GetPublicKeyResponse:
+        return GetPublicKeyResponse(key=keychain.get_key(self.fingerprint, include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeyResponse(Streamable):
+    key: KeyData
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        key_dict = self.key.to_json_dict()
+        return {"key": {key: key_dict[key] for key in approved_keys if key in key_dict}}
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysRequest(Streamable):
+    def run(self, keychain: Keychain) -> GetPublicKeysResponse:
+        return GetPublicKeysResponse(keys=keychain.get_keys(include_secrets=False))
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keys: List[KeyData]
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        # Ensure that only approved keys are returned
+        approved_keys = ["fingerprint", "public_key", "label"]
+        return {
+            "keys": [
+                {key: key_data_dict[key] for key in approved_keys if key in key_data_dict}
+                for key_data_dict in (key_data.to_json_dict() for key_data in self.keys)
+            ]
+        }
 
 
 @streamable
@@ -144,6 +190,10 @@ class KeychainServer:
                 return await self.run_request(data, GetKeyRequest)
             elif command == "get_keys":
                 return await self.run_request(data, GetKeysRequest)
+            elif command == "get_public_key":
+                return await self.run_request(data, GetPublicKeyRequest)
+            elif command == "get_public_keys":
+                return await self.run_request(data, GetPublicKeysRequest)
             elif command == "set_label":
                 return await self.run_request(data, SetLabelRequest)
             elif command == "delete_label":

@@ -52,6 +52,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: ${{ matrix.development.value }}
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -196,6 +197,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        do-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 

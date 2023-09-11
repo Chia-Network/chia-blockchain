@@ -42,7 +42,12 @@ class BlockHeightMap:
 
     # count how many blocks have been added since the cache was last written to
     # disk
-    __dirty: int
+    __counter: int
+
+    # this is the lowest height whose hash has been updated since the last flush
+    # to disk. When it's time to write to disk, we can start flushing from this
+    # offset
+    __first_dirty: int
 
     # the file we're saving the height-to-hash cache to
     __height_to_hash_filename: Path
@@ -57,7 +62,8 @@ class BlockHeightMap:
         self = BlockHeightMap()
         self.db = db
 
-        self.__dirty = 0
+        self.__counter = 0
+        self.__first_dirty = 0
         self.__height_to_hash = bytearray()
         self.__sub_epoch_summaries = {}
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
@@ -104,6 +110,8 @@ class BlockHeightMap:
         else:
             self.__height_to_hash += bytearray([0] * (new_size - size))
 
+        self.__first_dirty = height + 1
+
         # if the peak hash is already in the height-to-hash map, we don't need
         # to load anything more from the DB
         if self.get_hash(height) != peak:
@@ -128,11 +136,11 @@ class BlockHeightMap:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
     async def maybe_flush(self) -> None:
-        if self.__dirty < 1000:
+        if self.__counter < 1000:
             return
 
         assert (len(self.__height_to_hash) % 32) == 0
-        map_buf = self.__height_to_hash.copy()
+        offset = self.__first_dirty * 32
 
         ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
 
@@ -187,7 +195,8 @@ class BlockHeightMap:
     def __set_hash(self, height: int, block_hash: bytes32) -> None:
         idx = height * 32
         self.__height_to_hash[idx : idx + 32] = block_hash
-        self.__dirty += 1
+        self.__counter += 1
+        self.__first_dirty = min(self.__first_dirty, height)
 
     def get_hash(self, height: uint32) -> bytes32:
         idx = height * 32
@@ -207,6 +216,7 @@ class BlockHeightMap:
         for height in heights_to_delete:
             del self.__sub_epoch_summaries[height]
         del self.__height_to_hash[(fork_height + 1) * 32 :]
+        self.__first_dirty = min(self.__first_dirty, fork_height + 1)
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])

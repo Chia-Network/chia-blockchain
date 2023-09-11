@@ -143,7 +143,7 @@ async def setup_n_nodes(
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
@@ -156,7 +156,7 @@ async def setup_simulators_and_wallets(
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
-            dic,
+            consensus_constants,
             initial_num_public_keys,
             key_seed,
             keychain1,
@@ -186,7 +186,7 @@ async def setup_simulators_and_wallets(
 async def setup_simulators_and_wallets_service(
     simulator_count: int,
     wallet_count: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     spam_filter_after_n_txs: int = 200,
     xch_spam_amount: int = 1000000,
     *,
@@ -201,7 +201,7 @@ async def setup_simulators_and_wallets_service(
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         res = await setup_simulators_and_wallets_inner(
             db_version,
-            dic,
+            consensus_constants,
             initial_num_public_keys,
             key_seed,
             keychain1,
@@ -222,7 +222,7 @@ async def setup_simulators_and_wallets_service(
 
 async def setup_simulators_and_wallets_inner(
     db_version: int,
-    dic: Dict[str, int],
+    consensus_constants: ConsensusConstants,
     initial_num_public_keys: int,
     key_seed: Optional[bytes32],
     keychain1: Keychain,
@@ -245,13 +245,10 @@ async def setup_simulators_and_wallets_inner(
         AsyncGenerator[Union[Service[FullNode, FullNodeSimulator], Service[WalletNode, WalletNodeAPI]], None]
     ] = []
     bt_tools: List[BlockTools] = []
-    consensus_constants: ConsensusConstants = constants_for_dic(dic)
     for index in range(0, simulator_count):
         db_name = f"blockchain_test_{index}_sim_and_wallets.db"
         bt_tools.append(
-            await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
-            )
+            await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
         )  # block tools modifies constants
         sim = cast(
             AsyncGenerator[Service[FullNode, FullNodeSimulator], None],
@@ -275,7 +272,7 @@ async def setup_simulators_and_wallets_inner(
             seed = key_seed
         if index > (len(bt_tools) - 1):
             wallet_bt_tools = await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
+                consensus_constants, keychain=keychain2, config_overrides=config_overrides
             )  # block tools modifies constants
         else:
             wallet_bt_tools = bt_tools[index]
@@ -462,8 +459,13 @@ async def setup_full_system_inner(
     )
     vdf1_port = uint16(find_available_listen_port("vdf1"))
     vdf2_port = uint16(find_available_listen_port("vdf2"))
-    timelord_iter = setup_timelord(full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
-    timelord_bluebox_iter = setup_timelord(uint16(1000), True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
+
+    timelord_iter = setup_timelord(
+        full_node_0_port, False, consensus_constants, b_tools.config, b_tools.root_path, vdf_port=vdf1_port
+    )
+    timelord_bluebox_iter = setup_timelord(
+        uint16(1000), True, consensus_constants, b_tools_1.config, b_tools_1.root_path, vdf_port=vdf2_port
+    )
     harvester_service = await harvester_iter.__anext__()
     harvester = harvester_service._node
 
