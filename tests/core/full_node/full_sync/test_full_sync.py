@@ -488,6 +488,39 @@ class TestFullSync:
         full_node_1.full_node.add_to_bad_peak_cache(block.header_hash, block.height)
         assert len(full_node_1.full_node.bad_peak_cache) == 1
 
+    @pytest.mark.asyncio
+    async def test_handle_bad_peak(self, three_nodes, default_1000_blocks, self_hostname):
+        full_node_1, full_node_2, full_node_3 = three_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+
+        for block in default_1000_blocks:
+            await full_node_2.full_node.add_block(block)
+
+        peak = await full_node_2.full_node.blockchain.get_full_peak()
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        request = full_node_protocol.NewPeak(
+            peak.header_hash,
+            peak.height,
+            peak.weight + 100,
+            peak.height,
+            peak.reward_chain_block.get_unfinished().get_hash(),
+        )
+        con = server_2.all_connections[server_1.node_id]
+
+        # invoke new peak with fake weight
+        await con.call_api(FullNodeAPI.new_peak, request, timeout=6)
+        # let sync
+        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
+        assert len(full_node_1.full_node.server.all_connections.values()) == 2
+
+        await time_out_assert(60, full_node_1.full_node.sync_store.get_long_sync, True)
+        await time_out_assert(250, full_node_1.full_node.sync_store.get_long_sync, False)
+        #  check ban correct peer
+        assert server_3.node_id in full_node_1.full_node.server.all_connections
+        assert server_2.node_id not in full_node_1.full_node.server.all_connections
+
 
 def has_peers_with_peak(node: FullNode, header_hash: bytes32) -> bool:
     return len(node.sync_store.get_peers_that_have_peak([header_hash])) > 0
