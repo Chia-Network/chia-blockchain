@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import functools
 import logging
 import math
 import os
@@ -153,6 +154,16 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "UNIQUE_PLOTS_WINDOW": 2,
     }
 )
+
+
+@functools.lru_cache(maxsize=1000)
+def cached_passes_plot_filter(
+    prefix_bits: int,
+    plot_id: bytes32,
+    challenge_hash: bytes32,
+    signage_point: bytes32,
+) -> bool:
+    return passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point)
 
 
 def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
@@ -565,7 +576,10 @@ class BlockTools:
             else:
                 cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
             prefix_bits = calculate_prefix_bits(self.constants, block.height)
-            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
+            # a plot filter of 0 is incompatible with CHIP-13. Every plot will
+            # pass the filter and hence be rejected by CHIP-13
+            assert prefix_bits > 0
+            if cached_passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
                 return True
             if curr_sp_hash != cc_sp_hash:
                 sp_count += 1
@@ -719,6 +733,8 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT,
+                        block_list,
                         force_plot_id=force_plot_id,
                     )
 
@@ -1027,6 +1043,8 @@ class BlockTools:
                         difficulty,
                         sub_slot_iters,
                         curr.height,
+                        latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT,
+                        block_list,
                         force_plot_id=force_plot_id,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -1193,6 +1211,8 @@ class BlockTools:
                     constants.DIFFICULTY_STARTING,
                     constants.SUB_SLOT_ITERS_STARTING,
                     uint32(0),
+                    False,
+                    [],
                 )
 
                 # Try each of the proofs of space
@@ -1340,17 +1360,29 @@ class BlockTools:
         difficulty: uint64,
         sub_slot_iters: uint64,
         height: uint32,
+        chip_13_active: bool,
+        block_list: List[FullBlock],
         force_plot_id: Optional[bytes32] = None,
     ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[Tuple[uint64, ProofOfSpace]] = []
         rng = random.Random()
         rng.seed(seed)
+        num_not_rejected_by_chip_13 = 0
         for plot_info in self.plot_manager.plots.values():
             plot_id: bytes32 = plot_info.prover.get_id()
             if force_plot_id is not None and plot_id != force_plot_id:
                 continue
+            if chip_13_active:
+                if self.plot_id_passed_previous_filters(plot_id, signage_point, block_list):
+                    # this plot ID is rejected by CHIP-13, there's no point in
+                    # including any proofs from it
+                    # if we force a plot ID that's rejected by CHIP-13, we won't
+                    # ever be able to make a block
+                    assert force_plot_id is None
+                    continue
+            num_not_rejected_by_chip_13 += 1
             prefix_bits = calculate_prefix_bits(constants, height)
-            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
+            if cached_passes_plot_filter(prefix_bits, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
@@ -1388,6 +1420,10 @@ class BlockTools:
                             proof_xs,
                         )
                         found_proofs.append((required_iters, proof_of_space))
+
+        # if every plot is rejected by CHIP-13, there is no way to make
+        # progress. No plot will ever be able to win the next block
+        # assert num_not_rejected_by_chip_13 > 0
         random_sample = found_proofs
         if len(found_proofs) >= 1:
             if rng.random() < 0.1:
