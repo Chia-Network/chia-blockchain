@@ -46,7 +46,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     )
 
 
-async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:
+async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:  # pragma: no cover
     """
     Migrate the is_my_offer property contained in the serialized TradeRecord (trade_record column)
     to the is_my_offer column in the trade_records table.
@@ -350,30 +350,6 @@ class TradeStore:
             )
         return {bytes32(row[0]) for row in rows}
 
-    async def get_not_sent(self) -> List[TradeRecord]:
-        """
-        Returns the list of trades that have not been received by full node yet.
-        """
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT trade_record from trade_records WHERE sent<? and confirmed=?", (4, 0))
-            rows = await cursor.fetchall()
-            await cursor.close()
-
-        return await self._get_new_trade_records_from_old([TradeRecordOld.from_bytes(row[0]) for row in rows])
-
-    async def get_all_unconfirmed(self) -> List[TradeRecord]:
-        """
-        Returns the list of all trades that have not yet been confirmed.
-        """
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT trade_record from trade_records WHERE confirmed=?", (0,))
-            rows = await cursor.fetchall()
-            await cursor.close()
-
-        return await self._get_new_trade_records_from_old([TradeRecordOld.from_bytes(row[0]) for row in rows])
-
     async def get_all_trades(self) -> List[TradeRecord]:
         """
         Returns all stored trades.
@@ -484,14 +460,6 @@ class TradeStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(query, tuple(args))
-            rows = await cursor.fetchall()
-            await cursor.close()
-
-        return await self._get_new_trade_records_from_old([TradeRecordOld.from_bytes(row[0]) for row in rows])
-
-    async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT trade_record from trade_records WHERE confirmed_at_index>?", (height,))
             rows = await cursor.fetchall()
             await cursor.close()
 
