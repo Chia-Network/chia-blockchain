@@ -46,6 +46,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.wallet.conditions import Condition
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -64,7 +65,7 @@ class PoolWallet:
     if TYPE_CHECKING:
         from chia.wallet.wallet_protocol import WalletProtocol
 
-        _protocol_check: ClassVar[WalletProtocol] = cast("PoolWallet", None)
+        _protocol_check: ClassVar[WalletProtocol[object]] = cast("PoolWallet", None)
 
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
@@ -398,6 +399,7 @@ class PoolWallet:
         fee: uint64 = uint64(0),
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, bytes32, bytes32]:
         """
         A "plot NFT", or pool wallet, represents the idea of a set of plots that all pay to
@@ -435,6 +437,7 @@ class PoolWallet:
             p2_singleton_delay_time,
             p2_singleton_delayed_ph,
             tx_config,
+            extra_conditions=extra_conditions,
         )
 
         if spend_bundle is None:
@@ -644,6 +647,7 @@ class PoolWallet:
         delay_time: uint64,
         delay_ph: bytes32,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
@@ -702,6 +706,7 @@ class PoolWallet:
             False,
             announcement_set,
             origin_id=launcher_parent.name(),
+            extra_conditions=extra_conditions,
         )
         assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
 
@@ -913,7 +918,7 @@ class PoolWallet:
         await self.publish_transactions(absorb_transaction, fee_tx)
         return absorb_transaction, fee_tx
 
-    async def new_peak(self, peak_height: uint64) -> None:
+    async def new_peak(self, peak_height: uint32) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
 
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
@@ -986,7 +991,7 @@ class PoolWallet:
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         pass
 
     async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:

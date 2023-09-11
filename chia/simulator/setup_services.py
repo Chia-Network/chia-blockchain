@@ -9,6 +9,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 from secrets import token_bytes
+from types import FrameType
 from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple
 
 from chia.cmds.init_funcs import init
@@ -48,6 +49,7 @@ from chia.util.config import config_path_for_filename, load_config, lock_and_loa
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -436,15 +438,18 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         )
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(process_mgr))
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(process_mgr)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
-
-    yield vdf_task_1
-    vdf_task_1.cancel()
-    await kill_processes(process_mgr)
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
+        yield vdf_task_1
+        vdf_task_1.cancel()
+        await kill_processes(process_mgr)
 
 
 async def setup_vdf_clients(
@@ -480,13 +485,18 @@ async def setup_vdf_clients(
         )
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(process_mgr))
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+    signal_handlers = SignalHandlers()
+    async with signal_handlers.manage():
+        signal_handlers.setup_async_signal_handler(handler=stop)
 
-    yield vdf_task_1, vdf_task_2, vdf_task_3
+        yield vdf_task_1, vdf_task_2, vdf_task_3
 
     vdf_task_1.cancel()
     vdf_task_2.cancel()
@@ -498,10 +508,10 @@ async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    b_tools: BlockTools,
+    config: Dict[str, Any],
+    root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
-    config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
@@ -511,7 +521,7 @@ async def setup_timelord(
     service_config["rpc_port"] = uint16(0)
 
     service = create_timelord_service(
-        b_tools.root_path,
+        root_path,
         config,
         consensus_constants,
         connect_to_daemon=False,

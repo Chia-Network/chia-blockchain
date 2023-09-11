@@ -1399,7 +1399,7 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
-        limit=19,
+        limit=24,
     ),
 )
 @pytest.mark.benchmark

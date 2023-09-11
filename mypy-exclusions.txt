@@ -90,7 +90,6 @@ tests.core.full_node.full_sync.test_full_sync
 tests.core.full_node.stores.test_hint_store
 tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
-tests.core.full_node.test_block_height_map
 tests.core.full_node.test_conditions
 tests.core.full_node.test_full_node
 tests.core.full_node.test_node_load
@@ -154,6 +153,7 @@ tests.wallet.test_wallet_interested_store
 tests.wallet.test_wallet_key_val_store
 tests.wallet.test_wallet_user_store
 tests.weight_proof.test_weight_proof
+tests.timelord.test_new_peak
 tools.analyze-chain
 tools.run_block
 tools.test_full_sync

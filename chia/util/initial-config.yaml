@@ -376,6 +376,8 @@ full_node:
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
 
+  bad_peak_cache_size: 100
+
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
   reserved_cores: 0
@@ -672,8 +674,9 @@ data_layer:
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
 
-  uploaders: []
-  downloaders: []
+  plugins:
+    uploaders: []
+    downloaders: []
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True

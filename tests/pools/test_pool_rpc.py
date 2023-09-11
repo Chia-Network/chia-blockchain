@@ -16,6 +16,7 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 from blspy import G1Element
 
+from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
@@ -38,6 +39,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from tests.conftest import ConsensusMode
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -97,11 +99,10 @@ OneWalletNodeAndRpc = Tuple[WalletRpcClient, Any, FullNodeSimulator, int, BlockT
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc(
-    trusted: bool,
-    self_hostname: str,
+    trusted: bool, self_hostname: str, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[OneWalletNodeAndRpc]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
+    async for nodes in setup_simulators_and_wallets_service(1, 1, blockchain_constants):
         full_nodes, wallets, bt = nodes
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         wallet_service = wallets[0]
@@ -405,12 +406,13 @@ class TestPoolWalletRpc:
                             assert owner_sk is not None
                             assert owner_sk[0] != auth_sk
 
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3],
+        reason="the pooling test only creates one plot, and cannot pass CHIP-13 rules",
+    )
     @pytest.mark.asyncio
     async def test_absorb_self(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
@@ -486,12 +488,13 @@ class TestPoolWalletRpc:
             tx1 = await client.get_transactions(1)
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3],
+        reason="the pooling test only creates one plot, and cannot pass CHIP-13 rules",
+    )
     @pytest.mark.asyncio
     async def test_absorb_self_multiple_coins(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
@@ -558,12 +561,13 @@ class TestPoolWalletRpc:
             assert pool_bal["confirmed_wallet_balance"] == pool_expected_confirmed_balance
             assert main_bal["confirmed_wallet_balance"] == main_expected_confirmed_balance  # 10499999999999
 
+    @pytest.mark.limit_consensus_modes(
+        allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3],
+        reason="the pooling test only creates one plot, and cannot pass CHIP-13 rules",
+    )
     @pytest.mark.asyncio
     async def test_absorb_pooling(
-        self,
-        one_wallet_node_and_rpc: OneWalletNodeAndRpc,
-        fee: uint64,
-        self_hostname: str,
+        self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
         client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
