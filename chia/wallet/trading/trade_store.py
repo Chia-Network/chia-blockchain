@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 from time import perf_counter
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -506,13 +506,18 @@ class TradeStore:
     async def _get_new_trade_records_from_old(self, old_records: List[TradeRecordOld]) -> List[TradeRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                f"SELECT valid_times from trade_record_times WHERE trade_id IN ({','.join('?' *  len(old_records))})",
+                "SELECT trade_id, valid_times from trade_record_times WHERE "
+                f"trade_id IN ({','.join('?' *  len(old_records))})",
                 tuple(trade.trade_id for trade in old_records),
             )
-            valid_times: List[ConditionValidTimes] = [
-                ConditionValidTimes.from_bytes(res[0]) for res in await cursor.fetchall()
-            ]
+            valid_times: Dict[bytes32, ConditionValidTimes] = {
+                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
+            }
             await cursor.close()
         return [
-            TradeRecord(valid_times=vts, **dataclasses.asdict(record)) for record, vts in zip(old_records, valid_times)
+            TradeRecord(
+                valid_times=valid_times[record.trade_id] if record.trade_id in valid_times else ConditionValidTimes(),
+                **dataclasses.asdict(record),
+            )
+            for record in old_records
         ]

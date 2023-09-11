@@ -430,18 +430,18 @@ class WalletTransactionStore:
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
-                f"SELECT valid_times from tx_times WHERE txid IN ({','.join('?' *  len(old_records))})",
+                f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(old_records))})",
                 tuple(tx.name for tx in old_records),
             )
-            valid_times: List[ConditionValidTimes] = [
-                ConditionValidTimes.from_bytes(res[0]) for res in await cursor.fetchall()
-            ]
+            valid_times: Dict[bytes32, ConditionValidTimes] = {
+                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
+            }
             await cursor.close()
         return [
             TransactionRecord(
-                valid_times=vts,
+                valid_times=valid_times[record.name] if record.name in valid_times else ConditionValidTimes(),
                 spend_bundle=record.spend_bundle,
                 **{k: v for k, v in dataclasses.asdict(record).items() if k != "spend_bundle"},
             )
-            for record, vts in zip(old_records, valid_times)
+            for record in old_records
         ]
