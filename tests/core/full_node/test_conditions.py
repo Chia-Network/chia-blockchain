@@ -23,7 +23,7 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
-from tests.conftest import Mode
+from tests.conftest import ConsensusMode
 
 from ...blockchain.blockchain_test_utils import _validate_and_add_block
 from .ram_db import create_ram_blockchain
@@ -142,16 +142,12 @@ class TestConditions:
         ],
     )
     async def test_unknown_conditions_with_cost(
-        self,
-        opcode: int,
-        expected_cost: int,
-        bt,
-        consensus_mode: Mode,
+        self, opcode: int, expected_cost: int, bt, consensus_mode: ConsensusMode
     ):
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
         additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode != Mode.HARD_FORK_2_0:
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
             # before the hard fork, all unknown conditions have 0 cost
             expected_cost = 0
 
@@ -167,17 +163,11 @@ class TestConditions:
             ("((90 30000))", 300000000),
         ],
     )
-    async def test_softfork_condition(
-        self,
-        condition: str,
-        expected_cost: int,
-        bt,
-        consensus_mode: Mode,
-    ):
+    async def test_softfork_condition(self, condition: str, expected_cost: int, bt, consensus_mode: ConsensusMode):
         conditions = Program.to(assemble(condition))
         additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode != Mode.HARD_FORK_2_0:
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
             # the SOFTFORK condition is not recognized before the hard fork
             expected_cost = 0
 
@@ -366,7 +356,7 @@ class TestConditions:
     )
     async def test_announce_conditions_limit(
         self,
-        consensus_mode: Mode,
+        consensus_mode: ConsensusMode,
         prefix: str,
         condition: str,
         num: int,
@@ -378,7 +368,7 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if consensus_mode.value < Mode.SOFT_FORK3.value:
+        if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
             # before softfork 3, there was no limit on the number of
             # announcements
             expect_err = None

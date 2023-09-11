@@ -99,27 +99,30 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class Mode(Enum):
+class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
     SOFT_FORK3 = 2
     SOFT_FORK4 = 3
 
 
-@pytest.fixture(scope="session", params=[Mode.PLAIN, Mode.HARD_FORK_2_0, Mode.SOFT_FORK3, Mode.SOFT_FORK4])
+@pytest.fixture(
+    scope="session",
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3, ConsensusMode.SOFT_FORK4],
+)
 def consensus_mode(request):
     return request.param
 
 
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode) -> ConsensusConstants:
-    if consensus_mode == Mode.PLAIN:
+    if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
-    if consensus_mode == Mode.SOFT_FORK3:
+    if consensus_mode == ConsensusMode.SOFT_FORK3:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3)
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
-    if consensus_mode == Mode.HARD_FORK_2_0:
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return test_constants.replace(
             HARD_FORK_HEIGHT=2, PLOT_FILTER_128_HEIGHT=10, PLOT_FILTER_64_HEIGHT=15, PLOT_FILTER_32_HEIGHT=20
         )
@@ -188,7 +191,7 @@ saved_blocks_version = "rc5"
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -199,7 +202,7 @@ def default_400_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -210,7 +213,7 @@ def default_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -227,7 +230,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -239,26 +242,16 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
 
     return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}.db", bt, seed=b"10000")
 
 
 @pytest.fixture(scope="session")
-def default_20000_blocks(bt, consensus_mode):
-    if consensus_mode == Mode.SOFT_FORK4:
-        pytest.skip("Test cache not available")
-
-    from tests.util.blockchain import persistent_blocks
-
-    return persistent_blocks(20000, f"test_blocks_20000_{saved_blocks_version}.db", bt, seed=b"20000")
-
-
-@pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -276,7 +269,7 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         version = "_softfork3"
 
     from tests.util.blockchain import persistent_blocks
@@ -297,7 +290,7 @@ def default_2000_blocks_compact(bt, consensus_mode):
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == Mode.SOFT_FORK4:
+    if consensus_mode == ConsensusMode.SOFT_FORK4:
         pytest.skip("Test cache not available yet")
     return persistent_blocks(
         10000,
@@ -329,24 +322,57 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
+    # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
+    removed = []
+    kept = []
+    limit_consensus_modes_problems: List[str] = []
+    for item in items:
+        limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
+        if limit_consensus_modes_marker is not None:
+            callspec = getattr(item, "callspec", None)
+            if callspec is None:
+                limit_consensus_modes_problems.append(item.name)
+                continue
+
+            mode = callspec.params.get("consensus_mode")
+            if mode is None:
+                limit_consensus_modes_problems.append(item.name)
+                continue
+
+            modes = limit_consensus_modes_marker.kwargs.get("allowed", [ConsensusMode.PLAIN])
+            if mode not in modes:
+                removed.append(item)
+                continue
+
+        kept.append(item)
+    if removed:
+        config.hook.pytest_deselected(items=removed)
+        items[:] = kept
+
+    if len(limit_consensus_modes_problems) > 0:
+        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
+        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
+
+
 @pytest_asyncio.fixture(scope="function")
-async def node_with_params(request):
+async def node_with_params(request, blockchain_constants: ConsensusConstants):
     params = {}
     if request:
         params = request.param
-    async for (sims, wallets, bt) in setup_simulators_and_wallets(1, 0, {}, **params):
+    async for (sims, wallets, bt) in setup_simulators_and_wallets(1, 0, blockchain_constants, **params):
         yield sims[0]
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes(db_version: int, self_hostname, blockchain_constants):
+async def two_nodes(db_version: int, self_hostname, blockchain_constants: ConsensusConstants):
     async for _ in setup_two_nodes(blockchain_constants, db_version=db_version, self_hostname=self_hostname):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version: int):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
+async def setup_two_nodes_fixture(db_version: int, blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version):
         yield _
 
 
@@ -368,17 +394,26 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
 async def wallet_nodes(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
     constants = blockchain_constants
     async_gen = setup_simulators_and_wallets(
         2,
         1,
-        {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000, "SOFT_FORK4_HEIGHT": constants.SOFT_FORK4_HEIGHT},
+        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
@@ -394,121 +429,134 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_four_nodes(db_version):
-    async for _ in setup_simulators_and_wallets(4, 0, {}, db_version=db_version):
+async def setup_four_nodes(db_version, blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(4, 0, blockchain_constants, db_version=db_version):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_sim_and_wallets():
-    async for _ in setup_simulators_and_wallets(2, 0, {}):
+async def two_nodes_sim_and_wallets(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(2, 0, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    # Since the constants are identical for `ConsensusMode.PLAIN` and
+    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
+    params=[
+        pytest.param(
+            None,
+            marks=pytest.mark.limit_consensus_modes(
+                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
+                reason="the same setup is ran by ConsensusMode.PLAIN",
+            ),
+        )
+    ],
+)
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
-    # Since the constants are identical for `Mode.PLAIN` and `Mode.HARD_FORK_2_0`, we will only run in
-    # mode `PLAIN` and `SOFT_FORK4`.
-    if consensus_mode not in (Mode.PLAIN, Mode.SOFT_FORK4):
-        pytest.skip("Skipping duplicate test, the same setup is ran by Mode.PLAIN")
-    async for _ in setup_simulators_and_wallets_service(
-        2, 0, {"SOFT_FORK4_HEIGHT": blockchain_constants.SOFT_FORK4_HEIGHT}
-    ):
+    async for _ in setup_simulators_and_wallets_service(2, 0, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_and_one_simulator_services():
-    async for _ in setup_simulators_and_wallets_service(1, 1, {}):
+async def one_wallet_and_one_simulator_services(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets_service(1, 1, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_100_pk():
-    async for _ in setup_simulators_and_wallets(1, 1, {}, initial_num_public_keys=100):
+async def wallet_node_100_pk(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(1, 1, blockchain_constants, initial_num_public_keys=100):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulator_and_wallet() -> AsyncIterator[
-    Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
-]:
-    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
+async def simulator_and_wallet(
+    blockchain_constants: ConsensusConstants,
+) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
+    async for _ in setup_simulators_and_wallets(1, 1, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes(request):
+async def two_wallet_nodes(request, blockchain_constants: ConsensusConstants):
     params = {}
     if request and request.param_index > 0:
         params = request.param
-    async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
+    async for _ in setup_simulators_and_wallets(1, 2, blockchain_constants, **params):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_services() -> AsyncIterator[
+async def two_wallet_nodes_services(
+    blockchain_constants: ConsensusConstants,
+) -> AsyncIterator[
     Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ]:
-    async for _ in setup_simulators_and_wallets_service(1, 2, {}):
+    async for _ in setup_simulators_and_wallets_service(1, 2, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_custom_spam_filtering(spam_filter_after_n_txs, xch_spam_amount):
-    async for _ in setup_simulators_and_wallets(1, 2, {}, spam_filter_after_n_txs, xch_spam_amount):
+async def two_wallet_nodes_custom_spam_filtering(
+    spam_filter_after_n_txs, xch_spam_amount, blockchain_constants: ConsensusConstants
+):
+    async for _ in setup_simulators_and_wallets(1, 2, blockchain_constants, spam_filter_after_n_txs, xch_spam_amount):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_sim_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}):
+async def three_sim_two_wallets(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(3, 2, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_and_wallet():
-    async for _ in setup_simulators_and_wallets(2, 1, {}, db_version=2):
+async def setup_two_nodes_and_wallet(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(2, 1, blockchain_constants, db_version=2):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_and_wallet_fast_retry():
+async def setup_two_nodes_and_wallet_fast_retry(blockchain_constants: ConsensusConstants):
     async for _ in setup_simulators_and_wallets(
-        1, 1, {}, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
+        1, 1, blockchain_constants, config_overrides={"wallet.tx_resend_timeout_secs": 1}, db_version=2
     ):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 3, {}):
+async def three_wallet_nodes(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(1, 3, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_two_node_simulator():
-    async for _ in setup_simulators_and_wallets(2, 1, {}):
+async def wallet_two_node_simulator(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(2, 1, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mempool_perf(bt):
     key_seed = bt.farmer_master_sk_entropy
-    async for _ in setup_simulators_and_wallets(2, 1, {}, key_seed=key_seed):
+    async for _ in setup_simulators_and_wallets(2, 1, bt.constants, key_seed=key_seed):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
 async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAndWallets]:
     key_seed = bt.farmer_master_sk_entropy
-    async for _ in setup_simulators_and_wallets(2, 2, {}, key_seed=key_seed):
+    async for _ in setup_simulators_and_wallets(2, 2, bt.constants, key_seed=key_seed):
         yield _
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_nodes_perf():
-    async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
+async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
+    async_gen = setup_simulators_and_wallets(
+        1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
+    )
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
@@ -521,36 +569,24 @@ async def wallet_nodes_perf():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes_mainnet(db_version):
-    async_gen = setup_simulators_and_wallets(2, 1, {}, db_version=db_version)
-    nodes, wallets, bt = await async_gen.__anext__()
-    full_node_1 = nodes[0]
-    full_node_2 = nodes[1]
-    server_1 = full_node_1.full_node.server
-    server_2 = full_node_2.full_node.server
-    wallet_a = bt.get_pool_wallet_tool()
-    wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt
-
-    async for _ in async_gen:
+async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
+    async for _ in setup_simulators_and_wallets(3, 2, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def three_nodes_two_wallets():
-    async for _ in setup_simulators_and_wallets(3, 2, {}):
+async def one_node(
+    blockchain_constants: ConsensusConstants,
+) -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+    async for _ in setup_simulators_and_wallets_service(1, 0, blockchain_constants):
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
-    async for _ in setup_simulators_and_wallets_service(1, 0, {}):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
-    async_gen = setup_simulators_and_wallets(1, 0, {})
+async def one_node_one_block(
+    blockchain_constants: ConsensusConstants,
+) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+    async_gen = setup_simulators_and_wallets(1, 0, blockchain_constants)
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
@@ -579,8 +615,8 @@ async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNod
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_one_block():
-    async_gen = setup_simulators_and_wallets(2, 0, {})
+async def two_nodes_one_block(blockchain_constants: ConsensusConstants):
+    async_gen = setup_simulators_and_wallets(2, 0, blockchain_constants)
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -594,7 +630,7 @@ async def two_nodes_one_block():
         guarantee_transaction_block=True,
         farmer_reward_puzzle_hash=reward_ph,
         pool_reward_puzzle_hash=reward_ph,
-        genesis_timestamp=10000,
+        genesis_timestamp=uint64(10000),
         time_per_block=10,
     )
     assert blocks[0].height == 0
@@ -613,6 +649,7 @@ async def two_nodes_one_block():
 @pytest_asyncio.fixture(scope="function")
 async def farmer_one_harvester_simulator_wallet(
     tmp_path: Path,
+    blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[
     Tuple[
         Service[Harvester, HarvesterAPI],
@@ -622,7 +659,7 @@ async def farmer_one_harvester_simulator_wallet(
         BlockTools,
     ]
 ]:
-    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, {}):
+    async for sim_and_wallet in setup_simulators_and_wallets_service(1, 1, blockchain_constants):
         nodes, wallets, bt = sim_and_wallet
         async for farmer_harvester in setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True):
             harvester_services, farmer_service, _ = farmer_harvester
@@ -666,10 +703,15 @@ async def farmer_three_harvester_not_started(
 # fixture, to test all versions of the database schema. This doesn't work
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(
+    scope="function",
+    params=[
+        pytest.param(
+            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
+        )
+    ],
+)
 async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
     async for _ in setup_full_system_connect_to_deamon(
         test_constants_modified,
         bt,
@@ -863,13 +905,13 @@ async def introducer_service(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for service in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for service in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield service._api, service._node.server
 
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord_service(bt):
-    async for _ in setup_timelord(uint16(0), False, bt.constants, bt):
+    async for _ in setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path):
         yield _
 
 
@@ -950,9 +992,7 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(consensus_mode, bt):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("Skipping this run. This test only supports one running at a time.")
+async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
         yield _
 

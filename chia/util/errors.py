@@ -186,6 +186,7 @@ class Err(Enum):
     # raised if a spend issues too many assert spend, assert puzzle,
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
+    CHIP_0013_VALIDATION = 145
 
 
 class ValidationError(Exception):
@@ -195,9 +196,16 @@ class ValidationError(Exception):
         self.error_msg = error_msg
 
 
+class TimestampError(Exception):
+    def __init__(self) -> None:
+        self.code = Err.TIMESTAMP_TOO_FAR_IN_FUTURE
+        super().__init__(f"Error code: {self.code}")
+
+
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
+        self.code = code
         self.errors = errors
 
 

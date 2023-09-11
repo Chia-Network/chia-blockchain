@@ -10,7 +10,7 @@ dependencies = [
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
     "boto3==1.28.25",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.0.10",  # timelord and vdf verification
+    "chiavdf==1.0.11",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==2.0.2",  # proof of space
     "clvm==0.9.7",
@@ -24,7 +24,7 @@ dependencies = [
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
     "cryptography==41.0.3",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.12.2",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "filelock==3.12.3",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.2",  # Gives the chia processes readable names

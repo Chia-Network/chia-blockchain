@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
     - name: Checkout Code
@@ -108,10 +108,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Setup Node 16.x
+    - name: Setup Node 18.x
       uses: actions/setup-node@v3
       with:
-        node-version: '16.x'
+        node-version: '18.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -341,10 +341,10 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='$RELEASE_TAG'
+            chia_ref='${{ env.RELEASE_TAG }}'
         }
         $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO-prerelease/$RELEASE_TAG/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
     - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
@@ -353,10 +353,10 @@ jobs:
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='$RELEASE_TAG'
+            chia_ref='${{ env.RELEASE_TAG }}'
         }
         $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
     - name: Remove Windows exe and installer to exclude from cache
       run: |

@@ -16,10 +16,12 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import Condition
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -55,7 +57,7 @@ CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 class Wallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("Wallet", None)
+        _protocol_check: ClassVar[WalletProtocol[ClawbackMetadata]] = cast("Wallet", None)
 
     wallet_info: WalletInfo
     wallet_state_manager: WalletStateManager
@@ -203,7 +205,7 @@ class Wallet:
         coin_announcements_to_assert: Optional[Set[bytes32]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
-        conditions: List[Condition] = [],
+        conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
         assert fee >= 0
@@ -277,6 +279,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -371,6 +374,7 @@ class Wallet:
                     coin_announcements={message},
                     coin_announcements_to_assert=coin_announcements_bytes,
                     puzzle_announcements_to_assert=puzzle_announcements_bytes,
+                    conditions=extra_conditions,
                 )
                 solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
                 primary_announcement_hash = Announcement(coin.name(), message).name()
@@ -427,6 +431,7 @@ class Wallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> TransactionRecord:
         origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
@@ -456,6 +461,7 @@ class Wallet:
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
+            extra_conditions=extra_conditions,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
@@ -529,7 +535,7 @@ class Wallet:
 
     # WSChiaConnection is only imported for type checking
     async def coin_added(
-        self, coin: Coin, height: uint32, peer: WSChiaConnection
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
