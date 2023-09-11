@@ -16,7 +16,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Type, Union
 
 import pytest
 from chia_rs import Coin
@@ -371,7 +371,7 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
 
 
-def create_logger(file=sys.stdout) -> logging.Logger:
+def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
     logger = logging.getLogger()
     logger.setLevel(level=logging.DEBUG)
     stream_handler = logging.StreamHandler(stream=file)

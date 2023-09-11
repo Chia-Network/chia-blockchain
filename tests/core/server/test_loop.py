@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import pathlib
 import random
-import signal
 import subprocess
 import sys
 import threading
@@ -210,7 +209,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
             # else:
             #     flooding_process.terminate()
             flood_file.unlink()
-            # flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
+            flooding_process.communicate(timeout=adjusted_timeout(5))
         flood_output = flood_file.with_suffix(".out").read_text()
         logger.info(" ====           flood.py done")
         logger.handlers[0].flush()
@@ -245,7 +244,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         # else:
         #     serving_process.terminate()
         serve_file.unlink()
-        # serve_output, _ = serving_process.communicate()  # timeout=adjusted_timeout(5))
+        serving_process.communicate(timeout=adjusted_timeout(5))
     serve_output = serve_file.with_suffix(".out").read_text()
 
     logger.info(" ====           serve.py done")

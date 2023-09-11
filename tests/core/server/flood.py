@@ -4,8 +4,7 @@ import asyncio
 import itertools
 import pathlib
 import time
-
-from chia.util.misc import SignalHandlers
+import typing
 
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
@@ -13,7 +12,7 @@ PORT = 8444
 NUM_CLIENTS = 500
 
 
-async def tcp_echo_client(task_counter: str, file) -> None:
+async def tcp_echo_client(task_counter: str, file: typing.TextIO) -> None:
     try:
         for loop_counter in itertools.count():
             label = f"{task_counter:5}-{loop_counter:5}"
@@ -43,41 +42,32 @@ async def tcp_echo_client(task_counter: str, file) -> None:
 
 
 async def main() -> None:
-    # def dun(*args: object, **kwargs: object) -> None:
-    #     task.cancel()
+    path = pathlib.Path.cwd().joinpath("flood")
+    out_path = path.with_suffix(".out")
 
-    async with SignalHandlers.manage() as signal_handlers:
-        # signal_handlers.setup_sync_signal_handler(handler=dun)
+    async def dun() -> None:
+        while path.exists():
+            await asyncio.sleep(0.25)
 
-        path = pathlib.Path.cwd().joinpath("flood")
-        out_path = path.with_suffix(".out")
+        task.cancel()
 
-        async def dun():
-            while path.exists():
-                await asyncio.sleep(0.25)
+    file_task = asyncio.create_task(dun())
 
-            task.cancel()
+    with out_path.open(mode="w") as file:
 
-        file_task = asyncio.create_task(dun())
+        async def f() -> None:
+            await asyncio.gather(
+                *[tcp_echo_client(task_counter="{}".format(i), file=file) for i in range(0, NUM_CLIENTS)]
+            )
 
-        with out_path.open(mode="w") as file:
-
-            async def f() -> None:
-                await asyncio.gather(
-                    *[tcp_echo_client(task_counter="{}".format(i), file=file) for i in range(0, NUM_CLIENTS)]
-                )
-
-            task = asyncio.create_task(f())
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-            finally:
-                print("leaving flood", file=file)
-                await file_task
+        task = asyncio.create_task(f())
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        finally:
+            print("leaving flood", file=file)
+            await file_task
 
 
-from chia.server.chia_policy import ChiaPolicy
-
-asyncio.set_event_loop_policy(ChiaPolicy())
 asyncio.run(main())
