@@ -797,7 +797,12 @@ class BlockTools:
                         if not use_timestamp_residual:
                             self._block_time_residual = 0.0
 
-                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
+                        (
+                            full_block,
+                            block_record,
+                            self._block_time_residual,
+                            last_timestamp,
+                        ) = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -1089,7 +1094,12 @@ class BlockTools:
                         if not use_timestamp_residual:
                             self._block_time_residual = 0.0
 
-                        full_block, block_record, self._block_time_residual = get_full_block_and_block_record(
+                        (
+                            full_block,
+                            block_record,
+                            self._block_time_residual,
+                            last_timestamp,
+                        ) = get_full_block_and_block_record(
                             constants,
                             blocks,
                             sub_slot_start_total_iters,
@@ -1760,7 +1770,8 @@ def get_full_block_and_block_record(
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
     block_time_residual: float = 0.0,
-) -> Tuple[FullBlock, BlockRecord, float]:
+) -> Tuple[FullBlock, BlockRecord, float, uint64]:
+    time_per_block *= sub_slot_iters / 1024
     time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
     if current_time is True:
         timestamp = uint64(max(int(time.time()), last_timestamp + time_delta))
@@ -1816,7 +1827,7 @@ def get_full_block_and_block_record(
         normalized_to_identity_cc_ip,
     )
 
-    return full_block, block_record, block_time_residual
+    return full_block, block_record, block_time_residual, timestamp
 
 
 # these are the costs of unknown conditions, as defined chia_rs here:
