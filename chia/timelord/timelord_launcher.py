@@ -6,8 +6,8 @@ import os
 import pathlib
 import signal
 import time
-from types import FrameType
 from dataclasses import dataclass, field
+from types import FrameType
 from typing import Any, Dict, List, Optional
 
 import pkg_resources
@@ -114,20 +114,20 @@ async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFCl
 
 
 async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
-    lock = asyncio.Lock()
+    process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
 
     async def stop(
         signal_: signal.Signals,
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await kill_processes(lock)
+        await kill_processes(process_mgr)
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)
 
         try:
-            await spawn_all_processes(config, net_config, lock)
+            await spawn_all_processes(config, net_config, process_mgr)
         finally:
             log.info("Launcher fully closed.")
 

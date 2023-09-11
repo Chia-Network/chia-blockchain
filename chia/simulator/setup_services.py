@@ -448,8 +448,9 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)
         yield vdf_task_1
-        vdf_task_1.cancel()
-        await kill_processes(process_mgr)
+
+    vdf_task_1.cancel()
+    await kill_processes(process_mgr)
 
 
 async def setup_vdf_clients(
@@ -490,7 +491,7 @@ async def setup_vdf_clients(
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await kill_processes(lock)
+        await kill_processes(process_mgr)
 
     signal_handlers = SignalHandlers()
     async with signal_handlers.manage():
