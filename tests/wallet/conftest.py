@@ -61,6 +61,9 @@ class WalletEnvironment:
     wallet_aliases: Dict[str, int] = field(default_factory=dict)
 
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
+        """
+        This function turns something that is either a wallet id or a wallet alias into a wallet id.
+        """
         return (
             uint32(wallet_id_or_alias)
             if isinstance(wallet_id_or_alias, int)
@@ -68,6 +71,9 @@ class WalletEnvironment:
         )
 
     def alias_wallet_id(self, wallet_id: uint32) -> Union[uint32, str]:
+        """
+        This function turns a wallet id into an alias if one is available or the same wallet id if one is not.
+        """
         inverted_wallet_aliases: Dict[int, str] = {v: k for k, v in self.wallet_aliases.items()}
         if wallet_id in inverted_wallet_aliases:
             return inverted_wallet_aliases[wallet_id]
@@ -75,6 +81,12 @@ class WalletEnvironment:
             return wallet_id
 
     async def check_balances(self, additional_balance_info: Dict[Union[int, str], Dict[str, int]] = {}) -> None:
+        """
+        This function checks the internal representation of what the balances should be against the balances that the
+        wallet actually returns via the RPC.
+
+        Likely this should be called as part of WalletTestFramework.process_pending_states instead of directly.
+        """
         dealiased_additional_balance_info: Dict[uint32, Dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
@@ -115,6 +127,30 @@ class WalletEnvironment:
             raise BalanceCheckingError(errors)
 
     async def change_balances(self, update_dictionary: Dict[Union[int, str], Dict[str, int]]) -> None:
+        """
+        This method changes the internal representation of what the wallet balances should be. This is probably
+        necessary to call before check_balances as most wallet operations will result in a balance change that causes
+        the wallet to be out of sync with our internal representation.
+
+        The update dictionary is a dictionary of wallet ids/aliases mapped to a second dictionary of balance keys and
+        deltas that those balances should change by (i.e {"confirmed_wallet_balance": -100}).
+
+        There are two special keys that can be included in the update dictionary: "init" and "set_remainder". "init"
+        means that you are acknowledging there is currently no internal representation of state for the specified
+        wallet and instead of specifying deltas, you are specifying initial values. "set_remainder" is a boolean value
+        that indicates whether or not the remaining values that are unspecified should be set automatically with the
+        response from the RPC. This exists to avoid having to specify every balance every time especially for wallets
+        that are not part of the main focus of the test.
+
+        There's also a special syntax to say "I want to update to the correct balance number automatically so long as
+        it is >/</<=/>= the balance value after the following change". This potentially sounds complex, but the idea is
+        to allow for tests to say that they know a value should change by a certain amount AT LEAST which provides some
+        validation on balances that otherwise the test writer might automatically set due to the difficulty of knowing
+        EXACTLY what the next balance will be.  The most common use case is during a pre-block balance update: The
+        spendable balance will drop by AT LEAST the amount in the transaction, but potentially more depending on the
+        coin selection that happened.  To specify that you expect this behavior, you would use the following entry:
+        {"<=#spendable_balance": -100} (where 100 is the amount sent in the transaction).
+        """
         for wallet_id_or_alias, kwargs in update_dictionary.items():
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
 
@@ -178,7 +214,18 @@ class WalletTestFramework:
     tx_config: TXConfig = DEFAULT_TX_CONFIG
 
     async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
-        # First, let's take note of the number of puzzle hashes if we're supposed to be reusing
+        """
+        This is the main entry point for processing state in wallet tests. It does the following things:
+
+        1) Ensures all pending transactions have entered the mempool
+        2) Checks that all balances have changed properly prior to a block being farmed
+        3) Farms a block (to no one in particular)
+        4) Chacks that all balances have changed properly after the block was farmed
+        5) Checks that all pending transactions that were gathered in step 1 are now confirmed
+        6) Checks that if `reuse_puzhash` was set, no new derivations were created
+        7) Ensures the wallet is in a synced state before progressing to the rest of the test
+        """
+        # Take note of the number of puzzle hashes if we're supposed to be reusing
         if self.tx_config.reuse_puzhash:
             puzzle_hash_indexes: List[Dict[uint32, Optional[DerivationRecord]]] = []
             for env in self.environments:
@@ -189,10 +236,13 @@ class WalletTestFramework:
                     ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
+        # Gather all pending transactions and ensure they enter mempool
         pending_txs: List[List[TransactionRecord]] = []
         for env in self.environments:
             pending_txs.append(await env.wallet_state_manager.tx_store.get_all_unconfirmed())
         await self.full_node.wait_transaction_records_entered_mempool([tx for txs in pending_txs for tx in txs])
+
+        # Check balances prior to block
         try:
             for env in self.environments:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
@@ -204,7 +254,11 @@ class WalletTestFramework:
                     raise ValueError(f"Error with env index {i}")
         except Exception:
             raise ValueError("Error before block was farmed")
+
+        # Farm block
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+
+        # Check balances after block
         try:
             for env in self.environments:
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.wallet_node, timeout=20)
@@ -216,6 +270,8 @@ class WalletTestFramework:
                     raise ValueError(f"Error with env {i}")
         except Exception:
             raise ValueError("Error after block was farmed")
+
+        # Make sure all pending txs are now confirmed
         for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
@@ -245,6 +301,8 @@ def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
 
+# This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
+# These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(
     trusted_full_node: bool, tx_config: TXConfig, request: Any
