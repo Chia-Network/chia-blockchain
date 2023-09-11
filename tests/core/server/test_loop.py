@@ -148,25 +148,42 @@ class ServeInThread:
 # TODO: remove this
 @pytest.mark.only
 @pytest.mark.asyncio
-async def test_loop() -> None:
+async def test_loop(tmp_path: pathlib.Path) -> None:
     logger = create_logger()
 
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+        creationflags = (
+            0
+            # | subprocess.CREATE_NEW_PROCESS_GROUP
+            # | subprocess.CREATE_NO_WINDOW
+            # | subprocess.CREATE_NEW_CONSOLE
+            | subprocess.DETACHED_PROCESS
+            # | subprocess.CREATE_DEFAULT_ERROR_MODE
+            # | subprocess.CREATE_BREAKAWAY_FROM_JOB
+        )
+        # creationflags = 0
     else:
         creationflags = 0
+
+    serve_file = tmp_path.joinpath("serve")
+    serve_file.touch()
+    flood_file = tmp_path.joinpath("flood")
+    flood_file.touch()
 
     logger.info(" ==== launching serve.py")
     logger.handlers[0].flush()
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve"],
         creationflags=creationflags,
+        cwd=tmp_path,
         encoding="utf-8",
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
+        # TODO: ack!
+        shell=True,
     ) as serving_process:
         logger.info(" ====           serve.py running")
         logger.handlers[0].flush()
@@ -176,20 +193,25 @@ async def test_loop() -> None:
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood"],
             creationflags=creationflags,
+            cwd=tmp_path,
             encoding="utf-8",
             stderr=subprocess.STDOUT,
             stdout=subprocess.PIPE,
+            # TODO: ack!
+            shell=True,
         ) as flooding_process:
             logger.info(" ====           flood.py running")
             logger.handlers[0].flush()
             await asyncio.sleep(adjusted_timeout(25))
             logger.info(" ====   killing flood.py")
             logger.handlers[0].flush()
-            if sys.platform == "win32" or sys.platform == "cygwin":
-                flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
-            else:
-                flooding_process.terminate()
-            flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
+            # if sys.platform == "win32" or sys.platform == "cygwin":
+            #     flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
+            # else:
+            #     flooding_process.terminate()
+            flood_file.unlink()
+            # flood_output, _ = flooding_process.communicate(timeout=adjusted_timeout(5))
+        flood_output = flood_file.with_suffix(".out").read_text()
         logger.info(" ====           flood.py done")
         logger.handlers[0].flush()
 
@@ -206,6 +228,7 @@ async def test_loop() -> None:
             logger.handlers[0].flush()
             post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
+            logger.info(" ==== connection failed")
             post_connection_succeeded = False
             post_connection_error = f"{type(e).__name__}: {e}"
         finally:
@@ -217,11 +240,14 @@ async def test_loop() -> None:
 
         logger.info(" ====   killing serve.py")
         logger.handlers[0].flush()
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            serving_process.send_signal(signal.CTRL_BREAK_EVENT)
-        else:
-            serving_process.terminate()
-        serve_output, _ = serving_process.communicate()  # timeout=adjusted_timeout(5))
+        # if sys.platform == "win32" or sys.platform == "cygwin":
+        #     serving_process.send_signal(signal.CTRL_BREAK_EVENT)
+        # else:
+        #     serving_process.terminate()
+        serve_file.unlink()
+        # serve_output, _ = serving_process.communicate()  # timeout=adjusted_timeout(5))
+    serve_output = serve_file.with_suffix(".out").read_text()
+
     logger.info(" ====           serve.py done")
     logger.handlers[0].flush()
 
@@ -272,7 +298,6 @@ async def test_loop() -> None:
 
     logger.info(" ==== all checks passed")
     logger.handlers[0].flush()
-    assert False, "just making sure we get output"
 
 
 @pytest.mark.parametrize(

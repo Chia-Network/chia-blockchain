@@ -6,6 +6,7 @@ import asyncio.protocols
 import dataclasses
 import functools
 import logging.config
+import pathlib
 import sys
 import threading
 from typing import List, Optional, final
@@ -47,50 +48,62 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
-    logger = create_logger()
+    path = pathlib.Path.cwd().joinpath("serve")
+    out_path = path.with_suffix(".out")
 
-    async with SignalHandlers.manage() as signal_handlers:
-        if thread_end_event is None:
-            thread_end_event = threading.Event()
+    with out_path.open(mode="w") as file:
+        logger = create_logger(file=file)
+        async with SignalHandlers.manage() as signal_handlers:
+            if thread_end_event is None:
+                thread_end_event = threading.Event()
 
-        def dun(*args: object, **kwargs: object) -> None:
-            thread_end_event.set()
+            # def dun(*args: object, **kwargs: object) -> None:
+            #     thread_end_event.set()
+            #
+            # signal_handlers.setup_sync_signal_handler(handler=dun)
 
-        signal_handlers.setup_sync_signal_handler(handler=dun)
+            async def dun():
+                while path.exists():
+                    await asyncio.sleep(0.25)
 
-        loop = asyncio.get_event_loop()
-        server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
-        if port_holder is not None:
-            [server_socket] = server.sockets
-            # TODO: review if this is general enough, such as for ipv6
-            port_holder.append(server_socket.getsockname()[1])
-        logger.info("serving on {}".format(server.sockets[0].getsockname()))
-        logger.handlers[0].flush()
+                thread_end_event.set()
 
-        try:
+            file_task = asyncio.create_task(dun())
+
+            loop = asyncio.get_event_loop()
+            server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
+            if port_holder is not None:
+                [server_socket] = server.sockets
+                # TODO: review if this is general enough, such as for ipv6
+                port_holder.append(server_socket.getsockname()[1])
+            logger.info("serving on {}".format(server.sockets[0].getsockname()))
+            logger.handlers[0].flush()
+
             try:
-                while not thread_end_event.is_set():
-                    await asyncio.sleep(0.1)
-            finally:
-                # the test checks explicitly for this
-                logger.info("exit: shutting down")
+                try:
+                    while not thread_end_event.is_set():
+                        await asyncio.sleep(0.1)
+                finally:
+                    # the test checks explicitly for this
+                    logger.info("exit: shutting down")
+                    logger.handlers[0].flush()
+                logger.info("exit: thread end event set")
                 logger.handlers[0].flush()
-            logger.info("exit: thread end event set")
-            logger.handlers[0].flush()
-        except KeyboardInterrupt:
-            logger.info("exit: keyboard interrupt")
-            logger.handlers[0].flush()
-        except asyncio.CancelledError:
-            logger.info("exit: cancelled")
-            logger.handlers[0].flush()
-        finally:
-            logger.info("closing server")
-            logger.handlers[0].flush()
-            server.close()
-            await server.wait_closed()
-            logger.info("server closed")
-            logger.handlers[0].flush()
-            # await asyncio.sleep(5)
+            except KeyboardInterrupt:
+                logger.info("exit: keyboard interrupt")
+                logger.handlers[0].flush()
+            except asyncio.CancelledError:
+                logger.info("exit: cancelled")
+                logger.handlers[0].flush()
+            finally:
+                logger.info("closing server")
+                logger.handlers[0].flush()
+                server.close()
+                await server.wait_closed()
+                logger.info("server closed")
+                logger.handlers[0].flush()
+                # await asyncio.sleep(5)
+                await file_task
 
 
 def main(connection_limit: int = 25) -> None:

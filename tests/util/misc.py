@@ -371,10 +371,10 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
 
 
-def create_logger() -> logging.Logger:
+def create_logger(file=sys.stdout) -> logging.Logger:
     logger = logging.getLogger()
     logger.setLevel(level=logging.DEBUG)
-    stream_handler = logging.StreamHandler(stream=sys.stdout)
+    stream_handler = logging.StreamHandler(stream=file)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
         fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
