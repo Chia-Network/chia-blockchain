@@ -636,13 +636,13 @@ class WeightProofHandler:
         fork_point_index = 0
         ses_heights = self.blockchain.get_ses_heights()
         for idx, summary_height in enumerate(ses_heights):
-            log.debug(f"check summary index {idx} height {summary_height}")
+            log.debug(f"check summary {idx} height {summary_height}")
             local_ses = self.blockchain.get_ses(summary_height)
             if idx == len(received_summaries) - 1:
                 # end of wp summaries, local chain is longer or equal to wp chain
                 break
             if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
-                log.info(f"mismatch at index {idx} out of {len(ses_heights)} height {summary_height}")
+                log.debug(f"mismatch at index {idx} out of {len(ses_heights)} height {summary_height}")
                 break
             fork_point_index = idx
 
