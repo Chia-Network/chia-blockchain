@@ -655,6 +655,7 @@ class WalletRpcApi:
                             {"identifier": "genesis_by_id"},
                             uint64(request["amount"]),
                             tx_config,
+                            fee,
                             name,
                         )
                         asset_id = cat_wallet.get_asset_id()

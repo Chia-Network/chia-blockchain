@@ -88,6 +88,7 @@ class CATWallet:
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> "CATWallet":
         self = CATWallet()
@@ -119,6 +120,7 @@ class CATWallet:
                 cat_tail_info,
                 amount,
                 tx_config,
+                fee,
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
@@ -157,7 +159,7 @@ class CATWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
             amount=uint64(cat_coin.amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,
