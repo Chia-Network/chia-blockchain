@@ -1849,6 +1849,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_get_sync_status(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
@@ -2002,6 +2003,7 @@ async def test_clear_pending_roots(
         assert cleared_root == {"success": True, "root": pending_root.marshal()}
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
@@ -2058,6 +2060,7 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize("retain", [True, False])
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_unsubscribe_removes_files(
     self_hostname: str,
@@ -2103,6 +2106,7 @@ async def test_unsubscribe_removes_files(
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_wallet_log_in_changes_active_fingerprint(
     self_hostname: str,
