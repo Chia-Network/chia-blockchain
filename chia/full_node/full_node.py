@@ -993,22 +993,26 @@ class FullNode:
             raise RuntimeError(f"Weight proof did not arrive in time from peer: {weight_proof_peer.peer_info.host}")
         # dont sync to wp if local peak is heavier,
         # dont ban peer, we asked for this peak
-        if response.wp.recent_chain_data[-1].reward_chain_block.weight <= peak_weight:
-            if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
-                peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[peak_header_hash])
-                await peak_first_peer.close(600)
+        if response.wp.recent_chain_data[-1].reward_chain_block.height != peak_height:
+            peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[peak_header_hash])
+            await peak_first_peer.close(600)
+            raise RuntimeError(
+                f"Weight proof had the wrong height, ban peer that first sent us the peak: "
+                f"{peak_first_peer.peer_info.host}"
+            )
+        if response.wp.recent_chain_data[-1].reward_chain_block.weight != peak_weight:
+            peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[peak_header_hash])
+            await peak_first_peer.close(600)
+            raise RuntimeError(
+                f"Weight proof had the wrong weight, ban peer that first sent us the peak: "
+                f"{peak_first_peer.peer_info.host}"
+            )
+        current_peak = self.blockchain.get_peak()
+        if current_peak is not None:
+            if response.wp.recent_chain_data[-1].reward_chain_block.weight <= current_peak.weight:
                 raise RuntimeError(
-                    f"Weight proof had the wrong height, ban peer that first sent us the peak: "
-                    f"{peak_first_peer.peer_info.host}"
+                    f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}"
                 )
-            if response.wp.recent_chain_data[-1].reward_chain_block.weight != peak_header_hash:
-                peak_first_peer = self.get_peer(self.sync_store.peak_to_first_peer[peak_header_hash])
-                await peak_first_peer.close(600)
-                raise RuntimeError(
-                    f"Weight proof had the wrong weight, ban peer that first sent us the peak: "
-                    f"{peak_first_peer.peer_info.host}"
-                )
-
             raise RuntimeError(f"current peak is heavier than Weight proof peek: {weight_proof_peer.peer_info.host}")
         try:
             validated, fork_point, summaries = await self.weight_proof_handler.validate_weight_proof(response.wp)
