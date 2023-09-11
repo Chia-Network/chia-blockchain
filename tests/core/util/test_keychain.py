@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 import random
-import unittest
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.simulator.keyring import using_temp_file_keyring
+from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
@@ -42,9 +41,8 @@ public_key = G1Element.from_bytes(
 )
 
 
-class TestKeychain(unittest.TestCase):
-    @using_temp_file_keyring()
-    def test_basic_add_delete(self, seeded_random: random.Random):
+class TestKeychain:
+    def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
@@ -62,12 +60,8 @@ class TestKeychain(unittest.TestCase):
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
         bad_mnemonic[6] = "ZZZZZZ"
-        self.assertRaisesRegex(
-            ValueError,
-            "'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled",
-            bytes_from_mnemonic,
-            " ".join(bad_mnemonic),
-        )
+        with pytest.raises(ValueError, match="'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled"):
+            bytes_from_mnemonic(" ".join(bad_mnemonic))
 
         kc.add_private_key(mnemonic)
         assert kc._get_free_private_key_index() == 1
@@ -111,8 +105,7 @@ class TestKeychain(unittest.TestCase):
         kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         assert kc.get_first_public_key() is not None
 
-    @using_temp_file_keyring()
-    def test_add_private_key_label(self):
+    def test_add_private_key_label(self, empty_temp_file_keyring: TempKeyring):
         keychain: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
 
         key_data_0 = KeyData.generate(label="key_0")
@@ -146,8 +139,7 @@ class TestKeychain(unittest.TestCase):
             key_data in [key_data_0, key_data_1, key_data_2] for key_data in keychain.get_keys(include_secrets=True)
         )
 
-    @using_temp_file_keyring()
-    def test_bip39_eip2333_test_vector(self):
+    def test_bip39_eip2333_test_vector(self, empty_temp_file_keyring: TempKeyring):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 

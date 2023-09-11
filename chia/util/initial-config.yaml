@@ -677,6 +677,8 @@ data_layer:
   plugins:
     uploaders: []
     downloaders: []
+  maximum_full_file_count: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True
