@@ -5,7 +5,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 from aiofiles import tempfile
 from typing_extensions import Literal
@@ -93,3 +93,53 @@ async def write_file_async(
                 os.remove(temp_file_path)
         except Exception:
             log.exception(f"Failed to remove temp file {temp_file_path}")
+
+
+async def write_files_async(
+    files: Dict[Path, Union[str, bytes]], *, file_mode: int = 0o600, dir_mode: int = 0o700
+) -> None:
+    """
+    Writes the provided data to temporary files and then moves all the files to the final destination.
+    """
+
+    # Create the parent directory if necessary
+    temp_files: Dict[Path, Path] = {}
+    file_path = Path()
+    try:
+        for file_path, data in files.items():
+            os.makedirs(file_path.parent, mode=dir_mode, exist_ok=True)
+            mode: Literal["w+", "w+b"] = "w+" if type(data) is str else "w+b"
+            temp_file_path: Path
+            async with tempfile.NamedTemporaryFile(dir=file_path.parent, mode=mode, delete=False) as f:
+                # Ignoring type error since it is not obvious how to tie the type of the data
+                # being passed in to the type of the file object, etc.
+                temp_file_path = f.name  # type: ignore[assignment]
+                await f.write(data)  # type: ignore[arg-type]
+                await f.flush()
+                os.fsync(f.fileno())
+            temp_files[file_path] = temp_file_path
+    except Exception as e:
+        log.exception(f"Failed to write temp file {temp_file_path} to {file_path} {e}")
+        log.debug("clean temp files")
+        for _, temp_file in temp_files.items():
+            try:
+                if Path(temp_file).exists():
+                    os.remove(temp_file)
+            except Exception:
+                log.exception(f"Failed to remove temp file {temp_file}")
+        return
+
+    for file_path, temp_file_path in temp_files.items():
+        try:
+            await move_file_async(temp_file_path, file_path)
+        except Exception:
+            log.exception(f"Failed to move temp file {temp_file_path} to {file_path}")
+        else:
+            os.chmod(file_path, file_mode)
+        finally:
+            # We expect the file replace/move to have succeeded, but cleanup the temp file just in case
+            try:
+                if Path(temp_file_path).exists():
+                    os.remove(temp_file_path)
+            except Exception:
+                log.exception(f"Failed to remove temp file {temp_file_path}")

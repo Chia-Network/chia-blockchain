@@ -10,7 +10,7 @@ import aiofiles
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.files import write_file_async
+from chia.util.files import write_file_async, write_files_async
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -137,9 +137,7 @@ class BlockHeightMap:
         ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
 
         self.__dirty = 0
-
-        await write_file_async(self.__height_to_hash_filename, map_buf)
-        await write_file_async(self.__ses_filename, ses_buf)
+        await write_files_async({self.__height_to_hash_filename: map_buf, self.__ses_filename: ses_buf})
 
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can

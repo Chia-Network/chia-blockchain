@@ -4,11 +4,12 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Dict, Union
 
 import pytest
 
 from chia.util import files
-from chia.util.files import move_file, move_file_async, write_file_async
+from chia.util.files import move_file, move_file_async, write_file_async, write_files_async
 
 
 class TestMoveFile:
@@ -389,3 +390,68 @@ class TestWriteFile:
         dest_path: Path = tmp_path / "test_write_file/test_write_file.txt"
         await write_file_async(dest_path, "test")
         assert shutil_move_called is True
+
+    @pytest.mark.asyncio
+    # use tmp_path pytest fixture to create a temporary directory
+    async def test_write_files(self, tmp_path: Path):
+        """
+        Write a file to a location.
+        """
+        files_and_data: Dict[Path, Union[str, bytes]] = {}
+        for i in range(10):
+            files_and_data[Path(tmp_path / f"test_write_file_{i}.txt")] = f"test_{i}"
+
+        await write_files_async(files_and_data)
+        for i in range(10):
+            assert Path(tmp_path / f"test_write_file_{i}.txt").read_text() == f"test_{i}"
+
+    @pytest.mark.asyncio
+    # use tmp_path pytest fixture to create a temporary directory
+    async def test_write_files_different_dirs(self, tmp_path: Path):
+        """
+        Write a file to a location.
+        """
+        files_and_data: Dict[Path, Union[str, bytes]] = {}
+        for i in range(10):
+            files_and_data[Path(tmp_path / f"test_write_file/a/b/{i}.txt")] = f"test_{i}"
+
+        await write_files_async(files_and_data)
+        for i in range(10):
+            assert Path(tmp_path / f"test_write_file/a/b/{i}.txt").read_text() == f"test_{i}"
+
+    @pytest.mark.asyncio
+    # use tmp_path pytest fixture to create a temporary directory
+    async def test_write_files_throw_exception(self, tmp_path: Path, monkeypatch):
+        """
+        Write a file to a location where os.replace raises PermissionError.
+        """
+
+        files_and_data: Dict[Path, Union[str, bytes]] = {}
+        for i in range(10):
+            files_and_data[Path(tmp_path / f"test_write_file_{i}.txt")] = f"test_{i}"
+
+        await write_files_async(files_and_data)
+        for i in range(10):
+            file_path = tmp_path / f"test_write_file_{i}.txt"
+            assert Path().exists()
+            os.remove(file_path)
+
+        counter = 0
+
+        def mock_fsync(data):
+            nonlocal counter
+            if counter > 6:
+                raise Exception("test")
+            counter = counter + 1
+            os.fsync(data)
+
+        monkeypatch.setattr(os, "fsync", mock_fsync)
+
+        files_and_data = {}
+        for i in range(10):
+            files_and_data[Path(tmp_path / f"test_write_file_{i}.txt")] = f"test_{i}"
+
+        await write_files_async(files_and_data)
+        for i in range(10):
+            if Path(tmp_path / f"test_write_file_{i}.txt").exists():
+                raise Exception("failed to clean temp files")
