@@ -651,7 +651,6 @@ class WeightProofHandler:
             # This gets resolved after one full sub epoch
             return uint32(0), 0
 
-        log.info(f"forkpoint {ses_heights[fork_point_index - 2]}")
         return ses_heights[fork_point_index - 2], fork_point_index
 
 
