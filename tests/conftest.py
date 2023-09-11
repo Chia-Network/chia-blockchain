@@ -537,7 +537,7 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAn
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_nodes_perf():
+async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
     ) as (
