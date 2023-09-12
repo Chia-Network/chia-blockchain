@@ -69,7 +69,17 @@ def tx_endpoint(
         if "extra_conditions" in request:
             extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
 
-        push: bool = request.get("push", func.__kwdefaults__["push"])
+        assert func.__defaults__ is not None
+        push: bool = request.get(
+            "push",
+            {
+                param: default
+                for param, default in zip(
+                    func.__code__.co_varnames[: func.__code__.co_argcount][-1 : -len(func.__defaults__) - 1 : -1],
+                    func.__defaults__[-1::-1],
+                )
+            }["push"],
+        )
 
         return await func(
             self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, push=push, **kwargs
