@@ -23,7 +23,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, parse_timelock_info
 from chia.wallet.dao_wallet.dao_utils import (
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
@@ -482,6 +482,7 @@ class DAOCATWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
 
         # TODO: Hack to just drop coins from locked list. Need to catch this event in WSM to

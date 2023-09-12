@@ -31,7 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, parse_timelock_info
 from chia.wallet.dao_wallet.dao_info import DAOInfo, DAORules, ProposalInfo, ProposalType
 from chia.wallet.dao_wallet.dao_utils import (
     DAO_FINISHED_STATE,
@@ -788,6 +788,7 @@ class DAOWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)
@@ -950,6 +951,7 @@ class DAOWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
         return record
 
@@ -1131,6 +1133,7 @@ class DAOWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
         return record
 
@@ -1490,6 +1493,7 @@ class DAOWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
         return record
 
@@ -1636,6 +1640,7 @@ class DAOWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=parse_timelock_info(extra_conditions),
         )
         return record
 

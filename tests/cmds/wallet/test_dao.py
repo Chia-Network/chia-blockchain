@@ -10,6 +10,7 @@ import pytest
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
+from chia.wallet.conditions import parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
@@ -144,6 +145,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
                 type=uint32(TransactionType.INCOMING_TX.value),
                 name=bytes32(token_bytes()),
                 memos=[],
+                valid_times=parse_timelock_info(tuple()),
             )
 
     inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
@@ -471,6 +473,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
                 type=uint32(TransactionType.INCOMING_TX.value),
                 name=bytes32(b"x" * 32),
                 memos=[],
+                valid_times=parse_timelock_info(tuple()),
             )
 
     inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter

@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
+
+_T_TradeRecord = TypeVar("_T_TradeRecord", bound="TradeRecordOld")
 
 
 @streamable
 @dataclass(frozen=True)
-class TradeRecord(Streamable):
+class TradeRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
     """
@@ -47,10 +50,18 @@ class TradeRecord(Streamable):
         return formatted
 
     @classmethod
-    def from_json_dict_convenience(cls, record: Dict[str, Any], offer: str = "") -> "TradeRecord":
+    def from_json_dict_convenience(
+        cls: Type[_T_TradeRecord], record: Dict[str, Any], offer: str = ""
+    ) -> _T_TradeRecord:
         new_record = record.copy()
         new_record["status"] = TradeStatus[record["status"]].value
         del new_record["summary"]
         del new_record["pending"]
         new_record["offer"] = offer
         return cls.from_json_dict(new_record)
+
+
+@streamable
+@dataclass(frozen=True)
+class TradeRecord(TradeRecordOld):
+    valid_times: ConditionValidTimes

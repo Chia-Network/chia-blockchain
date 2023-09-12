@@ -4321,6 +4321,7 @@ class WalletRpcApi:
             parsed_request.min_amount_to_claim,
             tx_config,
             fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.service.wallet_state_manager.add_pending_transaction(tx)
