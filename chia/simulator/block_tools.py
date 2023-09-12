@@ -4,7 +4,6 @@ import asyncio
 import copy
 import dataclasses
 import logging
-import math
 import os
 import random
 import shutil
@@ -207,7 +206,6 @@ class BlockTools:
         self.root_path = root_path
         self.log = log
         self.local_keychain = keychain
-        self._block_time_residual = 0.0
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self.automated_testing = automated_testing
         self.plot_dir_name = plot_dir
@@ -575,7 +573,6 @@ class BlockTools:
         previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
-        use_timestamp_residual: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -625,7 +622,8 @@ class BlockTools:
         curr = latest_block
         while not curr.is_transaction_block:
             curr = blocks[curr.prev_hash]
-        last_timestamp = curr.timestamp
+        assert curr.timestamp is not None
+        last_timestamp = float(curr.timestamp)
         start_height = curr.height
 
         curr = latest_block
@@ -754,13 +752,9 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
-                        if not use_timestamp_residual:
-                            self._block_time_residual = 0.0
-
                         (
                             full_block,
                             block_record,
-                            self._block_time_residual,
                             new_timestamp,
                         ) = get_full_block_and_block_record(
                             constants,
@@ -791,7 +785,6 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_time_residual=self._block_time_residual,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
@@ -1044,13 +1037,9 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
-                        if not use_timestamp_residual:
-                            self._block_time_residual = 0.0
-
                         (
                             full_block,
                             block_record,
-                            self._block_time_residual,
                             new_timestamp,
                         ) = get_full_block_and_block_record(
                             constants,
@@ -1083,7 +1072,6 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
-                            block_time_residual=self._block_time_residual,
                         )
 
                         if block_record.is_transaction_block:
@@ -1667,11 +1655,6 @@ def get_icc(
     )
 
 
-def round_timestamp(timestamp: float, residual: float) -> Tuple[int, float]:
-    mod = math.modf(timestamp + residual)
-    return (int(mod[1]), mod[0])
-
-
 def get_full_block_and_block_record(
     constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
@@ -1682,7 +1665,7 @@ def get_full_block_and_block_record(
     slot_rc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
-    last_timestamp: uint64,
+    last_timestamp: float,
     start_height: uint32,
     time_per_block: float,
     block_generator: Optional[BlockGenerator],
@@ -1704,18 +1687,16 @@ def get_full_block_and_block_record(
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,
     current_time: bool = False,
-    block_time_residual: float = 0.0,
-) -> Tuple[FullBlock, BlockRecord, float, uint64]:
+) -> Tuple[FullBlock, BlockRecord, float]:
     # we're simulating time between blocks here. The more VDF iterations the
     # blocks advances, the longer it should have taken (and vice versa). This
     # formula is meant to converge at 1024 iters per the specified
     # time_per_block (which defaults to 18.75 seconds)
     time_per_block *= (((sub_slot_iters / 1024) - 1) * 0.2) + 1
-    time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
     if current_time is True:
-        timestamp = uint64(max(int(time.time()), last_timestamp + time_delta))
+        timestamp = max(int(time.time()), last_timestamp + time_per_block)
     else:
-        timestamp = uint64(last_timestamp + time_delta)
+        timestamp = last_timestamp + time_per_block
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 
@@ -1733,7 +1714,7 @@ def get_full_block_and_block_record(
         get_plot_signature,
         get_pool_signature,
         signage_point,
-        timestamp,
+        uint64(timestamp),
         BlockCache(blocks),
         seed,
         block_generator,
@@ -1766,7 +1747,7 @@ def get_full_block_and_block_record(
         normalized_to_identity_cc_ip,
     )
 
-    return full_block, block_record, block_time_residual, timestamp
+    return full_block, block_record, timestamp
 
 
 # these are the costs of unknown conditions, as defined chia_rs here:
