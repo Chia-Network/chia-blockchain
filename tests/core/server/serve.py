@@ -9,7 +9,7 @@ import logging.config
 import pathlib
 import sys
 import threading
-from typing import List, Optional, final
+from typing import List, Optional, final, overload
 
 from chia.server.chia_policy import ChiaPolicy
 from chia.server.start_service import async_run
@@ -41,27 +41,53 @@ class EchoServer(asyncio.Protocol):
         # self.transport.close()
 
 
+@overload
 async def async_main(
+    *,
+    out_path: pathlib.Path,
+    shutdown_path: pathlib.Path,
     ip: str = "127.0.0.1",
     port: int = 8444,
-    thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
-    shutdown_path = pathlib.Path(sys.argv[1])
-    out_path = shutdown_path.with_suffix(".out")
+    ...
 
+
+@overload
+async def async_main(
+    *,
+    out_path: pathlib.Path,
+    thread_end_event: threading.Event,
+    ip: str = "127.0.0.1",
+    port: int = 8444,
+    port_holder: Optional[List[int]] = None,
+) -> None:
+    ...
+
+
+async def async_main(
+    *,
+    out_path: pathlib.Path,
+    shutdown_path: Optional[pathlib.Path] = None,
+    thread_end_event: Optional[threading.Event] = None,
+    ip: str = "127.0.0.1",
+    port: int = 8444,
+    port_holder: Optional[List[int]] = None,
+) -> None:
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
+        file_task: Optional[asyncio.Task[None]] = None
         if thread_end_event is None:
+            assert shutdown_path is not None
             thread_end_event = threading.Event()
 
-        async def dun() -> None:
-            while shutdown_path.exists():
-                await asyncio.sleep(0.25)
+            async def dun() -> None:
+                while shutdown_path.exists():
+                    await asyncio.sleep(0.25)
 
-            thread_end_event.set()
+                thread_end_event.set()
 
-        file_task = asyncio.create_task(dun())
+            file_task = asyncio.create_task(dun())
 
         loop = asyncio.get_event_loop()
         server = await loop.create_server(functools.partial(EchoServer, logger=logger), ip, port)
@@ -88,12 +114,20 @@ async def async_main(
             server.close()
             await server.wait_closed()
             logger.info("server closed")
-            await file_task
+            if file_task is not None:
+                await file_task
 
 
 def main(connection_limit: int = 25) -> None:
     asyncio.set_event_loop_policy(ChiaPolicy())
-    async_run(async_main(), connection_limit=connection_limit - 100)
+    shutdown_path = pathlib.Path(sys.argv[1])
+    async_run(
+        async_main(
+            shutdown_path=shutdown_path,
+            out_path=shutdown_path.with_suffix(".out"),
+        ),
+        connection_limit=connection_limit - 100,
+    )
 
 
 if __name__ == "__main__":

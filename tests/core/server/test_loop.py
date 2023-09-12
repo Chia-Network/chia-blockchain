@@ -28,8 +28,10 @@ NUM_CLIENTS = 500
 
 
 @contextlib.asynccontextmanager
-async def serve_in_thread(ip: str, port: int, connection_limit: int) -> AsyncIterator[ServeInThread]:
-    server = ServeInThread(ip=ip, requested_port=port, connection_limit=connection_limit)
+async def serve_in_thread(
+    out_path: pathlib.Path, ip: str, port: int, connection_limit: int
+) -> AsyncIterator[ServeInThread]:
+    server = ServeInThread(out_path=out_path, ip=ip, requested_port=port, connection_limit=connection_limit)
     server.start()
     # TODO: can we check when it has really started?  just make a connection?
     await asyncio.sleep(1)
@@ -89,6 +91,7 @@ class Client:
 class ServeInThread:
     ip: str
     requested_port: int
+    out_path: pathlib.Path
     connection_limit: int = 25
     original_connection_limit: Optional[int] = None
     loop: Optional[asyncio.AbstractEventLoop] = None
@@ -121,6 +124,7 @@ class ServeInThread:
     async def main(self) -> None:
         self.server_task = asyncio.create_task(
             serve.async_main(
+                out_path=self.out_path,
                 ip=self.ip,
                 port=self.requested_port,
                 thread_end_event=self.thread_end_event,
@@ -257,12 +261,14 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     ids=lambda cycles: f"{cycles} cycle{'s' if cycles != 1 else ''}",
 )
 @pytest.mark.asyncio
-async def test_limits_connections(repetition: int, cycles: int) -> None:
+async def test_limits_connections(repetition: int, cycles: int, tmp_path: pathlib.Path) -> None:
     ip = "127.0.0.1"
     connection_limit = 10
     connection_attempts = connection_limit + 10
 
-    async with serve_in_thread(ip=ip, port=0, connection_limit=connection_limit) as server:
+    async with serve_in_thread(
+        out_path=tmp_path.joinpath("serve.out"), ip=ip, port=0, connection_limit=connection_limit
+    ) as server:
         for cycle in range(cycles):
             if cycle > 0:
                 await asyncio.sleep(1)
