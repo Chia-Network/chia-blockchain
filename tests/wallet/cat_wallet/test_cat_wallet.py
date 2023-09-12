@@ -81,6 +81,7 @@ class TestCATWallet:
                 {"identifier": "genesis_by_id"},
                 uint64(100),
                 DEFAULT_TX_CONFIG,
+                fee=uint64(10),
             )
             # The next 2 lines are basically a noop, it just adds test coverage
             cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
@@ -93,6 +94,9 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - 110)
+        await time_out_assert(20, wallet.get_spendable_balance, funds - 110)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - 110)
 
         # Test migration
         all_lineage = await cat_wallet.lineage_store.get_all_lineage_proofs()
