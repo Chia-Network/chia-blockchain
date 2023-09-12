@@ -1255,6 +1255,8 @@ async def test_dao_proposal_partial_vote(
 
     await time_out_assert(20, cat_wallet_1.get_spendable_balance, 0)
     await time_out_assert(20, cat_wallet_0.get_spendable_balance, old_balance + balance + new_mint_amount)
+    # release coins
+    await dao_wallet_0.free_coins_from_finished_proposals(DEFAULT_TX_CONFIG)
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")

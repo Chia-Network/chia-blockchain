@@ -307,7 +307,7 @@ class DAOCATWallet:
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
                         uint64(vote_amount),
-                        [new_innerpuzzle.get_tree_hash()],
+                        [standard_inner_puz.get_tree_hash()],
                     ),
                 ]
                 if change > 0:
@@ -508,18 +508,18 @@ class DAOCATWallet:
             for active_vote in lci.active_votes:
                 if active_vote in proposal_id_list:
                     my_finished_proposals.append(active_vote)
-            locked_coins.append((lci, my_finished_proposals))
+            if my_finished_proposals:
+                locked_coins.append((lci, my_finished_proposals))
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        # cat_wallet = await self.wallet_state_manager.user_store.get_wallet_by_id(self.dao_cat_info.free_cat_wallet_id)
         dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
 
         for lci_proposals_tuple in locked_coins:
             proposal_innerpuzhashes = []
             coin = lci_proposals_tuple[0].coin
+            lci = lci_proposals_tuple[0]
             proposals = lci_proposals_tuple[1]
-
             for proposal_id in proposals:
                 INNERPUZ = get_finished_state_inner_puzzle(proposal_id)
                 proposal_innerpuzhashes.append(INNERPUZ)
@@ -538,7 +538,7 @@ class DAOCATWallet:
                     0,
                     coin.amount,
                     proposals,
-                    proposal_innerpuzhashes,
+                    0,
                     0,
                     0,
                     0,
