@@ -382,7 +382,7 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
     data = {"service": service_name}
     payload = create_payload("register_service", data, service_name, "daemon")
     await ws.send_str(payload)
-    message_queue = asyncio.Queue()
+    message_queue: asyncio.Queue = asyncio.Queue()
 
     async def reader(ws, queue):
         while True:

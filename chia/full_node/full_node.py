@@ -74,6 +74,7 @@ from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -1108,11 +1109,11 @@ class FullNode:
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue_input))
         validate_task = asyncio.Task(validate_block_batches(batch_queue_input))
         try:
-            await asyncio.gather(fetch_task, validate_task)
-        except Exception as e:
+            with log_exceptions(log=self.log, message="sync from fork point failed"):
+                await asyncio.gather(fetch_task, validate_task)
+        except Exception:
             assert validate_task.done()
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
-            self.log.error(f"sync from fork point failed err: {e}")
 
     def get_peers_with_peak(self, peak_hash: bytes32) -> List[WSChiaConnection]:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])

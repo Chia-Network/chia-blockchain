@@ -48,24 +48,6 @@ class PeerRequestException(Exception):
     pass
 
 
-async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
-    request_height: int = height
-    while True:
-        if request_height == -1:
-            return None
-        response: Optional[List[HeaderBlock]] = await request_header_blocks(
-            peer, uint32(request_height), uint32(request_height)
-        )
-        if response is not None and len(response) > 0:
-            if response[0].is_transaction_block:
-                return response[0]
-        elif request_height < height:
-            # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
-            break
-        request_height = request_height - 1
-    return None
-
-
 async def subscribe_to_phs(
     puzzle_hashes: List[bytes32],
     peer: WSChiaConnection,

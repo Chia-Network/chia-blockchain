@@ -22,6 +22,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from tests.conftest import ConsensusMode
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 
 
@@ -476,20 +477,12 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
     assert await nft_wallet_taker.get_nft_count() == 1
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [False],
-)
-@pytest.mark.parametrize(
-    "reuse_puzhash",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [False])
+@pytest.mark.parametrize("reuse_puzhash", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_cat(
-    self_hostname: str,
-    two_wallet_nodes: Any,
-    trusted: Any,
-    reuse_puzhash: bool,
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, reuse_puzhash: bool
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
