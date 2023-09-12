@@ -43,11 +43,11 @@ async def tcp_echo_client(task_counter: str, file: typing.TextIO) -> None:
 
 
 async def main() -> None:
-    path = pathlib.Path(sys.argv[1])
-    out_path = path.with_suffix(".out")
+    shutdown_path = pathlib.Path(sys.argv[1])
+    out_path = shutdown_path.with_suffix(".out")
 
     async def dun() -> None:
-        while path.exists():
+        while shutdown_path.exists():
             await asyncio.sleep(0.25)
 
         task.cancel()

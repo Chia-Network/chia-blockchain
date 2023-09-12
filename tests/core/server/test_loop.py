@@ -159,44 +159,36 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     flood_file.touch()
 
     logger.info(" ==== launching serve.py")
-    logger.handlers[0].flush()
     with subprocess.Popen(
         [sys.executable, "-m", "tests.core.server.serve", os.fspath(serve_file)],
-    ) as serving_process:
+    ):
         logger.info(" ====           serve.py running")
-        logger.handlers[0].flush()
+
         await asyncio.sleep(adjusted_timeout(5))
+
         logger.info(" ==== launching flood.py")
-        logger.handlers[0].flush()
         with subprocess.Popen(
             [sys.executable, "-m", "tests.core.server.flood", os.fspath(flood_file)],
-        ) as flooding_process:
+        ):
             logger.info(" ====           flood.py running")
-            logger.handlers[0].flush()
-            await asyncio.sleep(adjusted_timeout(25))
+
+            await asyncio.sleep(adjusted_timeout(10))
+
             logger.info(" ====   killing flood.py")
-            logger.handlers[0].flush()
-            # if sys.platform == "win32" or sys.platform == "cygwin":
-            #     flooding_process.send_signal(signal.CTRL_BREAK_EVENT)
-            # else:
-            #     flooding_process.terminate()
             flood_file.unlink()
-            flooding_process.communicate(timeout=adjusted_timeout(5))
+
         flood_output = flood_file.with_suffix(".out").read_text()
         logger.info(" ====           flood.py done")
-        logger.handlers[0].flush()
 
-        await asyncio.sleep(adjusted_timeout(30))
+        await asyncio.sleep(adjusted_timeout(5))
 
         writer = None
         post_connection_error: Optional[str] = None
         try:
             logger.info(" ==== attempting a single new connection")
-            logger.handlers[0].flush()
             with anyio.fail_after(delay=adjusted_timeout(1)):
                 reader, writer = await asyncio.open_connection(IP, PORT)
             logger.info(" ==== connection succeeded")
-            logger.handlers[0].flush()
             post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:
             logger.info(" ==== connection failed")
@@ -207,25 +199,16 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
                 writer.close()
                 await writer.wait_closed()
 
-        await asyncio.sleep(adjusted_timeout(30))
-
         logger.info(" ====   killing serve.py")
-        logger.handlers[0].flush()
-        # if sys.platform == "win32" or sys.platform == "cygwin":
-        #     serving_process.send_signal(signal.CTRL_BREAK_EVENT)
-        # else:
-        #     serving_process.terminate()
+
         serve_file.unlink()
-        serving_process.communicate(timeout=adjusted_timeout(5))
+
     serve_output = serve_file.with_suffix(".out").read_text()
 
     logger.info(" ====           serve.py done")
-    logger.handlers[0].flush()
 
     logger.info(f"\n\n ==== serve output:\n{serve_output}")
-    logger.handlers[0].flush()
     logger.info(f"\n\n ==== flood output:\n{flood_output}")
-    logger.handlers[0].flush()
 
     over = []
     connection_limit = 25
@@ -251,13 +234,6 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
             if count > connection_limit + allowed_over_connections:
                 over.append(count)
 
-        # mark = "ChiaProactor._chia_accept_loop() entering count="
-        # if mark in line:
-        #     _, _, rest = line.partition(mark)
-        #     count = int(rest)
-        #     if count > 1:
-        #         accept_loop_count_over.append(count)
-
     assert over == [], over
     assert accept_loop_count_over == [], accept_loop_count_over
     assert "Traceback" not in serve_output
@@ -268,7 +244,6 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     ), "new connection found during shut down"
 
     logger.info(" ==== all checks passed")
-    logger.handlers[0].flush()
 
 
 @pytest.mark.parametrize(

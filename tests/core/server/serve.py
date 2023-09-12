@@ -47,8 +47,8 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
-    path = pathlib.Path(sys.argv[1])
-    out_path = path.with_suffix(".out")
+    shutdown_path = pathlib.Path(sys.argv[1])
+    out_path = shutdown_path.with_suffix(".out")
 
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
@@ -56,7 +56,7 @@ async def async_main(
             thread_end_event = threading.Event()
 
         async def dun() -> None:
-            while path.exists():
+            while shutdown_path.exists():
                 await asyncio.sleep(0.25)
 
             thread_end_event.set()
@@ -70,7 +70,6 @@ async def async_main(
             # TODO: review if this is general enough, such as for ipv6
             port_holder.append(server_socket.getsockname()[1])
         logger.info("serving on {}".format(server.sockets[0].getsockname()))
-        logger.handlers[0].flush()
 
         try:
             try:
@@ -79,22 +78,16 @@ async def async_main(
             finally:
                 # the test checks explicitly for this
                 logger.info("exit: shutting down")
-                logger.handlers[0].flush()
             logger.info("exit: thread end event set")
-            logger.handlers[0].flush()
         except KeyboardInterrupt:
             logger.info("exit: keyboard interrupt")
-            logger.handlers[0].flush()
         except asyncio.CancelledError:
             logger.info("exit: cancelled")
-            logger.handlers[0].flush()
         finally:
             logger.info("closing server")
-            logger.handlers[0].flush()
             server.close()
             await server.wait_closed()
             logger.info("server closed")
-            logger.handlers[0].flush()
             # await asyncio.sleep(5)
             await file_task
 
