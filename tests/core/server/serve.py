@@ -47,7 +47,7 @@ async def async_main(
     thread_end_event: Optional[threading.Event] = None,
     port_holder: Optional[List[int]] = None,
 ) -> None:
-    path = pathlib.Path.cwd().joinpath("serve")
+    path = pathlib.Path(sys.argv[1])
     out_path = path.with_suffix(".out")
 
     with out_path.open(mode="w") as file:

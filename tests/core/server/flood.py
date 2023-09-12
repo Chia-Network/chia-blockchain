@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import pathlib
+import sys
 import time
 import typing
 
@@ -42,7 +43,7 @@ async def tcp_echo_client(task_counter: str, file: typing.TextIO) -> None:
 
 
 async def main() -> None:
-    path = pathlib.Path.cwd().joinpath("flood")
+    path = pathlib.Path(sys.argv[1])
     out_path = path.with_suffix(".out")
 
     async def dun() -> None:

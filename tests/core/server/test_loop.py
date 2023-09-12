@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import pathlib
 import random
 import subprocess
@@ -152,21 +153,6 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
 
     allowed_over_connections = 0 if sys.platform == "win32" else 100
 
-    # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
-    if sys.platform == "win32" or sys.platform == "cygwin":
-        creationflags = (
-            0
-            # | subprocess.CREATE_NEW_PROCESS_GROUP
-            # | subprocess.CREATE_NO_WINDOW
-            # | subprocess.CREATE_NEW_CONSOLE
-            | subprocess.DETACHED_PROCESS
-            # | subprocess.CREATE_DEFAULT_ERROR_MODE
-            # | subprocess.CREATE_BREAKAWAY_FROM_JOB
-        )
-        # creationflags = 0
-    else:
-        creationflags = 0
-
     serve_file = tmp_path.joinpath("serve")
     serve_file.touch()
     flood_file = tmp_path.joinpath("flood")
@@ -175,14 +161,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     logger.info(" ==== launching serve.py")
     logger.handlers[0].flush()
     with subprocess.Popen(
-        [sys.executable, "-m", "tests.core.server.serve"],
-        creationflags=creationflags,
-        cwd=tmp_path,
-        encoding="utf-8",
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        # TODO: ack!
-        shell=True,
+        [sys.executable, "-m", "tests.core.server.serve", os.fspath(serve_file)],
     ) as serving_process:
         logger.info(" ====           serve.py running")
         logger.handlers[0].flush()
@@ -190,14 +169,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         logger.info(" ==== launching flood.py")
         logger.handlers[0].flush()
         with subprocess.Popen(
-            [sys.executable, "-m", "tests.core.server.flood"],
-            creationflags=creationflags,
-            cwd=tmp_path,
-            encoding="utf-8",
-            stderr=subprocess.STDOUT,
-            stdout=subprocess.PIPE,
-            # TODO: ack!
-            shell=True,
+            [sys.executable, "-m", "tests.core.server.flood", os.fspath(flood_file)],
         ) as flooding_process:
             logger.info(" ====           flood.py running")
             logger.handlers[0].flush()
