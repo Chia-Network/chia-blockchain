@@ -11,7 +11,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.transaction_record import TransactionRecord, minimum_send_attempts
+from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
@@ -41,6 +42,7 @@ tr1 = TransactionRecord(
     uint32(TransactionType.OUTGOING_TX),  # type
     bytes32(bytes32.random(module_seeded_random)),  # name
     [],  # List[Tuple[bytes32, List[bytes]]] memos
+    ConditionValidTimes(),
 )
 
 
@@ -786,3 +788,69 @@ async def test_transaction_record_is_valid() -> None:
     assert dataclasses.replace(tr1, sent_to=invalid_attempts + [mempool_success]).is_valid()
     assert dataclasses.replace(tr1, sent_to=invalid_attempts + [low_fee]).is_valid()
     assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()
+
+
+@pytest.mark.asyncio
+async def test_valid_times_migration() -> None:
+    async with DBConnection(1) as db_wrapper:
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS transaction_record("
+                    " transaction_record blob,"
+                    " bundle_id text PRIMARY KEY,"
+                    " confirmed_at_height bigint,"
+                    " created_at_time bigint,"
+                    " to_puzzle_hash text,"
+                    " amount blob,"
+                    " fee_amount blob,"
+                    " confirmed int,"
+                    " sent int,"
+                    " wallet_id bigint,"
+                    " trade_id text,"
+                    " type int)"
+                )
+            )
+
+        old_record = TransactionRecordOld(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(1000000000),
+            to_puzzle_hash=bytes32([0] * 32),
+            amount=uint64(0),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=None,
+            additions=[],
+            removals=[],
+            wallet_id=uint32(1),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
+            name=bytes32([0] * 32),
+            memos=[],
+        )
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute_insert(
+                "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    bytes(old_record),
+                    old_record.name,
+                    old_record.confirmed_at_height,
+                    old_record.created_at_time,
+                    old_record.to_puzzle_hash.hex(),
+                    bytes(old_record.amount),
+                    bytes(old_record.fee_amount),
+                    int(old_record.confirmed),
+                    old_record.sent,
+                    old_record.wallet_id,
+                    old_record.trade_id,
+                    old_record.type,
+                ),
+            )
+
+        store = await WalletTransactionStore.create(db_wrapper)
+        rec = await store.get_transaction_record(old_record.name)
+        assert rec is not None
+        assert rec.valid_times == ConditionValidTimes()

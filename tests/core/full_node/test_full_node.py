@@ -4,7 +4,7 @@ import asyncio
 import dataclasses
 import random
 import time
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -2062,7 +2062,7 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
         expected_height = 0
 
         for cycle in range(2):
-            async for service in setup_full_node(
+            async with setup_full_node(
                 consensus_constants=block_tools.constants,
                 db_name="node_restart_test.db",
                 self_hostname=block_tools.config["self_hostname"],
@@ -2070,8 +2070,9 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
                 simulator=True,
                 db_version=db_version,
                 reuse_db=True,
-            ):
-                simulator_api = cast(FullNodeSimulator, service._api)
+            ) as service:
+                simulator_api = service._api
+                assert isinstance(simulator_api, FullNodeSimulator)
                 await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
                 expected_height += blocks_per_cycle

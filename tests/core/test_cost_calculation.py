@@ -93,7 +93,10 @@ class TestCostCalculation:
         assert spend_info.puzzle == coin_spend.puzzle_reveal
         assert spend_info.solution == coin_spend.solution
 
-        clvm_cost = 404560
+        if softfork_height >= bt.constants.HARD_FORK_FIX_HEIGHT:
+            clvm_cost = 27360
+        else:
+            clvm_cost = 404560
         byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
         assert (
             npc_result.conds.cost
