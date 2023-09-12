@@ -170,7 +170,7 @@ def get_transactions_cmd(
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
     required=False,
-    default="0",
+    default=None,
 )
 @click.option(
     "--exclude-coin",
@@ -201,7 +201,7 @@ def send_cmd(
     address: str,
     override: bool,
     min_coin_amount: str,
-    max_coin_amount: str,
+    max_coin_amount: Optional[str],
     coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,

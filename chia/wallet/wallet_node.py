@@ -66,7 +66,6 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_r
 from chia.wallet.util.wallet_sync_utils import (
     PeerRequestException,
     fetch_header_blocks_in_range,
-    fetch_last_tx_from_peer,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
@@ -270,7 +269,7 @@ class WalletNode:
     async def reset_sync_db(self, db_path: Union[Path, str], fingerprint: int) -> bool:
         conn: aiosqlite.Connection
         # are not part of core wallet tables, but might appear later
-        ignore_tables = {"lineage_proofs_", "sqlite_"}
+        ignore_tables = {"lineage_proofs_", "sqlite_", "MIGRATED_VALID_TIMES_TXS", "MIGRATED_VALID_TIMES_TRADES"}
         required_tables = [
             "coin_record",
             "transaction_record",
@@ -281,6 +280,8 @@ class WalletNode:
             "all_notification_ids",
             "key_val_store",
             "trade_records",
+            "trade_record_times",
+            "tx_times",
             "pool_state_transitions",
             "singleton_records",
             "mirrors",
@@ -940,22 +941,8 @@ class WalletNode:
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
-    async def is_peer_synced(self, peer: WSChiaConnection, height: uint32) -> Optional[uint64]:
-        # Get last timestamp
-        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
-        latest_timestamp: Optional[uint64] = None
-        if last_tx is not None:
-            assert last_tx.foliage_transaction_block is not None
-            latest_timestamp = last_tx.foliage_transaction_block.timestamp
-
-        # Return None if not synced
-        if (
-            latest_timestamp is None
-            or self.config.get("testing", False) is False
-            and latest_timestamp < uint64(time.time()) - 600
-        ):
-            return None
-        return latest_timestamp
+    def is_timestamp_in_sync(self, timestamp: uint64) -> bool:
+        return self.config.get("testing", False) or uint64(time.time()) - timestamp < 600
 
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.config.get("trusted_peers", {}))
@@ -1012,25 +999,45 @@ class WalletNode:
                 neither.append(node)
         return synced_and_trusted + synced + trusted + neither
 
-    async def get_timestamp_for_height(self, height: uint32) -> uint64:
+    async def get_timestamp_for_height_from_peer(self, height: uint32, peer: WSChiaConnection) -> Optional[uint64]:
         """
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
         a transaction block
         """
-        for cache in self.peer_caches.values():
-            cache_ts: Optional[uint64] = cache.get_height_timestamp(height)
-            if cache_ts is not None:
-                return cache_ts
+        cache = self.get_cache_for_peer(peer)
+        request_height: int = height
+        while request_height >= 0:
+            cached_timestamp = cache.get_height_timestamp(uint32(request_height))
+            if cached_timestamp is not None:
+                return cached_timestamp
+            block = cache.get_block(uint32(request_height))
+            if block is None:
+                self.log.debug(f"get_timestamp_for_height_from_peer cache miss for height {request_height}")
+                response: Optional[List[HeaderBlock]] = await request_header_blocks(
+                    peer, uint32(request_height), uint32(request_height)
+                )
+                if response is not None and len(response) > 0:
+                    self.log.debug(f"get_timestamp_for_height_from_peer add to cache for height {request_height}")
+                    cache.add_to_blocks(response[0])
+                    block = response[0]
+                elif request_height < height:
+                    # The peer might be slightly behind but still synced, so we should allow fetching one more block
+                    break
+            else:
+                self.log.debug(f"get_timestamp_for_height_from_peer use cached block for height {request_height}")
 
+            if block is not None and block.foliage_transaction_block is not None:
+                return block.foliage_transaction_block.timestamp
+
+            request_height -= 1
+
+        return None
+
+    async def get_timestamp_for_height(self, height: uint32) -> uint64:
         for peer in self.get_full_node_peers_in_order():
-            last_tx_block = await fetch_last_tx_from_peer(height, peer)
-            if last_tx_block is None:
-                continue
-
-            assert last_tx_block.foliage_transaction_block is not None
-            self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
-            return last_tx_block.foliage_transaction_block.timestamp
-
+            timestamp = await self.get_timestamp_for_height_from_peer(height, peer)
+            if timestamp is not None:
+                return timestamp
         raise PeerRequestException("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: NewPeakWallet, peer: WSChiaConnection) -> None:
@@ -1066,8 +1073,8 @@ class WalletNode:
             # dont disconnect from peer, this might be a reorg
             return
 
-        latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb.height)
-        if latest_timestamp is None:
+        latest_timestamp = await self.get_timestamp_for_height_from_peer(new_peak_hb.height, peer)
+        if latest_timestamp is None or not self.is_timestamp_in_sync(latest_timestamp):
             if trusted:
                 self.log.debug(f"Trusted peer {peer.get_peer_info()} is not synced.")
             else:

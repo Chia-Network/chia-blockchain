@@ -5,7 +5,7 @@ from typing import Type
 
 import pytest
 
-from chia.simulator.keyring import using_temp_file_keyring
+from chia.simulator.keyring import TempKeyring
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 
@@ -41,8 +41,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance(create_if_necessary=False) is None
 
     # When: creating a new/unpopulated file keyring
-    @using_temp_file_keyring()
-    def test_empty_file_keyring_doesnt_have_master_passphrase(self):
+    def test_empty_file_keyring_doesnt_have_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         A new/unpopulated file keyring should not have a master passphrase set
         """
@@ -50,8 +49,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().has_master_passphrase() is False
 
     # When: using a populated file keyring
-    @using_temp_file_keyring(populate=True)
-    def test_populated_file_keyring_has_master_passphrase(self):
+    def test_populated_file_keyring_has_master_passphrase(self, populated_temp_file_keyring: TempKeyring):
         """
         Populated keyring should have the default master passphrase set
         """
@@ -59,8 +57,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().has_master_passphrase() is True
 
     # When: creating a new file keyring
-    @using_temp_file_keyring()
-    def test_default_cached_master_passphrase(self):
+    def test_default_cached_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         The default passphrase DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE is set
         """
@@ -72,8 +69,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().has_cached_master_passphrase() is True
 
     # When: using a file keyring
-    @using_temp_file_keyring()
-    def test_set_cached_master_passphrase(self):
+    def test_set_cached_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         Setting and retrieving the cached master passphrase should work
         """
@@ -93,8 +89,7 @@ class TestKeyringWrapper:
         )
 
     # When: using a populated file keyring
-    @using_temp_file_keyring(populate=True)
-    def test_master_passphrase_is_valid(self):
+    def test_master_passphrase_is_valid(self, populated_temp_file_keyring: TempKeyring):
         """
         The default master passphrase should unlock the populated keyring (without any keys)
         """
@@ -108,8 +103,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("foobarbaz") is False
 
     # When: creating a new unpopulated keyring
-    @using_temp_file_keyring()
-    def test_set_master_passphrase_on_empty_keyring(self):
+    def test_set_master_passphrase_on_empty_keyring(self, empty_temp_file_keyring: TempKeyring):
         """
         Setting a master passphrase should cache the passphrase and be usable to unlock
         the keyring. Using an old passphrase should not unlock the keyring.
@@ -132,8 +126,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is False
 
     # When: using a populated keyring
-    @using_temp_file_keyring(populate=True)
-    def test_set_master_passphrase_on_keyring(self):
+    def test_set_master_passphrase_on_keyring(self, populated_temp_file_keyring: TempKeyring):
         """
         Setting a master passphrase should cache the passphrase and be usable to unlock
         the keyring. Using an old passphrase should not unlock the keyring.
@@ -158,8 +151,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("testing one two three") is False
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_remove_master_passphrase_from_empty_keyring(self):
+    def test_remove_master_passphrase_from_empty_keyring(self, empty_temp_file_keyring: TempKeyring):
         """
         An empty keyring doesn't require a current passphrase to remove the master passphrase.
         Removing the master passphrase will set the default master passphrase on the keyring.
@@ -178,8 +170,7 @@ class TestKeyringWrapper:
         )
 
     # When: using a populated keyring
-    @using_temp_file_keyring(populate=True)
-    def test_remove_master_passphrase_from_populated_keyring(self):
+    def test_remove_master_passphrase_from_populated_keyring(self, populated_temp_file_keyring: TempKeyring):
         """
         A populated keyring will require a current passphrase when removing the master passphrase.
         Removing the master passphrase will set the default master passphrase on the keyring.
@@ -207,8 +198,7 @@ class TestKeyringWrapper:
         )
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_get_passphrase(self):
+    def test_get_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         Simple passphrase setting and retrieval
         """
@@ -232,8 +222,7 @@ class TestKeyringWrapper:
         )
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_set_passphrase_overwrite(self):
+    def test_set_passphrase_overwrite(self, empty_temp_file_keyring: TempKeyring):
         """
         Overwriting a previously-set passphrase should work
         """
@@ -260,8 +249,7 @@ class TestKeyringWrapper:
         )
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_delete_passphrase(self):
+    def test_delete_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         Deleting a non-existent passphrase should fail gracefully (no exceptions)
         """
@@ -283,8 +271,7 @@ class TestKeyringWrapper:
         # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None
 
-    @using_temp_file_keyring()
-    def test_emoji_master_passphrase(self):
+    def test_emoji_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         Emoji master passphrases should just work 😀
         """
@@ -299,8 +286,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().get_cached_master_passphrase() != ("🦄🦄🦄🦄🦄🦄🦄🦄", True)
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("🦄🦄🦄🦄🦄🦄🦄🦄") is False
 
-    @using_temp_file_keyring()
-    def test_japanese_master_passphrase(self):
+    def test_japanese_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
         Non-ascii master passphrases should just work
         """
@@ -316,8 +302,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().master_passphrase_is_valid("私は幸せな農夫ではありません") is False
 
     # When: using a new empty keyring
-    @using_temp_file_keyring()
-    def test_set_master_passphrase_with_hint(self):
+    def test_set_master_passphrase_with_hint(self, empty_temp_file_keyring: TempKeyring):
         """
         Setting a passphrase hint at the same time as setting the passphrase
         """
@@ -329,8 +314,7 @@ class TestKeyringWrapper:
         # Expect: hint can be retrieved
         assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "some passphrase hint"
 
-    @using_temp_file_keyring()
-    def test_passphrase_hint(self):
+    def test_passphrase_hint(self, empty_temp_file_keyring: TempKeyring):
         """
         Setting and retrieving the passphrase hint
         """
@@ -351,8 +335,7 @@ class TestKeyringWrapper:
         # Expect: the hint is still set
         assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "rhymes with bassphrase"
 
-    @using_temp_file_keyring()
-    def test_passphrase_hint_removal(self):
+    def test_passphrase_hint_removal(self, empty_temp_file_keyring: TempKeyring):
         """
         Removing a passphrase hint
         """
@@ -373,8 +356,7 @@ class TestKeyringWrapper:
         # Expect: passphrase hint has been removed
         assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() is None
 
-    @using_temp_file_keyring()
-    def test_passphrase_hint_update(self):
+    def test_passphrase_hint_update(self, empty_temp_file_keyring: TempKeyring):
         """
         Updating a passphrase hint
         """
@@ -397,8 +379,7 @@ class TestKeyringWrapper:
             == "Something you wouldn't expect The Shredder to say"
         )
 
-    @using_temp_file_keyring()
-    def test_get_label(self):
+    def test_get_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # label lookup for 1, 2, 3 should return None
         assert keyring_wrapper.get_label(1) is None
@@ -417,8 +398,7 @@ class TestKeyringWrapper:
         assert keyring_wrapper.get_label(2) is None
         assert keyring_wrapper.get_label(3) == "three"
 
-    @using_temp_file_keyring()
-    def test_set_label(self):
+    def test_set_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set and validate a label for 1
         keyring_wrapper.set_label(1, "one")
@@ -454,8 +434,7 @@ class TestKeyringWrapper:
             "لتفاصيل لتكتشف حقيقة وأساس ت",
         ],
     )
-    @using_temp_file_keyring()
-    def test_set_special_labels(self, label: str):
+    def test_set_special_labels(self, label: str, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         keyring_wrapper.set_label(1, label)
         assert keyring_wrapper.get_label(1) == label
@@ -476,8 +455,9 @@ class TestKeyringWrapper:
             ("a" * 70, KeychainLabelInvalid, "label exceeds max length: 70/65"),
         ],
     )
-    @using_temp_file_keyring()
-    def test_set_label_failures(self, label: str, exception: Type[KeychainLabelError], message: str) -> None:
+    def test_set_label_failures(
+        self, label: str, exception: Type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
+    ) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         keyring_wrapper.set_label(1, "one")
         with pytest.raises(exception, match=message) as e:
@@ -487,8 +467,7 @@ class TestKeyringWrapper:
             assert e.value.label == "one"
             assert e.value.fingerprint == 1
 
-    @using_temp_file_keyring()
-    def test_delete_label(self) -> None:
+    def test_delete_label(self, empty_temp_file_keyring: TempKeyring) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set labels for 1,2 and validate them
         keyring_wrapper.set_label(1, "one")

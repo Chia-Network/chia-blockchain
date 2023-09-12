@@ -27,6 +27,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
@@ -126,6 +127,7 @@ class TestWalletRpcClient(TestRpcClient):
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
             memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+            valid_times=ConditionValidTimes(),
         )
 
     async def get_cat_name(self, wallet_id: int) -> str:
@@ -270,6 +272,7 @@ class TestWalletRpcClient(TestRpcClient):
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32([2] * 32),
             memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
+            valid_times=ConditionValidTimes(),
         )
 
 

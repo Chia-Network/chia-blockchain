@@ -68,6 +68,7 @@ async def init_data_layer_service(
     db_path: Optional[Path] = None,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     manage_data_interval: int = 5,
+    maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[Service[DataLayer, DataLayerAPI]]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -75,6 +76,9 @@ async def init_data_layer_service(
     config["data_layer"]["run_server"] = False
     config["data_layer"]["port"] = 0
     config["data_layer"]["rpc_port"] = 0
+    config["data_layer"]["manage_data_interval"] = 5
+    if maximum_full_file_count is not None:
+        config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
         config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     config["data_layer"]["manage_data_interval"] = manage_data_interval
@@ -97,9 +101,10 @@ async def init_data_layer(
     db_path: Path,
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     manage_data_interval: int = 5,
+    maximum_full_file_count: Optional[int] = None,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval
+        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
@@ -1849,6 +1854,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_get_sync_status(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
@@ -2002,6 +2008,7 @@ async def test_clear_pending_roots(
         assert cleared_root == {"success": True, "root": pending_root.marshal()}
 
 
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
@@ -2057,7 +2064,57 @@ async def test_issue_15955_deadlock(
                 )
 
 
+@pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@pytest.mark.asyncio
+async def test_maximum_full_file_count(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    maximum_full_file_count: int,
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        manage_data_interval=manage_data_interval,
+        maximum_full_file_count=maximum_full_file_count,
+    ) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        res = await data_rpc_api.create_data_store({})
+        root_hashes: List[bytes32] = []
+        assert res is not None
+        store_id = bytes32.from_hexstr(res["id"])
+        await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
+        for batch_count in range(1, 10):
+            key = batch_count.to_bytes(2, "big")
+            value = batch_count.to_bytes(2, "big")
+            changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
+            update_tx_rec = res["tx_id"]
+            await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
+            await asyncio.sleep(manage_data_interval * 2)
+            root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
+            root_hashes.append(root_hash["hash"])
+            with os.scandir(data_layer.server_files_location) as entries:
+                filenames = {entry.name for entry in entries}
+                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
+                assert len(filenames) == expected_files_count
+                for generation, hash in enumerate(root_hashes):
+                    filename = get_delta_filename(store_id, hash, generation + 1)
+                    assert filename in filenames
+                    filename = get_full_tree_filename(store_id, hash, generation + 1)
+                    if generation + 1 > batch_count - maximum_full_file_count:
+                        assert filename in filenames
+                    else:
+                        assert filename not in filenames
+
+
 @pytest.mark.parametrize("retain", [True, False])
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_unsubscribe_removes_files(
     self_hostname: str,
@@ -2070,7 +2127,11 @@ async def test_unsubscribe_removes_files(
     )
     manage_data_interval = 5
     async with init_data_layer(
-        wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path, manage_data_interval=manage_data_interval
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        manage_data_interval=manage_data_interval,
+        maximum_full_file_count=100,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -2103,6 +2164,7 @@ async def test_unsubscribe_removes_files(
 
 
 @pytest.mark.parametrize(argnames="layer", argvalues=list(InterfaceLayer))
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
 async def test_wallet_log_in_changes_active_fingerprint(
     self_hostname: str,
