@@ -809,12 +809,14 @@ class WalletStateManager:
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
                         clawback_coins[coin.coin] = metadata
                         if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+                            tx = (await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))[0]
+                            await self.add_pending_transaction(tx)
                             clawback_coins = {}
             except Exception as e:
                 self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
-            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+            tx = (await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))[0]
+            await self.add_pending_transaction(tx)
 
     async def spend_clawback_coins(
         self,
@@ -823,7 +825,7 @@ class WalletStateManager:
         tx_config: TXConfig,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[bytes32]:
+    ) -> List[TransactionRecord]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
@@ -897,11 +899,10 @@ class WalletStateManager:
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.add_pending_transaction(tx_record)
         # Update incoming tx to prevent double spend and mark it is pending
         for coin_spend in coin_spends:
             await self.tx_store.increment_sent(coin_spend.coin.name(), "", MempoolInclusionStatus.PENDING, None)
-        return [tx_record.name]
+        return [tx_record]
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)

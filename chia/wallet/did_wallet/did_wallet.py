@@ -534,7 +534,7 @@ class DIDWallet:
 
     async def create_update_spend(
         self, tx_config: TXConfig, fee: uint64 = uint64(0), extra_conditions: Tuple[Condition, ...] = tuple()
-    ):
+    ) -> List[TransactionRecord]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -600,7 +600,6 @@ class DIDWallet:
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(chia_tx)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -619,9 +618,12 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
 
-        return spend_bundle
+        txs = [did_record]
+        if chia_tx is not None:
+            txs.append(chia_tx)
+
+        return txs
 
     async def transfer_did(
         self,
@@ -630,7 +632,7 @@ class DIDWallet:
         with_recovery: bool,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         """
         Transfer the current DID to another owner
         :param new_puzhash: New owner's p2_puzzle
@@ -696,7 +698,6 @@ class DIDWallet:
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            await self.wallet_state_manager.add_pending_transaction(chia_tx)
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -715,8 +716,10 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return did_record
+        txs = [did_record]
+        if chia_tx is not None:
+            txs.append(chia_tx)
+        return txs
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
     async def create_message_spend(
@@ -865,7 +868,7 @@ class DIDWallet:
         pubkey: G1Element,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[SpendBundle, str]:
+    ) -> Tuple[TransactionRecord, str]:
         """
         Create an attestment
         :param recovering_coin_name: Coin ID of the DID
@@ -936,8 +939,7 @@ class DIDWallet:
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return message_spend_bundle, attest_str
+        return did_record, attest_str
 
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None

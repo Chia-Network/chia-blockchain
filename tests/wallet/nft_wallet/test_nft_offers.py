@@ -100,9 +100,12 @@ async def test_nft_offer_with_fee(self_hostname: str, two_wallet_nodes: Any, tru
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
-    assert sb
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
@@ -290,9 +293,12 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
@@ -405,9 +411,12 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
@@ -543,9 +552,12 @@ async def test_nft_offer_nft_for_cat(
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
-    assert sb
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    txs = await nft_wallet_maker.generate_new_nft(metadata, tx_config)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
@@ -797,9 +809,12 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
         ]
     )
 
-    sb = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-    assert sb
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    txs = await nft_wallet_maker.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     metadata_2 = Program.to(
         [
@@ -807,9 +822,13 @@ async def test_nft_offer_nft_for_nft(self_hostname: str, two_wallet_nodes: Any, 
             ("h", "0xD4584AD463139FA8C0D9F68F4B59F183"),
         ]
     )
-    sb_2 = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG)
-    assert sb_2
-    await time_out_assert_not_none(20, full_node_api.full_node.mempool_manager.get_spendbundle, sb_2.name())
+
+    txs = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(
+                20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+            )
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)

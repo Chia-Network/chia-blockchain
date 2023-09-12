@@ -69,6 +69,10 @@ def tx_endpoint(
         if "extra_conditions" in request:
             extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
 
-        return await func(self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, **kwargs)
+        push: bool = request.get("push", func.__kwdefaults__["push"])
+
+        return await func(
+            self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, push=push, **kwargs
+        )
 
     return rpc_endpoint
