@@ -74,6 +74,7 @@ class ConsensusConstants:
     # the hard fork planned with the 2.0 release
     # this is the block with the first plot filter adjustment
     HARD_FORK_HEIGHT: uint32
+    HARD_FORK_FIX_HEIGHT: uint32
 
     # the plot filter adjustment heights
     PLOT_FILTER_128_HEIGHT: uint32

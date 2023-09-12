@@ -4,11 +4,15 @@ import time
 from secrets import token_bytes
 
 import pytest
+from blspy import G2Element
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
-from chia.wallet.trade_record import TradeRecord
+from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.trade_record import TradeRecord, TradeRecordOld
+from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore, migrate_coin_of_interest
 from chia.wallet.util.wallet_types import WalletType
@@ -46,6 +50,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             trade_id=tr1_name,
             status=uint32(TradeStatus.PENDING_ACCEPT.value),
             sent_to=[],
+            valid_times=ConditionValidTimes(),
         )
         await trade_store.add_trade_record(tr1, offer_name=bytes32(token_bytes(32)))
 
@@ -62,6 +67,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             trade_id=tr2_name,
             status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
+            valid_times=ConditionValidTimes(),
         )
         await trade_store.add_trade_record(tr2, offer_name=bytes32(token_bytes(32)))
 
@@ -86,6 +92,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             trade_id=tr2_name,
             status=uint32(TradeStatus.PENDING_CONFIRM.value),
             sent_to=[],
+            valid_times=ConditionValidTimes(),
         )
         await trade_store.add_trade_record(tr2_1, offer_name=bytes32(token_bytes(32)))
 
@@ -105,3 +112,59 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == {
             coin_2.name()
         }
+
+
+@pytest.mark.asyncio
+async def test_valid_times_migration() -> None:
+    async with DBConnection(1) as db_wrapper:
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS trade_records("
+                    " trade_record blob,"
+                    " trade_id text PRIMARY KEY,"
+                    " status int,"
+                    " confirmed_at_index int,"
+                    " created_at_time bigint,"
+                    " sent int,"
+                    " is_my_offer tinyint)"
+                )
+            )
+
+        fake_offer = Offer({}, SpendBundle([], G2Element()), {})
+        fake_coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+        old_record = TradeRecordOld(
+            confirmed_at_index=uint32(0),
+            accepted_at_time=None,
+            created_at_time=uint64(1000000),
+            is_my_offer=True,
+            sent=uint32(0),
+            offer=bytes(fake_offer),
+            taken_offer=None,
+            coins_of_interest=[fake_coin],
+            trade_id=bytes32([0] * 32),
+            status=uint32(TradeStatus.PENDING_ACCEPT.value),
+            sent_to=[],
+        )
+
+        async with db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "INSERT INTO trade_records "
+                "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, is_my_offer) "
+                "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                (
+                    bytes(old_record),
+                    old_record.trade_id.hex(),
+                    old_record.status,
+                    old_record.confirmed_at_index,
+                    old_record.created_at_time,
+                    old_record.sent,
+                    old_record.is_my_offer,
+                ),
+            )
+            await cursor.close()
+
+        trade_store = await TradeStore.create(db_wrapper)
+        rec = await trade_store.get_trade_record(old_record.trade_id)
+        assert rec is not None
+        assert rec.valid_times == ConditionValidTimes()

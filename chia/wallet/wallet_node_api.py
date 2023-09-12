@@ -52,8 +52,12 @@ class WalletNodeAPI:
                 peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer) and not peer.closed
             ]
 
-            # Check for untrusted peers first to avoid calling is_peer_synced if not required
-            if len(untrusted_peers) > 0 and await self.wallet_node.is_peer_synced(peer, peak.height):
+            # Check for untrusted peers to avoid fetching the timestamp if not required
+            if len(untrusted_peers) > 0:
+                timestamp = await self.wallet_node.get_timestamp_for_height_from_peer(peak.height, peer)
+            else:
+                timestamp = None
+            if timestamp is not None and self.wallet_node.is_timestamp_in_sync(timestamp):
                 self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
                 # Stop peer discovery/connect tasks first
                 if self.wallet_node.wallet_peers is not None:
