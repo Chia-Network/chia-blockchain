@@ -2,44 +2,53 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import logging
 import pathlib
+import random
 import sys
 import time
-import typing
+
+from tests.util.misc import create_logger
 
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
 PORT = 8444
 NUM_CLIENTS = 500
 
+total_open_connections = 0
 
-async def tcp_echo_client(task_counter: str, file: typing.TextIO) -> None:
+
+async def tcp_echo_client(task_counter: str, logger: logging.Logger) -> None:
+    global total_open_connections
     try:
         for loop_counter in itertools.count():
             label = f"{task_counter:5}-{loop_counter:5}"
+            await asyncio.sleep(random.random())
             t1 = time.monotonic()
             writer = None
             try:
-                print(f"Opening connection: {label}", file=file)
+                logger.info(f"Opening connection: {label}")
                 reader, writer = await asyncio.open_connection(IP, PORT)
-                print(f"Opened connection: {label}", file=file)
+                total_open_connections += 1
+                logger.info(f"Opened connection: {label} (total: {total_open_connections})")
                 assert writer is not None
-                await asyncio.sleep(15)
+                await asyncio.sleep(1 + 4 * random.random())
             except asyncio.CancelledError as e:
                 t2 = time.monotonic()
-                print(f"Cancelled connection {label}: {e}. Time: {t2 - t1:.3f}", file=file)
+                logger.info(f"Cancelled connection: {label} - {e}. Time: {t2 - t1:.3f}")
                 break
             except Exception as e:
                 t2 = time.monotonic()
-                print(f"Closed connection {label}: {e}. Time: {t2 - t1:.3f}", file=file)
+                logger.info(f"Closed connection: {label} - {e}. Time: {t2 - t1:.3f}")
             finally:
-                print(f"--- {label} a", file=file)
+                logger.info(f"--- {label} a")
                 if writer is not None:
-                    print(f"--- {label}   B", file=file)
+                    total_open_connections -= 1
+                    logger.info(f"--- {label}   B (total: {total_open_connections})")
                     writer.close()
                     await writer.wait_closed()
     finally:
-        print(f"--- {task_counter:5} task finishing", file=file)
+        logger.info(f"--- {task_counter:5} task finishing")
 
 
 async def main() -> None:
@@ -55,10 +64,11 @@ async def main() -> None:
     file_task = asyncio.create_task(dun())
 
     with out_path.open(mode="w") as file:
+        logger = create_logger(file=file)
 
         async def f() -> None:
             await asyncio.gather(
-                *[tcp_echo_client(task_counter="{}".format(i), file=file) for i in range(0, NUM_CLIENTS)]
+                *[tcp_echo_client(task_counter="{}".format(i), logger=logger) for i in range(0, NUM_CLIENTS)]
             )
 
         task = asyncio.create_task(f())
@@ -67,7 +77,7 @@ async def main() -> None:
         except asyncio.CancelledError:
             pass
         finally:
-            print("leaving flood", file=file)
+            logger.info("leaving flood")
             await file_task
 
 
