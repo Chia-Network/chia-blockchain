@@ -6,6 +6,7 @@ from typing import Any, AsyncIterator, List
 import pytest
 import pytest_asyncio
 
+from chia.consensus.constants import ConsensusConstants
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
@@ -38,8 +39,12 @@ def trusted_full_node(request: Any) -> bool:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_environments(trusted_full_node: bool, request: Any) -> AsyncIterator[WalletTestFramework]:
-    async with setup_simulators_and_wallets_service(1, request.param["num_environments"], {}) as wallet_nodes_services:
+async def wallet_environments(
+    trusted_full_node: bool, request: Any, blockchain_constants: ConsensusConstants
+) -> AsyncIterator[WalletTestFramework]:
+    async with setup_simulators_and_wallets_service(
+        1, request.param["num_environments"], blockchain_constants
+    ) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **request.param["config_overrides"]}
