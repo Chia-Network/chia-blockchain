@@ -145,8 +145,6 @@ class ServeInThread:
             chia_policy.global_max_concurrent_connections = self.original_connection_limit
 
 
-# TODO: remove this
-@pytest.mark.only
 @pytest.mark.asyncio
 async def test_loop(tmp_path: pathlib.Path) -> None:
     logger = create_logger()

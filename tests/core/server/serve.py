@@ -88,7 +88,6 @@ async def async_main(
             server.close()
             await server.wait_closed()
             logger.info("server closed")
-            # await asyncio.sleep(5)
             await file_task
 
 
