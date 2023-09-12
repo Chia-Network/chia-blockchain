@@ -264,7 +264,7 @@ async def send(
     address: str,
     override: bool,
     min_coin_amount: str,
-    max_coin_amount: str,
+    max_coin_amount: Optional[str],
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,

@@ -24,7 +24,7 @@ from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -80,6 +80,7 @@ class CRCATWallet(CATWallet):
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> "CATWallet":  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
@@ -248,6 +249,7 @@ class CRCATWallet(CATWallet):
                     type=uint32(TransactionType.INCOMING_CRCAT_PENDING),
                     name=coin.name(),
                     memos=list(memos.items()),
+                    valid_times=ConditionValidTimes(),
                 )
                 await self.wallet_state_manager.tx_store.add_transaction_record(tx_record)
             else:  # pragma: no cover
@@ -693,6 +695,7 @@ class CRCATWallet(CATWallet):
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=signed_spend_bundle.name(),
                 memos=list(compute_memos(signed_spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
             for i, payment in enumerate(payments)
         ]
@@ -709,6 +712,7 @@ class CRCATWallet(CATWallet):
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         # Select the relevant CR-CAT coins
         crcat_records: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
@@ -798,6 +802,7 @@ class CRCATWallet(CATWallet):
             puzzle_announcements=set(crcat.expected_announcement() for crcat, _ in crcats_and_puzhashes),
             coin_announcements={nonce},
             coin_announcements_to_consume=set(expected_announcements),
+            extra_conditions=extra_conditions,
         )
         claim_bundle = SpendBundle.aggregate(
             [claim_bundle, *(tx.spend_bundle for tx in vc_txs if tx.spend_bundle is not None)]
@@ -821,6 +826,7 @@ class CRCATWallet(CATWallet):
                 type=uint32(TransactionType.INCOMING_TX.value),
                 name=claim_bundle.name(),
                 memos=list(compute_memos(claim_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             ),
             *(dataclasses.replace(tx, spend_bundle=None) for tx in vc_txs),
             *((dataclasses.replace(chia_tx, spend_bundle=None),) if chia_tx is not None else []),
