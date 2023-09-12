@@ -18,7 +18,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
@@ -495,6 +495,7 @@ class Wallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
 
     async def create_tandem_xch_tx(

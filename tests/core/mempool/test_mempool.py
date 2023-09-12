@@ -12,7 +12,6 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -24,6 +23,7 @@ from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.outbound_message import Message
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
@@ -1966,7 +1966,7 @@ def generator_condition_tester(
     generator = BlockGenerator(program, [], [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
-        generator, max_cost, mempool_mode=mempool_mode, height=height, constants=DEFAULT_CONSTANTS
+        generator, max_cost, mempool_mode=mempool_mode, height=height, constants=test_constants
     )
     return npc_result
 
@@ -2001,7 +2001,7 @@ class TestGeneratorConditions:
         )
 
         # with the 2.0 hard fork, division with negative numbers is allowed
-        if operand < 0 and softfork_height >= DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+        if operand < 0 and softfork_height >= test_constants.HARD_FORK_HEIGHT:
             expected = None
 
         assert npc_result.error == expected
@@ -2098,7 +2098,10 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
-        generator_base_cost = 20470
+        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+            generator_base_cost = 40
+        else:
+            generator_base_cost = 20470
 
         # this max cost is exactly enough for the create coin condition
         npc_result = generator_condition_tester(
@@ -2123,7 +2126,10 @@ class TestGeneratorConditions:
         # AGG_SIG_ME
         pubkey = "abababababababababababababababababababababababab"
 
-        generator_base_cost = 20512
+        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+            generator_base_cost = 40
+        else:
+            generator_base_cost = 20512
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
@@ -2155,7 +2161,7 @@ class TestGeneratorConditions:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height, constants=DEFAULT_CONSTANTS
+            generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height, constants=test_constants
         )
         assert npc_result.error is None
         assert len(npc_result.conds.spends) == 2
@@ -2239,7 +2245,7 @@ class TestGeneratorConditions:
             expect_error = Err.INVALID_CONDITION.value
         # the SOFTFORK condition is only activated with the hard fork, so
         # before then there are no errors
-        elif softfork_height < DEFAULT_CONSTANTS.HARD_FORK_HEIGHT:
+        elif softfork_height < test_constants.HARD_FORK_HEIGHT:
             expect_error = None
 
         assert npc_result.error == expect_error
@@ -2484,7 +2490,7 @@ class TestMaliciousGenerators:
     def test_duplicate_coin_announces(self, request, opcode, softfork_height):
         # with soft-fork3, we only allow 1024 create- or assert announcements
         # per spend
-        if softfork_height >= DEFAULT_CONSTANTS.SOFT_FORK3_HEIGHT:
+        if softfork_height >= test_constants.SOFT_FORK3_HEIGHT:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=1024)
         else:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)

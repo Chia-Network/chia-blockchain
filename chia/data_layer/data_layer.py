@@ -39,6 +39,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
+    delete_full_file_if_exists,
     get_delta_filename,
     get_full_tree_filename,
     insert_from_delta_file,
@@ -84,6 +85,7 @@ class DataLayer:
     wallet_rpc_init: Awaitable[WalletRpcClient]
     downloaders: List[PluginRemote]
     uploaders: List[PluginRemote]
+    maximum_full_file_count: int
     server_files_location: Path
     _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
@@ -152,6 +154,7 @@ class DataLayer:
             server_files_location=path_from_root(root_path, server_files_replaced),
             downloaders=downloaders,
             uploaders=uploaders,
+            maximum_full_file_count=config.get("maximum_full_file_count", 1),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -498,6 +501,15 @@ class DataLayer:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
+    async def clean_old_full_tree_files(
+        self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
+    ) -> None:
+        for generation in range(full_tree_first_publish_generation - 1, 0, -1):
+            root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
+            file_exists = delete_full_file_if_exists(foldername, tree_id, root)
+            if not file_exists:
+                break
+
     async def upload_files(self, tree_id: bytes32) -> None:
         uploaders = await self.get_uploaders(tree_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -507,12 +519,21 @@ class DataLayer:
         await self._update_confirmation_status(tree_id=tree_id)
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
+        latest_generation = root.generation
+        # Don't store full tree files before this generation.
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
         while publish_generation > 0:
-            write_file_result = await write_files_for_root(self.data_store, tree_id, root, self.server_files_location)
+            write_file_result = await write_files_for_root(
+                self.data_store,
+                tree_id,
+                root,
+                self.server_files_location,
+                full_tree_first_publish_generation,
+            )
             if not write_file_result.result:
                 # this particular return only happens if the files already exist, no need to log anything
                 break
@@ -520,9 +541,11 @@ class DataLayer:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "store_id": tree_id.hex(),
-                        "full_tree_filename": write_file_result.full_tree.name,
                         "diff_filename": write_file_result.diff_tree.name,
                     }
+                    if write_file_result.full_tree is not None:
+                        request_json["full_tree_filename"] = write_file_result.full_tree.name
+
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
                         async with aiohttp.ClientSession() as session:
@@ -535,22 +558,30 @@ class DataLayer:
                                 if res_json["uploaded"]:
                                     self.log.info(
                                         f"Uploaded files to {uploader} for store {tree_id.hex()} "
-                                        "generation {publish_generation}"
+                                        f"generation {publish_generation}"
                                     )
                                 else:
                                     self.log.error(
                                         f"Failed to upload files to, will retry later: {uploader} : {res_json}"
                                     )
+                await self.clean_old_full_tree_files(
+                    self.server_files_location,
+                    tree_id,
+                    full_tree_first_publish_generation,
+                )
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
-                os.remove(write_file_result.full_tree)
+                if write_file_result.full_tree is not None:
+                    os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
     async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
         root = await self.data_store.get_tree_root(tree_id=store_id)
+        latest_generation = root.generation
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
@@ -560,9 +591,17 @@ class DataLayer:
         files = []
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
-            res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            res = await write_files_for_root(
+                self.data_store,
+                store_id,
+                root,
+                server_files_location,
+                full_tree_first_publish_generation,
+                overwrite,
+            )
             files.append(res.diff_tree.name)
-            files.append(res.full_tree.name)
+            if res.full_tree is not None:
+                files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
