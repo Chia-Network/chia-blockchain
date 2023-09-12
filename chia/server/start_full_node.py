@@ -81,6 +81,8 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
         overrides["SOFT_FORK4_HEIGHT"] = 2997292
     if "HARD_FORK_HEIGHT" not in overrides:
         overrides["HARD_FORK_HEIGHT"] = 2997292
+    if "HARD_FORK_FIX_HEIGHT" not in overrides:
+        overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
     if "PLOT_FILTER_128_HEIGHT" not in overrides:
         overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
     if "PLOT_FILTER_64_HEIGHT" not in overrides:
