@@ -20,7 +20,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
@@ -618,6 +618,7 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
 
@@ -714,6 +715,7 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
         return did_record
@@ -800,6 +802,7 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
             memos=list(compute_memos(signed_spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
 
     # This is used to cash out, or update the id_list
@@ -852,6 +855,7 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=ConditionValidTimes(),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
         return spend_bundle
@@ -933,6 +937,7 @@ class DIDWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
@@ -1061,6 +1066,7 @@ class DIDWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=ConditionValidTimes(),
         )
         await self.wallet_state_manager.add_pending_transaction(did_record)
         new_did_info = DIDInfo(
@@ -1302,6 +1308,7 @@ class DIDWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=ConditionValidTimes(),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
         await self.wallet_state_manager.add_pending_transaction(regular_record)

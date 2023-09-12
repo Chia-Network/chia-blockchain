@@ -61,6 +61,7 @@ default_kwargs = {
     # June 2024
     "SOFT_FORK4_HEIGHT": 5496000,
     "HARD_FORK_HEIGHT": 5496000,
+    "HARD_FORK_FIX_HEIGHT": 5496000,
     # June 2027
     "PLOT_FILTER_128_HEIGHT": 10542000,
     # June 2030

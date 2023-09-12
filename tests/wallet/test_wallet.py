@@ -22,6 +22,7 @@ from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -1423,6 +1424,7 @@ class TestWalletSimulator:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
             memos=list(compute_memos(stolen_sb).items()),
+            valid_times=ConditionValidTimes(),
         )
         await wallet.push_transaction(stolen_tx)
 
