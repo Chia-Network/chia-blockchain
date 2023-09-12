@@ -14,6 +14,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.merkle_utils import build_merkle_tree, simplify_merkle_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from tests.conftest import ConsensusMode
 
 
 async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
@@ -37,10 +38,8 @@ def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple
     return branch, new_proof
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.asyncio
 async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     (
@@ -302,10 +301,8 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.asyncio
 async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     (

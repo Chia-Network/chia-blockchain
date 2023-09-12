@@ -394,7 +394,12 @@ class TestBlockHeightMap:
             await BlockHeightMap.create(tmp_dir, db_wrapper)
             # Make sure we didn't alter the cache (nothing new to write)
             with open(tmp_dir / "height-to-hash", "rb") as f:
-                assert bytearray(f.read()) == heights
+                # pytest doesn't behave very well comparing large buffers
+                # (when the test fails). Compare small portions at a time instead
+                new_heights = f.read()
+                assert len(new_heights) == len(heights)
+                for idx in range(0, len(heights), 32):
+                    assert new_heights[idx : idx + 32] == heights[idx : idx + 32]
 
     @pytest.mark.asyncio
     async def test_cache_file_replace_everything(self, tmp_dir: Path, db_version: int) -> None:
@@ -433,14 +438,17 @@ class TestBlockHeightMap:
             await setup_chain(db_wrapper, 4000, ses_every=20)
             # At this point we should have a proper cache with the old chain data
             with open(tmp_dir / "height-to-hash", "rb") as f:
-                heights = bytearray(f.read())
+                heights = f.read()
                 assert len(heights) == (2000 + 1) * 32
             await BlockHeightMap.create(tmp_dir, db_wrapper)
             # Make sure we properly wrote the additional data to the cache
             with open(tmp_dir / "height-to-hash", "rb") as f:
-                new_heights = bytearray(f.read())
+                new_heights = f.read()
                 assert len(new_heights) == (4000 + 1) * 32
-                assert new_heights[: len(heights)] == heights
+                # pytest doesn't behave very well comparing large buffers
+                # (when the test fails). Compare small portions at a time instead
+                for idx in range(0, len(heights), 32):
+                    assert new_heights[idx : idx + 32] == heights[idx : idx + 32]
 
 
 @pytest.mark.asyncio

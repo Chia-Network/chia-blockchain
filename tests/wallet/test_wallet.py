@@ -22,6 +22,7 @@ from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -33,6 +34,7 @@ from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.conftest import ConsensusMode
 
 
 class TestWalletSimulator:
@@ -186,6 +188,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == expected_confirmed_balance
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
 
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
@@ -419,10 +422,8 @@ class TestWalletSimulator:
         interested_coins = await wallet_node_2.wallet_state_manager.interested_store.get_interested_coin_ids()
         assert merkle_coin.name() not in set(interested_coins)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_wallet_clawback_sent_self(
         self,
@@ -507,10 +508,8 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
         assert list(txs["transactions"][0]["memos"].values())[0] == b"Test".hex()
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_wallet_clawback_claim_manual(
         self,
@@ -601,10 +600,8 @@ class TestWalletSimulator:
         assert len(txs["transactions"]) == 1
         assert txs["transactions"][0]["confirmed"]
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_wallet_clawback_reorg(
         self,
@@ -761,10 +758,8 @@ class TestWalletSimulator:
         assert len(resp["coin_records"]) == 1
         assert resp["coin_records"][0]["id"][2:] == merkle_coin.name().hex()
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_clawback_resync(
         self,
@@ -959,10 +954,8 @@ class TestWalletSimulator:
         # Check unspent coins
         assert len(await wallet_node_1.wallet_state_manager.coin_store.get_all_unspent_coins()) == 6
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(
         self,
@@ -1000,10 +993,8 @@ class TestWalletSimulator:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
         assert await wallet.get_confirmed_balance() == permanent_funds
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_wallet_send_to_three_peers(
         self,
@@ -1145,42 +1136,6 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_0.get_unconfirmed_balance, expected_confirmed_balance)
         await time_out_assert(20, wallet_1.get_confirmed_balance, 5)
 
-    # @pytest.mark.asyncio
-    # async def test_wallet_finds_full_node(self):
-    #     node_iters = [
-    #         setup_full_node(
-    #             test_constants,
-    #             "blockchain_test.db",
-    #             11234,
-    #             introducer_port=11236,
-    #             simulator=False,
-    #         ),
-    #         setup_wallet_node(
-    #             11235,
-    #             test_constants,
-    #             None,
-    #             introducer_port=11236,
-    #         ),
-    #         setup_introducer(11236),
-    #     ]
-    #
-    #     full_node_api = await node_iters[0].__anext__()
-    #     wallet, wallet_server = await node_iters[1].__anext__()
-    #     introducer, introducer_server = await node_iters[2].__anext__()
-    #
-    #     async def has_full_node():
-    #         outbound: List[WSChiaConnection] = wallet.server.get_outgoing_connections()
-    #         for connection in outbound:
-    #             if connection.connection_type is NodeType.FULL_NODE:
-    #                 return True
-    #         return False
-    #
-    #     await time_out_assert(
-    #         2 * 60,
-    #         has_full_node,
-    #         True,
-    #     )
-    #     await _teardown_nodes(node_iters)
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
@@ -1469,6 +1424,7 @@ class TestWalletSimulator:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=name,
             memos=list(compute_memos(stolen_sb).items()),
+            valid_times=ConditionValidTimes(),
         )
         await wallet.push_transaction(stolen_tx)
 

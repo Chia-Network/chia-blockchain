@@ -36,6 +36,7 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from tests.conftest import ConsensusMode
 
 
 class TestCATWallet:
@@ -80,6 +81,7 @@ class TestCATWallet:
                 {"identifier": "genesis_by_id"},
                 uint64(100),
                 DEFAULT_TX_CONFIG,
+                fee=uint64(10),
             )
             # The next 2 lines are basically a noop, it just adds test coverage
             cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
@@ -92,6 +94,9 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - 110)
+        await time_out_assert(20, wallet.get_spendable_balance, funds - 110)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - 110)
 
         # Test migration
         all_lineage = await cat_wallet.lineage_store.get_all_lineage_proofs()
@@ -666,10 +671,8 @@ class TestCATWallet:
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
                 assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
@@ -780,14 +783,9 @@ class TestCATWallet:
                 DEFAULT_TX_CONFIG,
             )
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.parametrize(
-        "autodiscovery",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.parametrize("autodiscovery", [True, False])
     @pytest.mark.asyncio
     async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
