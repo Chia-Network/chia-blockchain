@@ -1706,6 +1706,11 @@ def get_full_block_and_block_record(
     current_time: bool = False,
     block_time_residual: float = 0.0,
 ) -> Tuple[FullBlock, BlockRecord, float, uint64]:
+    # we're simulating time between blocks here. The more VDF iterations the
+    # blocks advances, the longer it should have taken (and vice versa). This
+    # formula is meant to converge at 1024 iters per the specified
+    # time_per_block (which defaults to 18.75 seconds)
+    time_per_block *= (((sub_slot_iters / 1024) - 1) * 0.2) + 1
     time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
     if current_time is True:
         timestamp = uint64(max(int(time.time()), last_timestamp + time_delta))
