@@ -32,7 +32,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
@@ -171,6 +171,7 @@ class CATWallet:
             type=uint32(TransactionType.INCOMING_TX.value),
             name=bytes32(token_bytes()),
             memos=[],
+            valid_times=ConditionValidTimes(),
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
@@ -844,6 +845,7 @@ class CATWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         ]
 
@@ -866,6 +868,7 @@ class CATWallet:
                     type=chia_tx.type,
                     name=chia_tx.name,
                     memos=[],
+                    valid_times=parse_timelock_info(extra_conditions),
                 )
             )
 
