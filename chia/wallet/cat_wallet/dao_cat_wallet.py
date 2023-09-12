@@ -25,7 +25,6 @@ from chia.wallet.cat_wallet.dao_cat_info import DAOCATInfo, LockedCoinInfo
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.conditions import Condition
 from chia.wallet.dao_wallet.dao_utils import (
-    DAO_FINISHED_STATE_HASH,
     add_proposal_to_active_list,
     get_active_votes_from_lockup_puzzle,
     get_finished_state_inner_puzzle,
@@ -499,9 +498,7 @@ class DAOCATWallet:
         await self.save_info(dao_cat_info)
         return record
 
-    async def remove_active_proposal(
-        self, proposal_id_list: List[bytes32], fee: uint64 = uint64(0), push: bool = True
-    ) -> SpendBundle:
+    async def remove_active_proposal(self, proposal_id_list: List[bytes32], fee: uint64 = uint64(0)) -> SpendBundle:
         locked_coins: List[Tuple[LockedCoinInfo, List[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
             my_finished_proposals = []
@@ -569,27 +566,6 @@ class DAOCATWallet:
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
             full_spend = spend_bundle
-
-        if push:  # pragma: no cover
-            record = TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=DAO_FINISHED_STATE_HASH,
-                amount=uint64(1),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(10),
-                spend_bundle=full_spend,
-                additions=full_spend.additions(),
-                removals=full_spend.removals(),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=bytes32(token_bytes()),
-                memos=[],
-            )
-            await self.wallet_state_manager.add_pending_transaction(record)
 
         return full_spend
 
