@@ -576,7 +576,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            number_of_iterations=10000000,
+                            number_of_iterations=uint64(10000000),
                         )
                     ),
                 )
