@@ -152,7 +152,7 @@ class Offer:
         object.__setattr__(self, "_additions", adds)
         object.__setattr__(self, "_conditions", None)
 
-    def conditions(self) -> List[Condition]:
+    def conditions(self) -> Dict[Coin, List[Condition]]:
         if self._conditions is None:
             conditions: Dict[Coin, List[Condition]] = {}
             max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
@@ -167,10 +167,23 @@ class Offer:
                     raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend")
             object.__setattr__(self, "_conditions", conditions)
         assert self._conditions is not None, "self._conditions is None"
-        return [c for conditions in self._conditions.values() for c in conditions]
+        return self._conditions
 
-    def valid_times(self) -> ConditionValidTimes:
-        return parse_timelock_info(self.conditions())
+    def valid_times(self) -> Dict[Coin, ConditionValidTimes]:
+        return {coin: parse_timelock_info(conditions) for coin, conditions in self.conditions().items()}
+
+    def absolute_valid_times_ban_relatives(self) -> ConditionValidTimes:
+        valid_times: ConditionValidTimes = parse_timelock_info(
+            [c for conditions in self.conditions().values() for c in conditions]
+        )
+        if (
+            valid_times.max_secs_after_created is not None
+            or valid_times.min_secs_since_created is not None
+            or valid_times.max_blocks_after_created is not None
+            or valid_times.min_blocks_since_created is not None
+        ):
+            raise ValueError("Offers with relative timelocks are not currently supported")
+        return valid_times
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -310,7 +323,12 @@ class Offer:
         for key, value in self.driver_dict.items():
             driver_dict[key.hex()] = value.info
 
-        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), driver_dict, self.valid_times()
+        return (
+            keys_to_strings(offered_amounts),
+            keys_to_strings(requested_amounts),
+            driver_dict,
+            self.absolute_valid_times_ban_relatives(),
+        )
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends

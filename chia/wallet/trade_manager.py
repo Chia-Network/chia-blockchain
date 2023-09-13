@@ -886,7 +886,17 @@ class TradeManager:
             "requested": requested,
             "fees": offer.fees(),
             "infos": infos,
-            "valid_times": valid_times,
+            "valid_times": {
+                k: v
+                for k, v in valid_times.to_json_dict().items()
+                if k
+                not in (
+                    "max_secs_after_created",
+                    "min_secs_since_created",
+                    "max_blocks_after_created",
+                    "min_blocks_since_created",
+                )
+            },
         }
 
     async def check_for_final_modifications(

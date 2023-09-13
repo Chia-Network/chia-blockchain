@@ -1154,13 +1154,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         "infos": driver_dict,
         "fees": 1,
         "valid_times": {
-            "max_blocks_after_created": None,
             "max_height": None,
-            "max_secs_after_created": None,
             "max_time": None,
-            "min_blocks_since_created": None,
             "min_height": None,
-            "min_secs_since_created": None,
             "min_time": None,
         },
     }
