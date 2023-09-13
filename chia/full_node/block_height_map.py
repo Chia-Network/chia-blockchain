@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -10,7 +11,10 @@ import aiofiles
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.files import write_file_async, write_files_async
+from chia.util.files import (
+    write_to_temp_file,
+    move_file_and_clean,
+)
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -144,8 +148,24 @@ class BlockHeightMap:
 
         ses_buf = bytes(SesCache([(k, v) for (k, v) in self.__sub_epoch_summaries.items()]))
 
-        self.__dirty = 0
-        await write_files_async({self.__height_to_hash_filename: map_buf, self.__ses_filename: ses_buf})
+        self.__counter = 0
+        height_to_hash_temp_file = None
+        ses_temp_file = await write_to_temp_file(self.__ses_filename, ses_buf)
+        try:
+            async with aiofiles.open(self.__height_to_hash_filename, "r+b") as f:
+                map_buf = self.__height_to_hash[offset:].copy()
+                await f.seek(offset)
+                await f.write(map_buf)
+        except Exception:
+            # if the file doesn't exist, write the whole buffer
+            height_to_hash_temp_file = await write_to_temp_file(
+                self.__height_to_hash_filename, self.__height_to_hash.copy()
+            )
+
+        self.__first_dirty = len(self.__height_to_hash) // 32
+        await move_file_and_clean(self.__ses_filename, ses_temp_file)
+        if height_to_hash_temp_file is not None:
+            await move_file_and_clean(self.__height_to_hash_filename, height_to_hash_temp_file)
 
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
