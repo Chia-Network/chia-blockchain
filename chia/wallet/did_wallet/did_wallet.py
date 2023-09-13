@@ -19,7 +19,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint32, uint64, uint128, uint16
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
