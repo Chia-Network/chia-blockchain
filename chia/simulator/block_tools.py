@@ -793,6 +793,9 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
+                        # print(f"{full_block.height}: difficulty {difficulty} "
+                        #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
@@ -1081,6 +1084,9 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
+                        # print(f"{full_block.height}: difficulty {difficulty} "
+                        #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
 
                         block_list.append(full_block)
