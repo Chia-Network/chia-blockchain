@@ -174,6 +174,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
+    for tx in tx_records:
+        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
     assert offer_taker is not None
     assert tx_records is not None
 
@@ -295,6 +297,8 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     cancellation_txs = await trade_manager.cancel_pending_offers(
         [offer.trade_id], DEFAULT_TX_CONFIG, fee=uint64(2_000_000_000_000), secure=True
     )
+    for tx in cancellation_txs:
+        await trade_manager.wallet_state_manager.add_pending_transaction(tx)
     assert len(cancellation_txs) == 2
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
     await full_node_api.process_transaction_records(records=cancellation_txs)
@@ -472,6 +476,8 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ),
         fee=fee,
     )
+    for tx in tx_records:
+        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
     assert offer_taker is not None
     assert tx_records is not None
 

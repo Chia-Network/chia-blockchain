@@ -950,7 +950,12 @@ class PoolWallet:
                     assert self.target_state.relative_lock_height >= self.MINIMUM_RELATIVE_LOCK_HEIGHT
                     assert self.target_state.pool_url is not None
 
-                await self.generate_travel_transactions(self.next_transaction_fee, self.next_tx_config)
+                travel_tx, fee_tx = await self.generate_travel_transactions(
+                    self.next_transaction_fee, self.next_tx_config
+                )
+                await self.wallet_state_manager.add_pending_transaction(travel_tx)
+                if fee_tx is not None:
+                    await self.wallet_state_manager.add_pending_transaction(fee_tx)
 
     async def have_unconfirmed_transaction(self) -> bool:
         unconfirmed: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
