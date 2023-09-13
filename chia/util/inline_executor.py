@@ -16,7 +16,7 @@ class InlineExecutor(Executor):
         f: Future[_T] = Future()
         try:
             f.set_result(fn(*args, **kwargs))
-        except BaseException as e:  # lgtm[py/catch-base-exception]
+        except BaseException as e:
             f.set_exception(e)
         return f
 

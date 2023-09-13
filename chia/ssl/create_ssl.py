@@ -53,7 +53,7 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
             path.unlink()
 
         with open(os.open(str(path), flags, mode), "wb") as f:
-            f.write(data)  # lgtm [py/clear-text-storage-sensitive-data]
+            f.write(data)
 
 
 def ensure_ssl_dirs(dirs: List[Path]):

@@ -42,7 +42,7 @@ def passphrase_requirements() -> Dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
     """
-    return {"is_optional": True, "min_length": MIN_PASSPHRASE_LEN}  # lgtm [py/clear-text-logging-sensitive-data]
+    return {"is_optional": True, "min_length": MIN_PASSPHRASE_LEN}
 
 
 def set_keys_root_path(keys_root_path: Path) -> None:
