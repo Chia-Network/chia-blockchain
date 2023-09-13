@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import Callable, List, Optional, Tuple
 
@@ -22,8 +23,10 @@ the_puzzle_hash = bytes32(
     bytes.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2")
 )  # Program.to(1)
 
-NEW_DEFAULT_CONSTANTS: ConsensusConstants = DEFAULT_CONSTANTS.replace(
-    MAX_BLOCK_COST_CLVM=300000000, MEMPOOL_BLOCK_BUFFER=1
+NEW_DEFAULT_CONSTANTS: ConsensusConstants = dataclasses.replace(
+    DEFAULT_CONSTANTS,
+    MAX_BLOCK_COST_CLVM=300000000,
+    MEMPOOL_BLOCK_BUFFER=1,
 )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Dict, List, Optional, Tuple
 
 import pytest
@@ -498,7 +499,7 @@ class TestWeightProof:
     ],
 )
 def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int):
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=3)
+    constants = dataclasses.replace(DEFAULT_CONSTANTS, NUMBER_ZERO_BITS_PLOT_FILTER=3)
     assert calculate_prefix_bits(constants, height) == expected
 
 

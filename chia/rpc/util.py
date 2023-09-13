@@ -8,7 +8,7 @@ import aiohttp
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
-from chia.wallet.conditions import Condition, conditions_from_json_dicts
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ def tx_endpoint(
         extra_conditions: Tuple[Condition, ...] = tuple()
         if "extra_conditions" in request:
             extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
+        extra_conditions = (*extra_conditions, *ConditionValidTimes.from_json_dict(request).to_conditions())
 
         assert func.__defaults__ is not None
         push: bool = request.get(
