@@ -429,7 +429,7 @@ async def test_daemon_passthru(get_daemon, bt):
             await ws.send_str(payload)
             assert_response_success_only(await ws.receive())
 
-            async for _ in setup_full_node(
+            async with setup_full_node(
                 consensus_constants=bt.constants,
                 db_name="sim-test.db",
                 self_hostname="localhost",
@@ -437,7 +437,7 @@ async def test_daemon_passthru(get_daemon, bt):
                 simulator=False,
                 db_version=2,
                 connect_to_daemon=True,
-            ):
+            ) as _:
                 await time_out_assert_not_none(30, ws_server.connections.get, "chia_full_node")
 
                 payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
