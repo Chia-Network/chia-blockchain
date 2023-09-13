@@ -200,3 +200,19 @@ async def test_call_api_of_specific_for_missing_peer(
     )
 
     assert message is None
+
+
+@pytest.mark.limit_consensus_modes(reason="unnecessary")
+@pytest.mark.asyncio
+async def test_connection_hash(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    [full_node_service], [wallet_service], _ = one_wallet_and_one_simulator_services
+    wallet_node = wallet_service._node
+    await wallet_node.server.start_client(
+        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+    )
+    connection = full_node_service._node.server.all_connections[wallet_node.server.node_id]
+    assert hash(connection) == hash(connection.peer_node_id)

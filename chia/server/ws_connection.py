@@ -169,6 +169,9 @@ class WSChiaConnection:
             session=session,
         )
 
+    def __hash__(self) -> int:
+        return hash(self.peer_node_id)
+
     def _get_extra_info(self, name: str) -> Optional[Any]:
         writer = self.ws._writer
         assert writer is not None, "websocket's ._writer is None, was .prepare() called?"
