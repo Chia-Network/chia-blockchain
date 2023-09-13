@@ -24,7 +24,7 @@ from chia.pools.pool_puzzles import (
     solution_to_pool_state,
 )
 from chia.pools.pool_wallet import PoolWallet
-from chia.protocols.wallet_protocol import CoinState, NewPeakWallet
+from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import StateChangedProtocol
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -51,7 +51,7 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
@@ -68,7 +68,7 @@ from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, match_di
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.nft_wallet.uncurry_nft import NFTCoinData, UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -720,7 +720,11 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.atom), bytes32(tail_program_hash.atom), cat_inner_puzzle
+                bytes32(cat_mod_hash.atom),
+                bytes32(tail_program_hash.atom),
+                cat_inner_puzzle,
+                parent_coin_state.coin.parent_coin_info,
+                uint64(parent_coin_state.coin.amount),
             )
             return (
                 await self.handle_cat(
@@ -739,7 +743,8 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None and coin_state.coin.amount % 2 == 1:
-            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state, coin_state), uncurried_nft
+            nft_data = NFTCoinData(uncurried_nft, parent_coin_state, coin_spend)
+            return await self.handle_nft(nft_data), nft_data
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -893,6 +898,7 @@ class WalletStateManager:
             type=uint32(TransactionType.OUTGOING_CLAWBACK),
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         await self.add_pending_transaction(tx_record)
         # Update incoming tx to prevent double spend and mark it is pending
@@ -1173,14 +1179,12 @@ class WalletStateManager:
         return minter_did
 
     async def handle_nft(
-        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState, coin_state: CoinState
+        self,
+        nft_data: NFTCoinData,
     ) -> Optional[WalletIdentifier]:
         """
         Handle the new coin when it is a NFT
-        :param coin_spend: New coin spend
-        :param uncurried_nft: Uncurried NFT
-        :param parent_coin_state: Parent coin state
-        :param coin_state: Current coin state
+        :param nft_data: all necessary data to process a NFT coin
         :return: Wallet ID & Wallet Type
         """
         wallet_identifier = None
@@ -1188,13 +1192,14 @@ class WalletStateManager:
         new_did_id = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
+        uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
         old_p2_puzhash = uncurried_nft.p2_puzzle.get_tree_hash()
         metadata, new_p2_puzhash = get_metadata_and_phs(
             uncurried_nft,
-            coin_spend.solution,
+            nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            new_did_id = get_new_owner_did(uncurried_nft, coin_spend.solution.to_program())
+            new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
             old_did_id = uncurried_nft.owner_did
             if new_did_id is None:
                 new_did_id = old_did_id
@@ -1202,7 +1207,7 @@ class WalletStateManager:
                 new_did_id = None
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
-            coin_spend,
+            nft_data.parent_coin_spend,
             old_did_id,
             new_did_id,
             old_p2_puzhash,
@@ -1229,8 +1234,10 @@ class WalletStateManager:
                     uncurried_nft.singleton_launcher_id.hex(),
                     old_did_id,
                 )
-                if parent_coin_state.spent_height is not None:
-                    await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
+                if nft_data.parent_coin_state.spent_height is not None:
+                    await nft_wallet.remove_coin(
+                        nft_data.parent_coin_spend.coin, uint32(nft_data.parent_coin_state.spent_height)
+                    )
                     is_empty = await nft_wallet.is_empty()
                     has_did = False
                     for did_wallet in self.wallets.values():
@@ -1331,6 +1338,7 @@ class WalletStateManager:
                         type=uint32(TransactionType.OUTGOING_CLAWBACK),
                         name=clawback_spend_bundle.name(),
                         memos=list(compute_memos(clawback_spend_bundle).items()),
+                        valid_times=ConditionValidTimes(),
                     )
                     await self.tx_store.add_transaction_record(tx_record)
             coin_record = WalletCoinRecord(
@@ -1372,6 +1380,7 @@ class WalletStateManager:
                 # Use coin ID as the TX ID to mapping with the coin table
                 name=coin_record.coin.name(),
                 memos=list(memos.items()),
+                valid_times=ConditionValidTimes(),
             )
             await self.tx_store.add_transaction_record(tx_record)
         return None
@@ -1557,6 +1566,7 @@ class WalletStateManager:
                                     type=uint32(tx_type),
                                     name=bytes32(token_bytes()),
                                     memos=[],
+                                    valid_times=ConditionValidTimes(),
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
 
@@ -1636,6 +1646,7 @@ class WalletStateManager:
                                         type=uint32(TransactionType.OUTGOING_TX.value),
                                         name=tx_name,
                                         memos=[],
+                                        valid_times=ConditionValidTimes(),
                                     )
 
                                     await self.tx_store.add_transaction_record(tx_record)
@@ -1954,6 +1965,7 @@ class WalletStateManager:
                 type=uint32(tx_type),
                 name=coin_name,
                 memos=[],
+                valid_times=ConditionValidTimes(),
             )
             if tx_record.amount > 0:
                 await self.tx_store.add_transaction_record(tx_record)
@@ -2195,11 +2207,11 @@ class WalletStateManager:
 
         return filtered
 
-    async def new_peak(self, peak: NewPeakWallet) -> None:
+    async def new_peak(self, height: uint32) -> None:
         for wallet_id, wallet in self.wallets.items():
             if wallet.type() == WalletType.POOLING_WALLET:
                 assert isinstance(wallet, PoolWallet)
-                await wallet.new_peak(uint64(peak.height))
+                await wallet.new_peak(height)
         current_time = int(time.time())
 
         if self.wallet_node.last_wallet_tx_resend_time < current_time - self.wallet_node.wallet_tx_resend_timeout_secs:

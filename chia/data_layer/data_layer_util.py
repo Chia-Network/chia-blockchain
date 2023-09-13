@@ -692,6 +692,21 @@ class SyncStatus:
     target_generation: int
 
 
+@final
+@dataclasses.dataclass(frozen=True)
+class PluginRemote:
+    url: str
+    # repr=False to avoid leaking secrets
+    headers: Dict[str, str] = dataclasses.field(default_factory=dict, hash=False, repr=False)
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
+        return cls(
+            url=marshalled["url"],
+            headers=marshalled["headers"],
+        )
+
+
 @dataclasses.dataclass(frozen=True)
 class PluginStatus:
     uploaders: Dict[str, Dict[str, Any]]

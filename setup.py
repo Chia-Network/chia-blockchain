@@ -10,7 +10,7 @@ dependencies = [
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
     "boto3==1.28.25",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.0.10",  # timelord and vdf verification
+    "chiavdf==1.0.11",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==2.0.2",  # proof of space
     "clvm==0.9.7",
@@ -53,6 +53,7 @@ dev_dependencies = [
     "pytest==7.4.0",
     "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
+    "pytest-mock==3.11.1",
     "pytest-monitor==1.6.6; sys_platform == 'linux'",
     "pytest-xdist==3.3.1",
     "twine==4.0.2",

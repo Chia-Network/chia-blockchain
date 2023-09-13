@@ -28,7 +28,6 @@ export CHIA_INSTALLER_VERSION
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
 npm ci
-PATH=$(npm bin):$PATH
 cd .. || exit 1
 
 echo "Create dist/"
@@ -89,11 +88,11 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
   sudo gem install public_suffix -v 4.0.7
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+  echo USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
-  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+  USE_SYSTEM_FPM=true npx electron-builder build --linux deb --arm64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
@@ -103,7 +102,7 @@ else
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
-  electron-builder build --linux deb --x64 \
+  npx electron-builder build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain"
