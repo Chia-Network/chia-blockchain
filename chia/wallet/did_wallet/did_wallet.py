@@ -872,7 +872,7 @@ class DIDWallet:
         pubkey: G1Element,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[TransactionRecord, str]:
+    ) -> Tuple[TransactionRecord, SpendBundle, str]:
         """
         Create an attestment
         :param recovering_coin_name: Coin ID of the DID
@@ -944,7 +944,7 @@ class DIDWallet:
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        return did_record, attest_str
+        return did_record, message_spend_bundle, attest_str
 
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None

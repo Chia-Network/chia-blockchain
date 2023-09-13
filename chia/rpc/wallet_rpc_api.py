@@ -2457,7 +2457,7 @@ class WalletRpcApi:
             info = await wallet.get_info_for_recovery()
             coin = bytes32.from_hexstr(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
-            tx, attest_data = await wallet.create_attestment(
+            tx, message_spend_bundle, attest_data = await wallet.create_attestment(
                 coin,
                 bytes32.from_hexstr(request["puzhash"]),
                 pubkey,
@@ -2468,7 +2468,7 @@ class WalletRpcApi:
             assert tx.spend_bundle is not None
             return {
                 "success": True,
-                "message_spend_bundle": bytes(tx.spend_bundle).hex(),
+                "message_spend_bundle": bytes(message_spend_bundle).hex(),
                 "info": [info[0].hex(), info[1].hex(), info[2]],
                 "attest_data": attest_data,
                 "transactions": [tx.to_json_dict_convenience(self.service.config)],
