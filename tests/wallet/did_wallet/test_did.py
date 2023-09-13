@@ -793,7 +793,10 @@ class TestDIDWallet:
         assert metadata["GitHub"] == "测试"
 
         # Test match_hinted_coin
-        assert await did_wallet_2.match_hinted_coin(await did_wallet_2.get_coin(), new_puzhash)
+        assert await did_wallet_2.match_hinted_coin(
+            await did_wallet_2.get_coin(),
+            new_puzhash,
+        )
 
     @pytest.mark.parametrize(
         "trusted",
