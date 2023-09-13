@@ -947,8 +947,8 @@ class TestFullNodeProtocol:
                 if force_high_fee:
                     successful_bundle = spend_bundle
             else:
-                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(5000000 * group_size)
-                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000 * group_size) > 0
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10500000 * group_size)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10500000 * group_size) > 0
                 assert not force_high_fee
                 not_included_tx += 1
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)

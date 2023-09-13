@@ -60,7 +60,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # November 14, 2023
     SOFT_FORK3_HEIGHT=uint32(4510000),
     # June 2024
-    SOFT_FORK4_HEIGHT=uint32(5496000),
     HARD_FORK_HEIGHT=uint32(5496000),
     HARD_FORK_FIX_HEIGHT=uint32(5496000),
     # June 2027
@@ -69,6 +68,4 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
-    # Disallow plots from passing the plot filter for more than one out of any four consecutive signage points.
-    UNIQUE_PLOTS_WINDOW=uint8(4),
 )
