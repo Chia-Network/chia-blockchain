@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 from pytest import raises
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -13,7 +15,7 @@ from chia.consensus.pot_iterations import (
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64
 
-test_constants = DEFAULT_CONSTANTS.replace(**{"NUM_SPS_SUB_SLOT": 32, "SUB_SLOT_TIME_TARGET": 300})
+test_constants = dataclasses.replace(DEFAULT_CONSTANTS, NUM_SPS_SUB_SLOT=32, SUB_SLOT_TIME_TARGET=300)
 
 
 class TestPotIterations:
