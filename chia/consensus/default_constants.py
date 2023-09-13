@@ -68,6 +68,4 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
-    # Disallow plots from passing the plot filter for more than one out of any four consecutive signage points.
-    UNIQUE_PLOTS_WINDOW=uint8(4),
 )

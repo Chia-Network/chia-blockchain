@@ -78,9 +78,6 @@ class ConsensusConstants:
     PLOT_FILTER_64_HEIGHT: uint32
     PLOT_FILTER_32_HEIGHT: uint32
 
-    # number of consecutive plot ids required to be distinct
-    UNIQUE_PLOTS_WINDOW: uint8
-
     def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
         """
         Overrides str (hex) values with bytes.

@@ -154,7 +154,6 @@ test_constants = dataclasses.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=3600 * 24 * 10,
     MEMPOOL_BLOCK_BUFFER=6,
-    UNIQUE_PLOTS_WINDOW=2,
     # we deliberately make this different from HARD_FORK_HEIGHT in the
     # tests, to ensure they operate independently (which they need to do for
     # testnet10)
