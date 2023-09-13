@@ -38,7 +38,7 @@ async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncI
         patched_constants = dataclasses.replace(
             blockchain_constants,
             DISCRIMINANT_SIZE_BITS=32,
-            SUB_SLOT_ITERS_STARTING=2**12,
+            SUB_SLOT_ITERS_STARTING=uint64(2**12),
         )
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
@@ -48,7 +48,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
     patched_constants = dataclasses.replace(
         blockchain_constants,
         DISCRIMINANT_SIZE_BITS=32,
-        SUB_SLOT_ITERS_STARTING=2**12,
+        SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
     bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1

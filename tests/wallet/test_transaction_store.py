@@ -222,7 +222,7 @@ async def test_get_farming_rewards() -> None:
                         name=token_bytes(32),
                         confirmed=conf,
                         confirmed_at_height=uint32(100 if conf else 0),
-                        type=type,
+                        type=uint32(type.value),
                     )
                 )
 
@@ -320,7 +320,14 @@ async def test_all_transactions_for_wallet() -> None:
                 TransactionType.INCOMING_TRADE,
                 TransactionType.OUTGOING_TRADE,
             ]:
-                test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), wallet_id=uint32(wallet_id), type=type))
+                test_trs.append(
+                    dataclasses.replace(
+                        tr1,
+                        name=token_bytes(32),
+                        wallet_id=uint32(wallet_id),
+                        type=uint32(type.value),
+                    )
+                )
 
         for tr in test_trs:
             await store.add_transaction_record(tr)
@@ -549,29 +556,29 @@ async def test_get_transactions_between_relevance() -> None:
         store = await WalletTransactionStore.create(db_wrapper)
 
         t1 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=uint32(1000)
+            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=uint64(1000)
         )
         t2 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=uint32(999)
+            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(2), created_at_time=uint64(999)
         )
         t3 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=uint32(1000)
+            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=uint64(1000)
         )
         t4 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=uint32(999)
+            tr1, name=token_bytes(32), confirmed=False, confirmed_at_height=uint32(1), created_at_time=uint64(999)
         )
 
         t5 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=uint32(1000)
+            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=uint64(1000)
         )
         t6 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=uint32(999)
+            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(2), created_at_time=uint64(999)
         )
         t7 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=uint32(1000)
+            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=uint64(1000)
         )
         t8 = dataclasses.replace(
-            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=uint32(999)
+            tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=uint64(999)
         )
 
         await store.add_transaction_record(t1)
