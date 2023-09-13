@@ -193,7 +193,6 @@ class BlockTools:
         self,
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
-        const_dict: Optional[Dict[str, int]] = None,
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
         automated_testing: bool = True,
@@ -261,8 +260,6 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
-        if const_dict is not None:
-            updated_constants = dataclasses.replace(updated_constants, **const_dict)
         self.constants = updated_constants
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
@@ -2286,14 +2283,13 @@ create_block_tools_count = 0
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
+    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2303,14 +2299,13 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
+    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())
