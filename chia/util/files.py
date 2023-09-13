@@ -100,30 +100,3 @@ async def write_to_temp_file(file_path: Path, data: Union[str, bytes], dir_mode:
         await f.flush()
         os.fsync(f.fileno())
     return temp_file_path
-
-
-async def write_files_async(
-    files: Dict[Path, Union[str, bytes]], *, file_mode: int = 0o600, dir_mode: int = 0o700
-) -> None:
-    """
-    Writes the provided data to temporary files and then moves all the files to the final destination.
-    """
-
-    # Create the parent directory if necessary
-    temp_files: Dict[Path, Path] = {}
-    try:
-        for file_path, data in files.items():
-            temp_file_path = await write_to_temp_file(file_path, data)
-            temp_files[file_path] = temp_file_path
-    except Exception as e:
-        log.exception(f"Failed to write temp files")
-        log.debug("clean temp files")
-        for _, temp_file in temp_files.items():
-            try:
-                if Path(temp_file).exists():
-                    os.remove(temp_file)
-            except Exception:
-                log.exception(f"Failed to remove temp file {temp_file}")
-        return
-    for file_path, temp_file_path in temp_files.items():
-        await move_file_and_clean(file_path, temp_file_path)
