@@ -33,7 +33,6 @@ chia.util.hash
 chia.util.json_util
 chia.util.keychain
 chia.util.keyring_wrapper
-chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler

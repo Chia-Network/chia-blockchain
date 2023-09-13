@@ -1,6 +1,7 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import multiprocessing
 import os
@@ -119,11 +120,12 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return test_constants.replace(SOFT_FORK3_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
     if consensus_mode == ConsensusMode.SOFT_FORK4:
-        return test_constants.replace(SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-        return test_constants.replace(
+        return dataclasses.replace(
+            test_constants,
             HARD_FORK_HEIGHT=2,
             HARD_FORK_FIX_HEIGHT=2,
             PLOT_FILTER_128_HEIGHT=10,
@@ -432,7 +434,7 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
     async with setup_simulators_and_wallets(
         2,
         1,
-        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
+        dataclasses.replace(blockchain_constants, MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     ) as (nodes, wallets, bt):
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
