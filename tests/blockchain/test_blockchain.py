@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import multiprocessing
 import time
@@ -559,7 +560,7 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version, constants: ConsensusConstants):
         bt_high_iters = await create_block_tools_async(
-            constants=constants.replace(SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
+            constants=dataclasses.replace(constants, SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
             keychain=keychain,
         )
         bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
@@ -575,7 +576,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            number_of_iterations=10000000,
+                            number_of_iterations=uint64(10000000),
                         )
                     ),
                 )
@@ -1511,7 +1512,7 @@ class TestBlockHeaderValidation:
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
         # default for this test
-        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
+        constants = dataclasses.replace(bt.constants, MAX_FUTURE_TIME2=2 * 60)
         time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
@@ -2682,13 +2683,17 @@ class TestBodyValidation:
         pass
         #
         # with TempKeyring() as keychain:
-        #     new_test_constants = bt.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     new_test_constants = dataclasses.replace(
+        #         bt.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = bt_2.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     bt_2.constants = dataclasses.replace(
+        #         bt_2.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     blocks = bt_2.get_consecutive_blocks(
         #         3,
@@ -3623,13 +3628,18 @@ async def test_soft_fork4_activation(
     # consecutive plot filter, hence no block would pass CHIP-13).
     with TempKeyring() as keychain:
         bt = await create_block_tools_async(
-            constants=blockchain_constants.replace(
+            constants=dataclasses.replace(
+                blockchain_constants,
                 SOFT_FORK4_HEIGHT=(0 if bt_respects_soft_fork4 else 10000),
                 UNIQUE_PLOTS_WINDOW=unique_plots_window,
             ),
             keychain=keychain,
         )
-        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=0, SOFT_FORK4_HEIGHT=soft_fork4_height)
+        blockchain_constants = dataclasses.replace(
+            bt.constants,
+            SOFT_FORK3_HEIGHT=0,
+            SOFT_FORK4_HEIGHT=soft_fork4_height,
+        )
         b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
         blocks = bt.get_consecutive_blocks(25)
         for height, block in enumerate(blocks):

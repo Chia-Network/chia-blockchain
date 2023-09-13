@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 from typing import List, Tuple
@@ -34,19 +35,18 @@ from tests.core.node_height import node_height_at_least
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
 
-test_constants_modified = test_constants.replace(
-    **{
-        "DIFFICULTY_STARTING": 2**8,
-        "DISCRIMINANT_SIZE_BITS": 1024,
-        "SUB_EPOCH_BLOCKS": 140,
-        "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 350,
-        "MAX_SUB_SLOT_BLOCKS": 50,
-        "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
-        "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2**20,
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
-    }
+test_constants_modified = dataclasses.replace(
+    test_constants,
+    DIFFICULTY_STARTING=2**8,
+    DISCRIMINANT_SIZE_BITS=1024,
+    SUB_EPOCH_BLOCKS=140,
+    WEIGHT_PROOF_THRESHOLD=2,
+    WEIGHT_PROOF_RECENT_BLOCKS=350,
+    MAX_SUB_SLOT_BLOCKS=50,
+    NUM_SPS_SUB_SLOT=32,  # Must be a power of 2
+    EPOCH_BLOCKS=280,
+    SUB_SLOT_ITERS_STARTING=2**20,
+    NUMBER_ZERO_BITS_PLOT_FILTER=5,
 )
 
 

@@ -84,9 +84,6 @@ class ConsensusConstants:
     # number of consecutive plot ids required to be distinct
     UNIQUE_PLOTS_WINDOW: uint8
 
-    def replace(self, **changes: object) -> "ConsensusConstants":
-        return dataclasses.replace(self, **changes)
-
     def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
         """
         Overrides str (hex) values with bytes.
