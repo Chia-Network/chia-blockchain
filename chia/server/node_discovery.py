@@ -469,6 +469,10 @@ class FullNodeDiscovery:
                 async with self.address_manager.lock:
                     self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
 
+    def _peer_has_wrong_network_port(self, port: uint16) -> bool:
+        # Check if the peer is having the default port of a network different than ours.
+        return port in NETWORK_ID_DEFAULT_PORTS.values() and port != self.default_port
+
     async def _add_peers_common(
         self, peer_list: List[TimestampedPeerInfo], peer_src: Optional[PeerInfo], is_full_node: bool
     ) -> None:
@@ -504,7 +508,9 @@ class FullNodeDiscovery:
                     peer.port,
                     uint64(0),
                 )
-            peers_adjusted_timestamp.append(current_peer)
+
+            if not self._peer_has_wrong_network_port(peer.port):
+                peers_adjusted_timestamp.append(current_peer)
 
         assert self.address_manager is not None
 
@@ -611,6 +617,7 @@ class FullNodePeers(FullNodeDiscovery):
             if self.address_manager is None:
                 return None
             peers = await self.address_manager.get_peers()
+            peers = [peer for peer in peers if not self._peer_has_wrong_network_port(peer.port)]
             await self.add_peers_neighbour(peers, peer_info)
 
             msg = make_msg(
@@ -634,7 +641,7 @@ class FullNodePeers(FullNodeDiscovery):
                 await self.add_peers_neighbour(peer_list, peer_src)
                 if len(peer_list) == 1 and self.relay_queue is not None:
                     peer = peer_list[0]
-                    if peer.timestamp > time.time() - 60 * 10:
+                    if peer.timestamp > time.time() - 60 * 10 and not self._peer_has_wrong_network_port(peer.port):
                         self.relay_queue.put_nowait((peer, 2))
         except Exception as e:
             self.log.error(f"Respond peers exception: {e}. Traceback: {traceback.format_exc()}")

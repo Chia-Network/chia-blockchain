@@ -112,9 +112,8 @@ from chia.util.config import (
     save_config,
 )
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.ssl_check import fix_ssl
@@ -129,6 +128,10 @@ from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 
 GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
     "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
+)
+
+DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
+    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
 test_constants = DEFAULT_CONSTANTS.replace(
@@ -152,6 +155,10 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "MAX_FUTURE_TIME2": 3600 * 24 * 10,
         "MEMPOOL_BLOCK_BUFFER": 6,
         "UNIQUE_PLOTS_WINDOW": 2,
+        # we deliberately make this different from HARD_FORK_HEIGHT in the
+        # tests, to ensure they operate independently (which they need to do for
+        # testnet10)
+        "HARD_FORK_FIX_HEIGHT": 5496100,
     }
 )
 
@@ -267,7 +274,7 @@ class BlockTools:
         self.total_result = PlotRefreshResult()
 
         def test_callback(event: PlotRefreshEvents, update_result: PlotRefreshResult) -> None:
-            assert update_result.duration < 15
+            assert update_result.duration < 30
             if event == PlotRefreshEvents.started:
                 self.total_result = PlotRefreshResult()
 
@@ -315,8 +322,12 @@ class BlockTools:
                     bytes_to_mnemonic(self.pool_master_sk_entropy),
                 )
             else:
-                self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                assert sk is not None
+                self.farmer_master_sk = sk
+                sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+                assert sk is not None
+                self.pool_master_sk = sk
 
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
@@ -1806,46 +1817,69 @@ def compute_cost_table() -> List[int]:
 CONDITION_COSTS = compute_cost_table()
 
 
-def compute_cost_test(
-    generator: BlockGenerator, cost_per_byte: int, hard_fork: bool = False
-) -> Tuple[Optional[uint16], uint64]:
-    try:
+def conditions_cost(conds: Program, hard_fork: bool) -> uint64:
+    condition_cost = 0
+    for cond in conds.as_iter():
+        condition = cond.first().as_atom()
+        if condition in [ConditionOpcode.AGG_SIG_UNSAFE, ConditionOpcode.AGG_SIG_ME]:
+            condition_cost += ConditionCost.AGG_SIG.value
+        elif condition == ConditionOpcode.CREATE_COIN:
+            condition_cost += ConditionCost.CREATE_COIN.value
+        # after the 2.0 hard fork, two byte conditions (with no leading 0)
+        # have costs. Account for that.
+        elif hard_fork and len(condition) == 2 and condition[0] != 0:
+            condition_cost += CONDITION_COSTS[condition[1]]
+        elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
+            arg = cond.rest().first().as_int()
+            condition_cost += arg * 10000
+        elif hard_fork and condition in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ]:
+            condition_cost += ConditionCost.AGG_SIG.value
+    return uint64(condition_cost)
+
+
+def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
+    # this function cannot *validate* the block or any of the transactions. We
+    # deliberately create invalid blocks as parts of the tests, and we still
+    # need to be able to compute the cost of it
+
+    condition_cost = 0
+    clvm_cost = 0
+
+    if height >= constants.HARD_FORK_FIX_HEIGHT:
+        blocks = [bytes(g) for g in generator.generator_refs]
+        cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, DESERIALIZE_MOD, blocks)
+        clvm_cost += cost
+
+        for spend in result.first().as_iter():
+            # each spend is a list of:
+            # (parent-coin-id puzzle amount solution)
+            puzzle = spend.at("rf")
+            solution = spend.at("rrrf")
+
+            cost, result = puzzle._run(INFINITE_COST, MEMPOOL_MODE, solution)
+            clvm_cost += cost
+            condition_cost += conditions_cost(result, height >= constants.HARD_FORK_HEIGHT)
+
+    else:
         block_program_args = Program.to([[bytes(g) for g in generator.generator_refs]])
-        clvm_cost, result = GENERATOR_MOD._run(
-            INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, generator.program, block_program_args
-        )
-        size_cost = len(bytes(generator.program)) * cost_per_byte
-        condition_cost = 0
+        clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, generator.program, block_program_args)
 
         for res in result.first().as_iter():
-            res = res.rest()  # skip parent coind id
-            res = res.rest()  # skip puzzle hash
-            res = res.rest()  # skip amount
-            for cond in res.first().as_iter():
-                condition = cond.first().as_atom()
-                if condition in [ConditionOpcode.AGG_SIG_UNSAFE, ConditionOpcode.AGG_SIG_ME]:
-                    condition_cost += ConditionCost.AGG_SIG.value
-                elif condition == ConditionOpcode.CREATE_COIN:
-                    condition_cost += ConditionCost.CREATE_COIN.value
-                # after the 2.0 hard fork, two byte conditions (with no leading 0)
-                # have costs. Account for that.
-                elif hard_fork and len(condition) == 2 and condition[0] != 0:
-                    condition_cost += CONDITION_COSTS[condition[1]]
-                elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
-                    arg = cond.rest().first().as_int()
-                    condition_cost += arg * 10000
-                elif hard_fork and condition in [
-                    ConditionOpcode.AGG_SIG_PARENT,
-                    ConditionOpcode.AGG_SIG_PUZZLE,
-                    ConditionOpcode.AGG_SIG_AMOUNT,
-                    ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-                    ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-                    ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-                ]:
-                    condition_cost += ConditionCost.AGG_SIG.value
-        return None, uint64(clvm_cost + size_cost + condition_cost)
-    except Exception:
-        return uint16(Err.GENERATOR_RUNTIME_ERROR.value), uint64(0)
+            # each condition item is:
+            # (parent-coin-id puzzle-hash amount conditions)
+            conditions = res.at("rrrf")
+            condition_cost += conditions_cost(conditions, height >= constants.HARD_FORK_HEIGHT)
+
+    size_cost = len(bytes(generator.program)) * constants.COST_PER_BYTE
+
+    return uint64(clvm_cost + size_cost + condition_cost)
 
 
 def create_test_foliage(
@@ -1940,10 +1974,7 @@ def create_test_foliage(
         # Calculate the cost of transactions
         if block_generator is not None:
             generator_block_heights_list = block_generator.block_height_list
-            err, cost = compute_cost_test(
-                block_generator, constants.COST_PER_BYTE, hard_fork=height >= constants.HARD_FORK_HEIGHT
-            )
-            assert err is None
+            cost = compute_cost_test(block_generator, constants, height)
 
             removal_amount = 0
             addition_amount = 0

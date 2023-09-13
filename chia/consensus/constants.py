@@ -62,6 +62,9 @@ class ConsensusConstants:
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
 
+    # soft fork initiated in 1.8.0 release
+    SOFT_FORK2_HEIGHT: uint32
+
     # soft fork initiated in 2.0 release
     SOFT_FORK3_HEIGHT: uint32
 
@@ -71,6 +74,7 @@ class ConsensusConstants:
     # the hard fork planned with the 2.0 release
     # this is the block with the first plot filter adjustment
     HARD_FORK_HEIGHT: uint32
+    HARD_FORK_FIX_HEIGHT: uint32
 
     # the plot filter adjustment heights
     PLOT_FILTER_128_HEIGHT: uint32

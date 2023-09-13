@@ -26,7 +26,7 @@ class KeyTool(dict):
         bls_private_key = PrivateKey.from_bytes(secret_exponent.to_bytes(32, "big"))
         return AugSchemeMPL.sign(bls_private_key, message)
 
-    def signature_for_solution(self, coin_spend: CoinSpend, additional_data: bytes) -> AugSchemeMPL:
+    def signature_for_solution(self, coin_spend: CoinSpend, additional_data: bytes) -> G2Element:
         signatures = []
         conditions_dict = conditions_dict_for_solution(
             coin_spend.puzzle_reveal, coin_spend.solution, test_constants.MAX_BLOCK_COST_CLVM

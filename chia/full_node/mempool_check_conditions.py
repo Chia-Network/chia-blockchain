@@ -18,7 +18,7 @@ from chia_rs import (
     NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
 )
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
-from chia_rs import run_block_generator, run_chia_program
+from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
@@ -51,11 +51,14 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants,
 ) -> NPCResult:
+    run_block = run_block_generator
+
     flags = 0
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
 
-    flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    if height >= constants.SOFT_FORK2_HEIGHT:
+        flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK3_HEIGHT:
         # the soft-fork initiated with 2.0. To activate end of October 2023
@@ -90,9 +93,12 @@ def get_name_puzzle_conditions(
             | ALLOW_BACKREFS
         )
 
+    if height >= constants.HARD_FORK_FIX_HEIGHT:
+        run_block = run_block_generator2
+
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
-        err, result = run_block_generator(bytes(generator.program), block_args, max_cost, flags)
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None, uint64(0))

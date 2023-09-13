@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
+from chia.data_layer.data_layer_util import PluginRemote
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -16,6 +17,7 @@ from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -30,8 +32,8 @@ log = logging.getLogger(__name__)
 def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
-    downloaders: List[str],
-    uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
+    downloaders: List[PluginRemote],
+    uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
     wallet_service: Optional[Service[WalletNode, WalletNodeAPI]] = None,
     connect_to_daemon: bool = True,
 ) -> Service[DataLayer, DataLayerAPI]:
@@ -50,7 +52,7 @@ def create_data_layer_service(
         wallet_config = wallet_service.config
     wallet_rpc_init = WalletRpcClient.create(self_hostname, uint16(wallet_rpc_port), wallet_root_path, wallet_config)
 
-    data_layer = DataLayer(
+    data_layer = DataLayer.create(
         config=service_config,
         root_path=root_path,
         wallet_rpc_init=wallet_rpc_init,
@@ -100,11 +102,26 @@ async def async_main() -> int:
         overwrite=False,
     )
 
-    uploaders: List[str] = config["data_layer"].get("uploaders", [])
-    downloaders: List[str] = config["data_layer"].get("downloaders", [])
+    plugins_config = config["data_layer"].get("plugins", {})
+
+    old_uploaders = config["data_layer"].get("uploaders", [])
+    new_uploaders = plugins_config.get("uploaders", [])
+    uploaders: List[PluginRemote] = [
+        *(PluginRemote(url=url) for url in old_uploaders),
+        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
+    ]
+
+    old_downloaders = config["data_layer"].get("downloaders", [])
+    new_downloaders = plugins_config.get("downloaders", [])
+    downloaders: List[PluginRemote] = [
+        *(PluginRemote(url=url) for url in old_downloaders),
+        *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
+    ]
+
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

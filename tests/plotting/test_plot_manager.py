@@ -28,7 +28,6 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint16, uint32
 from chia.util.misc import VersionedBlob
-from tests.conftest import Mode
 from tests.plotting.util import get_test_plots
 
 log = logging.getLogger(__name__)
@@ -170,11 +169,9 @@ def trigger_remove_plot(_: Path, plot_path: str):
     remove_plot(Path(plot_path))
 
 
+@pytest.mark.limit_consensus_modes(reason="not dependent on consensus, does not support parallel execution")
 @pytest.mark.asyncio
-async def test_plot_refreshing(environment, consensus_mode: Mode):
-    if consensus_mode != Mode.PLAIN:
-        pytest.skip("plot refreshing is not dependent on consensus. This test does not support parallel execution")
-
+async def test_plot_refreshing(environment):
     env: Environment = environment
     expected_result = PlotRefreshResult()
     dir_duplicates: Directory = Directory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)

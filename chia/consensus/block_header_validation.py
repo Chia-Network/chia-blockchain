@@ -513,7 +513,7 @@ def validate_unfinished_header_block(
                     curr_optional_block_record.pos_ss_cc_challenge_hash,
                     curr_optional_block_record.cc_sp_hash,
                 ):
-                    return None, ValidationError(Err.INVALID_POSPACE, f"Chip-13 Block Failed: {height}")
+                    return None, ValidationError(Err.CHIP_0013_VALIDATION, f"CHIP-0013 Block Failed: {height}")
 
                 sp_count += 1
                 curr_sp = curr_optional_block_record.cc_sp_hash
@@ -751,6 +751,7 @@ def validate_unfinished_header_block(
 
     # 17. Check foliage block signature by plot key
     if header_block.foliage.foliage_transaction_block_hash is not None:
+        assert header_block.foliage.foliage_transaction_block_signature is not None
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.plot_public_key,
             header_block.foliage.foliage_transaction_block_hash,
@@ -789,6 +790,7 @@ def validate_unfinished_header_block(
         # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
         if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
             assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
+            assert header_block.foliage.foliage_block_data.pool_signature is not None
             if not AugSchemeMPL.verify(
                 header_block.reward_chain_block.proof_of_space.pool_public_key,
                 bytes(header_block.foliage.foliage_block_data.pool_target),
