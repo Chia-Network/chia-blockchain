@@ -81,7 +81,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
-    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -155,7 +154,6 @@ test_constants = dataclasses.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=3600 * 24 * 10,
     MEMPOOL_BLOCK_BUFFER=6,
-    UNIQUE_PLOTS_WINDOW=uint8(2),
     # we deliberately make this different from HARD_FORK_HEIGHT in the
     # tests, to ensure they operate independently (which they need to do for
     # testnet10)
@@ -193,7 +191,6 @@ class BlockTools:
         self,
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
-        const_dict: Optional[Dict[str, int]] = None,
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict[str, Any]] = None,
         automated_testing: bool = True,
@@ -261,8 +258,6 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
-        if const_dict is not None:
-            updated_constants = dataclasses.replace(updated_constants, **const_dict)
         self.constants = updated_constants
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
@@ -558,29 +553,6 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
-    # Verifies if the given plot passed any of the previous `UNIQUE_PLOTS_WINDOW` plot filters.
-    def plot_id_passed_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
-        curr_sp_hash = cc_sp_hash
-        sp_count = 1
-        for block in reversed(blocks):
-            if sp_count >= self.constants.UNIQUE_PLOTS_WINDOW:
-                return False
-
-            challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
-            if block.reward_chain_block.challenge_chain_sp_vdf is None:
-                # Edge case of first sp (start of slot), where sp_iters == 0
-                cc_sp_hash = challenge
-            else:
-                cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            prefix_bits = calculate_prefix_bits(self.constants, block.height)
-            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
-                return True
-            if curr_sp_hash != cc_sp_hash:
-                sp_count += 1
-                curr_sp_hash = cc_sp_hash
-
-        return False
-
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -739,10 +711,6 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -1041,10 +1009,6 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
@@ -2286,14 +2250,13 @@ create_block_tools_count = 0
 async def create_block_tools_async(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_async_count
     create_block_tools_async_count += 1
     print(f"  create_block_tools_async called {create_block_tools_async_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
+    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
     await bt.setup_keys()
     await bt.setup_plots()
 
@@ -2303,14 +2266,13 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict: Optional[Dict[str, int]] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict[str, Any]] = None,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
+    bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())
