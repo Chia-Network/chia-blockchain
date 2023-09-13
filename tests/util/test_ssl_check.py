@@ -24,4 +24,7 @@ def test_check_ssl_stream_with_bad_permissions(
         print(f"stderr: {captured.err!r}")
 
         assert captured.out == ""
-        assert "WARNING: UNPROTECTED SSL FILE!" in captured.err
+        if sys.platform == "win32":
+            assert captured.err == ""
+        else:
+            assert "WARNING: UNPROTECTED SSL FILE!" in captured.err
