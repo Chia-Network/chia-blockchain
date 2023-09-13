@@ -102,7 +102,7 @@ async def one_wallet_node_and_rpc(
     trusted: bool, self_hostname: str, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[OneWalletNodeAndRpc]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets_service(1, 1, blockchain_constants):
+    async with setup_simulators_and_wallets_service(1, 1, blockchain_constants) as nodes:
         full_nodes, wallets, bt = nodes
         full_node_api: FullNodeSimulator = full_nodes[0]._api
         wallet_service = wallets[0]

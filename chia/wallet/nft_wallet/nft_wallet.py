@@ -23,7 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -672,6 +672,7 @@ class NFTWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             ),
         ]
 

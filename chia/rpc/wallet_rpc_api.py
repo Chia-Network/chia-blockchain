@@ -655,6 +655,7 @@ class WalletRpcApi:
                             {"identifier": "genesis_by_id"},
                             uint64(request["amount"]),
                             tx_config,
+                            fee,
                             name,
                         )
                         asset_id = cat_wallet.get_asset_id()
@@ -3928,6 +3929,7 @@ class WalletRpcApi:
             parsed_request.min_amount_to_claim,
             tx_config,
             fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.service.wallet_state_manager.add_pending_transaction(tx)
