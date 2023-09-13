@@ -104,12 +104,11 @@ class ConsensusMode(Enum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
     SOFT_FORK3 = 2
-    SOFT_FORK4 = 3
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3, ConsensusMode.SOFT_FORK4],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK3],
 )
 def consensus_mode(request):
     return request.param
@@ -121,8 +120,6 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
         return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3, SOFT_FORK4_HEIGHT=3)
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
             test_constants,
@@ -197,8 +194,6 @@ saved_blocks_version = "rc5"
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -210,8 +205,6 @@ def default_400_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -223,8 +216,6 @@ def default_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -242,8 +233,6 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -256,9 +245,6 @@ def default_1500_blocks(bt, consensus_mode):
 def default_10000_blocks(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
 
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        pytest.skip("Test cache not available yet")
-
     version = ""
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
@@ -269,8 +255,6 @@ def default_10000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -289,8 +273,6 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        version = "_softfork3"
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
@@ -311,9 +293,6 @@ def default_2000_blocks_compact(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_10000_blocks_compact(bt, consensus_mode):
     from tests.util.blockchain import persistent_blocks
-
-    if consensus_mode == ConsensusMode.SOFT_FORK4:
-        pytest.skip("Test cache not available yet")
 
     version = ""
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
@@ -415,20 +394,7 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
         yield _
 
 
-@pytest_asyncio.fixture(
-    scope="function",
-    # Since the constants are identical for `ConsensusMode.PLAIN` and
-    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
-    params=[
-        pytest.param(
-            None,
-            marks=pytest.mark.limit_consensus_modes(
-                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
-                reason="the same setup is ran by ConsensusMode.PLAIN",
-            ),
-        )
-    ],
-)
+@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes(blockchain_constants, consensus_mode):
     constants = blockchain_constants
     async with setup_simulators_and_wallets(
@@ -451,20 +417,7 @@ async def setup_four_nodes(db_version, blockchain_constants: ConsensusConstants)
         yield _
 
 
-@pytest_asyncio.fixture(
-    scope="function",
-    # Since the constants are identical for `ConsensusMode.PLAIN` and
-    # `ConsensusMode.HARD_FORK_2_0`, we will only run in mode `PLAIN` and `SOFT_FORK4`.
-    params=[
-        pytest.param(
-            None,
-            marks=pytest.mark.limit_consensus_modes(
-                allowed=[ConsensusMode.PLAIN, ConsensusMode.SOFT_FORK4],
-                reason="the same setup is ran by ConsensusMode.PLAIN",
-            ),
-        )
-    ],
-)
+@pytest_asyncio.fixture(scope="function")
 async def two_nodes_sim_and_wallets_services(blockchain_constants, consensus_mode):
     async with setup_simulators_and_wallets_service(2, 0, blockchain_constants) as _:
         yield _

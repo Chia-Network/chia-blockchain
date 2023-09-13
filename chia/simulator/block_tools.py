@@ -81,7 +81,6 @@ from chia.types.blockchain_format.proof_of_space import (
     calculate_prefix_bits,
     generate_plot_public_key,
     generate_taproot_sk,
-    get_plot_id,
     passes_plot_filter,
     verify_and_get_quality_string,
 )
@@ -558,29 +557,6 @@ class BlockTools:
     def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.constants, self.pool_master_sk)
 
-    # Verifies if the given plot passed any of the previous `UNIQUE_PLOTS_WINDOW` plot filters.
-    def plot_id_passed_previous_filters(self, plot_id: bytes32, cc_sp_hash: bytes32, blocks: List[FullBlock]) -> bool:
-        curr_sp_hash = cc_sp_hash
-        sp_count = 1
-        for block in reversed(blocks):
-            if sp_count >= self.constants.UNIQUE_PLOTS_WINDOW:
-                return False
-
-            challenge = block.reward_chain_block.pos_ss_cc_challenge_hash
-            if block.reward_chain_block.challenge_chain_sp_vdf is None:
-                # Edge case of first sp (start of slot), where sp_iters == 0
-                cc_sp_hash = challenge
-            else:
-                cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
-            prefix_bits = calculate_prefix_bits(self.constants, block.height)
-            if passes_plot_filter(prefix_bits, plot_id, challenge, cc_sp_hash):
-                return True
-            if curr_sp_hash != cc_sp_hash:
-                sp_count += 1
-                curr_sp_hash = cc_sp_hash
-
-        return False
-
     def get_consecutive_blocks(
         self,
         num_blocks: int,
@@ -739,10 +715,6 @@ class BlockTools:
                                 if required_iters <= latest_block.required_iters:
                                     continue
                         assert latest_block.header_hash in blocks
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         additions = None
                         removals = None
                         if transaction_data_included:
@@ -1041,10 +1013,6 @@ class BlockTools:
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
                         assert last_timestamp is not None
-                        plot_id = get_plot_id(proof_of_space)
-                        if latest_block.height + 1 >= constants.SOFT_FORK4_HEIGHT:
-                            if self.plot_id_passed_previous_filters(plot_id, cc_sp_output_hash, block_list):
-                                continue
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an

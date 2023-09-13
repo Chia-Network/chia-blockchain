@@ -60,7 +60,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # November 14, 2023
     SOFT_FORK3_HEIGHT=uint32(4510000),
     # June 2024
-    SOFT_FORK4_HEIGHT=uint32(5496000),
     HARD_FORK_HEIGHT=uint32(5496000),
     HARD_FORK_FIX_HEIGHT=uint32(5496000),
     # June 2027
