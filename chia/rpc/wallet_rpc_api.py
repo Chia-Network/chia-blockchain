@@ -1076,16 +1076,27 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
                 assert isinstance(wallet, CATWallet)
-                transaction = (await self.cat_spend(request, hold_lock=False))["transaction"]
+                response = await self.cat_spend(request, hold_lock=False)
+                transaction = response["transaction"]
+                transactions = response["transactions"]
             else:
-                transaction = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
-            tr = TransactionRecord.from_json_dict_convenience(transaction)
+                response = await self.create_signed_transaction(request, hold_lock=False)
+                transaction = response["signed_tx"]
+                transactions = response["transactions"]
+
             if wallet.type() not in {WalletType.CAT, WalletType.CRCAT}:
                 assert isinstance(wallet, Wallet)
-                await wallet.push_transaction(tr)
+                for tr in transactions:
+                    await self.service.wallet_state_manager.add_pending_transaction(
+                        TransactionRecord.from_json_dict_convenience(tr)
+                    )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {"transaction": transaction, "transaction_id": tr.name}
+        return {
+            "transaction": transaction,
+            "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
+            "transactions": transactions,
+        }
 
     @tx_endpoint
     async def spend_clawback_coins(
