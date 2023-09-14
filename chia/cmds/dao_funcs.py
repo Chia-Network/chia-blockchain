@@ -149,7 +149,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print("Transaction not yet submitted to nodes")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -287,11 +287,17 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
         )
-        spend_bundle = res["spend_bundle_name"]
-        if res["success"]:
-            print(f"Submitted spend bundle with name: {spend_bundle}")
-        else:  # pragma: no cover
-            print("Unable to generate vote transaction.")
+        tx_id = res["tx_id"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
+                return None
+
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -316,11 +322,17 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
         )
-        if res["success"]:
-            name = res["tx_id"]
-            print(f"Submitted proposal close transaction with name: {name}")
-        else:  # pragma: no cover
-            print("Unable to generate close transaction.")
+        tx_id = res["tx_id"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_id[2:]))
+                return None
+
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -354,7 +366,7 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp:
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
 
-        print("Transaction not yet submitted to nodes")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -384,7 +396,7 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
-        print("Transaction not yet submitted to nodes")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -415,7 +427,7 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
                 return None
-        print("Transaction not yet submitted to nodes")  # pragma: no cover
+        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
 
 
 async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -453,7 +465,8 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             ).to_tx_config(units["chia"], config, fingerprint),
         )
         if res["success"]:
-            print(f"Created spend proposal for asset: {asset_id}")
+            asset_id_name = asset_id if asset_id else "XCH"
+            print(f"Created spend proposal for asset: {asset_id_name}")
             print("Successfully created proposal.")
             print("Proposal ID: {}".format(res["proposal_id"]))
         else:  # pragma: no cover

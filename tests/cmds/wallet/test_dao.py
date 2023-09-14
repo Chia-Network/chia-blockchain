@@ -250,7 +250,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             is_yes_vote: bool,
             fee: uint64 = uint64(0),
         ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "spend_bundle_name": "0xCAFEF00D"}
+            return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
 
         async def dao_close_proposal(
             self,
@@ -261,7 +261,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self_destruct: bool = False,
             reuse_puzhash: Optional[bool] = None,
         ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "tx_id": "0xCAFEF00D"}
+            return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
 
         async def dao_create_proposal(
             self,
@@ -282,6 +282,27 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
 
         async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
             return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
+
+        async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
+            return TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=bytes32(b"2" * 32),
+                amount=uint64(10),
+                fee_amount=uint64(1),
+                confirmed=True,
+                sent=uint32(10),
+                spend_bundle=None,
+                additions=[],
+                removals=[],
+                wallet_id=uint32(1),
+                sent_to=[("peer1", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
+                name=bytes32(b"x" * 32),
+                memos=[],
+                valid_times=parse_timelock_info(tuple()),
+            )
 
     # List all proposals
     inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
@@ -337,12 +358,12 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
 
     # Vote on a proposal
     vote_args = ["dao", "vote", FINGERPRINT_ARG, "-i 2", "-p", "0xFEEDBEEF", "-a", "1000", "-n", "-m 0.1", "--reuse"]
-    vote_asserts = ["Submitted spend bundle with name: 0xCAFEF00D"]
+    vote_asserts = ["Transaction submitted to nodes"]
     run_cli_command_and_assert(capsys, root_dir, vote_args, vote_asserts)
 
     # Close a proposal
     close_args = ["dao", "close_proposal", FINGERPRINT_ARG, "-i 2", "-p", "0xFEEDBEEF", "-d", "-m 0.1", "--reuse"]
-    close_asserts = ["Submitted proposal close transaction with name: 0xCAFEF00D"]
+    close_asserts = ["Transaction submitted to nodes"]
     run_cli_command_and_assert(capsys, root_dir, close_args, close_asserts)
 
     # Create a spend proposal
