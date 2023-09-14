@@ -1445,7 +1445,7 @@ class DataStore:
 
     async def delete_store_data(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as reader:
-            result = await reader.execute(
+            cursor = await reader.execute(
                 """
                 WITH RECURSIVE
                     tree_nodes AS (
@@ -1486,9 +1486,9 @@ class DataStore:
                 """,
                 (tree_id, tree_id),
             )
-            to_delete = {}
-            ref_counts = {}
-            async for row in result:
+            to_delete: Dict[bytes, Tuple[bytes, bytes]] = {}
+            ref_counts: Dict[bytes, int] = {}
+            async for row in cursor:
                 hash = row["hash"]
                 left = row["left"]
                 right = row["right"]

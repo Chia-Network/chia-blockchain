@@ -1487,6 +1487,6 @@ async def test_delete_store_data(raw_data_store: DataStore) -> None:
     await raw_data_store.delete_store_data(tree_id_2)
     async with raw_data_store.db_wrapper.writer() as writer:
         async with writer.execute("SELECT COUNT(*) FROM node") as cursor:
-            result = await cursor.fetchone()
-            assert result[0] == 0
+            row_count = await cursor.fetchone()
+            assert row_count[0] == 0
     assert not await raw_data_store.tree_id_exists(tree_id_2)
