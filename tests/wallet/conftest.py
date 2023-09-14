@@ -40,7 +40,7 @@ def trusted_full_node(request: Any) -> bool:
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(
-    trusted_full_node: bool, request: Any, blockchain_constants: ConsensusConstants
+    trusted_full_node: bool, request: pytest.FixtureRequest, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[WalletTestFramework]:
     async with setup_simulators_and_wallets_service(
         1, request.param["num_environments"], blockchain_constants
