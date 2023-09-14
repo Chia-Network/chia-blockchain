@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import multiprocessing.context
 import time
@@ -876,12 +877,14 @@ class WalletStateManager:
         if len(coin_spends) == 0:
             return []
         spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
+        tx_list: List[TransactionRecord] = []
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee, tx_config, Announcement(coin_spends[0].coin.name(), message)
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
         assert derivation_record is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -902,10 +905,11 @@ class WalletStateManager:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
+        tx_list.append(tx_record)
         # Update incoming tx to prevent double spend and mark it is pending
         for coin_spend in coin_spends:
             await self.tx_store.increment_sent(coin_spend.coin.name(), "", MempoolInclusionStatus.PENDING, None)
-        return [tx_record]
+        return tx_list
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)

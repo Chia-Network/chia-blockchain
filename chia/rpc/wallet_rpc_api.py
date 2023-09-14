@@ -1136,30 +1136,28 @@ class WalletRpcApi:
                 assert isinstance(metadata, ClawbackMetadata)
                 coins[coin_record.coin] = metadata
                 if len(coins) >= batch_size:
-                    tx_list.extend(
-                        (
-                            await self.service.wallet_state_manager.spend_clawback_coins(
-                                coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
-                            )
-                        )
+                    new_txs = await self.service.wallet_state_manager.spend_clawback_coins(
+                        coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
                     )
+                    if push:
+                        for tx in new_txs:
+                            await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    tx_list.extend(new_txs)
                     coins = {}
             except Exception as e:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
-            tx_list.extend(
-                (
-                    await self.service.wallet_state_manager.spend_clawback_coins(
-                        coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
-                    )
-                )
+            new_txs = await self.service.wallet_state_manager.spend_clawback_coins(
+                coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
             )
-        if push:
-            for tx in tx_list:
-                await self.service.wallet_state_manager.add_pending_transaction(tx)
+            if push:
+                for tx in new_txs:
+                    await self.service.wallet_state_manager.add_pending_transaction(tx)
+            tx_list.extend(new_txs)
+
         return {
             "success": True,
-            "transaction_ids": [tx.name.hex() for tx in tx_list],
+            "transaction_ids": [tx.name.hex() for tx in tx_list if tx.type == TransactionType.OUTGOING_CLAWBACK.value],
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_list],
         }
 
