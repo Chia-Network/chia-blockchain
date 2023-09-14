@@ -796,7 +796,8 @@ def dao_create_spend_proposal_cmd(
     "--vote-amount",
     help="The number of votes to add",
     type=int,
-    required=True,
+    required=False,
+    default=None,
 )
 @click.option(
     "--proposal-timelock",
@@ -854,7 +855,7 @@ def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    vote_amount: int,
+    vote_amount: Optional[int],
     proposal_timelock: Optional[int],
     soft_close: Optional[int],
     attendance_required: Optional[int],
@@ -919,7 +920,8 @@ def dao_create_update_proposal_cmd(
     "--vote-amount",
     help="The number of votes to add",
     type=int,
-    required=True,
+    required=False,
+    default=None,
 )
 @click.option(
     "-m",
@@ -937,7 +939,7 @@ def dao_create_mint_proposal_cmd(
     wallet_id: int,
     amount: int,
     to_address: int,
-    vote_amount: int,
+    vote_amount: Optional[int],
     fee: str,
     min_coin_amount: Optional[str],
     max_coin_amount: Optional[str],

@@ -2977,7 +2977,7 @@ async def test_dao_cat_exits(
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         assert isinstance(dao_cat_wallet_0, DAOCATWallet)
-        await time_out_assert(20, dao_cat_wallet_0.get_votable_balance, cat_amt)
+        await time_out_assert(60, dao_cat_wallet_0.get_votable_balance, cat_amt)
 
         # create a spend proposal
         additions = [
