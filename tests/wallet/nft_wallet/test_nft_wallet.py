@@ -22,6 +22,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -1009,8 +1010,9 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     assert len(wallet_1.wallet_state_manager.wallets) == 1, "NFT wallet shouldn't exist yet"
     assert len(wallet_0.wallet_state_manager.wallets) == 3
     # transfer DID to the other wallet
-    tx = await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG)
-    assert tx
+    txs = await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG)
+    for tx in txs:
+        await did_wallet.wallet_state_manager.add_pending_transaction(tx)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
@@ -1055,6 +1057,9 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     resp = await api_1.nft_set_nft_did(
         dict(wallet_id=nft_wallet_id_1, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex(), fee=fee)
     )
+    txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
+    for tx in txs:
+        await did_wallet.wallet_state_manager.add_pending_transaction(tx)
     await make_new_block_with(resp, full_node_api, ph)
 
     coins_response = await wait_rpc_state_condition(

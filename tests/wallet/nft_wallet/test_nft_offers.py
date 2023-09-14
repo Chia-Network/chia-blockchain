@@ -338,6 +338,8 @@ async def test_nft_offer_cancellations(self_hostname: str, two_wallet_nodes: Any
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=cancel_fee, secure=True
     )
+    for tx in txs:
+        await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node_api.process_transaction_records(records=txs)
@@ -435,11 +437,12 @@ async def test_nft_offer_with_metadata_update(self_hostname: str, two_wallet_nod
     url_to_add = "https://new_url.com"
     key = "mu"
     fee_for_update = uint64(10)
-    update_sb = await nft_wallet_maker.update_metadata(
-        nft_to_update, key, url_to_add, DEFAULT_TX_CONFIG, fee=fee_for_update
-    )
+    txs = await nft_wallet_maker.update_metadata(nft_to_update, key, url_to_add, DEFAULT_TX_CONFIG, fee=fee_for_update)
     mempool_mgr = full_node_api.full_node.mempool_manager
-    await time_out_assert_not_none(20, mempool_mgr.get_spendbundle, update_sb.name())  # type: ignore
+    for tx in txs:
+        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
+        if tx.spend_bundle is not None:
+            await time_out_assert_not_none(20, mempool_mgr.get_spendbundle, tx.spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
