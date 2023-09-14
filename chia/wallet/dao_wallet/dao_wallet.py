@@ -868,7 +868,7 @@ class DAOWallet:
             dao_cat_wallet = self.wallet_state_manager.get_wallet(
                 id=self.dao_info.dao_cat_wallet_id, required_type=DAOCATWallet
             )
-            vote_amount = await dao_cat_wallet.get_spendable_balance()
+            vote_amount = await dao_cat_wallet.get_votable_balance(include_free_cats=False)
         assert vote_amount is not None
         cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
         assert cat_tail_hash
@@ -981,7 +981,8 @@ class DAOWallet:
         previous_votes = []
         lockup_inner_puzhashes = []
         for spend in dao_cat_spend.coin_spends:
-            vote_amounts.append(vote_amount)
+            spend_vote_amount = Program.from_bytes(bytes(spend.solution)).at("frrrrrrf").as_int()
+            vote_amounts.append(spend_vote_amount)
             vote_coins.append(spend.coin.name())
             previous_votes.append(
                 get_active_votes_from_lockup_puzzle(

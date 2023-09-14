@@ -188,8 +188,8 @@ def test_proposal() -> None:
             [vote_amount, 20],  # vote amounts
             vote_type,  # vote type (yes)
             [vote_coin_id_1, vote_coin_id_2],  # vote coin ids
-            [active_votes_list],  # previous votes
-            [acs_ph],  # lockup inner puz hash
+            [active_votes_list, 0],  # previous votes
+            [acs_ph, acs_ph],  # lockup inner puz hash
             0,  # inner puz reveal
             0,  # soft close len
             self_destruct_time,

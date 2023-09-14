@@ -190,8 +190,8 @@
                   PROPOSED_PUZ_HASH
                   (r coin_id_list)
                   (r vote_amount_list)
-                  previous_votes
-                  lockup_innerpuzhashes
+                  (r previous_votes)
+                  (r lockup_innerpuzhashes)
                   vote_info
                   (+ (f vote_amount_list) sum)
                   output

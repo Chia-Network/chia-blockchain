@@ -296,12 +296,14 @@ class DAOCATWallet:
                         [standard_inner_puz.get_tree_hash()],
                     )
                 ]
+                message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
                 puzzle_announcements = set([message])
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
             else:
                 vote_amount = amount - running_sum
+                running_sum = running_sum + coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -317,6 +319,7 @@ class DAOCATWallet:
                             [lci.inner_puzzle.get_tree_hash()],
                         )
                     )
+                message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
                 puzzle_announcements = set([message])
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
@@ -353,7 +356,6 @@ class DAOCATWallet:
                 limitations_program_reveal=limitations_program_reveal,
             )
             spendable_cat_list.append(new_spendable_cat)
-            running_sum += coin.amount
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
         spend_bundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)

@@ -3364,3 +3364,281 @@ async def test_dao_reorgs(
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
     await time_out_assert(20, get_proposal_state, (True, True), *[dao_wallet_0, 0])
     await time_out_assert(20, get_proposal_state, (True, True), *[dao_wallet_1, 0])
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_dao_votes(
+    self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
+) -> None:
+    num_blocks = 1
+    full_nodes, wallets, _ = three_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_node_2, server_2 = wallets[2]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+    ph_0 = await wallet_0.get_new_puzzlehash()
+    ph_1 = await wallet_1.get_new_puzzlehash()
+    ph_2 = await wallet_2.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_2.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_1))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+    )
+
+    await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
+    await time_out_assert(20, full_node_api.wallet_is_synced, True, wallet_node_0)
+
+    # set a standard fee amount to use in all txns
+    base_fee = uint64(100)
+
+    # set the cat issuance and DAO rules
+    cat_issuance = 300000
+    proposal_min_amt = uint64(101)
+    dao_rules = DAORules(
+        proposal_timelock=uint64(10),
+        soft_close_length=uint64(5),
+        attendance_required=uint64(190000),
+        pass_percentage=uint64(5100),  # 51%
+        self_destruct_length=uint64(20),
+        oracle_spend_delay=uint64(10),
+        proposal_minimum_amount=proposal_min_amt,
+    )
+
+    dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
+        wallet_node_0.wallet_state_manager,
+        wallet_0,
+        uint64(cat_issuance),
+        dao_rules,
+        DEFAULT_TX_CONFIG,
+    )
+    assert dao_wallet_0 is not None
+
+    tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
+    tx_record = tx_queue[0]
+    await full_node_api.process_transaction_records(records=[tx_record])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
+    dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
+    await time_out_assert(10, cat_wallet_0.get_confirmed_balance, cat_issuance)
+    assert dao_cat_wallet_0
+
+    treasury_id = dao_wallet_0.dao_info.treasury_id
+
+    dc_1 = uint64(100000)
+    dc_2 = uint64(50000)
+    dc_3 = uint64(30000)
+    dc_4 = uint64(20000)
+    dc_5 = uint64(10000)
+
+    # Lockup voting cats for all wallets
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dc_1, DEFAULT_TX_CONFIG, fee=base_fee)
+    for tx in txs:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    dao_cat_sb_0 = txs[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
+    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dc_2, DEFAULT_TX_CONFIG, fee=base_fee)
+    for tx in txs:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    dao_cat_sb_0 = txs[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
+    await full_node_api.process_transaction_records(records=txs)
+
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dc_3, DEFAULT_TX_CONFIG, fee=base_fee)
+    for tx in txs:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    dao_cat_sb_0 = txs[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
+    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dc_4, DEFAULT_TX_CONFIG, fee=base_fee)
+    for tx in txs:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    dao_cat_sb_0 = txs[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
+    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    txs = await dao_cat_wallet_0.enter_dao_cat_voting_mode(dc_5, DEFAULT_TX_CONFIG, fee=base_fee)
+    for tx in txs:
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx)
+    dao_cat_sb_0 = txs[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, dao_cat_sb_0.name())
+    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    await time_out_assert(10, dao_cat_wallet_0.get_confirmed_balance, dc_1 + dc_2 + dc_3 + dc_4 + dc_5)
+
+    # Create funding spend so the treasury holds some XCH
+    xch_funds = uint64(500000)
+    funding_tx = await dao_wallet_0.create_add_funds_to_treasury_spend(xch_funds, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(funding_tx)
+    funding_sb = funding_tx.spend_bundle
+    assert isinstance(funding_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, funding_sb.name())
+    await full_node_api.process_transaction_records(records=[funding_tx])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    # Check that the funding spend is recognized by all wallets
+    await time_out_assert(10, dao_wallet_0.get_balance_by_asset_type, xch_funds)
+
+    # Create Proposals
+    recipient_puzzle_hash = await wallet_2.get_new_puzzlehash()
+    proposal_amount_1 = uint64(9998)
+    xch_proposal_inner = generate_simple_proposal_innerpuz(
+        treasury_id,
+        [recipient_puzzle_hash],
+        [proposal_amount_1],
+        [None],
+    )
+
+    vote_1 = uint64(120000)
+    vote_2 = uint64(150000)
+
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, DEFAULT_TX_CONFIG, vote_1, fee=base_fee)
+    await wallet_0.wallet_state_manager.add_pending_transaction(proposal_tx)
+    assert isinstance(proposal_tx, TransactionRecord)
+    proposal_sb = proposal_tx.spend_bundle
+    assert isinstance(proposal_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[proposal_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    assert len(dao_wallet_0.dao_info.proposals_list) == 1
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == vote_1
+    assert dao_wallet_0.dao_info.proposals_list[0].timer_coin is not None
+    prop_0 = dao_wallet_0.dao_info.proposals_list[0]
+
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, DEFAULT_TX_CONFIG, vote_2, fee=base_fee)
+    await wallet_0.wallet_state_manager.add_pending_transaction(proposal_tx)
+    assert isinstance(proposal_tx, TransactionRecord)
+    proposal_sb = proposal_tx.spend_bundle
+    assert isinstance(proposal_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[proposal_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    assert len(dao_wallet_0.dao_info.proposals_list) == 2
+    assert dao_wallet_0.dao_info.proposals_list[1].amount_voted == vote_2
+
+    vote_3 = uint64(30000)
+    vote_tx = await dao_wallet_0.generate_proposal_vote_spend(prop_0.proposal_id, vote_3, True, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(vote_tx)
+    assert isinstance(vote_tx, TransactionRecord)
+    vote_sb = vote_tx.spend_bundle
+    assert isinstance(vote_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, vote_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[vote_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == vote_1 + vote_3
+
+    vote_4 = uint64(60000)
+    vote_tx = await dao_wallet_0.generate_proposal_vote_spend(prop_0.proposal_id, vote_4, True, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(vote_tx)
+    assert isinstance(vote_tx, TransactionRecord)
+    vote_sb = vote_tx.spend_bundle
+    assert isinstance(vote_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, vote_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[vote_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    assert dao_wallet_0.dao_info.proposals_list[0].amount_voted == vote_1 + vote_3 + vote_4
+
+    vote_5 = uint64(1)
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, DEFAULT_TX_CONFIG, vote_5, fee=base_fee)
+    await wallet_0.wallet_state_manager.add_pending_transaction(proposal_tx)
+    assert isinstance(proposal_tx, TransactionRecord)
+    proposal_sb = proposal_tx.spend_bundle
+    assert isinstance(proposal_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[proposal_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    assert len(dao_wallet_0.dao_info.proposals_list) == 3
+    assert dao_wallet_0.dao_info.proposals_list[2].amount_voted == vote_5
+    prop_2 = dao_wallet_0.dao_info.proposals_list[2]
+
+    vote_6 = uint64(20000)
+    for i in range(10):
+        vote_tx = await dao_wallet_0.generate_proposal_vote_spend(prop_2.proposal_id, vote_6, True, DEFAULT_TX_CONFIG)
+        await wallet_0.wallet_state_manager.add_pending_transaction(vote_tx)
+        assert isinstance(vote_tx, TransactionRecord)
+        vote_sb = vote_tx.spend_bundle
+        assert isinstance(vote_sb, SpendBundle)
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, vote_sb.name())
+        await full_node_api.process_spend_bundles(bundles=[vote_sb])
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    assert dao_wallet_0.dao_info.proposals_list[2].amount_voted == 200001
+
+    close_tx = await dao_wallet_0.create_proposal_close_spend(prop_0.proposal_id, DEFAULT_TX_CONFIG)
+    await wallet_0.wallet_state_manager.add_pending_transaction(close_tx)
+    assert isinstance(close_tx, TransactionRecord)
+    close_sb = close_tx.spend_bundle
+    assert isinstance(close_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, close_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[close_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    proposal_tx = await dao_wallet_0.generate_new_proposal(xch_proposal_inner, DEFAULT_TX_CONFIG, fee=base_fee)
+    await wallet_0.wallet_state_manager.add_pending_transaction(proposal_tx)
+    assert isinstance(proposal_tx, TransactionRecord)
+    proposal_sb = proposal_tx.spend_bundle
+    assert isinstance(proposal_sb, SpendBundle)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, proposal_sb.name())
+    await full_node_api.process_spend_bundles(bundles=[proposal_sb])
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+    assert dao_wallet_0.dao_info.proposals_list[3].amount_voted == 210000

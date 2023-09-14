@@ -718,7 +718,8 @@ def dao_proposal(ctx: click.Context) -> None:
     "--vote-amount",
     help="The number of votes to add",
     type=int,
-    required=True,
+    required=False,
+    default=None,
 )
 @click.option(
     "--asset-id",
@@ -749,7 +750,7 @@ def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    vote_amount: int,
+    vote_amount: Optional[int],
     to_address: Optional[str],
     amount: Optional[str],
     asset_id: Optional[str],
