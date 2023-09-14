@@ -5,7 +5,6 @@ import dataclasses
 import logging
 import random
 import time
-from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
 
 import pytest
@@ -832,7 +831,7 @@ class TestFullNodeProtocol:
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.asyncio
-    async def test_new_transaction_and_mempool(self, wallet_nodes, self_hostname):
+    async def test_new_transaction_and_mempool(self, wallet_nodes, self_hostname, seeded_random: random.Random):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
@@ -951,6 +950,7 @@ class TestFullNodeProtocol:
                 assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10500000 * group_size) > 0
                 assert not force_high_fee
                 not_included_tx += 1
+        assert successful_bundle is not None
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
 
         # these numbers reflect the capacity of the mempool. In these
@@ -961,7 +961,7 @@ class TestFullNodeProtocol:
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full
-        new_transaction = fnp.NewTransaction(token_bytes(32), 10000000, uint64(1))
+        new_transaction = fnp.NewTransaction(bytes32.random(seeded_random), uint64(10000000), uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
         assert full_node_2.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
@@ -983,7 +983,7 @@ class TestFullNodeProtocol:
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
 
         # No longer full
-        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        new_transaction = fnp.NewTransaction(bytes32.random(seeded_random), uint64(1000000), uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
 
         # Cannot resubmit transaction, but not because of ALREADY_INCLUDING
@@ -1013,7 +1013,7 @@ class TestFullNodeProtocol:
         assert status == MempoolInclusionStatus.SUCCESS
 
     @pytest.mark.asyncio
-    async def test_request_respond_transaction(self, wallet_nodes, self_hostname):
+    async def test_request_respond_transaction(self, wallet_nodes, self_hostname, seeded_random: random.Random):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         wallet_ph = wallet_a.get_new_puzzlehash()
         blocks = await full_node_1.get_all_full_blocks()
@@ -1037,7 +1037,7 @@ class TestFullNodeProtocol:
         # Farm another block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(wallet_ph))
 
-        tx_id = token_bytes(32)
+        tx_id = bytes32.random(seeded_random)
         request_transaction = fnp.RequestTransaction(tx_id)
         msg = await full_node_1.request_transaction(request_transaction)
         assert msg is None
@@ -1061,7 +1061,7 @@ class TestFullNodeProtocol:
         assert msg.data == bytes(fnp.RespondTransaction(spend_bundle))
 
     @pytest.mark.asyncio
-    async def test_respond_transaction_fail(self, wallet_nodes, self_hostname):
+    async def test_respond_transaction_fail(self, wallet_nodes, self_hostname, seeded_random: random.Random):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         cb_ph = wallet_a.get_new_puzzlehash()
@@ -1069,7 +1069,7 @@ class TestFullNodeProtocol:
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-        tx_id = token_bytes(32)
+        tx_id = bytes32.random(seeded_random)
         request_transaction = fnp.RequestTransaction(tx_id)
         msg = await full_node_1.request_transaction(request_transaction)
         assert msg is None

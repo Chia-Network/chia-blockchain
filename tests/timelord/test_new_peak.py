@@ -10,8 +10,12 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.protocols import timelord_protocol
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.full_block import FullBlock
 from chia.util.ints import uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.blockchain import create_blockchain
@@ -19,11 +23,13 @@ from tests.util.blockchain import create_blockchain
 
 class TestNewPeak:
     @pytest.mark.asyncio
-    async def test_timelord_new_peak_basic(self, bt, timelord, default_1000_blocks) -> None:
+    async def test_timelord_new_peak_basic(
+        self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
+    ) -> None:
         b1, db_wrapper1, db_path1 = await create_blockchain(bt.constants, 2)
         b2, db_wrapper2, db_path2 = await create_blockchain(bt.constants, 2)
 
-        timelord_api, timelord_server = timelord
+        timelord_api, _ = timelord
         for block in default_1000_blocks:
             await _validate_and_add_block(b1, block)
             await _validate_and_add_block(b2, block)
@@ -64,11 +70,13 @@ class TestNewPeak:
         return None
 
     @pytest.mark.asyncio
-    async def test_timelord_new_peak_heavier_unfinished(self, bt, timelord, default_1000_blocks) -> None:
+    async def test_timelord_new_peak_heavier_unfinished(
+        self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
+    ) -> None:
         b1, db_wrapper1, db_path1 = await create_blockchain(bt.constants, 2)
         b2, db_wrapper2, db_path2 = await create_blockchain(bt.constants, 2)
 
-        timelord_api, timelord_server = timelord
+        timelord_api, _ = timelord
         for block in default_1000_blocks:
             await _validate_and_add_block(b1, block)
             await _validate_and_add_block(b2, block)
@@ -90,18 +98,11 @@ class TestNewPeak:
         block = blocks_1[-1]
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            bt.constants,
-            b1,
-            block_record.required_iters,
-            block,
-            True,
+            bt.constants, b1, block_record.required_iters, block, True
         )
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            bt.constants,
-            len(block.finished_sub_slots) > 0,
-            b1.block_record(blocks_1[-1].prev_header_hash),
-            b1,
+            bt.constants, len(block.finished_sub_slots) > 0, b1.block_record(blocks_1[-1].prev_header_hash), b1
         )
 
         if block.reward_chain_block.signage_point_index == 0:
@@ -124,12 +125,7 @@ class TestNewPeak:
             rc_prev = block.reward_chain_block.reward_chain_sp_vdf.challenge
 
         timelord_unf_block = timelord_protocol.NewUnfinishedBlockTimelord(
-            block.reward_chain_block.get_unfinished(),
-            difficulty,
-            sub_slot_iters,
-            block.foliage,
-            ses,
-            rc_prev,
+            block.reward_chain_block.get_unfinished(), difficulty, sub_slot_iters, block.foliage, ses, rc_prev
         )
 
         timelord_api.new_unfinished_block_timelord(timelord_unf_block)
@@ -171,16 +167,12 @@ def get_recent_reward_challenges(
     return list(reversed(recent_rc))
 
 
-def timelord_peak_from_block(block, blockchain: BlockchainInterface, constants: ConsensusConstants):
+def timelord_peak_from_block(
+    block: FullBlock, blockchain: BlockchainInterface, constants: ConsensusConstants
+) -> timelord_protocol.NewPeakTimelord:
     peak = blockchain.block_record(block.header_hash)
     _, difficulty = get_next_sub_slot_iters_and_difficulty(constants, False, peak, blockchain)
-    ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-        constants,
-        blockchain,
-        peak.required_iters,
-        block,
-        True,
-    )
+    ses: Optional[SubEpochSummary] = next_sub_epoch_summary(constants, blockchain, peak.required_iters, block, True)
 
     recent_rc = get_recent_reward_challenges(blockchain, constants)
     curr = peak
