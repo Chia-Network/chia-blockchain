@@ -1437,3 +1437,56 @@ async def test_benchmark_batch_insert_speed(
             tree_id=tree_id,
             changelist=batch,
         )
+
+
+@pytest.mark.asyncio
+async def test_delete_store_data(raw_data_store: DataStore) -> None:
+    tree_id = bytes32(b"\0" * 32)
+    tree_id_2 = bytes32(b"\0" * 31 + b"\1")
+    await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    await raw_data_store.create_tree(tree_id=tree_id_2, status=Status.COMMITTED)
+    keys = [key.to_bytes(4, byteorder="big") for key in range(4)]
+    batch1 = [
+        {"action": "insert", "key": keys[0], "value": keys[0]},
+        {"action": "insert", "key": keys[1], "value": keys[1]},
+    ]
+    batch2 = batch1.copy()
+    batch1.append({"action": "insert", "key": keys[2], "value": keys[2]})
+    batch2.append({"action": "insert", "key": keys[3], "value": keys[3]})
+    await raw_data_store.insert_batch(tree_id, batch1, status=Status.COMMITTED)
+    await raw_data_store.insert_batch(tree_id_2, batch2, status=Status.COMMITTED)
+    assert batch1 != batch2
+    keys_values_before = await raw_data_store.get_keys_values(tree_id_2)
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_before = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_before[node["key"]] = node["value"]
+    for i in range(4):
+        assert kv_nodes_before[keys[i]] == keys[i]
+    await raw_data_store.delete_store_data(tree_id)
+    # Deleting from `node` table doesn't alter other stores.
+    keys_values_after = await raw_data_store.get_keys_values(tree_id_2)
+    assert keys_values_before == keys_values_after
+    async with raw_data_store.db_wrapper.reader() as reader:
+        result = await reader.execute("SELECT * FROM node")
+        nodes = await result.fetchall()
+        kv_nodes_after = {}
+        for node in nodes:
+            if node["key"] is not None:
+                kv_nodes_after[node["key"]] = node["value"]
+    for i in range(4):
+        if i != 2:
+            assert kv_nodes_after[keys[i]] == keys[i]
+        else:
+            # `keys[2]` was only present in the first store.
+            assert keys[i] not in kv_nodes_after
+    assert not await raw_data_store.tree_id_exists(tree_id)
+    await raw_data_store.delete_store_data(tree_id_2)
+    async with raw_data_store.db_wrapper.writer() as writer:
+        async with writer.execute("SELECT COUNT(*) FROM node") as cursor:
+            result = await cursor.fetchone()
+            assert result[0] == 0
+    assert not await raw_data_store.tree_id_exists(tree_id_2)

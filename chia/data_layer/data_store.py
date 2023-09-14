@@ -1443,6 +1443,82 @@ class DataStore:
                     },
                 )
 
+    async def delete_store_data(self, tree_id: bytes32) -> None:
+        async with self.db_wrapper.writer() as reader:
+            result = await reader.execute(
+                """
+                WITH RECURSIVE
+                    tree_nodes AS (
+                        SELECT a.hash, n.left, n.right
+                        FROM ancestors AS a
+                        JOIN node AS n ON a.hash = n.hash
+                        WHERE a.tree_id = ?
+                    ),
+                    orphans AS (
+                        SELECT
+                            n.hash,
+                            n.left,
+                            n.right
+                        FROM node n
+                        WHERE (n.left IN (SELECT hash FROM tree_nodes)
+                        OR n.right IN (SELECT hash FROM tree_nodes))
+                        UNION ALL
+
+                        SELECT
+                            n.hash,
+                            n.left,
+                            n.right
+                        FROM node n
+                        JOIN orphans ON n.left = orphans.hash OR n.right = orphans.hash
+                    ),
+                    all_nodes AS (
+                        SELECT hash, left, right FROM tree_nodes
+                        UNION
+                        SELECT hash, left, right FROM orphans
+                    ),
+                    nodes_to_keep AS (
+                        SELECT all_nodes.hash
+                        FROM all_nodes
+                        LEFT JOIN ancestors a ON all_nodes.hash = a.hash
+                        WHERE a.tree_id != ?
+                    )
+                    SELECT hash, left, right FROM all_nodes WHERE hash NOT IN (SELECT hash FROM nodes_to_keep)
+                """,
+                (tree_id, tree_id),
+            )
+            to_delete = {}
+            ref_counts = {}
+            async for row in result:
+                hash = row["hash"]
+                left = row["left"]
+                right = row["right"]
+                to_delete[hash] = (left, right)
+                if left is not None:
+                    ref_counts[left] = ref_counts.get(left, 0) + 1
+                if right is not None:
+                    ref_counts[right] = ref_counts.get(right, 0) + 1
+
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute("DELETE FROM ancestors WHERE tree_id == ?", (tree_id,))
+            await writer.execute("DELETE FROM root WHERE tree_id == ?", (tree_id,))
+            queue = [hash for hash in to_delete if ref_counts.get(hash, 0) == 0]
+            while queue:
+                hash = queue.pop(0)
+                if hash not in to_delete:
+                    continue
+                await writer.execute("DELETE FROM node WHERE hash == ?", (hash,))
+
+                left, right = to_delete[hash]
+                if left is not None:
+                    ref_counts[left] -= 1
+                    if ref_counts[left] == 0:
+                        queue.append(left)
+
+                if right is not None:
+                    ref_counts[right] -= 1
+                    if ref_counts[right] == 0:
+                        queue.append(right)
+
     async def unsubscribe(self, tree_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:
             await writer.execute(

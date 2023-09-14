@@ -632,12 +632,12 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
-    async def unsubscribe(self, tree_id: bytes32, retain_files: bool) -> None:
+    async def unsubscribe(self, tree_id: bytes32, retain_data: bool) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
         filenames: List[str] = []
-        if await self.data_store.tree_id_exists(tree_id) and not retain_files:
+        if await self.data_store.tree_id_exists(tree_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(tree_id)
             all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
             for root in all_roots:
@@ -646,6 +646,8 @@ class DataLayer:
                 filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
+            if not retain_data:
+                await self.data_store.delete_store_data(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
