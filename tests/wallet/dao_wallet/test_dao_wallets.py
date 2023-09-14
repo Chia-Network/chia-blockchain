@@ -133,6 +133,9 @@ async def test_dao_creation(
         proposal_minimum_amount=uint64(1),
     )
 
+    fee = uint64(10)
+    fee_for_cat = uint64(20)
+
     # Try to create a DAO with more CATs than xch balance
     with pytest.raises(ValueError) as e_info:
         dao_wallet_0 = await DAOWallet.create_new_dao_and_wallet(
@@ -141,6 +144,8 @@ async def test_dao_creation(
             uint64(funds + 1),
             dao_rules,
             DEFAULT_TX_CONFIG,
+            fee=fee,
+            fee_for_cat=fee_for_cat,
         )
     assert e_info.value.args[0] == f"Your balance of {funds} mojos is not enough to create {funds + 1} CATs"
 
@@ -150,6 +155,8 @@ async def test_dao_creation(
         uint64(cat_amt * 2),
         dao_rules,
         DEFAULT_TX_CONFIG,
+        fee=fee,
+        fee_for_cat=fee_for_cat,
     )
     assert dao_wallet_0 is not None
 

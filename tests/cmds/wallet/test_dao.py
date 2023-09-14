@@ -36,6 +36,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             filter_amount: uint64 = uint64(1),
             name: Optional[str] = None,
             fee: uint64 = uint64(0),
+            fee_for_cat: uint64 = uint64(0),
         ) -> Dict[str, Union[str, int, bytes32]]:
             if not treasury_id:
                 treasury_id = bytes32(token_bytes(32))

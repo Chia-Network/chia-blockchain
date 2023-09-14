@@ -794,6 +794,7 @@ class WalletRpcApi:
                         uint64(request.get("filter_amount", 1)),
                         name,
                         uint64(request.get("fee", 0)),
+                        uint64(request.get("fee_for_cat", 0)),
                     )
             elif mode == "existing":
                 # async with self.service.wallet_state_manager.lock:

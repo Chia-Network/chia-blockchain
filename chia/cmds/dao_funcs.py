@@ -66,6 +66,9 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
 
+    fee_for_cat = Decimal(args["fee_for_cat"])
+    final_fee_for_cat: uint64 = uint64(int(fee_for_cat * units["chia"]))
+
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.create_new_dao_wallet(
             mode="new",
@@ -75,6 +78,7 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
             filter_amount=filter_amount,
             name=name,
             fee=final_fee,
+            fee_for_cat=final_fee_for_cat,
             tx_config=CMDTXConfigLoader.from_json_dict(
                 {
                     "min_coin_amount": args["min_coin_amount"],

@@ -690,6 +690,7 @@ class DAOWallet:
                 cat_tail_info,
                 amount_of_cats_to_create,
                 DEFAULT_TX_CONFIG,
+                fee=fee_for_cat,
             )
             assert new_cat_wallet is not None
         else:  # pragma: no cover

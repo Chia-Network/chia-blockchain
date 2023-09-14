@@ -1300,6 +1300,7 @@ class WalletRpcClient(RpcClient):
         filter_amount: uint64 = uint64(1),
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
+        fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Dict:
         request: Dict[str, Any] = {
@@ -1311,6 +1312,7 @@ class WalletRpcClient(RpcClient):
             "filter_amount": filter_amount,
             "name": name,
             "fee": fee,
+            "fee_for_cat": fee_for_cat,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
         }
