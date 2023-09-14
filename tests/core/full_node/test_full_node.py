@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import logging
 import random
 import time
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -13,8 +14,10 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
+from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.sync_store import Peak
 from chia.protocols import full_node_protocol
 from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
@@ -28,6 +31,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
@@ -37,6 +41,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace, calculate_plot_id_pk, calculate_pos_challenge
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.serialized_program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -48,13 +53,14 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
+from tests.conftest import ConsensusMode
 from tests.connection_utils import add_dummy_connection, connect_and_get_peer
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
@@ -105,7 +111,9 @@ async def get_block_path(full_node: FullNodeAPI):
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("tx_size", [3000000000000])
-    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname):
+    async def test_block_compression(
+        self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname, consensus_mode
+    ):
         nodes, wallets, bt = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -165,7 +173,13 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(5), program) is not None
+        template = detect_potential_template_generator(uint32(5), program)
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork we don't use this compression mechanism
+            # anymore, we use CLVM backrefs in the encoding instead
+            assert template is None
+        else:
+            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
@@ -195,7 +209,13 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(6), program) is None
-        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork we don't use this compression mechanism
+            # anymore, we use CLVM backrefs in the encoding instead
+            assert num_blocks == 0
+        else:
+            assert num_blocks > 0
 
         # Farm two empty blocks
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -270,7 +290,13 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
-        assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) > 0
+        num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork we don't use this compression mechanism
+            # anymore, we use CLVM backrefs in the encoding instead
+            assert num_blocks == 0
+        else:
+            assert num_blocks > 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
         tr: TransactionRecord = await wallet.generate_signed_transaction(
@@ -359,7 +385,13 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(11), program) is not None
+        template = detect_potential_template_generator(uint32(11), program)
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork we don't use this compression mechanism
+            # anymore, we use CLVM backrefs in the encoding instead
+            assert template is None
+        else:
+            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         height = full_node_1.full_node.blockchain.get_peak().height
@@ -367,7 +399,14 @@ class TestFullNodeBlockCompression:
         blockchain = empty_blockchain
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
-        assert full_node_1.full_node.full_node_store.previous_generator is not None
+
+        template = full_node_1.full_node.full_node_store.previous_generator
+        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork we don't use this compression mechanism
+            # anymore, we use CLVM backrefs in the encoding instead
+            assert template is None
+        else:
+            assert template is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
@@ -908,8 +947,8 @@ class TestFullNodeProtocol:
                 if force_high_fee:
                     successful_bundle = spend_bundle
             else:
-                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(5000000 * group_size)
-                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(5000000 * group_size) > 0
+                assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10500000 * group_size)
+                assert full_node_1.full_node.mempool_manager.mempool.get_min_fee_rate(10500000 * group_size) > 0
                 assert not force_high_fee
                 not_included_tx += 1
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
@@ -2027,7 +2066,7 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
         expected_height = 0
 
         for cycle in range(2):
-            async for service in setup_full_node(
+            async with setup_full_node(
                 consensus_constants=block_tools.constants,
                 db_name="node_restart_test.db",
                 self_hostname=block_tools.config["self_hostname"],
@@ -2035,8 +2074,9 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
                 simulator=True,
                 db_version=db_version,
                 reuse_db=True,
-            ):
-                simulator_api = cast(FullNodeSimulator, service._api)
+            ) as service:
+                simulator_api = service._api
+                assert isinstance(simulator_api, FullNodeSimulator)
                 await simulator_api.farm_blocks_to_puzzlehash(count=blocks_per_cycle)
 
                 expected_height += blocks_per_cycle
@@ -2045,3 +2085,29 @@ async def test_node_start_with_existing_blocks(db_version: int) -> None:
 
                 assert block_record is not None, f"block_record is None on cycle {cycle + 1}"
                 assert block_record.height == expected_height, f"wrong height on cycle {cycle + 1}"
+
+
+@pytest.mark.asyncio
+async def test_wallet_sync_task_failure(
+    one_node: SimulatorsAndWalletsServices, caplog: pytest.LogCaptureFixture
+) -> None:
+    [full_node_service], _, _ = one_node
+    full_node = full_node_service._node
+    assert full_node.wallet_sync_task is not None
+    caplog.set_level(logging.DEBUG)
+    peak = Peak(bytes32(32 * b"0"), uint32(0), uint128(0))
+    # WalletUpdate with invalid args to force an exception in FullNode.update_wallets / FullNode.wallet_sync_task
+    bad_wallet_update = WalletUpdate(-10, peak, [], {})  # type: ignore[arg-type]
+    await full_node.wallet_sync_queue.put(bad_wallet_update)
+    await time_out_assert(30, full_node.wallet_sync_queue.empty)
+    assert "update_wallets - fork_height: -10, peak_height: 0" in caplog.text
+    assert "Wallet sync task failure" in caplog.text
+    assert not full_node.wallet_sync_task.done()
+    caplog.clear()
+    # WalletUpdate with valid args to test continued processing after failure
+    good_wallet_update = WalletUpdate(uint32(10), peak, [], {})
+    await full_node.wallet_sync_queue.put(good_wallet_update)
+    await time_out_assert(30, full_node.wallet_sync_queue.empty)
+    assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
+    assert "Wallet sync task failure" not in caplog.text
+    assert not full_node.wallet_sync_task.done()

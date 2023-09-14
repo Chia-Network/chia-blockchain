@@ -1210,7 +1210,7 @@ ABSOLUTE_PROPERTIES: Set[str] = {"min_time", "max_time", "min_height", "max_heig
 ALL_PROPERTIES: Set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
 
 
-def parse_timelock_info(conditions: List[Condition]) -> ConditionValidTimes:
+def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
     properties: Set[str] = ALL_PROPERTIES.copy()
     for condition in conditions:

@@ -20,7 +20,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.util.streamable import Streamable
+from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
@@ -94,11 +95,14 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
         """
+        # TODO Use coin_data instead of calling peer API
         wallet_node = self.wallet_state_manager.wallet_node
         coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
@@ -212,6 +216,7 @@ class VCWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
 
         return vc_record, [tx]
@@ -352,6 +357,7 @@ class VCWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         )
         return tx_list
@@ -430,6 +436,7 @@ class VCWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=final_bundle.name(),
             memos=list(compute_memos(final_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
@@ -664,4 +671,4 @@ class VCWallet:
 
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol = VCWallet()  # pragma: no cover
+    _dummy: WalletProtocol[VerifiedCredential] = VCWallet()  # pragma: no cover

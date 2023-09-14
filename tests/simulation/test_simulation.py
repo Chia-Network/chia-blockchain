@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import List, Tuple
 
 import pytest
@@ -25,19 +26,18 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
-test_constants_modified = test_constants.replace(
-    **{
-        "DIFFICULTY_STARTING": 2**8,
-        "DISCRIMINANT_SIZE_BITS": 1024,
-        "SUB_EPOCH_BLOCKS": 140,
-        "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 350,
-        "MAX_SUB_SLOT_BLOCKS": 50,
-        "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
-        "EPOCH_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2**20,
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
-    }
+test_constants_modified = dataclasses.replace(
+    test_constants,
+    DIFFICULTY_STARTING=2**8,
+    DISCRIMINANT_SIZE_BITS=1024,
+    SUB_EPOCH_BLOCKS=140,
+    WEIGHT_PROOF_THRESHOLD=2,
+    WEIGHT_PROOF_RECENT_BLOCKS=350,
+    MAX_SUB_SLOT_BLOCKS=50,
+    NUM_SPS_SUB_SLOT=32,  # Must be a power of 2
+    EPOCH_BLOCKS=280,
+    SUB_SLOT_ITERS_STARTING=2**20,
+    NUMBER_ZERO_BITS_PLOT_FILTER=5,
 )
 
 
@@ -49,13 +49,13 @@ test_constants_modified = test_constants.replace(
 async def extra_node(self_hostname):
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
-        async for service in setup_full_node(
+        async with setup_full_node(
             test_constants_modified,
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
             db_version=1,
-        ):
+        ) as service:
             yield service._api
 
 

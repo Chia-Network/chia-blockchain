@@ -79,9 +79,9 @@ class GenesisById(LimitationsProgram):
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, _: Dict, amount: uint64, tx_config: TXConfig
+        cls, wallet, _: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
     ) -> Tuple[TransactionRecord, SpendBundle]:
-        coins = await wallet.standard_wallet.select_coins(amount, tx_config.coin_selection_config)
+        coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -97,7 +97,7 @@ class GenesisById(LimitationsProgram):
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, tx_config, uint64(0), coins, origin_id=origin_id
+            amount, minted_cat_puzzle_hash, tx_config, fee, coins, origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
 

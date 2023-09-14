@@ -6,10 +6,11 @@ import logging
 import signal
 import sqlite3
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple
+from types import FrameType
+from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple, Union
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
@@ -35,6 +36,7 @@ from chia.server.start_service import Service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools, test_constants
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.simulator.start_simulator import create_full_node_simulator_service
@@ -48,6 +50,7 @@ from chia.util.config import config_path_for_filename, load_config, lock_and_loa
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 
@@ -85,6 +88,7 @@ def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) ->
     return capabilities.copy()
 
 
+@asynccontextmanager
 async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, None]:
     root_path = btools.root_path
     config = btools.config
@@ -99,6 +103,7 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
             yield ws_server
 
 
+@asynccontextmanager
 async def setup_full_node(
     consensus_constants: ConsensusConstants,
     db_name: str,
@@ -113,7 +118,7 @@ async def setup_full_node(
     disable_capabilities: Optional[List[Capability]] = None,
     *,
     reuse_db: bool = False,
-) -> AsyncGenerator[Service[FullNode, FullNodeAPI], None]:
+) -> AsyncGenerator[Service[FullNode, Union[FullNodeSimulator, FullNodeAPI]], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
@@ -194,6 +199,7 @@ async def setup_full_node(
                 pass
 
 
+@asynccontextmanager
 async def setup_crawler(
     root_path_populated_with_config: Path, database_uri: str
 ) -> AsyncGenerator[Service[Crawler, CrawlerAPI], None]:
@@ -232,6 +238,7 @@ async def setup_crawler(
         await service.wait_closed()
 
 
+@asynccontextmanager
 async def setup_seeder(root_path_populated_with_config: Path, database_uri: str) -> AsyncGenerator[DNSServer, None]:
     config = load_config(root_path_populated_with_config, "config.yaml")
     service_config = config["seeder"]
@@ -252,6 +259,7 @@ async def setup_seeder(root_path_populated_with_config: Path, database_uri: str)
 
 # Note: convert these setup functions to fixtures, or push it one layer up,
 # keeping these usable independently?
+@asynccontextmanager
 async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
@@ -326,6 +334,7 @@ async def setup_wallet_node(
         keychain.delete_all_keys()
 
 
+@asynccontextmanager
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
@@ -360,6 +369,7 @@ async def setup_harvester(
     await service.wait_closed()
 
 
+@asynccontextmanager
 async def setup_farmer(
     b_tools: BlockTools,
     root_path: Path,
@@ -407,6 +417,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
+@asynccontextmanager
 async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[Introducer, IntroducerAPI], None]:
     service = create_introducer_service(
         bt.root_path,
@@ -423,22 +434,27 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
     await service.wait_closed()
 
 
+@asynccontextmanager
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncGenerator[asyncio.Task[Any], None]:
     lock = asyncio.Lock()
     vdf_task_1 = asyncio.create_task(
         spawn_process(self_hostname, port, 1, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(lock))
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
+        yield vdf_task_1
+        await kill_processes(lock)
 
-    yield vdf_task_1
-    await kill_processes(lock)
 
-
+@asynccontextmanager
 async def setup_vdf_clients(
     bt: BlockTools, self_hostname: str, port: int
 ) -> AsyncGenerator[Tuple[asyncio.Task[Any], asyncio.Task[Any], asyncio.Task[Any]], None]:
@@ -453,25 +469,31 @@ async def setup_vdf_clients(
         spawn_process(self_hostname, port, 3, lock, prefer_ipv6=bt.config.get("prefer_ipv6", False))
     )
 
-    def stop() -> None:
-        asyncio.create_task(kill_processes(lock))
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
+    signal_handlers = SignalHandlers()
+    async with signal_handlers.manage():
+        signal_handlers.setup_async_signal_handler(handler=stop)
 
-    yield vdf_task_1, vdf_task_2, vdf_task_3
+        yield vdf_task_1, vdf_task_2, vdf_task_3
 
-    await kill_processes(lock)
+        await kill_processes(lock)
 
 
+@asynccontextmanager
 async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    b_tools: BlockTools,
+    config: Dict[str, Any],
+    root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
-    config = b_tools.config
     service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
@@ -481,7 +503,7 @@ async def setup_timelord(
     service_config["rpc_port"] = uint16(0)
 
     service = create_timelord_service(
-        b_tools.root_path,
+        root_path,
         config,
         consensus_constants,
         connect_to_daemon=False,

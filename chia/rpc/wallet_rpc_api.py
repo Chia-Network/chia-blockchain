@@ -52,7 +52,7 @@ from chia.wallet.derive_keys import (
     match_address_to_sk,
 )
 from chia.wallet.did_wallet import did_wallet_puzzles
-from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import (
     DID_INNERPUZ_MOD,
@@ -655,6 +655,7 @@ class WalletRpcApi:
                             {"identifier": "genesis_by_id"},
                             uint64(request["amount"]),
                             tx_config,
+                            fee,
                             name,
                         )
                         asset_id = cat_wallet.get_asset_id()
@@ -1466,7 +1467,7 @@ class WalletRpcApi:
         :return:
         """
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
-        selected_wallet: Optional[WalletProtocol] = None
+        selected_wallet: Optional[WalletProtocol[Any]] = None
         is_hex = request.get("is_hex", False)
         if isinstance(is_hex, str):
             is_hex = bool(is_hex)
@@ -1729,11 +1730,27 @@ class WalletRpcApi:
         ###
 
         offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
+        offered, requested, infos, valid_times = offer.summary()
 
         if request.get("advanced", False):
             response = {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
+                "summary": {
+                    "offered": offered,
+                    "requested": requested,
+                    "fees": offer.fees(),
+                    "infos": infos,
+                    "valid_times": {
+                        k: v
+                        for k, v in valid_times.to_json_dict().items()
+                        if k
+                        not in (
+                            "max_secs_after_created",
+                            "min_secs_since_created",
+                            "max_blocks_after_created",
+                            "min_blocks_since_created",
+                        )
+                    },
+                },
                 "id": offer.name(),
             }
         else:
@@ -2100,7 +2117,13 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-
+        did_data: DIDCoinData = DIDCoinData(
+            p2_puzzle,
+            bytes32(recovery_list_hash.atom),
+            uint16(num_verification.as_int()),
+            singleton_struct,
+            metadata,
+        )
         hinted_coins = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
@@ -2258,7 +2281,12 @@ class WalletRpcApi:
                 coin_state.coin, uint32(coin_state.created_height), uint32(0), False, False, wallet_type, wallet_id
             )
             await self.service.wallet_state_manager.coin_store.add_coin_record(coin_record, coin_state.coin.name())
-            await did_wallet.coin_added(coin_state.coin, uint32(coin_state.created_height), peer)
+            await did_wallet.coin_added(
+                coin_state.coin,
+                uint32(coin_state.created_height),
+                peer,
+                did_data,
+            )
             return {"success": True, "latest_coin_id": coin_state.coin.name().hex()}
 
     @tx_endpoint
@@ -3917,6 +3945,7 @@ class WalletRpcApi:
             parsed_request.min_amount_to_claim,
             tx_config,
             fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.service.wallet_state_manager.add_pending_transaction(tx)

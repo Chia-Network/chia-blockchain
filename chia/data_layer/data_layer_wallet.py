@@ -25,7 +25,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -108,7 +108,8 @@ class Mirror:
 @final
 class DataLayerWallet:
     if TYPE_CHECKING:
-        _protocol_check: ClassVar[WalletProtocol] = cast("DataLayerWallet", None)
+        # TODO Create DataLayer coin data model if necessary
+        _protocol_check: ClassVar[WalletProtocol[object]] = cast("DataLayerWallet", None)
 
     wallet_state_manager: WalletStateManager
     log: logging.Logger
@@ -354,6 +355,7 @@ class DataLayerWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=full_spend.name(),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
@@ -607,6 +609,7 @@ class DataLayerWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
+            valid_times=parse_timelock_info(extra_conditions),
         )
         assert dl_tx.spend_bundle is not None
         if fee > 0:
@@ -821,6 +824,7 @@ class DataLayerWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=mirror_bundle.name(),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         ]
 
@@ -847,7 +851,7 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
