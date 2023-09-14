@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
-from secrets import token_bytes
 from typing import Dict, List
 
 import pytest
@@ -16,11 +16,11 @@ from chia.wallet.wallet_nft_store import WalletNftStore
 from tests.util.db_connection import DBConnection
 
 
-def get_dummy_nft() -> NFTCoinInfo:
+def get_dummy_nft(random_: random.Random) -> NFTCoinInfo:
     return NFTCoinInfo(
-        bytes32(token_bytes(32)),
-        Coin(bytes32(token_bytes(32)), bytes32(token_bytes(32)), uint64(1)),
-        LineageProof(bytes32(token_bytes(32)), bytes32(token_bytes(32)), uint64(1)),
+        bytes32.random(random_),
+        Coin(bytes32.random(random_), bytes32.random(random_), uint64(1)),
+        LineageProof(bytes32.random(random_), bytes32.random(random_), uint64(1)),
         Program.to(["A Test puzzle"]),
         uint32(1),
     )
@@ -28,12 +28,13 @@ def get_dummy_nft() -> NFTCoinInfo:
 
 @dataclass
 class DummyNFTs:
+    seeded_random: random.Random
     nfts_per_wallet: Dict[uint32, List[NFTCoinInfo]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         nfts = self.nfts_per_wallet.setdefault(uint32(wallet_id), [])
         for _ in range(count):
-            nfts.append(get_dummy_nft())
+            nfts.append(get_dummy_nft(random_=self.seeded_random))
 
 
 class TestNftStore:
@@ -171,8 +172,8 @@ class TestNftStore:
 
 
 @pytest.mark.asyncio
-async def test_delete_wallet() -> None:
-    dummy_nfts = DummyNFTs()
+async def test_delete_wallet(seeded_random: random.Random) -> None:
+    dummy_nfts = DummyNFTs(seeded_random=seeded_random)
     for i in range(5):
         dummy_nfts.generate(i, i * 5)
     async with DBConnection(1) as wrapper:

@@ -1730,11 +1730,27 @@ class WalletRpcApi:
         ###
 
         offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
+        offered, requested, infos, valid_times = offer.summary()
 
         if request.get("advanced", False):
             response = {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
+                "summary": {
+                    "offered": offered,
+                    "requested": requested,
+                    "fees": offer.fees(),
+                    "infos": infos,
+                    "valid_times": {
+                        k: v
+                        for k, v in valid_times.to_json_dict().items()
+                        if k
+                        not in (
+                            "max_secs_after_created",
+                            "min_secs_since_created",
+                            "max_blocks_after_created",
+                            "min_blocks_since_created",
+                        )
+                    },
+                },
                 "id": offer.name(),
             }
         else:

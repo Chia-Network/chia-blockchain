@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from secrets import token_bytes
+import random
 from typing import Optional
 
 import pytest
@@ -11,6 +11,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -40,7 +41,7 @@ class TestTransactions:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname):
+    async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
         full_nodes, wallets, _ = three_nodes_two_wallets
 
@@ -106,7 +107,7 @@ class TestTransactions:
 
         # Farm another block
         for i in range(1, 8):
-            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random(seeded_random)))
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
@@ -122,7 +123,7 @@ class TestTransactions:
         await time_out_assert(20, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
     @pytest.mark.asyncio
-    async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname):
+    async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
         full_nodes, wallets, _ = three_nodes_two_wallets
 
@@ -155,7 +156,7 @@ class TestTransactions:
         await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, token_bytes(), DEFAULT_TX_CONFIG, 0
+            10, bytes32.random(seeded_random), DEFAULT_TX_CONFIG, 0
         )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 

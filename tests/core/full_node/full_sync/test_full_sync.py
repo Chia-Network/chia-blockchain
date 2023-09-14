@@ -417,6 +417,7 @@ class TestFullSync:
         assert duration > 5
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
@@ -443,6 +444,7 @@ class TestFullSync:
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
