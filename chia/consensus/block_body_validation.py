@@ -45,7 +45,7 @@ async def validate_block_body(
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_point_with_peak: Optional[uint32],
-    get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
+    get_block_generator: Callable[[BlockInfo, uint32], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
@@ -315,7 +315,7 @@ async def validate_block_body(
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     # The fork point is the last block in common between the peak chain and the chain of `block`
     if peak is None or height == 0:
-        fork_h: int = -1
+        fork_h: uint32 = uint32(0)
     elif fork_point_with_peak is not None:
         fork_h = fork_point_with_peak
     else:
@@ -340,8 +340,7 @@ async def validate_block_body(
             curr = await block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
             reorg_blocks[curr.height] = curr
-        if fork_h != -1:
-            assert len(reorg_blocks) == height - fork_h - 1
+        assert len(reorg_blocks) == height - fork_h - 1
 
         curr = prev_block
         assert curr is not None
@@ -349,7 +348,9 @@ async def validate_block_body(
             # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
             if curr.transactions_generator is not None:
                 # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
-                curr_block_generator: Optional[BlockGenerator] = await get_block_generator(curr)
+                curr_block_generator: Optional[BlockGenerator] = await get_block_generator(
+                    curr, uint32(0) if fork_h is None else fork_h
+                )
                 assert curr_block_generator is not None and curr.transactions_info is not None
                 curr_npc_result = get_name_puzzle_conditions(
                     curr_block_generator,

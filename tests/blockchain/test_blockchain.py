@@ -3585,12 +3585,14 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         fork_height = 2 if counter > 3 else None
 
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block1], {}, validate_signatures=False
+            [block1], {}, validate_signatures=False, fork_height=fork_height
         )
         result, err, _ = await b.add_block(block1, preval[0], fork_point_with_peak=fork_height)
         assert not err
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block2], {}, validate_signatures=False
+            [block2],
+            {},
+            validate_signatures=False,
         )
         result, err, _ = await b.add_block(block2, preval[0], fork_point_with_peak=fork_height)
         assert not err

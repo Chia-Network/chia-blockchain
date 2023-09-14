@@ -1207,7 +1207,11 @@ class FullNode:
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+            blocks_to_validate,
+            {},
+            wp_summaries=wp_summaries,
+            validate_signatures=True,
+            fork_height=fork_point,
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
