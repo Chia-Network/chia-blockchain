@@ -537,7 +537,9 @@ class TestDIDWallet:
         recovery_list = [bytes32.fromhex(did_wallet.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
+        txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
+        for tx in txs:
+            await did_wallet.wallet_state_manager.add_pending_transaction(tx)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -617,7 +619,9 @@ class TestDIDWallet:
         recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
+        txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
+        for tx in txs:
+            await did_wallet.wallet_state_manager.add_pending_transaction(tx)
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -856,7 +860,9 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         await did_wallet_1.update_recovery_list([bytes(ph)], 1)
-        await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG)
+        txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG)
+        for tx in txs:
+            await did_wallet_1.wallet_state_manager.add_pending_transaction(tx)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
@@ -1062,7 +1068,9 @@ class TestDIDWallet:
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
-        await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, fee)
+        txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, fee)
+        for tx in txs:
+            await did_wallet_1.wallet_state_manager.add_pending_transaction(tx)
         transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
