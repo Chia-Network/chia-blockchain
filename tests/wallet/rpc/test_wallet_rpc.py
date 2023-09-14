@@ -42,6 +42,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -1148,7 +1149,18 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert id == offer.name()
     id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert id == offer.name()
-    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert summary == {
+        "offered": {"xch": 5},
+        "requested": {cat_asset_id.hex(): 1},
+        "infos": driver_dict,
+        "fees": 1,
+        "valid_times": {
+            "max_height": None,
+            "max_time": None,
+            "min_height": None,
+            "min_time": None,
+        },
+    }
     assert advanced_summary == summary
 
     id, valid = await wallet_1_rpc.check_offer_validity(offer)
@@ -1297,6 +1309,14 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=cat_asset_id)
     assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+
+    with pytest.raises(ValueError, match="not currently supported"):
+        await wallet_1_rpc.create_offer_for_ids(
+            {uint32(1): -5, cat_asset_id.hex(): 1},
+            DEFAULT_TX_CONFIG,
+            driver_dict=driver_dict,
+            timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
+        )
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
