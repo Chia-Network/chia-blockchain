@@ -6,7 +6,6 @@ import math
 import time
 import traceback
 from dataclasses import dataclass, field
-from secrets import token_bytes
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
@@ -457,7 +456,7 @@ class WSChiaConnection:
     async def incoming_message_handler(self) -> None:
         while True:
             message = await self.incoming_queue.get()
-            task_id: bytes32 = bytes32(token_bytes(32))
+            task_id: bytes32 = bytes32.secret()
             api_task = asyncio.create_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
