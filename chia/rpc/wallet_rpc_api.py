@@ -1164,7 +1164,7 @@ class WalletRpcApi:
 
         # Some backwards compat fill-ins
         if cs_config_loader.excluded_coin_ids is None:
-            excluded_coins: Optional[List[Coin]] = request.get("excluded_coins")
+            excluded_coins: Optional[List[Coin]] = request.get("excluded_coins", request.get("exclude_coins"))
             if excluded_coins is not None:
                 cs_config_loader = cs_config_loader.override(
                     excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
