@@ -933,15 +933,6 @@ class Blockchain(BlockchainInterface):
                 prev_block = await self.block_store.get_full_block(previous_block_hash)
                 assert prev_block is not None
                 assert prev_block_record is not None
-                # fork = find_fork_point_in_chain(self, peak, prev_block_record)
-                curr_2: Optional[FullBlock] = prev_block
-                assert curr_2 is not None and isinstance(curr_2, FullBlock)
-                reorg_chain[curr_2.height] = curr_2
-                while curr_2.height > fork and curr_2.height > 0:
-                    curr_2 = await self.block_store.get_full_block(curr_2.prev_header_hash)
-                    assert curr_2 is not None
-                    reorg_chain[curr_2.height] = curr_2
-
             for ref_height in block.transactions_generator_ref_list:
                 if ref_height in additional_height_dict:
                     if ref_height in additional_height_dict:
@@ -950,12 +941,6 @@ class Blockchain(BlockchainInterface):
                         if ref_block.transactions_generator is None:
                             raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                         result.append(ref_block.transactions_generator)
-                elif ref_height in reorg_chain:
-                    ref_block = reorg_chain[ref_height]
-                    assert ref_block is not None
-                    if ref_block.transactions_generator is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_block.transactions_generator)
                 else:
                     header_hash = self.height_to_hash(ref_height)
                     if header_hash is None:
