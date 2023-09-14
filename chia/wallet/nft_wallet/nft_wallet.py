@@ -555,14 +555,12 @@ class NFTWallet:
             synthetic_pk = synthetic_secret_key.get_g1()
             if mode == SigningMode.CHIP_0002_HEX_INPUT:
                 hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
-            elif mode == SigningMode.CHIP_0002:
-                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
             elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
                 hex_message = bytes(message, "utf-8")
             elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
                 hex_message = bytes.fromhex(message)
             else:
-                raise ValueError(f"Invalid sign mode {mode.value}.")
+                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
             return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
         else:
             raise ValueError("Invalid NFT puzzle.")
