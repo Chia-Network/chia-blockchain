@@ -30,11 +30,12 @@ async def new_block(
 ) -> None:
     async with db.writer_maybe_transaction() as conn:
         cursor = await conn.execute(
-            "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
+            "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block_hash,
                 parent,
                 height,
+                True,  # in_main_chain
                 # sub epoch summary
                 None if ses is None else bytes(ses),
             ),
@@ -52,6 +53,7 @@ async def setup_db(db: DBWrapper2) -> None:
             "header_hash blob PRIMARY KEY,"
             "prev_hash blob,"
             "height bigint,"
+            "in_main_chain tinyint,"
             "sub_epoch_summary blob)"
         )
         await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
@@ -179,6 +181,38 @@ class TestBlockHeightMap:
             height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
 
             for height in reversed(range(10000)):
+                assert height_map.contains_height(uint32(height))
+                assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
+                if (height % 20) == 0:
+                    assert height_map.get_ses(uint32(height)) == gen_ses(height)
+                else:
+                    with pytest.raises(KeyError) as _:
+                        height_map.get_ses(uint32(height))
+
+    @pytest.mark.asyncio
+    async def test_restore_ses_only(self, tmp_dir: Path, db_version: int) -> None:
+        # this is a test where the height-to-hash is complete and correct but
+        # sub epoch summaries are missing. We need to be able to restore them in
+        # this case.
+        async with DBConnection(db_version) as db_wrapper:
+            await setup_db(db_wrapper)
+            await setup_chain(db_wrapper, 2000, ses_every=20)
+
+            height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+            await height_map.maybe_flush()
+            del height_map
+
+            # corrupt the sub epoch cache
+            ses_cache = []
+            for i in range(0, 2000, 19):
+                ses_cache.append((uint32(i), bytes(gen_ses(i + 9999))))
+
+            await write_file_async(tmp_dir / "sub-epoch-summaries", bytes(SesCache(ses_cache)))
+
+            # the test starts here
+            height_map = await BlockHeightMap.create(tmp_dir, db_wrapper)
+
+            for height in reversed(range(2000)):
                 assert height_map.contains_height(uint32(height))
                 assert height_map.get_hash(uint32(height)) == gen_block_hash(height)
                 if (height % 20) == 0:
