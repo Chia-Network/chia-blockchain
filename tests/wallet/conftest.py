@@ -306,7 +306,10 @@ def tx_config(request: Any) -> TXConfig:
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
 @pytest_asyncio.fixture(scope="function")
 async def wallet_environments(
-    trusted_full_node: bool, tx_config: TXConfig, blockchain_constants: ConsensusConstants, request: Any
+    trusted_full_node: bool,
+    tx_config: TXConfig,
+    blockchain_constants: ConsensusConstants,
+    request: pytest.FixtureRequest,
 ) -> AsyncIterator[WalletTestFramework]:
     if "trusted" in request.param:
         if request.param["trusted"] != trusted_full_node:
