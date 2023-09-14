@@ -24,20 +24,30 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class VDFClientProcessMgr:
-    lock: asyncio.Lock
-    stopped: bool
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    stopped: bool = False
     active_processes: List[asyncio.subprocess.Process] = field(default_factory=list)
 
-
-async def kill_processes(process_mgr: VDFClientProcessMgr):
-    async with process_mgr.lock:
-        process_mgr.stopped = True
-        for process in process_mgr.active_processes:
+    async def remove_process(self, proc: asyncio.subprocess.Process) -> None:
+        async with self.lock:
             try:
-                process.kill()
-            except ProcessLookupError:
+                self.active_processes.remove(proc)
+            except ValueError:
                 pass
-        process_mgr.active_processes.clear()
+
+    async def add_process(self, proc: asyncio.subprocess.Process) -> None:
+        async with self.lock:
+            self.active_processes.append(proc)
+
+    async def kill_processes(self):
+        async with self.lock:
+            self.stopped = True
+            for process in self.active_processes:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+        self.active_processes.clear()
 
 
 def find_vdf_client() -> pathlib.Path:
@@ -72,8 +82,7 @@ async def spawn_process(
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-        async with process_mgr.lock:
-            process_mgr.active_processes.append(proc)
+        await process_mgr.add_process(proc)
 
         stdout, stderr = await proc.communicate()
         if stdout:
@@ -85,10 +94,7 @@ async def spawn_process(
             else:
                 log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
 
-        async with process_mgr.lock:
-            if proc in process_mgr.active_processes:
-                process_mgr.active_processes.remove(proc)
-
+        await process_mgr.remove_process(proc)
         await asyncio.sleep(0.1)
 
 
@@ -121,7 +127,7 @@ async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await kill_processes(process_mgr)
+        await process_mgr.kill_processes()
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)

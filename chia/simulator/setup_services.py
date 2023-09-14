@@ -43,7 +43,7 @@ from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
-from chia.timelord.timelord_launcher import VDFClientProcessMgr, kill_processes, spawn_process
+from chia.timelord.timelord_launcher import VDFClientProcessMgr, spawn_process
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
@@ -453,14 +453,14 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await kill_processes(process_mgr)
+        await process_mgr.kill_processes()
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)
         yield vdf_task_1
 
     vdf_task_1.cancel()
-    await kill_processes(process_mgr)
+    await process_mgr.kill_processes()
 
 
 @asynccontextmanager
@@ -502,7 +502,7 @@ async def setup_vdf_clients(
         stack_frame: Optional[FrameType],
         loop: asyncio.AbstractEventLoop,
     ) -> None:
-        await kill_processes(process_mgr)
+        await process_mgr.kill_processes()
 
     signal_handlers = SignalHandlers()
     async with signal_handlers.manage():
@@ -513,7 +513,7 @@ async def setup_vdf_clients(
     vdf_task_1.cancel()
     vdf_task_2.cancel()
     vdf_task_3.cancel()
-    await kill_processes(process_mgr)
+    await process_mgr.kill_processes()
 
 
 @asynccontextmanager
