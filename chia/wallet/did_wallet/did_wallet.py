@@ -123,14 +123,14 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            spend_bundle = await self.generate_new_decentralised_id(amount, DEFAULT_TX_CONFIG, fee)
+            txs = await self.generate_new_decentralised_id(amount, DEFAULT_TX_CONFIG, fee)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
 
-        if spend_bundle is None:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
-            raise ValueError("Failed to create spend.")
+        for tx in txs:
+            self.wallet_state_manager.add_pending_transaction(tx)
+
         await self.wallet_state_manager.add_new_wallet(self)
 
         return self
@@ -808,7 +808,7 @@ class DIDWallet:
         )
 
     # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig):
+    async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig) -> List[TransactionRecord]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -859,8 +859,7 @@ class DIDWallet:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=ConditionValidTimes(),
         )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return spend_bundle
+        return [did_record]
 
     # Pushes a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
@@ -998,7 +997,7 @@ class DIDWallet:
         parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
         pubkey: G1Element,
         spend_bundle: SpendBundle,
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         assert self.did_info.origin_coin is not None
 
         # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
@@ -1069,7 +1068,6 @@ class DIDWallet:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=ConditionValidTimes(),
         )
-        await self.wallet_state_manager.add_pending_transaction(did_record)
         new_did_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
@@ -1083,7 +1081,7 @@ class DIDWallet:
             self.did_info.metadata,
         )
         await self.save_info(new_did_info)
-        return spend_bundle
+        return [did_record]
 
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
@@ -1218,14 +1216,14 @@ class DIDWallet:
 
     async def generate_new_decentralised_id(
         self, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
-    ) -> Optional[SpendBundle]:
+    ) -> List[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
         """
 
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
         if coins is None:
-            return None
+            raise ValueError(f"Not enough spendable balance to generate new DID: {amount + fee}")
 
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
@@ -1240,7 +1238,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -1270,9 +1268,6 @@ class DIDWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
-        if tx_record is None or tx_record.spend_bundle is None:
-            return None
-
         # Only want to save this information if the transaction is valid
         did_info: DIDInfo = DIDInfo(
             launcher_coin,
@@ -1288,6 +1283,7 @@ class DIDWallet:
         )
         await self.save_info(did_info)
         eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
+        assert tx_record.spend_bundle is not None
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
@@ -1312,9 +1308,7 @@ class DIDWallet:
             valid_times=ConditionValidTimes(),
         )
         regular_record = dataclasses.replace(tx_record, spend_bundle=None)
-        await self.wallet_state_manager.add_pending_transaction(regular_record)
-        await self.wallet_state_manager.add_pending_transaction(did_record)
-        return full_spend
+        return [did_record, regular_record]
 
     async def generate_eve_spend(
         self,

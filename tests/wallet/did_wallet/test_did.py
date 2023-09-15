@@ -226,15 +226,19 @@ class TestDIDWallet:
         ) = await did_wallet_2.load_attest_files_for_recovery_spend([attest_data])
         assert message_spend_bundle == test_message_spend_bundle
 
-        spend_bundle = await did_wallet_2.recovery_spend(
+        txs = await did_wallet_2.recovery_spend(
             did_wallet_2.did_info.temp_coin,
             newpuzhash,
             test_info_list,
             pubkey,
             test_message_spend_bundle,
         )
+        assert txs[0].spend_bundle is not None
+        await did_wallet_2.wallet_state_manager.add_pending_transaction(txs[0])
 
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await time_out_assert_not_none(
+            5, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
+        )
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
 
@@ -245,7 +249,9 @@ class TestDIDWallet:
             assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
         some_ph = 32 * b"\2"
-        await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG)
+        txs = await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG)
+        for tx in txs:
+            await did_wallet_2.wallet_state_manager.add_pending_transaction(tx)
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
@@ -400,7 +406,8 @@ class TestDIDWallet:
         await full_node_api.farm_blocks_to_wallet(1, wallet)
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 0)
-        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
+        txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
+        await did_wallet_4.wallet_state_manager.add_pending_transaction(txs[0])
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_4.id()
         )
@@ -465,9 +472,7 @@ class TestDIDWallet:
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         try:
-            spend_bundle = await did_wallet.recovery_spend(
-                coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
-            )
+            await did_wallet.recovery_spend(coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])))
         except Exception:
             # We expect a CLVM 80 error for this test
             pass
@@ -663,7 +668,8 @@ class TestDIDWallet:
             info,
             message_spend_bundle,
         ) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
-        await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
+        txs = await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
+        await did_wallet_3.wallet_state_manager.add_pending_transaction(txs[0])
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
         )
@@ -707,7 +713,8 @@ class TestDIDWallet:
             test_info_list,
             test_message_spend_bundle,
         ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
-        await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
+        txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
+        await did_wallet_2.wallet_state_manager.add_pending_transaction(txs[0])
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_4.id()

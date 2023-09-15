@@ -2442,6 +2442,7 @@ class WalletRpcApi:
             "metadata": metadata,
         }
 
+    # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
     async def did_recovery_spend(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
@@ -2467,15 +2468,23 @@ class WalletRpcApi:
                 puzhash = wallet.did_info.temp_puzhash
 
             assert wallet.did_info.temp_coin is not None
-            spend_bundle = await wallet.recovery_spend(
-                wallet.did_info.temp_coin,
-                puzhash,
-                info_list,
-                pubkey,
-                message_spend_bundle,
-            )
+            tx = (
+                await wallet.recovery_spend(
+                    wallet.did_info.temp_coin,
+                    puzhash,
+                    info_list,
+                    pubkey,
+                    message_spend_bundle,
+                )
+            )[0]
+            if request.get("push", True):
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
         if spend_bundle:
-            return {"success": True, "spend_bundle": spend_bundle}
+            return {
+                "success": True,
+                "spend_bundle": tx.spend_bundle,
+                "transactions": [tx.to_json_dict_convenience(self.service.config)],
+            }
         else:
             return {"success": False}
 
