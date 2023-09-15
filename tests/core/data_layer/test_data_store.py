@@ -1297,7 +1297,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 counter += 1
             await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(tree_id)
-            await write_files_for_root(data_store_server, tree_id, root, tmp_path)
+            await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
     finally:
         await data_store_server.close()
@@ -1394,7 +1394,7 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=17,
+        limit=18,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,

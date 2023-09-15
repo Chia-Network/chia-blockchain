@@ -4,8 +4,8 @@ import asyncio
 import dataclasses
 import json
 import logging
+import random
 from operator import attrgetter
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
@@ -42,6 +42,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -952,8 +953,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             },
         )
 
-    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
-    await client.create_new_cat_and_wallet(uint64(100), test=True)
+    # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos and fee=10
+    await client.create_new_cat_and_wallet(uint64(100), fee=uint64(10), test=True)
     await time_out_assert(20, client.get_synced)
 
     res = await client.create_new_cat_and_wallet(uint64(20), test=True)
@@ -1148,7 +1149,18 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert id == offer.name()
     id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert id == offer.name()
-    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert summary == {
+        "offered": {"xch": 5},
+        "requested": {cat_asset_id.hex(): 1},
+        "infos": driver_dict,
+        "fees": 1,
+        "valid_times": {
+            "max_height": None,
+            "max_time": None,
+            "min_height": None,
+            "min_time": None,
+        },
+    }
     assert advanced_summary == summary
 
     id, valid = await wallet_1_rpc.check_offer_validity(offer)
@@ -1297,6 +1309,14 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await wallet_1_rpc.cancel_offers(DEFAULT_TX_CONFIG, asset_id=cat_asset_id)
     assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+
+    with pytest.raises(ValueError, match="not currently supported"):
+        await wallet_1_rpc.create_offer_for_ids(
+            {uint32(1): -5, cat_asset_id.hex(): 1},
+            DEFAULT_TX_CONFIG,
+            driver_dict=driver_dict,
+            timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
+        )
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
@@ -1880,7 +1900,10 @@ async def test_get_coin_records_rpc(wallet_rpc_environment: WalletRpcTestEnviron
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.asyncio
-async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_get_coin_records_rpc_limits(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+    seeded_random: random.Random,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1896,8 +1919,10 @@ async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTest
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
-            Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
-            uint32(uint32.from_bytes(token_bytes(4))),
+            Coin(
+                bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))
+            ),
+            uint32(seeded_random.randrange(2**32)),
             uint32(0),
             False,
             False,
@@ -1951,16 +1976,19 @@ async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTest
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.asyncio
-async def test_get_coin_records_rpc_failures(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_get_coin_records_rpc_failures(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+    seeded_random: random.Random,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     client: WalletRpcClient = env.wallet_1.rpc_client
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
     api = cast(WalletRpcApi, rpc_server.rpc_api)
 
-    too_many_hashes = [bytes32(token_bytes(32)) for _ in range(api.max_get_coin_records_filter_items + 1)]
+    too_many_hashes = [bytes32.random(seeded_random) for _ in range(api.max_get_coin_records_filter_items + 1)]
     too_many_amounts = [
-        uint64(uint64.from_bytes(token_bytes(8))) for _ in range(api.max_get_coin_records_filter_items + 1)
+        uint64(uint64(seeded_random.randrange(2**64))) for _ in range(api.max_get_coin_records_filter_items + 1)
     ]
     # Run requests which exceeds the allowed limit and contain too much filter items
     for name, request in {

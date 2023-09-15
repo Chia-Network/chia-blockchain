@@ -73,10 +73,11 @@ network_overrides: &network_overrides
       MIN_PLOT_SIZE: 18
       SOFT_FORK2_HEIGHT: 3000000
       SOFT_FORK3_HEIGHT: 2997292
-      SOFT_FORK4_HEIGHT: 2997292
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
       HARD_FORK_HEIGHT: 2997292
+      # November 2023
+      HARD_FORK_FIX_HEIGHT: 3426000
       # another 2 weeks later
       PLOT_FILTER_128_HEIGHT: 3061804
       # 3 years later
@@ -677,6 +678,8 @@ data_layer:
   plugins:
     uploaders: []
     downloaders: []
+  maximum_full_file_count: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True

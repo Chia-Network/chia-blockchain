@@ -81,7 +81,7 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
@@ -655,6 +655,7 @@ class WalletRpcApi:
                             {"identifier": "genesis_by_id"},
                             uint64(request["amount"]),
                             tx_config,
+                            fee,
                             name,
                         )
                         asset_id = cat_wallet.get_asset_id()
@@ -1154,13 +1155,25 @@ class WalletRpcApi:
                 wallet.target_state = None
             return {}
 
-    @tx_endpoint
     async def select_coins(
         self,
         request: Dict[str, Any],
-        tx_config: TXConfig = DEFAULT_TX_CONFIG,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
+        assert self.service.logged_in_fingerprint is not None
+        cs_config_loader: CoinSelectionConfigLoader = CoinSelectionConfigLoader.from_json_dict(request)
+
+        # Some backwards compat fill-ins
+        if cs_config_loader.excluded_coin_ids is None:
+            excluded_coins: Optional[List[Coin]] = request.get("excluded_coins", request.get("exclude_coins"))
+            if excluded_coins is not None:
+                cs_config_loader = cs_config_loader.override(
+                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                )
+
+        cs_config: CoinSelectionConfig = cs_config_loader.autofill(
+            constants=self.service.wallet_state_manager.constants,
+        )
+
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
@@ -1169,7 +1182,7 @@ class WalletRpcApi:
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount, tx_config.coin_selection_config)
+            selected_coins = await wallet.select_coins(amount, cs_config)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
@@ -1729,11 +1742,27 @@ class WalletRpcApi:
         ###
 
         offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
+        offered, requested, infos, valid_times = offer.summary()
 
         if request.get("advanced", False):
             response = {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
+                "summary": {
+                    "offered": offered,
+                    "requested": requested,
+                    "fees": offer.fees(),
+                    "infos": infos,
+                    "valid_times": {
+                        k: v
+                        for k, v in valid_times.to_json_dict().items()
+                        if k
+                        not in (
+                            "max_secs_after_created",
+                            "min_secs_since_created",
+                            "max_blocks_after_created",
+                            "min_blocks_since_created",
+                        )
+                    },
+                },
                 "id": offer.name(),
             }
         else:
@@ -3928,6 +3957,7 @@ class WalletRpcApi:
             parsed_request.min_amount_to_claim,
             tx_config,
             fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.service.wallet_state_manager.add_pending_transaction(tx)

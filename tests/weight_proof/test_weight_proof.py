@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import sys
+import dataclasses
 from typing import Dict, List, Optional, Tuple
 
-import aiosqlite
 import pytest
 
 from chia.consensus.block_record import BlockRecord
@@ -11,7 +10,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality
-from chia.full_node.block_store import BlockStore
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -489,42 +487,6 @@ class TestWeightProof:
         assert valid
         assert fork_point != 0
 
-    @pytest.mark.skip("used for debugging")
-    @pytest.mark.asyncio
-    async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("path to db")
-        block_store: BlockStore = await BlockStore.create(connection)
-        blocks = await block_store.get_block_records_in_range(0, 0xFFFFFFFF)
-        peak = len(blocks) - 1
-        peak_height = blocks[peak].height
-        headers = await block_store.get_header_blocks_in_range(0, peak_height)
-        sub_height_to_hash = {}
-        sub_epoch_summaries = {}
-        # peak_header = await block_store.get_full_blocks_at([peak_height])
-        if len(blocks) == 0:
-            return None, None
-
-        assert peak is not None
-
-        # Sets the other state variables (peak_height and height_to_hash)
-        curr: BlockRecord = blocks[peak]
-        while True:
-            sub_height_to_hash[curr.height] = curr.header_hash
-            if curr.sub_epoch_summary_included is not None:
-                sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
-            if curr.height == 0:
-                break
-            curr = blocks[curr.prev_hash]
-        assert len(sub_height_to_hash) == peak_height + 1
-        block_cache = BlockCache(blocks, headers, sub_height_to_hash, sub_epoch_summaries)
-        wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
-        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 50])
-        valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
-
-        await connection.close()
-        assert valid
-        print(f"size of proof is {get_size(wp)}")
-
 
 @pytest.mark.parametrize(
     "height,expected",
@@ -537,7 +499,7 @@ class TestWeightProof:
     ],
 )
 def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int):
-    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=3)
+    constants = dataclasses.replace(DEFAULT_CONSTANTS, NUMBER_ZERO_BITS_PLOT_FILTER=3)
     assert calculate_prefix_bits(constants, height) == expected
 
 
@@ -558,24 +520,3 @@ def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int):
 def test_calculate_prefix_bits_default(height: uint32, expected: int):
     constants = DEFAULT_CONSTANTS
     assert calculate_prefix_bits(constants, height) == expected
-
-
-def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
-    size = sys.getsizeof(obj)
-    if seen is None:
-        seen = set()
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    # Important mark as seen *before* entering recursion to gracefully handle
-    # self-referential objects
-    seen.add(obj_id)
-    if isinstance(obj, dict):
-        size += sum([get_size(v, seen) for v in obj.values()])
-        size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, "__dict__"):
-        size += get_size(obj.__dict__, seen)
-    elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([get_size(i, seen) for i in obj])
-    return size

@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 import traceback
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -32,7 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
@@ -88,6 +87,7 @@ class CATWallet:
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        fee: uint64 = uint64(0),
         name: Optional[str] = None,
     ) -> "CATWallet":
         self = CATWallet()
@@ -119,6 +119,7 @@ class CATWallet:
                 cat_tail_info,
                 amount,
                 tx_config,
+                fee,
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
@@ -157,7 +158,7 @@ class CATWallet:
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=(await self.convert_puzzle_hash(cat_coin.puzzle_hash)),
             amount=uint64(cat_coin.amount),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,
@@ -167,8 +168,9 @@ class CATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=[],
+            valid_times=ConditionValidTimes(),
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
         await self.standard_wallet.push_transaction(chia_tx)
@@ -842,6 +844,7 @@ class CATWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         ]
 
@@ -864,6 +867,7 @@ class CATWallet:
                     type=chia_tx.type,
                     name=chia_tx.name,
                     memos=[],
+                    valid_times=parse_timelock_info(extra_conditions),
                 )
             )
 

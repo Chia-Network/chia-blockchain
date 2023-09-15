@@ -4,12 +4,14 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import aiohttp
 import pkg_resources
 import pytest
 from aiohttp.web_ws import WebSocketResponse
+from pytest_mock import MockerFixture
 
 from chia.daemon.client import connect_to_daemon
 from chia.daemon.keychain_server import (
@@ -22,6 +24,7 @@ from chia.daemon.keychain_server import (
     SetLabelRequest,
 )
 from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
+from chia.plotters.plotters import call_plotters
 from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
@@ -68,6 +71,63 @@ class KeysForPlotCase:
     request: Dict[str, Any]
     response: Dict[str, Any]
     marks: Marks = ()
+
+
+@dataclass
+class ChiaPlottersBladebitArgsCase:
+    case_id: str
+    plot_type: str
+    count: int = 1
+    threads: int = 0
+    pool_contract: str = "txch1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    compress: int = 1
+    device: int = 0
+    hybrid_disk_mode: Optional[int] = None
+    farmer_pk: str = ""
+    final_dir: str = ""
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self.case_id
+
+    def to_command_array(self) -> List[str]:
+        command: List[str] = ["bladebit", self.plot_type]
+        command += ["-r", str(self.threads)]
+        command += ["-n", str(self.count)]
+        command += ["-c", self.pool_contract]
+        command += ["-f", self.farmer_pk]
+        command += ["--compress", str(self.compress)]
+        if self.plot_type == "cudaplot":
+            command += ["--device", str(self.device)]
+            if self.hybrid_disk_mode is not None:
+                command += [f"--disk-{self.hybrid_disk_mode}"]
+        command += ["-d", str(self.final_dir)]
+
+        return command
+
+    def expected_raw_command_args(self):
+        raw_args = []
+        raw_args += [
+            "--threads",
+            str(self.threads),
+            "--count",
+            str(self.count),
+            "--farmer-key",
+            str(self.farmer_pk),
+            "--pool-contract",
+            str(self.pool_contract),
+        ]
+        # --compress is "1" by default
+        raw_args += ["--compress", str(self.compress) if self.compress is not None else "1"]
+        raw_args += [self.plot_type]
+        if self.plot_type == "cudaplot":
+            # --device is "0" by default
+            raw_args += ["--device", str(self.device) if self.device is not None else "0"]
+            if self.hybrid_disk_mode is not None:
+                raw_args += [f"--disk-{self.hybrid_disk_mode}"]
+        raw_args += [str(self.final_dir)]
+        return raw_args
 
 
 # Simple class that responds to a poll() call used by WebSocketServer.is_running()
@@ -1634,6 +1694,42 @@ async def test_plotter_errors(
     ),
     RouteCase(
         route="start_plotting",
+        description="bladebit - cudaplot - hybrid 128 mode",
+        request={
+            **plotter_request_ref,
+            "plotter": "bladebit",
+            "plot_type": "cudaplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "e": False,
+            "compress": 1,
+            "disk_128": True,
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
+        description="bladebit - cudaplot - hybrid 16 mode",
+        request={
+            **plotter_request_ref,
+            "plotter": "bladebit",
+            "plot_type": "cudaplot",
+            "w": True,
+            "m": True,
+            "no_cpu_affinity": True,
+            "e": False,
+            "compress": 1,
+            "disk_16": True,
+        },
+        response={
+            "success": True,
+        },
+    ),
+    RouteCase(
+        route="start_plotting",
         description="madmax",
         request={
             **plotter_request_ref,
@@ -1857,3 +1953,37 @@ async def test_plotter_stop_plotting(
     # 5) Finally, get the "ack" for the stop_plotting payload
     response = await ws.receive()
     assert_response(response, {"success": True}, stop_plotting_request_id)
+
+
+@datacases(
+    ChiaPlottersBladebitArgsCase(case_id="1", plot_type="cudaplot"),
+    ChiaPlottersBladebitArgsCase(case_id="2", plot_type="cudaplot", hybrid_disk_mode=16),
+    ChiaPlottersBladebitArgsCase(case_id="3", plot_type="cudaplot", hybrid_disk_mode=128),
+)
+def test_run_plotter_bladebit(
+    mocker: MockerFixture,
+    mock_daemon_with_config_and_keys,
+    bt: BlockTools,
+    case: ChiaPlottersBladebitArgsCase,
+) -> None:
+    root_path = bt.root_path
+
+    case.farmer_pk = bytes(bt.farmer_pk).hex()
+    case.final_dir = str(bt.plot_dir)
+
+    def bladebit_exists(x: Path) -> bool:
+        return True if isinstance(x, Path) and x.parent == root_path / "plotters" else mocker.DEFAULT
+
+    def get_bladebit_version(_: Path) -> Tuple[bool, List[str]]:
+        return True, ["3", "0", "0"]
+
+    mocker.patch("os.path.exists", side_effect=bladebit_exists)
+    mocker.patch("chia.plotters.bladebit.get_bladebit_version", side_effect=get_bladebit_version)
+    mock_run_plotter = mocker.patch("chia.plotters.bladebit.run_plotter")
+
+    call_plotters(root_path, case.to_command_array())
+
+    assert mock_run_plotter.call_args.args[0] == root_path
+    assert mock_run_plotter.call_args.args[1] == "bladebit"
+    assert mock_run_plotter.call_args.args[2][1:] == case.expected_raw_command_args()
+    mock_run_plotter.assert_called_once()
