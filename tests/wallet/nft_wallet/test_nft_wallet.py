@@ -1629,6 +1629,9 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: A
     resp = await api_0.nft_set_nft_did(
         dict(wallet_id=nft_wallet_0_id, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex())
     )
+    txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
+    for tx in txs:
+        await did_wallet1.wallet_state_manager.add_pending_transaction(tx)
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
@@ -1659,7 +1662,9 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: A
     resp = await api_0.nft_set_nft_did(
         dict(wallet_id=nft_wallet_1_id, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex())
     )
-
+    txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
+    for tx in txs:
+        await did_wallet1.wallet_state_manager.add_pending_transaction(tx)
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id") is not None
@@ -1683,6 +1688,9 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: A
     assert coins[0] == resp["nft_info"]
     # Test set DID2 -> None
     resp = await api_0.nft_set_nft_did(dict(wallet_id=nft_wallet_2_id, nft_coin_id=nft_coin_id.hex()))
+    txs = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
+    for tx in txs:
+        await did_wallet1.wallet_state_manager.add_pending_transaction(tx)
     await make_new_block_with(resp, full_node_api, ph)
 
     # Check NFT DID
