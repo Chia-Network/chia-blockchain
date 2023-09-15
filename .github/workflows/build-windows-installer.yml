@@ -358,6 +358,14 @@ jobs:
         $json = $data | ConvertTo-Json
         $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
+    - name: Install and check version
+      env:
+        INSTALLER_PATH: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
+        & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version
+
     - name: Remove Windows exe and installer to exclude from cache
       run: |
         Remove-Item .\chia-blockchain-gui\packages\gui\dist -Recurse -Force
