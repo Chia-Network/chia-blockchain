@@ -334,13 +334,13 @@ jobs:
         env:
           PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
         run: |
-          hdiutil attach "$PACKAGE_PATH"/Chia-*.dmg
-          "/Volumes/Chia */Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
+          hdiutil attach "$PACKAGE_PATH"/chia-*.dmg
+          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
 
       - name: Detach .dmg
         if: always()
         run: |
-          hdiutil detach "/Volumes/Chia *" | true
+          hdiutil detach "/Volumes/Chia "* | true
 
       - name: Remove working files to exclude from cache
         run: |
