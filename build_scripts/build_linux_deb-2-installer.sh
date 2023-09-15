@@ -35,7 +35,7 @@ rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-SPEC_FILE=$(python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)')
+SPEC_FILE=$(realpath "build_scripts/pyinstaller.spec")
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
