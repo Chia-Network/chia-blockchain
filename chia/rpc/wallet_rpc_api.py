@@ -836,6 +836,7 @@ class WalletRpcApi:
                     return {
                         "total_fee": fee * 2,
                         "transaction": tr,
+                        "transactions": [tr],
                         "launcher_id": launcher_id.hex(),
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
                     }
@@ -1061,8 +1062,10 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        json_tx = tx.to_json_dict_convenience(self.service.config)
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
+            "transaction": json_tx,
+            "transactions": [json_tx],
             "transaction_id": tx.name,
         }
 
@@ -1083,13 +1086,6 @@ class WalletRpcApi:
                 response = await self.create_signed_transaction(request, hold_lock=False)
                 transaction = response["signed_tx"]
                 transactions = response["transactions"]
-
-            if wallet.type() not in {WalletType.CAT, WalletType.CRCAT}:
-                assert isinstance(wallet, Wallet)
-                for tr in transactions:
-                    await self.service.wallet_state_manager.add_pending_transaction(
-                        TransactionRecord.from_json_dict_convenience(tr)
-                    )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
@@ -1422,7 +1418,9 @@ class WalletRpcApi:
         )
         if push:
             await self.service.wallet_state_manager.add_pending_transaction(tx)
-        return {"tx": tx.to_json_dict_convenience(self.service.config)}
+
+        json_tx = tx.to_json_dict_convenience(self.service.config)
+        return {"tx": json_tx, "transactions": [json_tx]}
 
     async def verify_signature(self, request: Dict[str, Any]) -> EndpointResult:
         """
