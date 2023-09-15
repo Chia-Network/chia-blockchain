@@ -554,9 +554,16 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.main_wallet
 
         txs: List[TransactionRecord] = []
-        for transaction_hexstr in request["transactions"]:
-            tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr))
-            txs.append(tx)
+        for transaction_hexstr_or_json in request["transactions"]:
+            if isinstance(transaction_hexstr_or_json, str):
+                tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
+                txs.append(tx)
+            else:
+                try:
+                    tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
+                except AttributeError:
+                    tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
+                txs.append(tx)
 
         async with self.service.wallet_state_manager.lock:
             for tx in txs:

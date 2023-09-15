@@ -360,6 +360,10 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     )
 
     await client.push_transactions([tx])
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)]})
+    assert resp["success"]
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()]})
+    assert resp["success"]
 
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
