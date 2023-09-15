@@ -297,7 +297,6 @@ jobs:
       if: matrix.os.arch == "amd64"
       env:
         PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
-        INSTALL_PATH: ${{ github.workspace }}\installed
       run: |
         sudo apt install --yes "$PACKAGE_PATH"/chia-blockchain-cli_*.deb
         chia version
