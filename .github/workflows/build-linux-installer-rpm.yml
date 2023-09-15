@@ -289,7 +289,7 @@ jobs:
       env:
         PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
       run: |
-        yum install --yes "$PACKAGE_PATH"/chia-blockchain-cli-*.rpm
+        yum install -y "$PACKAGE_PATH"/chia-blockchain-cli-*.rpm
         chia version
         # TODO: check gui package as well?
 
