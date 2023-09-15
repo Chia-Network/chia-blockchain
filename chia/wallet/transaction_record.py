@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Tuple, TypeVar
+from typing import Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -9,11 +9,16 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.transaction_type import TransactionType
 
 T = TypeVar("T")
+_T_TransactionRecord = TypeVar("_T_TransactionRecord", bound="TransactionRecordOld")
+
+minimum_send_attempts = 6
 
 
 @dataclass
@@ -24,7 +29,7 @@ class ItemAndTransactionRecords(Generic[T]):
 
 @streamable
 @dataclass(frozen=True)
-class TransactionRecord(Streamable):
+class TransactionRecordOld(Streamable):
     """
     Used for storing transaction data and status in wallets.
     """
@@ -78,7 +83,7 @@ class TransactionRecord(Streamable):
         return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls, modified_tx_input: Dict):
+    def from_json_dict_convenience(cls: Type[_T_TransactionRecord], modified_tx_input: Dict) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
@@ -109,3 +114,24 @@ class TransactionRecord(Streamable):
             if memo is not None
         }
         return formatted
+
+    def is_valid(self) -> bool:
+        if len(self.sent_to) < minimum_send_attempts:
+            # we haven't tried enough peers yet
+            return True
+        if any(x[1] == MempoolInclusionStatus.SUCCESS for x in self.sent_to):
+            # we managed to push it to mempool at least once
+            return True
+        if any(x[2] in (Err.INVALID_FEE_LOW_FEE.name, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name) for x in self.sent_to):
+            # we tried to push it to mempool and got a fee error so it's a temporary error
+            return True
+        return False
+
+    def hint_dict(self) -> Dict[bytes32, bytes32]:
+        return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
+
+
+@streamable
+@dataclass(frozen=True)
+class TransactionRecord(TransactionRecordOld):
+    valid_times: ConditionValidTimes

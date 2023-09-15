@@ -20,5 +20,5 @@ class Announcement:
             message = self.message
         return std_hash(bytes(self.origin_info + message))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name().hex()

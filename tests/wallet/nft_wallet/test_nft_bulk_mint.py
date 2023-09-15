@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import asyncio
-from secrets import token_bytes
+import random
 from typing import Any, Dict
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -25,11 +23,11 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 
 
 async def nft_count(wallet: NFTWallet) -> int:
-    nfts = await wallet.nft_store.get_nft_list()
-    return len(nfts)
+    return await wallet.get_nft_count()
 
 
 @pytest.mark.parametrize(
@@ -37,7 +35,9 @@ async def nft_count(wallet: NFTWallet) -> int:
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_did(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -47,7 +47,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -102,7 +102,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.random(seeded_random).hex())]
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -113,7 +113,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
-        metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
+        metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -149,19 +149,25 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_did_rpc(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -191,36 +197,19 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -230,6 +219,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -255,11 +245,11 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -267,21 +257,26 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             for i in range(n)
         ]
         target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
-        royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
+        royalty_address = encode_puzzle_hash(bytes32.random(seeded_random), "xch")
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
         chunk = 5
         next_coin = funding_coin
-        did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
+        did_coin = (
+            await client.select_coins(amount=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=2)
+        )[0]
         did_lineage_parent = None
         spends = []
         nft_ids = set([])
         for i in range(0, n, chunk):
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -296,6 +291,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 did_lineage_parent=did_lineage_parent,
                 mint_from_did=True,
                 fee=fee,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -310,14 +306,12 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
@@ -340,12 +334,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -353,19 +343,25 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_did_rpc_no_royalties(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -395,36 +391,19 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -434,6 +413,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -458,11 +438,11 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -473,17 +453,22 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         royalty_address = None
         royalty_percentage = None
         required_amount = n
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
         chunk = 5
         next_coin = funding_coin
-        did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
+        did_coin = (
+            await client.select_coins(amount=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=2)
+        )[0]
         did_lineage_parent = None
         spends = []
 
         for i in range(0, n, chunk):
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_maker, timeout=20)
             resp: Dict[str, Any] = await client.nft_mint_bulk(
                 wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
@@ -497,6 +482,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
                 did_coin=did_coin.to_json_dict(),
                 did_lineage_parent=did_lineage_parent,
                 mint_from_did=True,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -510,26 +496,20 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         await time_out_assert(60, get_taker_nfts, n)
 
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -537,7 +517,9 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_did_multiple_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -548,7 +530,7 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -612,14 +594,18 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000)
-    xch_coins_2 = await wallet_maker.select_coins(amount=10000, exclude=xch_coins_1)
+    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
+    xch_coins_2 = await wallet_maker.select_coins(
+        amount=10000,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
+    )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
         metadata_list,
+        DEFAULT_TX_CONFIG,
         target_list=target_list,
         mint_number_start=1,
         mint_total=mint_total,
@@ -645,7 +631,9 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -655,7 +643,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -710,7 +698,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.random(seeded_random).hex())]
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -721,7 +709,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     target_list = [(await wallet_1.get_new_puzzlehash()) for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_xch(
-        metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
+        metadata_list, DEFAULT_TX_CONFIG, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -756,19 +744,25 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api: FullNodeSimulator = full_nodes[0]
-    bt = full_node_api.bt
+async def test_nft_mint_from_xch_rpc(
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
+) -> None:
+    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    full_node_api: FullNodeSimulator = full_node_service._api
     full_node_server = full_node_api.server
-    wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
+    wallet_node_maker = wallet_services[0]._node
+    wallet_node_taker = wallet_services[1]._node
+    server_0 = wallet_node_maker.server
+    server_1 = wallet_node_taker.server
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
     wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -798,36 +792,19 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
-    daemon_port = config["daemon_port"]
 
-    def stop_node_cb() -> None:
-        pass
+    assert wallet_services[0].rpc_server is not None
+    assert full_node_service.rpc_server is not None
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
+    client = await WalletRpcClient.create(
         self_hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+        wallet_services[0].rpc_server.listen_port,
+        wallet_services[0].root_path,
+        wallet_services[0].config,
     )
-
-    rpc_server = await start_rpc_server(
-        api_maker,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,  # type: ignore
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        self_hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(self_hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -837,6 +814,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
+    assert spend_bundle is not None
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
@@ -862,11 +840,11 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -874,11 +852,13 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             for i in range(n)
         ]
         target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
-        royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
+        royalty_address = encode_puzzle_hash(bytes32.random(seeded_random), "xch")
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
-        xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+        xch_coins = await client.select_coins(
+            amount=required_amount, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG, wallet_id=wallet_maker.id()
+        )
         funding_coin = xch_coins[0]
         assert funding_coin.amount >= required_amount
         funding_coin_dict = xch_coins[0].to_json_dict()
@@ -900,6 +880,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 xch_change_target=funding_coin_dict["puzzle_hash"],
                 mint_from_did=False,
                 fee=fee,
+                tx_config=DEFAULT_TX_CONFIG,
             )
             assert resp["success"]
             sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
@@ -911,14 +892,12 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         for sb in spends:
             resp = await client_node.push_tx(sb)
             assert resp["success"]
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-            await asyncio.sleep(2)
+            await full_node_api.process_spend_bundles([sb])
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         async def get_taker_nfts() -> int:
-            nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
-            return len(nfts)
+            return int((await api_taker.nft_count_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["count"])
 
         # We are using a long time out here because it can take a long time for the NFTs to show up
         # Even with only 10 NFTs it regularly takes longer than 30-40s for them to be found
@@ -941,12 +920,8 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
-        rpc_server.close()
-        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
-        await rpc_server.await_closed()
-        await rpc_server_node.await_closed()
 
 
 @pytest.mark.parametrize(
@@ -954,7 +929,9 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_xch_multiple_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -965,7 +942,7 @@ async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nod
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -1029,14 +1006,18 @@ async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nod
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000)
-    xch_coins_2 = await wallet_maker.select_coins(amount=10000, exclude=xch_coins_1)
+    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
+    xch_coins_2 = await wallet_maker.select_coins(
+        amount=10000,
+        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
+    )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_xch(
         metadata_list,
+        DEFAULT_TX_CONFIG,
         target_list=target_list,
         mint_number_start=1,
         mint_total=mint_total,

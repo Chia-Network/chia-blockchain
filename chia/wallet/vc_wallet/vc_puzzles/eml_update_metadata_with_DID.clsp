@@ -1,0 +1,80 @@
+; This is a TRANSFER_PROGRAM for use with exigent_metadata_layer.clsp
+
+; Given a DID's singleton struct, assert its announcement of any changes. If no DID's innerpuz is provided, then just
+; return the same metadata and transfer program with no conditions
+
+; This TP also allows metadata to be cleared and transfer program to be reset simultaneously, no DID required
+(mod
+  (
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_HASH
+    (provider_id . metadata)  ; Truth
+    conditions  ; Truth
+    ; tp_solution looks like this in the case of a DID update
+    (
+      provider_innerpuzhash
+      my_coin_id
+      new_metadata
+      new_transfer_program_hash
+    )
+    ; tp_solution could also be () or new_transfer_program_hash for two other cases:
+    ;  - () == continue with the same metadata we currently have
+    ;  - new_transfer_program_hash == update the transfer program to whatever, but clear the metadata
+  )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include sha256tree.clib)
+  (include utility_macros.clib)
+
+  (defconstant ONE 1)
+
+  (defun-inline create_did_puzhash
+    (
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_HASH
+      provider_id
+      provider_innerpuzhash
+    )
+
+    (curry_hashes_inline SINGLETON_MOD_HASH
+      ; calculate the singleton struct
+      (sha256 TWO
+        (sha256 ONE SINGLETON_MOD_HASH)
+        (sha256 TWO
+          (sha256 ONE provider_id)
+          (sha256 ONE SINGLETON_LAUNCHER_HASH)
+        )
+      )
+      provider_innerpuzhash
+    )
+  )
+
+  ; Returning (new_metadata new_transfer_program_hash conditions)
+  (if (l (f (r (r (r (r (r @)))))))  ; If a tp solution was provided
+      (list
+        (i new_metadata (c provider_id new_metadata) ())
+        new_transfer_program_hash
+        (list
+          (list ASSERT_MY_COIN_ID my_coin_id)
+          ; get an announcement from the DID in the EML's metadata to update to a new metadata and transfer program
+          (list ASSERT_PUZZLE_ANNOUNCEMENT
+            (sha256
+              (create_did_puzhash SINGLETON_MOD_HASH SINGLETON_LAUNCHER_HASH provider_id provider_innerpuzhash)
+              (sha256
+                my_coin_id
+                (sha256tree new_metadata)
+                new_transfer_program_hash
+              )
+            )
+          )
+        )
+      )
+      ; else - the tp_solution is an atom
+      (if (f (r (r (r (r (r @))))))  ; If a new_transfer_program_hash was provided
+          (list () (f (r (r (r (r (r @)))))) ())
+          ; else - No new TP was provided, continue with current metadata
+          (list (c provider_id metadata) () ())
+      )
+  )
+)

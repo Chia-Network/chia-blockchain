@@ -5,10 +5,11 @@ import json
 import ssl
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 
+from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -145,6 +146,12 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
+    async def get_keys_for_plotting(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
+        data = {"fingerprints": fingerprints} if fingerprints else {}
+        request = self.format_request("get_keys_for_plotting", data)
+        response = await self._get(request)
+        return response
+
 
 async def connect_to_daemon(
     self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext, heartbeat: int
@@ -215,6 +222,6 @@ async def acquire_connection_to_daemon(
         yield daemon  # <----
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-
-    if daemon is not None:
-        await daemon.close()
+    finally:
+        if daemon is not None:
+            await daemon.close()

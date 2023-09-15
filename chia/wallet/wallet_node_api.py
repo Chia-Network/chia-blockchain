@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -10,17 +12,14 @@ from chia.wallet.wallet_node import WalletNode
 
 
 class WalletNodeAPI:
+    log: logging.Logger
     wallet_node: WalletNode
 
     def __init__(self, wallet_node) -> None:
+        self.log = logging.getLogger(__name__)
         self.wallet_node = wallet_node
 
-    @property
-    def log(self):
-        return self.wallet_node.log
-
-    @property
-    def api_ready(self):
+    def ready(self) -> bool:
         return self.wallet_node.logged_in
 
     @api_request(peer_required=True)
@@ -45,7 +44,29 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        self.wallet_node.node_peaks[peer.peer_node_id] = (peak.height, peak.header_hash)
+        # For trusted peers check if there are untrusted peers, if so make sure to disconnect them if the trusted node
+        # is synced.
+        if self.wallet_node.is_trusted(peer):
+            full_node_connections = self.wallet_node.server.get_connections(NodeType.FULL_NODE)
+            untrusted_peers = [
+                peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer) and not peer.closed
+            ]
+
+            # Check for untrusted peers to avoid fetching the timestamp if not required
+            if len(untrusted_peers) > 0:
+                timestamp = await self.wallet_node.get_timestamp_for_height_from_peer(peak.height, peer)
+            else:
+                timestamp = None
+            if timestamp is not None and self.wallet_node.is_timestamp_in_sync(timestamp):
+                self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
+                # Stop peer discovery/connect tasks first
+                if self.wallet_node.wallet_peers is not None:
+                    await self.wallet_node.wallet_peers.ensure_is_closed()
+                    self.wallet_node.wallet_peers = None
+                # Then disconnect from all untrusted nodes
+                for untrusted_peer in untrusted_peers:
+                    await untrusted_peer.close()
+
         await self.wallet_node.new_peak_queue.new_peak_wallet(peak, peer)
 
     @api_request()
@@ -106,7 +127,7 @@ class WalletNodeAPI:
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ):
         if self.wallet_node.wallet_peers is not None:
-            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
+            await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), False)
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
@@ -117,7 +138,7 @@ class WalletNodeAPI:
             return None
 
         self.log.info(f"Wallet received {len(request.peer_list)} peers.")
-        await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), True)
+        await self.wallet_node.wallet_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
 
         return None
 

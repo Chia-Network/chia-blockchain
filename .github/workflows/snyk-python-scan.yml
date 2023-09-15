@@ -1,6 +1,8 @@
 name: 🚨 Snyk Python Scan
 on:
   push:
+    paths-ignore:
+    - '**.md'
     branches:
     - long_lived/**
     - main
@@ -8,6 +10,8 @@ on:
     tags:
     - '**'
   pull_request:
+    paths-ignore:
+    - '**.md'
     branches:
     - '**'
   workflow_dispatch:
@@ -34,7 +38,7 @@ jobs:
       run: |
         unset HAS_SNYK_SECRET
         if [ -n "$SNYK_TOKEN" ]; then HAS_SNYK_SECRET='true' ; fi
-        echo HAS_SNYK_SECRET=${HAS_SNYK_SECRET} >> $GITHUB_OUTPUT
+        echo HAS_SNYK_SECRET=${HAS_SNYK_SECRET} >> "$GITHUB_OUTPUT"
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 

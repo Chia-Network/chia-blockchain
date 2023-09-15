@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -30,11 +30,11 @@ class SpendBundle(Streamable):
     aggregated_signature: G2Element
 
     @property
-    def coin_solutions(self):
+    def coin_solutions(self) -> List[CoinSpend]:
         return self.coin_spends
 
     @classmethod
-    def aggregate(cls, spend_bundles) -> "SpendBundle":
+    def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         for bundle in spend_bundles:
@@ -60,15 +60,15 @@ class SpendBundle(Streamable):
     # TODO: this should be removed
     def fees(self) -> int:
         """Unsafe to use for fees validation!!!"""
-        amount_in = sum(_.amount for _ in self.removals())
-        amount_out = sum(_.amount for _ in self.additions())
+        amount_in = sum(coin.amount for coin in self.removals())
+        amount_out = sum(coin.amount for coin in self.additions())
 
         return amount_in - amount_out
 
     def name(self) -> bytes32:
         return self.get_hash()
 
-    def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
+    def debug(self, agg_sig_additional_data: bytes = DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA) -> None:
         debug_spend_bundle(self, agg_sig_additional_data)
 
     # TODO: this should be removed
@@ -113,4 +113,4 @@ class SpendBundle(Streamable):
             d["coin_solutions"] = d["coin_spends"]
         if exclude_modern_keys:
             del d["coin_spends"]
-        return recurse_jsonify(d)
+        return cast(Dict[str, Any], recurse_jsonify(d))

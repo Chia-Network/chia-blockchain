@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import importlib_metadata
+import importlib.metadata
+
 from pkg_resources import resource_filename
 
 __version__: str
 try:
-    __version__ = importlib_metadata.version("chia-blockchain")  # type: ignore[no-untyped-call]
-except importlib_metadata.PackageNotFoundError:
+    __version__ = importlib.metadata.version("chia-blockchain")
+except importlib.metadata.PackageNotFoundError:
     # package is not installed
     __version__ = "unknown"
 

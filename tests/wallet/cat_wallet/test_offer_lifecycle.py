@@ -16,14 +16,15 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 
 acs = Program.to(1)
@@ -60,7 +61,7 @@ async def generate_coins(
             if tail_str:
                 tail: Program = str_to_tail(tail_str)  # Making a fake but unique TAIL
                 cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
-                payments.append(Payment(cat_puzzle.get_tree_hash(), amount, []))
+                payments.append(Payment(cat_puzzle.get_tree_hash(), amount))
                 cat_bundles.append(
                     unsigned_spend_bundle_for_spendable_cats(
                         CAT_MOD,
@@ -75,7 +76,7 @@ async def generate_coins(
                     )
                 )
             else:
-                payments.append(Payment(acs_ph, amount, []))
+                payments.append(Payment(acs_ph, amount))
 
     # This bundle creates all of the initial coins
     parent_bundle = SpendBundle(
@@ -288,6 +289,7 @@ class TestOfferLifecycle:
                 },
                 {"xch": 900, str_to_tail_hash("red").hex(): 350},
                 driver_dict_as_infos,
+                ConditionValidTimes(),
             )
             assert new_offer.get_pending_amounts() == {
                 "xch": 1200,

@@ -13,7 +13,7 @@ jobs:
       status: ${{ steps.check-labels.outputs.status }}
     steps:
       - id: check-labels
-        uses: mheap/github-action-required-labels@v3
+        uses: mheap/github-action-required-labels@v5
         with:
           mode: exactly
           count: 1

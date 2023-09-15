@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import List
@@ -25,7 +26,7 @@ testnet10 = {
     "MIN_PLOT_SIZE": 18,
 }
 
-constants = DEFAULT_CONSTANTS.replace(**testnet10)
+constants = dataclasses.replace(DEFAULT_CONSTANTS, **testnet10)
 retire_bytes = (
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
     b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"

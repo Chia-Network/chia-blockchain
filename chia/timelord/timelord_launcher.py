@@ -6,14 +6,16 @@ import os
 import pathlib
 import signal
 import time
-from typing import Dict, List
+from types import FrameType
+from typing import Any, Dict, List, Optional
 
 import pkg_resources
 
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.network import get_host_addr
+from chia.util.misc import SignalHandlers
+from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 active_processes: List = []
@@ -51,7 +53,7 @@ async def spawn_process(host: str, port: int, counter: int, lock: asyncio.Lock, 
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            resolved = get_host_addr(host, prefer_ipv6=prefer_ipv6)
+            resolved = await resolve(host, prefer_ipv6=prefer_ipv6)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
@@ -94,24 +96,23 @@ async def spawn_all_processes(config: Dict, net_config: Dict, lock: asyncio.Lock
     await asyncio.gather(*awaitables)
 
 
-def signal_received(lock: asyncio.Lock):
-    asyncio.create_task(kill_processes(lock))
-
-
-async def async_main(config, net_config):
-    loop = asyncio.get_running_loop()
+async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
     lock = asyncio.Lock()
 
-    try:
-        loop.add_signal_handler(signal.SIGINT, signal_received, lock)
-        loop.add_signal_handler(signal.SIGTERM, signal_received, lock)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        await kill_processes(lock)
 
-    try:
-        await spawn_all_processes(config, net_config, lock)
-    finally:
-        log.info("Launcher fully closed.")
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
+
+        try:
+            await spawn_all_processes(config, net_config, lock)
+        finally:
+            log.info("Launcher fully closed.")
 
 
 def main():
