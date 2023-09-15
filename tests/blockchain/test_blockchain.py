@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 import multiprocessing
+import random
 import time
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from secrets import token_bytes
 from typing import List
 
 import pytest
@@ -1367,7 +1367,7 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt):
+    async def test_pool_target_contract(self, empty_blockchain, bt, seeded_random: random.Random):
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
@@ -1381,7 +1381,7 @@ class TestBlockHeaderValidation:
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(token_bytes(32))
+                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32.random(seeded_random)
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
                 new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)

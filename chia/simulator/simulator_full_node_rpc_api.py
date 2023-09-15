@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from secrets import token_bytes
 from typing import Dict, List
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -90,7 +89,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         new_blocks = int(str(_request.get("num_of_new_blocks", 1)))  # how many extra blocks should we add
         all_blocks = bool(_request.get("revert_all_blocks", False))  # fork all blocks
         use_random_seed = bool(_request.get("random_seed", True))  # randomize the seed to differentiate reorgs
-        random_seed = bytes32(token_bytes(32)) if use_random_seed else None
+        random_seed = bytes32.secret() if use_random_seed else None
         cur_height = self.service.blockchain.get_peak_height()
         if cur_height is None:
             raise ValueError("No blocks to revert")

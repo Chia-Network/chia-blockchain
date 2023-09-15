@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from secrets import token_bytes
+import random
 from typing import Any, Callable, Coroutine, Optional, Tuple
 
 import pytest
@@ -56,7 +56,7 @@ async def get_nft_count(wallet: NFTWallet) -> int:
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_sell_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -68,7 +68,7 @@ async def test_nft_offer_sell_nft(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -215,7 +215,7 @@ async def test_nft_offer_sell_nft(
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_request_nft(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -227,7 +227,7 @@ async def test_nft_offer_request_nft(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -372,7 +372,7 @@ async def test_nft_offer_request_nft(
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_sell_did_to_did(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -384,7 +384,7 @@ async def test_nft_offer_sell_did_to_did(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -552,7 +552,7 @@ async def test_nft_offer_sell_did_to_did(
 @pytest.mark.parametrize("zero_royalties", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_sell_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, zero_royalties: bool, seeded_random: random.Random
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -564,7 +564,7 @@ async def test_nft_offer_sell_nft_for_cat(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -754,7 +754,7 @@ async def test_nft_offer_sell_nft_for_cat(
 @pytest.mark.parametrize("test_change", [True, False])
 @pytest.mark.asyncio
 async def test_nft_offer_request_nft_for_cat(
-    self_hostname: str, two_wallet_nodes: Any, trusted: bool, test_change: bool
+    self_hostname: str, two_wallet_nodes: Any, trusted: bool, test_change: bool, seeded_random: random.Random
 ) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -766,7 +766,7 @@ async def test_nft_offer_request_nft_for_cat(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -966,7 +966,9 @@ async def test_nft_offer_request_nft_for_cat(
 )
 @pytest.mark.asyncio
 # @pytest.mark.skip
-async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_sell_cancel(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -974,7 +976,7 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -1089,7 +1091,9 @@ async def test_nft_offer_sell_cancel(self_hostname: str, two_wallet_nodes: Any, 
     [True],
 )
 @pytest.mark.asyncio
-async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_offer_sell_cancel_in_batch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -1098,7 +1102,7 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -1226,7 +1230,11 @@ async def test_nft_offer_sell_cancel_in_batch(self_hostname: str, two_wallet_nod
 )
 @pytest.mark.asyncio
 async def test_complex_nft_offer(
-    self_hostname: str, two_wallet_nodes: Any, trusted: Any, royalty_pts: Tuple[int, int, int]
+    self_hostname: str,
+    two_wallet_nodes: Any,
+    trusted: Any,
+    royalty_pts: Tuple[int, int, int],
+    seeded_random: random.Random,
 ) -> None:
     """
     This test is going to create an offer where the maker offers 1 NFT and 1 CAT for 2 NFTs, an XCH and a CAT
@@ -1243,7 +1251,7 @@ async def test_complex_nft_offer(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
