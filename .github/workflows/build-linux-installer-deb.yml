@@ -294,7 +294,7 @@ jobs:
 
     - name: Install and check version
       # TODO: check arm as well, but persistent runners mean we do not want to install
-      if: matrix.os.arch == "amd64"
+      if: matrix.os.arch == 'amd64'
       env:
         PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
       run: |
