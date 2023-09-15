@@ -17,7 +17,7 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (Resolve-Path -Path "build_scripts/pyinstaller.spec")
+$SPEC_FILE = (Resolve-Path -Path "pyinstaller.spec")
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"

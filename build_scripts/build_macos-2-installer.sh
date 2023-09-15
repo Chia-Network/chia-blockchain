@@ -24,7 +24,7 @@ sudo rm -rf dist
 mkdir dist
 
 echo "Create executables with pyinstaller"
-SPEC_FILE=$(realpath "build_scripts/pyinstaller.spec")
+SPEC_FILE=$(realpath "pyinstaller.spec")
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
