@@ -506,7 +506,12 @@ class TradeManager:
             )
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints, driver_dict, tx_config, solver, fee
+                offer_dict_no_ints,
+                driver_dict,
+                tx_config,
+                solver,
+                fee,
+                extra_conditions,
             )
 
             if potential_special_offer is not None:
@@ -822,6 +827,7 @@ class TradeManager:
         tx_config: TXConfig,
         solver: Solver,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
             if (
@@ -831,7 +837,7 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee, extra_conditions
                 )
             elif (
                 puzzle_info.check_type(
@@ -843,7 +849,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee, extra_conditions
                 )
         return None
 
