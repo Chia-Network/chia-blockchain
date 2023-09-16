@@ -285,14 +285,59 @@ jobs:
       run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-linux-rpm
 
-    - name: Install and check version
-      env:
-        PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
-      run: |
-        yum install -y "$PACKAGE_PATH"/chia-blockchain-cli-*.rpm
-        chia version
-        # TODO: check gui package as well?
-
     - name: Remove working files to exclude from cache
       run: |
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  test:
+    name: Test package installation ${{ matrix.distribution.name }}
+    runs-on: ${{ matrix.os }}
+    needs:
+    - build
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-latest]
+        distribution:
+        - name: amazonlinux:2
+          type: amazon
+          url: "docker://amazonlinux:2"
+        - name: centos:7
+          type: centos
+          url: "docker://centos:7"
+        - name: fedora:34
+          type: fedora
+          # (34, 3.9) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+34&start=0
+          url: "docker://fedora:34"
+        - name: fedora:35
+          type: fedora
+          # (35, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+35&start=0
+          url: "docker://fedora:35"
+        - name: fedora:36
+          type: fedora
+          # (36, 3.10) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+36&start=0
+          url: "docker://fedora:36"
+        - name: rockylinux:8
+          type: rocky
+          url: "docker://rockylinux:8"
+        - name: rockylinux:9
+          type: rocky
+          url: "docker://rockylinux:9"
+
+    steps:
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-linux-rpm-intel
+        path: packages
+
+    - name: Install package
+      run: |
+        yum install -y ./packages/chia-blockchain-cli-*.rpm
+        # TODO: check gui package as well?
+
+    - name: Run chia version
+      run: |
+        chia version

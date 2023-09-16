@@ -345,3 +345,59 @@ jobs:
       - name: Remove working files to exclude from cache
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  test:
+    name: Test package installation ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os:
+          - name: 11
+            matrix: 11
+            runs-on:
+              intel: macos-11
+          - name: 12
+            matrix: 12
+            runs-on:
+              intel: macos-12
+          - name: 13
+            matrix: 13
+            runs-on:
+              intel: macos-13
+              arm: [macos, arm64]
+        arch:
+          - name: ARM64
+            matrix: arm
+            artifact-name: m1
+          - name: Intel
+            matrix: intel
+            artifact-name: intel
+        exclude:
+          - os:
+              matrix: 11
+            arch:
+              matrix: arm
+          - os:
+              matrix: 12
+            arch:
+              matrix: arm
+
+    steps:
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
+        path: packages
+
+    - name: Install package
+      run: |
+        yum install -y ./packages/chia-blockchain-cli-*.rpm
+        # TODO: check gui package as well?
+
+    - name: Run chia version
+      run: |
+        chia version
