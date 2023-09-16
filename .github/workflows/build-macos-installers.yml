@@ -330,18 +330,6 @@ jobs:
         run:
           security delete-keychain signing_temp.keychain || true
 
-      - name: Mount .dmg and check version
-        env:
-          PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
-        run: |
-          hdiutil attach "$PACKAGE_PATH"/chia-*.dmg
-          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
-
-      - name: Detach .dmg
-        if: always()
-        run: |
-          hdiutil detach "/Volumes/Chia "*
-
       - name: Remove working files to exclude from cache
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
@@ -394,11 +382,21 @@ jobs:
         name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
         path: packages
 
-    - name: Install package
+    - name: Mount .dmg
+      env:
+        PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        yum install -y "${{ steps.download.outputs.download-path }}"/chia-blockchain-cli-*.rpm
-        # TODO: check gui package as well?
+        hdiutil attach "${{ steps.download.outputs.download-path }}"/chia-*.dmg
+
+    - name: Run chia version
+      run: |
+        "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" version
+
+    - name: Detach .dmg
+      if: always()
+      run: |
+        hdiutil detach "/Volumes/Chia "*
 
     - name: Run chia version
       run: |
