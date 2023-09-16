@@ -128,6 +128,12 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         ) -> Dict[str, Union[str, bool]]:
             return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
 
+        async def dao_get_rules(
+            self,
+            wallet_id: int,
+        ) -> Dict[str, Dict[str, int]]:
+            return {"rules": {"proposal_minimum": 100}}
+
         async def get_transaction(self, wallet_id: int, transaction_id: bytes32) -> TransactionRecord:
             return TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -156,11 +162,11 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     get_id_asserts = ["Treasury ID: 0xCAFEF00D"]
     run_cli_command_and_assert(capsys, root_dir, get_id_args, get_id_asserts)
 
-    get_balance_args = ["dao", "get_balance", FINGERPRINT_ARG, "-i 2"]
+    get_balance_args = ["dao", "balance", FINGERPRINT_ARG, "-i 2"]
     get_balance_asserts = ["XCH: 1.0", "0xCAFEF00D: 10000.0"]
     run_cli_command_and_assert(capsys, root_dir, get_balance_args, get_balance_asserts)
 
-    no_balance_args = ["dao", "get_balance", FINGERPRINT_ARG, "-i 3"]
+    no_balance_args = ["dao", "balance", FINGERPRINT_ARG, "-i 3"]
     no_balance_asserts = ["The DAO treasury currently has no funds"]
     run_cli_command_and_assert(capsys, root_dir, no_balance_args, no_balance_asserts)
 
@@ -169,6 +175,10 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         "Transaction submitted to nodes",
     ]
     run_cli_command_and_assert(capsys, root_dir, add_funds_args, add_funds_asserts)
+
+    rules_args = ["dao", "rules", FINGERPRINT_ARG, "-i 2"]
+    rules_asserts = "proposal_minimum: \t100"
+    run_cli_command_and_assert(capsys, root_dir, rules_args, rules_asserts)
 
 
 def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:

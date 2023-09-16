@@ -106,6 +106,16 @@ async def get_treasury_id(args: Dict[str, Any], wallet_rpc_port: Optional[int], 
         print(f"Treasury ID: {treasury_id}")
 
 
+async def get_rules(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+    wallet_id = args["wallet_id"]
+
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
+        res = await wallet_client.dao_get_rules(wallet_id=wallet_id)
+        rules = res["rules"]
+        for rule, val in rules.items():
+            print(f"{rule}: {val}")
+
+
 async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]

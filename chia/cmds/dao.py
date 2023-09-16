@@ -292,7 +292,7 @@ def dao_add_funds_cmd(
     asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
 
 
-@dao_cmd.command("get_balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
+@dao_cmd.command("balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -313,6 +313,29 @@ def dao_get_balance_cmd(
         "wallet_id": wallet_id,
     }
     asyncio.run(get_treasury_balance(extra_params, wallet_rpc_port, fingerprint))
+
+
+@dao_cmd.command("rules", short_help="Get the current rules governing the DAO", no_args_is_help=True)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
+@click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
+def dao_rules_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_id: int,
+) -> None:
+    from .dao_funcs import get_rules
+
+    extra_params = {
+        "wallet_id": wallet_id,
+    }
+    asyncio.run(get_rules(extra_params, wallet_rpc_port, fingerprint))
 
 
 # ----------------------------------------------------------------------------------------
