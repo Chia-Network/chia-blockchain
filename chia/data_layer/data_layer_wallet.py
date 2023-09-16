@@ -1170,6 +1170,7 @@ class DataLayerWallet:
         solver: Solver,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Offer:
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
@@ -1199,8 +1200,10 @@ class DataLayerWallet:
                 sign=False,
                 add_pending_singleton=False,
                 announce_new_state=True,
+                extra_conditions=extra_conditions,
             )
             fee_left_to_pay = uint64(0)
+            extra_conditions = tuple()
 
             assert txs[0].spend_bundle is not None
             dl_spend: CoinSpend = next(
