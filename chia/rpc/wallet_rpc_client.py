@@ -12,7 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -191,6 +191,7 @@ class WalletRpcClient(RpcClient):
         memos: Optional[List[str]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         if memos is None:
             send_dict: Dict = {
@@ -200,6 +201,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "puzzle_decorator": puzzle_decorator_override,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             }
         else:
             send_dict = {
@@ -210,6 +212,7 @@ class WalletRpcClient(RpcClient):
                 "memos": memos,
                 "puzzle_decorator": puzzle_decorator_override,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             }
         send_dict.update(tx_config.to_json_dict())
         res = await self.fetch("send_transaction", send_dict)
@@ -255,6 +258,7 @@ class WalletRpcClient(RpcClient):
         fee: int = 0,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         response = await self.fetch(
             "spend_clawback_coins",
@@ -263,6 +267,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "force": force,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             },
         )
         return response
@@ -293,6 +298,7 @@ class WalletRpcClient(RpcClient):
         puzzle_announcements: Optional[List[Announcement]] = None,
         wallet_id: Optional[int] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -306,6 +312,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
 
         if coin_announcements is not None and len(coin_announcements) > 0:
@@ -465,6 +472,7 @@ class WalletRpcClient(RpcClient):
         num_verification: int,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -472,6 +480,7 @@ class WalletRpcClient(RpcClient):
             "num_verifications_required": num_verification,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("did_update_recovery_ids", request)
         return response
@@ -490,6 +499,7 @@ class WalletRpcClient(RpcClient):
         coin_announcements: List[str],
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -497,6 +507,7 @@ class WalletRpcClient(RpcClient):
             "puzzle_announcements": puzzle_announcements,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("did_message_spend", request)
         return response
@@ -507,12 +518,14 @@ class WalletRpcClient(RpcClient):
         metadata: Dict,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "metadata": metadata,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("did_update_metadata", request)
         return response
@@ -556,6 +569,7 @@ class WalletRpcClient(RpcClient):
         puzhash: str,
         file_name: str,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -564,6 +578,7 @@ class WalletRpcClient(RpcClient):
             "puzhash": puzhash,
             "filename": file_name,
             "extra_conditions": list(extra_conditions),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("did_create_attest", request)
         return response
@@ -584,6 +599,7 @@ class WalletRpcClient(RpcClient):
         with_recovery: bool,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -592,6 +608,7 @@ class WalletRpcClient(RpcClient):
             "with_recovery_info": with_recovery,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("did_transfer_did", request)
         return response
@@ -619,6 +636,7 @@ class WalletRpcClient(RpcClient):
         p2_singleton_delay_time: Optional[uint64] = None,
         p2_singleton_delayed_ph: Optional[bytes32] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         request: Dict[str, Any] = {
             "wallet_type": "pool_wallet",
@@ -631,6 +649,7 @@ class WalletRpcClient(RpcClient):
             },
             "fee": fee,
             "extra_conditions": list(extra_conditions),
+            **timelock_info.to_json_dict(),
         }
         if p2_singleton_delay_time is not None:
             request["p2_singleton_delay_time"] = p2_singleton_delay_time
@@ -742,6 +761,7 @@ class WalletRpcClient(RpcClient):
         removals: Optional[List[Coin]] = None,
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         send_dict: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -749,6 +769,7 @@ class WalletRpcClient(RpcClient):
             "memos": memos if memos else [],
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         if amount is not None and inner_address is not None:
             send_dict["amount"] = amount
@@ -781,6 +802,7 @@ class WalletRpcClient(RpcClient):
         fee=uint64(0),
         validate_only: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {str(key): value for key, value in offer_dict.items()}
 
@@ -790,6 +812,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
@@ -817,12 +840,14 @@ class WalletRpcClient(RpcClient):
         solver: Dict[str, Any] = None,
         fee=uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TradeRecord:
         req = {
             "offer": offer.to_bech32(),
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         if solver is not None:
             req["solver"] = solver
@@ -876,6 +901,7 @@ class WalletRpcClient(RpcClient):
         fee=uint64(0),
         secure: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ):
         await self.fetch(
             "cancel_offer",
@@ -885,6 +911,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
 
@@ -897,6 +924,7 @@ class WalletRpcClient(RpcClient):
         cancel_all: bool = False,
         asset_id: Optional[bytes32] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> None:
         await self.fetch(
             "cancel_offers",
@@ -909,6 +937,7 @@ class WalletRpcClient(RpcClient):
                 "asset_id": None if asset_id is None else asset_id.hex(),
                 "extra_conditions": list(extra_conditions),
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
 
@@ -940,6 +969,7 @@ class WalletRpcClient(RpcClient):
         royalty_percentage=0,
         did_id=None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -958,6 +988,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("nft_mint_nft", request)
         return response
@@ -971,6 +1002,7 @@ class WalletRpcClient(RpcClient):
         fee,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -980,6 +1012,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("nft_add_uri", request)
         return response
@@ -1013,6 +1046,7 @@ class WalletRpcClient(RpcClient):
         fee,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1021,6 +1055,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("nft_transfer_nft", request)
         return response
@@ -1043,6 +1078,7 @@ class WalletRpcClient(RpcClient):
         fee,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1051,6 +1087,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("nft_set_nft_did", request)
         return response
@@ -1078,6 +1115,7 @@ class WalletRpcClient(RpcClient):
         mint_from_did: Optional[bool] = False,
         fee: Optional[int] = 0,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict:
         request = {
             "wallet_id": wallet_id,
@@ -1096,6 +1134,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("nft_mint_bulk", request)
         return response
@@ -1106,11 +1145,13 @@ class WalletRpcClient(RpcClient):
         root: bytes32,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Tuple[List[TransactionRecord], bytes32]:
         request = {
             "root": root.hex(),
             "fee": fee,
             "extra_conditions": list(extra_conditions),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("create_new_dl", request)
         txs: List[TransactionRecord] = [
@@ -1147,12 +1188,14 @@ class WalletRpcClient(RpcClient):
         new_root: bytes32,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         request = {
             "launcher_id": launcher_id.hex(),
             "new_root": new_root.hex(),
             "fee": fee,
             "extra_conditions": list(extra_conditions),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dl_update_root", request)
         return TransactionRecord.from_json_dict_convenience(response["tx_record"])
@@ -1161,11 +1204,16 @@ class WalletRpcClient(RpcClient):
         self,
         update_dictionary: Dict[bytes32, bytes32],
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         updates_as_strings: Dict[str, str] = {}
         for lid, root in update_dictionary.items():
             updates_as_strings[str(lid)] = str(root)
-        request = {"updates": updates_as_strings, "extra_conditions": list(extra_conditions)}
+        request = {
+            "updates": updates_as_strings,
+            "extra_conditions": list(extra_conditions),
+            **timelock_info.to_json_dict(),
+        }
         response = await self.fetch("dl_update_multiple", request)
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
 
@@ -1203,6 +1251,7 @@ class WalletRpcClient(RpcClient):
         urls: List[bytes],
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             path="dl_new_mirror",
@@ -1212,6 +1261,7 @@ class WalletRpcClient(RpcClient):
                 "urls": [url.decode("utf8") for url in urls],
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
@@ -1221,6 +1271,7 @@ class WalletRpcClient(RpcClient):
         coin_id: bytes32,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             path="dl_delete_mirror",
@@ -1228,6 +1279,7 @@ class WalletRpcClient(RpcClient):
                 "coin_id": coin_id.hex(),
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
@@ -1268,6 +1320,7 @@ class WalletRpcClient(RpcClient):
         amount: uint64,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> TransactionRecord:
         response = await self.fetch(
             "send_notification",
@@ -1277,6 +1330,7 @@ class WalletRpcClient(RpcClient):
                 "amount": amount,
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
+                **timelock_info.to_json_dict(),
             },
         )
         return TransactionRecord.from_json_dict_convenience(response["tx"])
@@ -1514,6 +1568,7 @@ class WalletRpcClient(RpcClient):
         target_address: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
         response = await self.fetch(
             "vc_mint",
@@ -1523,6 +1578,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
         return VCRecord.from_json_dict(response["vc_record"]), [
@@ -1546,6 +1602,7 @@ class WalletRpcClient(RpcClient):
         provider_inner_puzhash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             "vc_spend",
@@ -1559,6 +1616,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
@@ -1576,6 +1634,7 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             "vc_revoke",
@@ -1584,6 +1643,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "extra_conditions": list(extra_conditions),
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]

@@ -53,6 +53,7 @@ dev_dependencies = [
     "pytest==7.4.0",
     "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
+    "pytest-mock==3.11.1",
     "pytest-monitor==1.6.6; sys_platform == 'linux'",
     "pytest-xdist==3.3.1",
     "twine==4.0.2",

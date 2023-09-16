@@ -8,13 +8,11 @@ from blspy import G1Element, G2Element
 from chia_rs import serialized_length
 from chiabip158 import PyBIP158
 
-from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable, streamable
 
 
 def skip_list(buf: memoryview, skip_item: Callable[[memoryview], memoryview]) -> memoryview:
@@ -324,28 +322,3 @@ def header_block_from_block(
         header_block += bytes(transactions_info)
 
     return header_block
-
-
-@streamable
-@dataclass(frozen=True)
-class PlotFilterInfo(Streamable):
-    pos_ss_cc_challenge_hash: bytes32
-    cc_sp_hash: bytes32
-
-
-def plot_filter_info_from_block(buf: memoryview) -> PlotFilterInfo:
-    buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
-    buf = skip_uint128(buf)  # weight
-    buf = skip_uint32(buf)  # height
-    buf = skip_uint128(buf)  # total_iters
-    buf = skip_uint8(buf)  # signage_point_index
-    pos_ss_cc_challenge_hash = bytes32(buf[:32])
-    buf = skip_bytes32(buf)  # pos_ss_cc_challenge_hash
-    buf = skip_proof_of_space(buf)  # proof_of_space
-    # Optional[challenge_chain_sp_vdf]
-    if buf[0] == 0:
-        # This corresponds to the edge case of first sp (start of slot), where sp_iters == 0
-        return PlotFilterInfo(pos_ss_cc_challenge_hash, pos_ss_cc_challenge_hash)
-    buf = buf[1 + 32 + 8 :]  # optional, vdf info challenge, vdf info number_of_iterations
-    output = ClassgroupElement.from_bytes(buf[:100])
-    return PlotFilterInfo(pos_ss_cc_challenge_hash, output.get_hash())

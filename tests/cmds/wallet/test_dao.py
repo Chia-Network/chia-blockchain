@@ -177,7 +177,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     run_cli_command_and_assert(capsys, root_dir, add_funds_args, add_funds_asserts)
 
     rules_args = ["dao", "rules", FINGERPRINT_ARG, "-i 2"]
-    rules_asserts = "proposal_minimum: \t100"
+    rules_asserts = "proposal_minimum: 100"
     run_cli_command_and_assert(capsys, root_dir, rules_args, rules_asserts)
 
 

@@ -38,7 +38,7 @@ class TradeRecordOld(Streamable):
         formatted["status"] = TradeStatus(self.status).name
         offer_to_summarize: bytes = self.offer if self.taken_offer is None else self.taken_offer
         offer = Offer.from_bytes(offer_to_summarize)
-        offered, requested, infos = offer.summary()
+        offered, requested, infos, _ = offer.summary()
         formatted["summary"] = {
             "offered": offered,
             "requested": requested,

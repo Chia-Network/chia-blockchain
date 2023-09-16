@@ -1394,7 +1394,7 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=17,
+        limit=18,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,

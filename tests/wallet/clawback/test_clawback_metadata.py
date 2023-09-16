@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from secrets import token_bytes
+import random
 from typing import List, Tuple
 
 import pytest
@@ -24,6 +24,7 @@ async def test_is_recipient(
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
     self_hostname: str,
+    seeded_random: random.Random,
 ) -> None:
     full_nodes, wallets, _ = simulator_and_wallet
     full_node_api = full_nodes[0]
@@ -33,10 +34,10 @@ async def test_is_recipient(
     puzhash_1 = await wallet.get_new_puzzlehash()
     puzhash_2 = await wallet.get_new_puzzlehash()
     await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-    invalid_data = ClawbackMetadata(uint64(500), bytes32(token_bytes()), bytes32(token_bytes()))
+    invalid_data = ClawbackMetadata(uint64(500), bytes32.random(seeded_random), bytes32.random(seeded_random))
     both_data = ClawbackMetadata(uint64(500), puzhash_1, puzhash_2)
-    sender_data = ClawbackMetadata(uint64(500), puzhash_1, bytes32(token_bytes()))
-    recipient_data = ClawbackMetadata(uint64(500), bytes32(token_bytes()), puzhash_2)
+    sender_data = ClawbackMetadata(uint64(500), puzhash_1, bytes32.random(seeded_random))
+    recipient_data = ClawbackMetadata(uint64(500), bytes32.random(seeded_random), puzhash_2)
     # Test invalid metadata
     has_exception = False
     try:
