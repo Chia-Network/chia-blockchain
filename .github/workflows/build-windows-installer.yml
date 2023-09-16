@@ -403,5 +403,7 @@ jobs:
         Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
     - name: Run chia version
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
       run: |
         & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version
