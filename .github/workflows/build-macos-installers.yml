@@ -330,7 +330,7 @@ jobs:
         run:
           security delete-keychain signing_temp.keychain || true
 
-      - name: Install and check version
+      - name: Mount .dmg and check version
         env:
           PACKAGE_PATH: ${{ github.workspace }}/build_scripts/final_installer/
         run: |
@@ -340,7 +340,7 @@ jobs:
       - name: Detach .dmg
         if: always()
         run: |
-          hdiutil detach "/Volumes/Chia "* | true
+          hdiutil detach "/Volumes/Chia "*
 
       - name: Remove working files to exclude from cache
         run: |
