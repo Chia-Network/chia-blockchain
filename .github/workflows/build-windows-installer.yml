@@ -399,7 +399,7 @@ jobs:
         INSTALL_PATH: ${{ github.workspace }}\installed
       run: |
         dir ./packages/
-        $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
+        $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
         Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
     - name: Run chia version
