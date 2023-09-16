@@ -395,6 +395,7 @@ jobs:
 
     - name: Install package
       run: |
+        ls -l ./packages/
         yum install -y ./packages/chia-blockchain-cli-*.rpm
         # TODO: check gui package as well?
 

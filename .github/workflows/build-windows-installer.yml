@@ -398,6 +398,7 @@ jobs:
       env:
         INSTALL_PATH: ${{ github.workspace }}\installed
       run: |
+        dir ./packages/
         $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
         Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
