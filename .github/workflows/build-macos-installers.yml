@@ -397,7 +397,3 @@ jobs:
       if: always()
       run: |
         hdiutil detach "/Volumes/Chia "*
-
-    - name: Run chia version
-      run: |
-        chia version
