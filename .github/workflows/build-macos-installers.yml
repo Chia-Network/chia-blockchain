@@ -389,14 +389,15 @@ jobs:
     steps:
     - name: Download packages
       uses: actions/download-artifact@v3
+      id: download
       with:
         name: chia-installers-macos-dmg-${{ matrix.arch.artifact-name }}
         path: packages
 
     - name: Install package
       run: |
-        ls -l ./packages/
-        yum install -y ./packages/chia-blockchain-cli-*.rpm
+        ls -l "${{ steps.download.outputs.download-path }}"
+        yum install -y "${{ steps.download.outputs.download-path }}"/chia-blockchain-cli-*.rpm
         # TODO: check gui package as well?
 
     - name: Run chia version

@@ -338,14 +338,15 @@ jobs:
     steps:
     - name: Download packages
       uses: actions/download-artifact@v3
+      id: download
       with:
         name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
         path: packages
 
     - name: Install package
       run: |
-        ls -l ./packages/
-        apt install --yes packages/chia-blockchain-cli_*.deb
+        ls -l "${{ steps.download.outputs.download-path }}"
+        apt install --yes "${{ steps.download.outputs.download-path }}"/chia-blockchain-cli_*.deb
         # TODO: check gui package as well?
 
     - name: Run chia version
