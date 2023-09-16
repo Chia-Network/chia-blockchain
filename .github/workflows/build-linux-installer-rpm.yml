@@ -325,6 +325,18 @@ jobs:
         - name: rockylinux:9
           type: rocky
           url: "docker://rockylinux:9"
+        - name: build image
+          type: rocky
+          url: "chianetwork/rocky8-builder:latest"
+        exclude:
+          - distribution:
+              name: amazonlinux:2
+          - distribution:
+              name: centos:7
+          - distribution:
+              name: rockylinux:8
+          - distribution:
+              name: build image
 
     steps:
     - name: Download packages
