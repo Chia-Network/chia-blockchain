@@ -344,7 +344,7 @@ jobs:
 
     - name: Install package
       run: |
-        sudo apt install --yes packages/chia-blockchain-cli_*.deb
+        apt install --yes packages/chia-blockchain-cli_*.deb
         # TODO: check gui package as well?
 
     - name: Run chia version
