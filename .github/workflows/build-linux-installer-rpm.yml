@@ -327,7 +327,7 @@ jobs:
           url: "docker://rockylinux:9"
         - name: build image
           type: rocky
-          url: "chianetwork/rocky8-builder:latest"
+          url: "docker://chianetwork/rocky8-builder:latest"
         exclude:
           - distribution:
               name: amazonlinux:2
