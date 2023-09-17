@@ -1252,6 +1252,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
         else:
             new_value = timelock.timestamp
 
-        valid_times = replace(valid_times, **{final_property: new_value})
+        # the type is enforced above
+        valid_times = replace(valid_times, **{final_property: new_value})  # type: ignore[arg-type]
 
     return valid_times
