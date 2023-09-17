@@ -366,11 +366,11 @@ jobs:
             artifact-name: intel
         exclude:
           - os:
-              matrix: 11
+              matrix: 12
             arch:
               matrix: arm
           - os:
-              matrix: 12
+              matrix: 13
             arch:
               matrix: arm
 

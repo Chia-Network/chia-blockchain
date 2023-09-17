@@ -330,12 +330,16 @@ jobs:
           url: "docker://chianetwork/rocky8-builder:latest"
         exclude:
           - distribution:
+              # glibc version
               name: amazonlinux:2
           - distribution:
+              # glibc version
               name: centos:7
           - distribution:
+              # dependency
               name: rockylinux:8
           - distribution:
+              # dependency
               name: build image
 
     steps:
