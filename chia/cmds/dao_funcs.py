@@ -184,9 +184,10 @@ async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[i
 
 async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
     wallet_id = args["wallet_id"]
+    include_closed = args["include_closed"]
 
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        res = await wallet_client.dao_get_proposals(wallet_id=wallet_id)
+        res = await wallet_client.dao_get_proposals(wallet_id=wallet_id, include_closed=include_closed)
         proposals = res["proposals"]
         soft_close_length = res["soft_close_length"]
         print("############################")

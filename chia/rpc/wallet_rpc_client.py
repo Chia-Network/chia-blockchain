@@ -1454,8 +1454,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("dao_vote_on_proposal", request)
         return response
 
-    async def dao_get_proposals(self, wallet_id: int):
-        request: Dict[str, Any] = {"wallet_id": wallet_id}
+    async def dao_get_proposals(self, wallet_id: int, include_closed: bool = True):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "include_closed": include_closed}
         response = await self.fetch("dao_get_proposals", request)
         return response
 

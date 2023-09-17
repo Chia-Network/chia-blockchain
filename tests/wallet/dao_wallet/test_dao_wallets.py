@@ -1749,6 +1749,9 @@ async def test_dao_rpc_api(
         True,
     )
 
+    open_props = await api_0.dao_get_proposals({"wallet_id": dao_wallet_0_id, "include_closed": False})
+    assert len(open_props["proposals"]) == 1
+
     await api_0.dao_close_proposal({"wallet_id": dao_wallet_0_id, "proposal_id": prop.proposal_id.hex()})
     tx_queue = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
     await full_node_api.process_transaction_records(records=[tx for tx in tx_queue])
@@ -2146,6 +2149,9 @@ async def test_dao_rpc_client(
             lambda x: x["confirmed_wallet_balance"],
             100,
         )
+
+        open_props = await client_0.dao_get_proposals(dao_id_0, False)
+        assert len(open_props["proposals"]) == 1
 
         # close the update proposal
         proposal_id_hex = props["proposals"][1]["proposal_id"]

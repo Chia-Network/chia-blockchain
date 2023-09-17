@@ -189,6 +189,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         async def dao_get_proposals(
             self,
             wallet_id: int,
+            include_closed: bool = True,
         ) -> Dict[str, Union[bool, int, List[Any]]]:
             proposal = {
                 "proposal_id": "0xCAFEF00D",

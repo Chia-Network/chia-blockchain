@@ -2667,9 +2667,12 @@ class WalletRpcApi:
 
     async def dao_get_proposals(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
+        include_closed = request.get("include_closed", True)
         dao_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DAOWallet)
         assert dao_wallet is not None
         proposal_list = dao_wallet.dao_info.proposals_list
+        if not include_closed:
+            proposal_list = [prop for prop in proposal_list if not prop.closed]
         dao_rules = get_treasury_rules_from_puzzle(dao_wallet.dao_info.current_treasury_innerpuz)
         return {
             "success": True,
