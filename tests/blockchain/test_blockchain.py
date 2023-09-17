@@ -559,7 +559,11 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version, constants: ConsensusConstants):
         bt_high_iters = await create_block_tools_async(
-            constants=dataclasses.replace(constants, SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
+            constants=dataclasses.replace(
+                constants,
+                SUB_SLOT_ITERS_STARTING=uint64(2**12),
+                DIFFICULTY_STARTING=uint64(2**14),
+            ),
             keychain=keychain,
         )
         bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
