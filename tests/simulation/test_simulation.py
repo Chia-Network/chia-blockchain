@@ -22,21 +22,21 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsP
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
 test_constants_modified = dataclasses.replace(
     test_constants,
-    DIFFICULTY_STARTING=2**8,
+    DIFFICULTY_STARTING=uint64(2**8),
     DISCRIMINANT_SIZE_BITS=1024,
-    SUB_EPOCH_BLOCKS=140,
-    WEIGHT_PROOF_THRESHOLD=2,
-    WEIGHT_PROOF_RECENT_BLOCKS=350,
-    MAX_SUB_SLOT_BLOCKS=50,
-    NUM_SPS_SUB_SLOT=32,  # Must be a power of 2
-    EPOCH_BLOCKS=280,
-    SUB_SLOT_ITERS_STARTING=2**20,
+    SUB_EPOCH_BLOCKS=uint32(140),
+    WEIGHT_PROOF_THRESHOLD=uint8(2),
+    WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
+    MAX_SUB_SLOT_BLOCKS=uint32(50),
+    NUM_SPS_SUB_SLOT=uint32(32),  # Must be a power of 2
+    EPOCH_BLOCKS=uint32(280),
+    SUB_SLOT_ITERS_STARTING=uint64(2**20),
     NUMBER_ZERO_BITS_PLOT_FILTER=5,
 )
 
