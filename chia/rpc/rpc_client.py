@@ -54,6 +54,16 @@ class RpcClient:
         self.closing_task = None
         return self
 
+    @classmethod
+    @asynccontextmanager
+    async def create_as_context(cls: Type[_T_RpcClient], *args) -> AsyncIterator[RpcClient]:
+        client: RpcClient = await cls.create(*args)
+        try:
+            yield client
+        finally:
+            client.close()
+            await client.await_closed()
+
     async def fetch(self, path, request_json) -> Dict[str, Any]:
         async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
             response.raise_for_status()
@@ -89,24 +99,3 @@ class RpcClient:
     async def await_closed(self) -> None:
         if self.closing_task is not None:
             await self.closing_task
-
-
-@asynccontextmanager
-async def client_as_context_manager(
-    cls: Type[_T_RpcClient],
-    self_hostname: str,
-    port: uint16,
-    root_path: Path,
-    net_config: Dict[str, Any],
-) -> AsyncIterator[_T_RpcClient]:
-    rpc_client: _T_RpcClient = await cls.create(
-        self_hostname,
-        port,
-        root_path,
-        net_config,
-    )
-
-    yield rpc_client
-
-    rpc_client.close()
-    await rpc_client.await_closed()
