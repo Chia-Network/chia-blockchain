@@ -925,7 +925,10 @@ class Blockchain(BlockchainInterface):
                 reorg_chain[prev.height] = prev
                 curr = prev
 
+            count = 0
+            heights_from_db = []
             for ref_height in block.transactions_generator_ref_list:
+                count = count + 1
                 if ref_height in additional_height_dict:
                     if ref_height in additional_height_dict:
                         ref_block = additional_height_dict[ref_height]
@@ -940,10 +943,11 @@ class Blockchain(BlockchainInterface):
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(ref_block.transactions_generator)
                 else:
-                    [gen] = await self.block_store.get_generators_at([ref_height])
-                    if gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(gen)
+                    heights_from_db.append(ref_height)
+            refs_from_db = await self.block_store.get_generators_at(heights_from_db)
+            if refs_from_db is None or len(refs_from_db) != len(heights_from_db):
+                raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+            result.extend(refs_from_db)
 
         assert len(result) == len(ref_list)
         return BlockGenerator(block.transactions_generator, result, [])
