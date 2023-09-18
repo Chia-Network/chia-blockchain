@@ -340,6 +340,9 @@ jobs:
           matrix: intel
           artifact-name: amd64
 
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
     steps:
     - name: Download packages
       uses: actions/download-artifact@v3
