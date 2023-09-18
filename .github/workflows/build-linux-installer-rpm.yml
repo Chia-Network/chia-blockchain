@@ -346,7 +346,6 @@ jobs:
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
         yum install -y "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
-        # TODO: check gui package as well?
 
     - name: Run chia version
       run: |

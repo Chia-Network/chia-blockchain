@@ -348,11 +348,14 @@ jobs:
         name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
         path: packages
 
+    - name: Update apt repos
+      run: |
+        apt-get update --yes
+
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
         apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
-        # TODO: check gui package as well?
 
     - name: Run chia version
       run: |
