@@ -1241,7 +1241,7 @@ def validate_recent_blocks(
             if not adjusted:
                 assert prev_block_record is not None
                 prev_block_record = dataclasses.replace(
-                    prev_block_record, deficit=deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                    prev_block_record, deficit=uint8(deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                 )
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True

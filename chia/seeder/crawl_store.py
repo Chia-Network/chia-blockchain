@@ -10,7 +10,7 @@ from typing import Dict, List
 import aiosqlite
 
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ class CrawlStore:
         age_timestamp = int(max(peer.last_try_timestamp, peer.connected_timestamp))
         if age_timestamp == 0:
             age_timestamp = now - 1000
-        replaced = replace(peer, try_count=peer.try_count + 1, last_try_timestamp=now)
+        replaced = replace(peer, try_count=uint32(peer.try_count + 1), last_try_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)

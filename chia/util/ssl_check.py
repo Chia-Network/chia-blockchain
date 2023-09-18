@@ -143,15 +143,18 @@ def check_ssl(root_path: Path) -> None:
     certs_to_check, keys_to_check = get_all_ssl_file_paths(root_path)
     invalid_files = verify_ssl_certs_and_keys(certs_to_check, keys_to_check)
     if len(invalid_files):
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print("@             WARNING: UNPROTECTED SSL FILE!              @")
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        for path, actual_permissions, expected_permissions in invalid_files:
-            print(
+        lines = [
+            "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+            "@             WARNING: UNPROTECTED SSL FILE!              @",
+            "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@",
+            *(
                 get_ssl_perm_warning(path, actual_permissions, expected_permissions)
-            )  # lgtm [py/clear-text-logging-sensitive-data]
-        print("One or more SSL files were found with permission issues.")
-        print("Run the following to fix issues: chia init --fix-ssl-permissions")
+                for path, actual_permissions, expected_permissions in invalid_files
+            ),
+            "One or more SSL files were found with permission issues.",
+            "Run the following to fix issues: chia init --fix-ssl-permissions",
+        ]
+        print("\n".join(lines), file=sys.stderr)
 
 
 def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: int) -> Tuple[bool, bool]:
