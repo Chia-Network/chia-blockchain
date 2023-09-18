@@ -1399,7 +1399,6 @@ class BatchInsertBenchmarkCase:
         limit=24,
     ),
 )
-@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
