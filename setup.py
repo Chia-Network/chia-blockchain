@@ -109,7 +109,6 @@ kwargs = dict(
             "chia_data_layer_http = chia.data_layer.data_layer_server:main",
             "chia_data_layer_s3_plugin = chia.data_layer.s3_plugin_service:run_server",
         ],
-        "pytest11": ["chia_tests = chia._pytest_plugin"],
     },
     package_data={
         "chia": ["pyinstaller.spec"],

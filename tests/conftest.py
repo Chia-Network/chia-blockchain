@@ -375,6 +375,10 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
         raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
 
+    for item in items:
+        if benchmark_runner_fixture_name in getattr(item, "fixturenames", ()):
+            item.add_marker("benchmark")
+
 
 @pytest_asyncio.fixture(scope="function")
 async def node_with_params(request, blockchain_constants: ConsensusConstants):
