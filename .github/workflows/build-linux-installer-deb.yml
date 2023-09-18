@@ -297,7 +297,7 @@ jobs:
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
-    name: Test package installation ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: Test package installation ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
     - build
@@ -327,6 +327,11 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
           url: "docker://ubuntu:jammy"
+        mode:
+        - name: GUI
+          file: chia-blockchain_*.deb
+        - name: CLI
+          file: chia-blockchain-cli_*.deb
         arch:
         - name: ARM64
           matrix: arm
@@ -346,7 +351,7 @@ jobs:
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        apt install --yes "${{ steps.download.outputs.download-path }}"/chia-blockchain-cli_*.deb
+        apt install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
         # TODO: check gui package as well?
 
     - name: Run chia version

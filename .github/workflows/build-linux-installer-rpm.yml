@@ -290,7 +290,7 @@ jobs:
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
-    name: Test package installation ${{ matrix.distribution.name }}
+    name: Test package installation ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
     runs-on: ${{ matrix.os }}
     needs:
     - build
@@ -321,6 +321,11 @@ jobs:
         - name: build image
           type: rocky
           url: "docker://chianetwork/rocky8-builder:latest"
+        mode:
+        - name: GUI
+          file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
+        - name: CLI
+          file: chia-blockchain-cli-[0,1,2,3,4,5,6,7,8,9]*.rpm
         exclude:
           - distribution:
               # dependency
@@ -340,7 +345,7 @@ jobs:
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        yum install -y "${{ steps.download.outputs.download-path }}"/chia-blockchain-cli-*.rpm
+        yum install -y "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
         # TODO: check gui package as well?
 
     - name: Run chia version
