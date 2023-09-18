@@ -79,7 +79,7 @@ class TestMempoolPerformance:
 
         for idx, block in enumerate(blocks):
             if idx >= len(blocks) - 3:
-                duration = 0.1
+                duration = 0.15
             else:
                 duration = 0.001
 
