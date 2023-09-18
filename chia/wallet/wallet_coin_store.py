@@ -13,43 +13,11 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.lru_cache import LRUCache
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.query_filter import AmountFilter, FilterMode, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
-
-class FilterMode(IntEnum):
-    include = 1
-    exclude = 2
-
-
-@streamable
-@dataclass(frozen=True)
-class AmountFilter(Streamable):
-    values: List[uint64]
-    mode: uint8  # FilterMode
-
-    @classmethod
-    def include(cls, values: List[uint64]):
-        return cls(values, mode=uint8(FilterMode.include))
-
-    @classmethod
-    def exclude(cls, values: List[uint64]):
-        return cls(values, mode=uint8(FilterMode.exclude))
-
-
-@streamable
-@dataclass(frozen=True)
-class HashFilter(Streamable):
-    values: List[bytes32]
-    mode: uint8  # FilterMode
-
-    @classmethod
-    def include(cls, values: List[bytes32]):
-        return cls(values, mode=uint8(FilterMode.include))
-
-    @classmethod
-    def exclude(cls, values: List[bytes32]):
-        return cls(values, mode=uint8(FilterMode.exclude))
+unspent_range = UInt32Range(stop=uint32(0))
 
 
 class CoinRecordOrder(IntEnum):
@@ -61,7 +29,7 @@ class CoinRecordOrder(IntEnum):
 @dataclass(frozen=True)
 class GetCoinRecords(Streamable):
     offset: uint32 = uint32(0)
-    limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1)
+    limit: uint32 = uint32.MAXIMUM
     wallet_id: Optional[uint32] = None
     wallet_type: Optional[uint8] = None  # WalletType
     coin_type: Optional[uint8] = None  # CoinType
@@ -154,7 +122,9 @@ class WalletCoinStore:
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO coin_record ("
+                "coin_name, confirmed_height, spent_height, spent, coinbase, puzzle_hash, coin_parent, amount, "
+                "wallet_type, wallet_id, coin_type, metadata) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     name.hex(),
                     record.confirmed_block_height,
@@ -218,7 +188,7 @@ class WalletCoinStore:
         self,
         *,
         offset: uint32 = uint32(0),
-        limit: uint32 = uint32(uint32.MAXIMUM_EXCLUSIVE - 1),
+        limit: uint32 = uint32.MAXIMUM,
         wallet_id: Optional[uint32] = None,
         wallet_type: Optional[WalletType] = None,
         coin_type: Optional[CoinType] = None,
@@ -267,7 +237,7 @@ class WalletCoinStore:
 
         where_sql = "WHERE " + " AND ".join(conditions) if len(conditions) > 0 else ""
         order_sql = f"ORDER BY {order.name} {'DESC' if reverse else 'ASC'}, rowid"
-        limit_sql = f"LIMIT {offset}, {limit}" if offset > 0 or limit < uint32.MAXIMUM_EXCLUSIVE - 1 else ""
+        limit_sql = f"LIMIT {offset}, {limit}" if offset > 0 or limit < uint32.MAXIMUM else ""
         query_sql = f"{where_sql} {order_sql} {limit_sql}"
 
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -373,4 +343,10 @@ class WalletCoinStore:
                     (height,),
                 )
             ).close()
+        self.total_count_cache.cache.clear()
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute("DELETE FROM coin_record WHERE wallet_id=?", (wallet_id,))
+            await cursor.close()
         self.total_count_cache.cache.clear()

@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import WebServer, get_host_addr
+from chia.util.network import WebServer, resolve
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -188,7 +188,7 @@ class RpcServer:
             hostname=self_hostname,
             port=rpc_port,
             max_request_body_size=max_request_body_size,
-            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self._get_routes().items()],
             ssl_context=self.ssl_context,
             prefer_ipv6=self.prefer_ipv6,
         )
@@ -246,21 +246,21 @@ class RpcServer:
             raise RuntimeError("RpcServer is not started")
         return self.webserver.listen_port
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def _get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_connections": self.get_connections,
             "/open_connection": self.open_connection,
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
-            "/get_routes": self._get_routes,
+            "/get_routes": self.get_routes,
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
-            "routes": list(self.get_routes().keys()),
+            "routes": list(self._get_routes().keys()),
         }
 
     async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
@@ -276,7 +276,7 @@ class RpcServer:
     async def open_connection(self, request: Dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
-        target_node: PeerInfo = PeerInfo(str(get_host_addr(host, prefer_ipv6=self.prefer_ipv6)), uint16(int(port)))
+        target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect

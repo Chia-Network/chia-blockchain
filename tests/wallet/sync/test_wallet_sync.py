@@ -18,7 +18,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
 from chia.server.outbound_message import Message, make_msg
-from chia.simulator.block_tools import test_constants
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -31,6 +30,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
@@ -53,6 +53,7 @@ log = getLogger(__name__)
 
 
 class TestWalletSync:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_request_block_headers(self, simulator_and_wallet, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
@@ -154,6 +155,7 @@ class TestWalletSync:
         ],
         indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -205,8 +207,9 @@ class TestWalletSync:
         ],
         indirect=True,
     )
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname, blockchain_constants):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -234,7 +237,7 @@ class TestWalletSync:
             await full_node_api.full_node.add_block(all_blocks[-1])
 
         new_blocks = bt.get_consecutive_blocks(
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
+            blockchain_constants.WEIGHT_PROOF_RECENT_BLOCKS + 10, block_list_input=all_blocks
         )
         for i in range(base_num_blocks + 20, len(new_blocks)):
             await full_node_api.full_node.add_block(new_blocks[i])
@@ -287,6 +290,7 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -334,6 +338,7 @@ class TestWalletSync:
                 600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
             )
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname):
         num_blocks = 5
@@ -390,6 +395,7 @@ class TestWalletSync:
             await time_out_assert(60, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
             await time_out_assert(60, wallet.get_confirmed_balance, 0)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -514,7 +520,9 @@ class TestWalletSync:
             payees.append(Payment(payee_ph, uint64(i + 100)))
             payees.append(Payment(payee_ph, uint64(i + 200)))
 
-        tx: TransactionRecord = await wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -582,24 +590,26 @@ class TestWalletSync:
         assert len(response.coins) == 0
 
     @pytest.mark.asyncio
-    async def test_get_wp_fork_point(self, default_10000_blocks):
+    async def test_get_wp_fork_point(self, default_10000_blocks, blockchain_constants):
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
         wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
         wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
         wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
         wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
         wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
         wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
-        fork12 = get_wp_fork_point(test_constants, wp1, wp2)
-        fork13 = get_wp_fork_point(test_constants, wp3, wp1)
-        fork14 = get_wp_fork_point(test_constants, wp4, wp1)
-        fork23 = get_wp_fork_point(test_constants, wp3, wp2)
-        fork24 = get_wp_fork_point(test_constants, wp4, wp2)
-        fork34 = get_wp_fork_point(test_constants, wp3, wp4)
-        fork45 = get_wp_fork_point(test_constants, wp4, wp5)
-        fork16 = get_wp_fork_point(test_constants, wp1, wp6)
+        fork12 = get_wp_fork_point(blockchain_constants, wp1, wp2)
+        fork13 = get_wp_fork_point(blockchain_constants, wp3, wp1)
+        fork14 = get_wp_fork_point(blockchain_constants, wp4, wp1)
+        fork23 = get_wp_fork_point(blockchain_constants, wp3, wp2)
+        fork24 = get_wp_fork_point(blockchain_constants, wp4, wp2)
+        fork34 = get_wp_fork_point(blockchain_constants, wp3, wp4)
+        fork45 = get_wp_fork_point(blockchain_constants, wp4, wp5)
+        fork16 = get_wp_fork_point(blockchain_constants, wp1, wp6)
 
         # overlap between recent chain in wps, fork point is the tip of the shorter wp
         assert fork12 == wp1.recent_chain_data[-1].height
@@ -662,7 +672,7 @@ class TestWalletSync:
             (10, 10000000000, 1),  # everything is dust
             (10, 10000000000, 10000000000),  # max dust threshold, dust is same size so not filtered
             # Test with more coins
-            (100, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
+            (105, 1000000, 1),  # default filter level (1m mojos), default dust size (1)
         ],
     )
     async def test_dusted_wallet(
@@ -723,13 +733,13 @@ class TestWalletSync:
         payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
-
-        # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # The dust is only filtered at this point if spam_filter_after_n_txs is 0 and xch_spam_amount is > dust_value.
@@ -753,7 +763,7 @@ class TestWalletSync:
         log.info(f"all_unspent is {all_unspent}")
         small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance, DEFAULT_COIN_SELECTION_CONFIG))
 
         log.info(f"Small coin count is {small_unspent_count}")
         log.info(f"Wallet balance is {balance}")
@@ -783,11 +793,20 @@ class TestWalletSync:
             # This greatly speeds up the overall process
             if dust_remaining % 100 == 0 and dust_remaining != new_dust:
                 # construct and send tx
-                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+                )
                 await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+
+                # advance the chain and sync both wallets
+                await full_node_api.wait_transaction_records_entered_mempool([tx])
+                await full_node_api.wait_for_wallets_synced(
+                    wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20
+                )
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-                last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-                assert last_block is not None
+                await full_node_api.wait_for_wallets_synced(
+                    wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20
+                )
                 # reset payees
                 payees = []
 
@@ -796,14 +815,16 @@ class TestWalletSync:
         # Only need to create tx if there was new dust to be added
         if new_dust >= 1:
             # construct and send tx
-            tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+            tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+            )
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
             # advance the chain and sync both wallets
+            await full_node_api.wait_transaction_records_entered_mempool([tx])
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-            assert last_block is not None
-            await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=60)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
         all_unspent: Set[
@@ -843,13 +864,15 @@ class TestWalletSync:
             payees.append(Payment(payee_ph, uint64(xch_spam_amount)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -882,13 +905,15 @@ class TestWalletSync:
         payees.append(Payment(payee_ph, uint64(dust_value)))
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -941,13 +966,15 @@ class TestWalletSync:
                 large_dust_balance += dust_value
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -977,13 +1004,15 @@ class TestWalletSync:
         payees = [Payment(payee_ph, uint64(balance))]
 
         # construct and send tx
-        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -1020,24 +1049,33 @@ class TestWalletSync:
             # This greatly speeds up the overall process
             if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
                 # construct and send tx
-                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+                tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+                    uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+                )
                 await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+                await full_node_api.wait_transaction_records_entered_mempool([tx])
+                await full_node_api.wait_for_wallets_synced(
+                    wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20
+                )
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-                last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-                assert last_block is not None
+                await full_node_api.wait_for_wallets_synced(
+                    wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20
+                )
                 # reset payees
                 payees = []
 
             coins_remaining -= 1
 
         # construct and send tx
-        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -1060,13 +1098,15 @@ class TestWalletSync:
         payees = [Payment(payee_ph, uint64(1))]
 
         # construct and send tx
-        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        tx: TransactionRecord = await dust_wallet.generate_signed_transaction(
+            uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees
+        )
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
         # advance the chain and sync both wallets
+        await full_node_api.wait_transaction_records_entered_mempool([tx])
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
-        assert last_block is not None
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Obtain and log important values
@@ -1108,16 +1148,17 @@ class TestWalletSync:
                 ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
-        farm_sb = await farm_nft_wallet.generate_new_nft(metadata)
+        farm_sb = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
         assert farm_sb
 
         # ensure hints are generated
         assert compute_memos(farm_sb)
-        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
 
         # Farm a new block
+        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
-        await time_out_assert(30, farm_wallet_node.wallet_state_manager.lock.locked, False)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
@@ -1136,18 +1177,19 @@ class TestWalletSync:
         txs = await farm_nft_wallet.generate_signed_transaction(
             [uint64(nft_coins[0].coin.amount)],
             [dust_ph],
+            DEFAULT_TX_CONFIG,
             coins={nft_coins[0].coin},
         )
         assert len(txs) == 1
         assert txs[0].spend_bundle is not None
         await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
-        await time_out_assert_not_none(
-            15, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
-        )
         assert compute_memos(txs[0].spend_bundle)
 
         # Farm a new block.
+        await full_node_api.wait_transaction_records_entered_mempool(txs)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
         # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
@@ -1272,7 +1314,9 @@ class TestWalletSync:
 
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
-            tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
+            tx = await wallet.generate_signed_transaction(
+                1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
+            )
             await wallet_node.wallet_state_manager.add_pending_transaction(tx)
 
             async def tx_in_mempool():
@@ -1290,15 +1334,18 @@ class TestWalletSync:
             assert not wallet_node.db_flaky
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname):
+    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname, blockchain_constants):
         full_nodes, wallets, bt = two_wallet_nodes
         wallet_node, wallet_server = wallets[0]
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         blocks = default_1000_blocks
-        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
+            blocks, blockchain_constants
+        )
+        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
 
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
@@ -1341,6 +1388,7 @@ class TestWalletSync:
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
 
 
+@pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet, default_1000_blocks, default_400_blocks, self_hostname, caplog

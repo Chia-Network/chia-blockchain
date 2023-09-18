@@ -16,7 +16,7 @@ def parse_blob(input_bytes: bytes) -> Tuple[bytes, bytes]:
     size = int.from_bytes(size_bytes, "big")
     message_bytes = input_bytes[:size]
     input_bytes = input_bytes[size:]
-    return message_bytes, input_bytes
+    return (message_bytes, input_bytes)
 
 
 def test_protocol_bytes() -> None:
@@ -489,5 +489,15 @@ def test_protocol_bytes() -> None:
     message_92 = type(respond_compact_proof_of_time).from_bytes(message_bytes)
     assert message_92 == respond_compact_proof_of_time
     assert bytes(message_92) == bytes(respond_compact_proof_of_time)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message_93 = type(error_without_data).from_bytes(message_bytes)
+    assert message_93 == error_without_data
+    assert bytes(message_93) == bytes(error_without_data)
+
+    message_bytes, input_bytes = parse_blob(input_bytes)
+    message_94 = type(error_with_data).from_bytes(message_bytes)
+    assert message_94 == error_with_data
+    assert bytes(message_94) == bytes(error_with_data)
 
     assert input_bytes == b""

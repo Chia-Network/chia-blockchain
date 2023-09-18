@@ -1,14 +1,14 @@
 (mod (SINGLETON_STRUCT INNER_PUZZLE lineage_proof my_amount inner_solution)
 
-;; SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+  ;; SINGLETON_STRUCT = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
 
-; SINGLETON_STRUCT, INNER_PUZZLE are curried in by the wallet
+  ; SINGLETON_STRUCT, INNER_PUZZLE are curried in by the wallet
 
-; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+  ; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
 
-; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
-; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
+  ; This puzzle is a wrapper around an inner smart puzzle which guarantees uniqueness.
+  ; It takes its singleton identity from a coin with a launcher puzzle which guarantees that it is unique.
 
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
@@ -16,10 +16,10 @@
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree1 (TREE)
-      (if (l TREE)
-          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-          (sha256 1 TREE)
-      )
+    (if (l TREE)
+        (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+        (sha256 1 TREE)
+    )
   )
 
   ; "assert" is a macro that wraps repeated instances of "if"
@@ -41,17 +41,17 @@
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
-     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
-                                      inner_puzzle_hash
-                                      (sha256tree1 SINGLETON_STRUCT)
-     )
+    (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree1 SINGLETON_STRUCT)
+    )
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a singleton
   (defun create_my_ID (SINGLETON_STRUCT full_puzzle_hash parent_parent parent_inner_puzzle_hash parent_amount my_amount)
     (sha256 (sha256 parent_parent (calculate_full_puzzle_hash SINGLETON_STRUCT parent_inner_puzzle_hash) parent_amount)
-            full_puzzle_hash
-            my_amount)
+      full_puzzle_hash
+    my_amount)
   )
 
   ;; take a boolean and a non-empty list of conditions
@@ -60,8 +60,8 @@
   ;; pretty sneaky, eh?
   (defun strip_first_condition_if (boolean condition_list)
     (if boolean
-      (r condition_list)
-      condition_list
+        (r condition_list)
+        condition_list
     )
   )
 
@@ -80,8 +80,8 @@
   ;; Returns a (bool . bool)
   (defun odd_cons_m113 (output_amount)
     (c
-      (= (logand output_amount 1) 1) ;; is it odd?
-      (= output_amount -113) ;; is it the escape value?
+      (= (logand output_amount 1) 1)  ;; is it odd?
+      (= output_amount -113)  ;; is it the escape value?
     )
   )
 
@@ -97,29 +97,29 @@
   (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
     (if conditions
         (morph_next_condition SINGLETON_STRUCT conditions has_odd_output_been_found (odd_cons_m113 (created_coin_value_or_0 (f conditions))))
-          (if has_odd_output_been_found
-              0
-              (x)  ;; no odd output found
-          )
+        (if has_odd_output_been_found
+            0
+            (x)  ;; no odd output found
         )
-   )
+    )
+  )
 
-   ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `is_output_m113`
-   ;; precalculated
-   (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . is_output_m113))
-       (assert
-          (not (all is_output_odd has_odd_output_been_found))
-          (strip_first_condition_if
-             is_output_m113
-             (c (if is_output_odd
-                    (morph_condition (f conditions) SINGLETON_STRUCT)
-                    (f conditions)
-                )
-                (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any is_output_odd has_odd_output_been_found))
-             )
+  ;; a continuation of `check_and_morph_conditions_for_singleton` with booleans `is_output_odd` and `is_output_m113`
+  ;; precalculated
+  (defun morph_next_condition (SINGLETON_STRUCT conditions has_odd_output_been_found (is_output_odd . is_output_m113))
+    (assert
+      (not (all is_output_odd has_odd_output_been_found))
+      (strip_first_condition_if
+        is_output_m113
+        (c (if is_output_odd
+               (morph_condition (f conditions) SINGLETON_STRUCT)
+               (f conditions)
           )
+          (check_and_morph_conditions_for_singleton SINGLETON_STRUCT (r conditions) (any is_output_odd has_odd_output_been_found))
+        )
       )
-   )
+    )
+  )
 
   ; this final stager asserts our ID
   ; it also runs the innerpuz with the innersolution with the "truths" added
@@ -171,7 +171,7 @@
   ; if our value is not an odd amount then we are invalid
   ; this calculates my_innerpuzhash and passes all values to stager_one
   (if (logand my_amount 1)
-    (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
-    (x)
+      (stager_one SINGLETON_STRUCT lineage_proof (sha256tree1 INNER_PUZZLE) my_amount INNER_PUZZLE inner_solution)
+      (x)
   )
 )

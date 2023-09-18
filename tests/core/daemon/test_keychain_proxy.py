@@ -19,7 +19,7 @@ TEST_KEY_3 = KeyData.generate(label="☕️🍬")
 
 @pytest_asyncio.fixture(scope="function")
 async def keychain_proxy(get_b_tools: BlockTools) -> AsyncGenerator[KeychainProxy, None]:
-    async for daemon in setup_daemon(btools=get_b_tools):
+    async with setup_daemon(btools=get_b_tools) as daemon:
         log = logging.getLogger("keychain_proxy_fixture")
         keychain_proxy = await connect_to_keychain_and_validate(daemon.root_path, log)
         assert keychain_proxy is not None

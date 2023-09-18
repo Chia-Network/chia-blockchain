@@ -23,20 +23,20 @@
   ;; Note that `(c (q . P) E)` = `(c . ((q . P) . (E . 0)))`
 
   (defun-inline update-hash-for-parameter-hash (parameter-hash environment-hash)
-     (sha256 TWO (sha256 ONE C_KW)
-                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) parameter-hash)
-                             (sha256 TWO environment-hash (sha256 ONE 0))))
+    (sha256 TWO (sha256 ONE C_KW)
+      (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) parameter-hash)
+    (sha256 TWO environment-hash (sha256 ONE 0))))
   )
 
   ;; This function recursively calls `update-hash-for-parameter-hash`, updating `environment-hash`
   ;; along the way.
 
   (defun build-curry-list (reversed-curry-parameter-hashes environment-hash)
-     (if reversed-curry-parameter-hashes
-         (build-curry-list (r reversed-curry-parameter-hashes)
-                           (update-hash-for-parameter-hash (f reversed-curry-parameter-hashes) environment-hash))
-         environment-hash
-     )
+    (if reversed-curry-parameter-hashes
+        (build-curry-list (r reversed-curry-parameter-hashes)
+        (update-hash-for-parameter-hash (f reversed-curry-parameter-hashes) environment-hash))
+        environment-hash
+    )
   )
 
   ;; Given the tree hash `environment-hash` of an environment tree E
@@ -49,9 +49,9 @@
   ;; Note that `(a (q . F) E)` = `(a . ((q . F)  . (E . 0)))`
 
   (defun-inline tree-hash-of-apply (function-hash environment-hash)
-     (sha256 TWO (sha256 ONE A_KW)
-                 (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) function-hash)
-                             (sha256 TWO environment-hash (sha256 ONE 0))))
+    (sha256 TWO (sha256 ONE A_KW)
+      (sha256 TWO (sha256 TWO (sha256 ONE Q_KW) function-hash)
+    (sha256 TWO environment-hash (sha256 ONE 0))))
   )
 
   ;; DO NOT USE THIS FUNCTION GOING FORWARD. Having to pass the arguments in reverse order is stupid.
@@ -76,8 +76,8 @@
 
   ;; DO NOT USE
   (defun puzzle-hash-of-curried-function (function-hash . reversed-curry-parameter-hashes)
-     (tree-hash-of-apply function-hash
-                         (build-curry-list reversed-curry-parameter-hashes (sha256 ONE ONE)))
+    (tree-hash-of-apply function-hash
+    (build-curry-list reversed-curry-parameter-hashes (sha256 ONE ONE)))
   )
 
   (defconstant b32 32)
@@ -88,15 +88,15 @@
 
   (defun calculate_coin_id (parent puzzlehash amount)
     (if (all (size_b32 parent) (size_b32 puzzlehash) (> amount -1))
-      (sha256 parent puzzlehash amount)
-      (x)
+        (sha256 parent puzzlehash amount)
+        (x)
     )
   )
 
   ; takes a lisp tree and returns the hash of it
   (defun sha256tree (TREE)
-        (if (l TREE)
-            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-            (sha256 1 TREE)))
+    (if (l TREE)
+        (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+  (sha256 1 TREE)))
 
 )

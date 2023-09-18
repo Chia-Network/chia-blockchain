@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import dataclasses
 import json
 import logging
 import os
@@ -8,7 +10,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast, final
 
 import aiohttp
 
@@ -20,6 +22,7 @@ from chia.data_layer.data_layer_util import (
     Layer,
     Offer,
     OfferStore,
+    PluginRemote,
     PluginStatus,
     Proof,
     ProofOfInclusion,
@@ -35,7 +38,13 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.data_layer.download_data import (
+    delete_full_file_if_exists,
+    get_delta_filename,
+    get_full_tree_filename,
+    insert_from_delta_file,
+    write_files_for_root,
+)
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -47,34 +56,46 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
-async def get_plugin_info(url: str) -> Tuple[str, Dict[str, Any]]:
+async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Dict[str, Any]]:
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url + "/plugin_info", json={}) as response:
+            async with session.post(
+                plugin_remote.url + "/plugin_info",
+                json={},
+                headers=plugin_remote.headers,
+            ) as response:
                 ret = {"status": response.status}
                 if response.status == 200:
                     ret["response"] = json.loads(await response.text())
-                return url, ret
+                return plugin_remote, ret
     except aiohttp.ClientError as e:
-        return url, {"error": f"ClientError: {e}"}
+        return plugin_remote, {"error": f"ClientError: {e}"}
 
 
+@final
+@dataclasses.dataclass
 class DataLayer:
-    data_store: DataStore
     db_path: Path
     config: Dict[str, Any]
+    root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
+    downloaders: List[PluginRemote]
+    uploaders: List[PluginRemote]
+    maximum_full_file_count: int
+    server_files_location: Path
+    _server: Optional[ChiaServer] = None
+    none_bytes: bytes32 = bytes32([0] * 32)
+    initialized: bool = False
+    _data_store: Optional[DataStore] = None
     state_changed_callback: Optional[StateChangedProtocol] = None
-    wallet_id: uint64
-    initialized: bool
-    none_bytes: bytes32
-    lock: asyncio.Lock
-    _server: Optional[ChiaServer]
-    downloaders: List[str]
-    uploaders: List[str]
+    _shut_down: bool = False
+    periodically_manage_data_task: Optional[asyncio.Task[None]] = None
+    _wallet_rpc: Optional[WalletRpcClient] = None
+    subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
 
     @property
     def server(self) -> ChiaServer:
@@ -85,38 +106,69 @@ class DataLayer:
 
         return self._server
 
-    def __init__(
-        self,
+    @property
+    def data_store(self) -> DataStore:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._data_store is None:
+            raise RuntimeError("data_store not assigned")
+
+        return self._data_store
+
+    @property
+    def wallet_rpc(self) -> WalletRpcClient:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._wallet_rpc is None:
+            raise RuntimeError("wallet_rpc not assigned")
+
+        return self._wallet_rpc
+
+    @classmethod
+    def create(
+        cls,
         config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
-        downloaders: List[str],
-        uploaders: List[str],  # dont add FilesystemUploader to this, it is the default uploader
+        downloaders: List[PluginRemote],
+        uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
-    ):
+    ) -> DataLayer:
         if name == "":
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-        self.initialized = False
-        self.config = config
-        self.connection = None
-        self.wallet_rpc_init = wallet_rpc_init
-        self.log = logging.getLogger(name if name is None else __name__)
-        self._shut_down: bool = False
-        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(root_path, db_path_replaced)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
-        self.server_files_location = path_from_root(root_path, server_files_replaced)
+
+        db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
+
+        self = cls(
+            config=config,
+            root_path=root_path,
+            wallet_rpc_init=wallet_rpc_init,
+            log=logging.getLogger(name if name is None else __name__),
+            db_path=path_from_root(root_path, db_path_replaced),
+            server_files_location=path_from_root(root_path, server_files_replaced),
+            downloaders=downloaders,
+            uploaders=uploaders,
+            maximum_full_file_count=config.get("maximum_full_file_count", 1),
+        )
+
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
-        self.none_bytes = bytes32([0] * 32)
-        self.lock = asyncio.Lock()
-        self._server = None
-        self.downloaders = downloaders
-        self.uploaders = uploaders
+
+        return self
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
@@ -131,26 +183,41 @@ class DataLayer:
         self._server = server
 
     async def _start(self) -> None:
-        self.data_store = await DataStore.create(database=self.db_path)
-        self.wallet_rpc = await self.wallet_rpc_init
-        self.subscription_lock: asyncio.Lock = asyncio.Lock()
+        sql_log_path: Optional[Path] = None
+        if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/data_sql.log")
+            self.log.info(f"logging SQL commands to {sql_log_path}")
 
-        self.periodically_manage_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_manage_data())
+        self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
+        self._wallet_rpc = await self.wallet_rpc_init
+
+        self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
         self._shut_down = True
-        self.wallet_rpc.close()
+        if self._wallet_rpc is not None:
+            self.wallet_rpc.close()
 
     async def _await_closed(self) -> None:
-        if self.connection is not None:
-            await self.connection.close()
-        try:
-            self.periodically_manage_data_task.cancel()
-        except asyncio.CancelledError:
-            pass
-        await self.data_store.close()
-        await self.wallet_rpc.await_closed()
+        if self.periodically_manage_data_task is not None:
+            try:
+                self.periodically_manage_data_task.cancel()
+            except asyncio.CancelledError:
+                pass
+        if self._data_store is not None:
+            await self.data_store.close()
+        if self._wallet_rpc is not None:
+            await self.wallet_rpc.await_closed()
+
+    async def wallet_log_in(self, fingerprint: int) -> int:
+        result = await self.wallet_rpc.log_in(fingerprint)
+        if not result.get("success", False):
+            wallet_error = result.get("error", "no error message provided")
+            raise Exception(f"DataLayer wallet RPC log in request failed: {wallet_error}")
+
+        fingerprint = cast(int, result["fingerprint"])
+        return fingerprint
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
@@ -176,10 +243,9 @@ class DataLayer:
         tree_id: bytes32,
         changelist: List[Dict[str, Any]],
     ) -> bytes32:
+        await self._update_confirmation_status(tree_id=tree_id)
+
         async with self.data_store.transaction():
-            # Make sure we update based on the latest confirmed root.
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=tree_id)
             pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
             if pending_root is not None:
                 raise Exception("Already have a pending root waiting for confirmation.")
@@ -206,9 +272,8 @@ class DataLayer:
         tree_id: bytes32,
         fee: uint64,
     ) -> TransactionRecord:
-        # Make sure we update based on the latest confirmed root.
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
+
         pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
@@ -228,16 +293,16 @@ class DataLayer:
         key: bytes,
         root_hash: Optional[bytes32] = None,
     ) -> bytes32:
+        await self._update_confirmation_status(tree_id=store_id)
+
         async with self.data_store.transaction():
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=store_id)
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> Optional[bytes]:
+        await self._update_confirmation_status(tree_id=store_id)
+
         async with self.data_store.transaction():
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=store_id)
             res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
             if res is None:
                 self.log.error("Failed to fetch key")
@@ -245,22 +310,21 @@ class DataLayer:
             return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
+
         res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
 
     async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
+
         res = await self.data_store.get_keys(store_id, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
@@ -274,8 +338,7 @@ class DataLayer:
         return latest
 
     async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
@@ -299,8 +362,6 @@ class DataLayer:
         async with self.data_store.transaction():
             try:
                 root = await self.data_store.get_tree_root(tree_id=tree_id)
-            except asyncio.CancelledError:
-                raise
             except Exception:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -361,8 +422,7 @@ class DataLayer:
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
 
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
 
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
@@ -419,19 +479,21 @@ class DataLayer:
                         f"Root hash saved: {singleton_record.root}."
                     )
                     break
-            except asyncio.CancelledError:
-                raise
             except aiohttp.client_exceptions.ClientConnectorError:
                 self.log.warning(f"Server {url} unavailable for {tree_id}.")
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {tree_id}: {e} {traceback.format_exc()}.")
 
-    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[str]:
+    async def get_downloader(self, tree_id: bytes32, url: str) -> Optional[PluginRemote]:
         request_json = {"store_id": tree_id.hex(), "url": url}
         for d in self.downloaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(d + "/handle_download", json=request_json) as response:
+                    async with session.post(
+                        d.url + "/handle_download",
+                        json=request_json,
+                        headers=d.headers,
+                    ) as response:
                         res_json = await response.json()
                         if res_json["handle_download"]:
                             return d
@@ -439,22 +501,39 @@ class DataLayer:
                     self.log.error(f"get_downloader could not get response: {type(e).__name__}: {e}")
         return None
 
+    async def clean_old_full_tree_files(
+        self, foldername: Path, tree_id: bytes32, full_tree_first_publish_generation: int
+    ) -> None:
+        for generation in range(full_tree_first_publish_generation - 1, 0, -1):
+            root = await self.data_store.get_tree_root(tree_id=tree_id, generation=generation)
+            file_exists = delete_full_file_if_exists(foldername, tree_id, root)
+            if not file_exists:
+                break
+
     async def upload_files(self, tree_id: bytes32) -> None:
         uploaders = await self.get_uploaders(tree_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
             return
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=tree_id)
+        await self._update_confirmation_status(tree_id=tree_id)
 
         root = await self.data_store.get_tree_root(tree_id=tree_id)
+        latest_generation = root.generation
+        # Don't store full tree files before this generation.
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
         while publish_generation > 0:
-            write_file_result = await write_files_for_root(self.data_store, tree_id, root, self.server_files_location)
+            write_file_result = await write_files_for_root(
+                self.data_store,
+                tree_id,
+                root,
+                self.server_files_location,
+                full_tree_first_publish_generation,
+            )
             if not write_file_result.result:
                 # this particular return only happens if the files already exist, no need to log anything
                 break
@@ -462,33 +541,47 @@ class DataLayer:
                 if uploaders is not None and len(uploaders) > 0:
                     request_json = {
                         "store_id": tree_id.hex(),
-                        "full_tree_filename": write_file_result.full_tree.name,
                         "diff_filename": write_file_result.diff_tree.name,
                     }
+                    if write_file_result.full_tree is not None:
+                        request_json["full_tree_filename"] = write_file_result.full_tree.name
+
                     for uploader in uploaders:
                         self.log.info(f"Using uploader {uploader} for store {tree_id.hex()}")
                         async with aiohttp.ClientSession() as session:
-                            async with session.post(uploader + "/upload", json=request_json) as response:
+                            async with session.post(
+                                uploader.url + "/upload",
+                                json=request_json,
+                                headers=uploader.headers,
+                            ) as response:
                                 res_json = await response.json()
                                 if res_json["uploaded"]:
                                     self.log.info(
                                         f"Uploaded files to {uploader} for store {tree_id.hex()} "
-                                        "generation {publish_generation}"
+                                        f"generation {publish_generation}"
                                     )
                                 else:
                                     self.log.error(
                                         f"Failed to upload files to, will retry later: {uploader} : {res_json}"
                                     )
+                await self.clean_old_full_tree_files(
+                    self.server_files_location,
+                    tree_id,
+                    full_tree_first_publish_generation,
+                )
             except Exception as e:
                 self.log.error(f"Exception uploading files, will retry later: tree id {tree_id}")
                 self.log.debug(f"Failed to upload files, cleaning local files: {type(e).__name__}: {e}")
-                os.remove(write_file_result.full_tree)
+                if write_file_result.full_tree is not None:
+                    os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
     async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
         root = await self.data_store.get_tree_root(tree_id=store_id)
+        latest_generation = root.generation
+        full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
             self.log.error(f"No singleton record found for: {store_id}")
@@ -498,16 +591,28 @@ class DataLayer:
         files = []
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
-            res = await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
+            res = await write_files_for_root(
+                self.data_store,
+                store_id,
+                root,
+                server_files_location,
+                full_tree_first_publish_generation,
+                overwrite,
+            )
             files.append(res.diff_tree.name)
-            files.append(res.full_tree.name)
+            if res.full_tree is not None:
+                files.append(res.full_tree.name)
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
             request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
             for uploader in uploaders:
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(uploader + "/add_missing_files", json=request_json) as response:
+                    async with session.post(
+                        uploader.url + "/add_missing_files",
+                        json=request_json,
+                        headers=uploader.headers,
+                    ) as response:
                         res_json = await response.json()
                         if not res_json["uploaded"]:
                             self.log.error(f"failed to upload to uploader {uploader}")
@@ -527,14 +632,28 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
-    async def unsubscribe(self, tree_id: bytes32) -> None:
+    async def unsubscribe(self, tree_id: bytes32, retain_files: bool) -> None:
         subscriptions = await self.get_subscriptions()
         if tree_id not in (subscription.tree_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given tree_id.")
+        filenames: List[str] = []
+        if await self.data_store.tree_id_exists(tree_id) and not retain_files:
+            generation = await self.data_store.get_tree_generation(tree_id)
+            all_roots = await self.data_store.get_roots_between(tree_id, 1, generation + 1)
+            for root in all_roots:
+                root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
+                filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
+                filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
         await self.wallet_rpc.dl_stop_tracking(tree_id)
         self.log.info(f"Unsubscribed to {tree_id}")
+        for filename in filenames:
+            file_path = self.server_files_location.joinpath(filename)
+            try:
+                file_path.unlink()
+            except FileNotFoundError:
+                pass
 
     async def get_subscriptions(self) -> List[Subscription]:
         async with self.subscription_lock:
@@ -575,8 +694,6 @@ class DataLayer:
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
                     pass
-                except asyncio.CancelledError:
-                    raise
                 except Exception as e:
                     self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
@@ -586,10 +703,7 @@ class DataLayer:
             while time.monotonic() < delay_until:
                 if self._shut_down:
                     break
-                try:
-                    await asyncio.sleep(0.1)
-                except asyncio.CancelledError:
-                    raise
+                await asyncio.sleep(0.1)
 
         while not self._shut_down:
             async with self.subscription_lock:
@@ -602,8 +716,6 @@ class DataLayer:
                 if local_id not in subscription_tree_ids:
                     try:
                         await self.subscribe(local_id, [])
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
@@ -615,14 +727,10 @@ class DataLayer:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
-                    except asyncio.CancelledError:
-                        raise
                     except Exception as e:
                         self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
-            try:
-                await asyncio.sleep(manage_data_interval)
-            except asyncio.CancelledError:
-                raise
+
+            await asyncio.sleep(manage_data_interval)
 
     async def build_offer_changelist(
         self,
@@ -661,12 +769,12 @@ class DataLayer:
             return changelist
 
     async def process_offered_stores(self, offer_stores: Tuple[OfferStore, ...]) -> Dict[bytes32, StoreProofs]:
+        for offer_store in offer_stores:
+            await self._update_confirmation_status(tree_id=offer_store.store_id)
+
         async with self.data_store.transaction():
             our_store_proofs: Dict[bytes32, StoreProofs] = {}
             for offer_store in offer_stores:
-                async with self.lock:
-                    await self._update_confirmation_status(tree_id=offer_store.store_id)
-
                 changelist = await self.build_offer_changelist(
                     store_id=offer_store.store_id,
                     inclusions=offer_store.inclusions,
@@ -754,6 +862,9 @@ class DataLayer:
                 driver_dict={},
                 fee=fee,
                 validate_only=False,
+                # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+                # This is not a change in behavior, the default was already implicit.
+                tx_config=DEFAULT_TX_CONFIG,
             )
             if wallet_offer is None:
                 raise Exception("offer is None despite validate_only=False")
@@ -838,6 +949,9 @@ class DataLayer:
             offer=offer,
             solver=solver,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         return trade_record
@@ -855,6 +969,9 @@ class DataLayer:
             trade_id=trade_id,
             secure=secure,
             fee=fee,
+            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+            # This is not a change in behavior, the default was already implicit.
+            tx_config=DEFAULT_TX_CONFIG,
         )
 
         if not secure:
@@ -862,8 +979,7 @@ class DataLayer:
                 await self.data_store.clear_pending_roots(tree_id=store_id)
 
     async def get_sync_status(self, store_id: bytes32) -> SyncStatus:
-        async with self.lock:
-            await self._update_confirmation_status(tree_id=store_id)
+        await self._update_confirmation_status(tree_id=store_id)
 
         if not await self.data_store.tree_id_exists(tree_id=store_id):
             raise Exception(f"No tree id stored in the local database for {store_id}")
@@ -879,12 +995,16 @@ class DataLayer:
             target_generation=singleton_record.generation,
         )
 
-    async def get_uploaders(self, tree_id: bytes32) -> List[str]:
+    async def get_uploaders(self, tree_id: bytes32) -> List[PluginRemote]:
         uploaders = []
         for uploader in self.uploaders:
             async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(uploader + "/handle_upload", json={"store_id": tree_id.hex()}) as response:
+                    async with session.post(
+                        uploader.url + "/handle_upload",
+                        json={"store_id": tree_id.hex()},
+                        headers=uploader.headers,
+                    ) as response:
                         res_json = await response.json()
                         if res_json["handle_upload"]:
                             uploaders.append(uploader)
@@ -893,10 +1013,10 @@ class DataLayer:
         return uploaders
 
     async def check_plugins(self) -> PluginStatus:
-        coros = [get_plugin_info(url=plugin) for plugin in {*self.uploaders, *self.downloaders}]
+        coros = [get_plugin_info(plugin_remote=plugin) for plugin in {*self.uploaders, *self.downloaders}]
         results = dict(await asyncio.gather(*coros))
 
-        uploader_status = {url: results.get(url, "unknown") for url in self.uploaders}
-        downloader_status = {url: results.get(url, "unknown") for url in self.downloaders}
+        uploader_status = {uploader.url: results.get(uploader.url, "unknown") for uploader in self.uploaders}
+        downloader_status = {downloader.url: results.get(downloader.url, "unknown") for downloader in self.downloaders}
 
         return PluginStatus(uploaders=uploader_status, downloaders=downloader_status)

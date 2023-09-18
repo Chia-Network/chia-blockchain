@@ -16,7 +16,9 @@ ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
-GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile("graftroot_dl_offers.clsp")
+GRAFTROOT_DL_OFFERS = load_clvm_maybe_recompile(
+    "graftroot_dl_offers.clsp", package_or_requirement="chia.data_layer.puzzles"
+)
 P2_PARENT = load_clvm_maybe_recompile("p2_parent.clsp")
 
 

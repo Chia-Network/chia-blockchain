@@ -486,7 +486,7 @@ def validate_unfinished_header_block(
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
     q_str: Optional[bytes32] = verify_and_get_quality_string(
-        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash
+        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=height
     )
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)
@@ -722,6 +722,7 @@ def validate_unfinished_header_block(
 
     # 17. Check foliage block signature by plot key
     if header_block.foliage.foliage_transaction_block_hash is not None:
+        assert header_block.foliage.foliage_transaction_block_signature is not None
         if not AugSchemeMPL.verify(
             header_block.reward_chain_block.proof_of_space.plot_public_key,
             header_block.foliage.foliage_transaction_block_hash,
@@ -760,6 +761,7 @@ def validate_unfinished_header_block(
         # 20b. If pospace has a pool pk, heck pool target signature. Should not check this for genesis block.
         if header_block.reward_chain_block.proof_of_space.pool_public_key is not None:
             assert header_block.reward_chain_block.proof_of_space.pool_contract_puzzle_hash is None
+            assert header_block.foliage.foliage_block_data.pool_signature is not None
             if not AugSchemeMPL.verify(
                 header_block.reward_chain_block.proof_of_space.pool_public_key,
                 bytes(header_block.foliage.foliage_block_data.pool_target),
@@ -815,11 +817,7 @@ def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_TRANSACTIONS_FILTER_HASH)
 
         # 26a. The timestamp in Foliage Block must not be over 5 minutes in the future
-        if height >= constants.SOFT_FORK2_HEIGHT:
-            max_future_time = constants.MAX_FUTURE_TIME2
-        else:
-            max_future_time = constants.MAX_FUTURE_TIME
-        if header_block.foliage_transaction_block.timestamp > int(time.time() + max_future_time):
+        if header_block.foliage_transaction_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME2):
             return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
         if prev_b is not None:

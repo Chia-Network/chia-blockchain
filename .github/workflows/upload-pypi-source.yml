@@ -21,6 +21,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   mypy:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
@@ -53,7 +57,6 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.7'
           - major_dot_minor: '3.8'
           - major_dot_minor: '3.9'
           - major_dot_minor: '3.10'
@@ -62,12 +65,9 @@ jobs:
           - name: mypy
             command: |
               echo "MYPY VERSION IS: $(mypy --version)"
+              python manage-mypy.py build-mypy-ini
               mypy
         exclude:
-          - os:
-              matrix: macos
-            python:
-              major_dot_minor: '3.7'
           - os:
               matrix: macos
             arch:
@@ -81,6 +81,9 @@ jobs:
 
     steps:
     - uses: chia-network/actions/clean-workspace@main
+
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
 
     - uses: actions/checkout@v3
       with:
@@ -128,9 +131,16 @@ jobs:
             command: flake8 benchmarks build_scripts chia tests tools *.py
           - name: pylint
             command: pylint benchmarks build_scripts chia tests tools *.py
+          - name: generated protocol tests
+            command: |
+              python3 -m tests.util.build_network_protocol_files
+              git diff --exit-code
 
     steps:
     - uses: chia-network/actions/clean-workspace@main
+
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
 
     - uses: actions/checkout@v3
       with:
@@ -160,6 +170,9 @@ jobs:
       - mypy
       - check
     steps:
+    - name: Add safe git directory
+      uses: chia-network/actions/git-mark-workspace-safe@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
@@ -170,16 +183,6 @@ jobs:
       name: Install Python
       with:
         python-version: '3.8'
-
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
-      env:
-        SECRET: "${{ secrets.test_pypi_password }}"
 
     - uses: ./.github/actions/install
       with:
@@ -199,9 +202,8 @@ jobs:
         path: ./dist
 
     - name: Publish distribution to PyPI
-      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags')
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_NON_INTERACTIVE: 1
-        TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
+        skip-existing: true

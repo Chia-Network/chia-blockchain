@@ -65,13 +65,16 @@ SERVERS = [
     "timelord",
 ]
 
-# TODO: collapse all these entry points into one `chia_exec` entrypoint that accepts the server as a parameter
+if THIS_IS_WINDOWS:
+    hidden_imports_for_windows = ["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"]
+else:
+    hidden_imports_for_windows = []
 
-entry_points = ["chia.cmds.chia"] + [f"chia.server.start_{s}" for s in SERVERS]
-
-hiddenimports = []
-hiddenimports.extend(entry_points)
-hiddenimports.extend(keyring_imports)
+hiddenimports = [
+    *collect_submodules("chia"),
+    *keyring_imports,
+    *hidden_imports_for_windows,
+]
 
 binaries = []
 
@@ -99,12 +102,13 @@ if os.path.exists(f"{ROOT}/bladebit/bladebit"):
         )
     ])
 
-if THIS_IS_WINDOWS:
-    hiddenimports.extend(["win32timezone", "win32cred", "pywintypes", "win32ctypes.pywin32"])
-
-# this probably isn't necessary
-if THIS_IS_WINDOWS:
-    entry_points.extend(["aiohttp", "chia.util.bip39"])
+if os.path.exists(f"{ROOT}/bladebit/bladebit_cuda"):
+    binaries.extend([
+        (
+            f"{ROOT}/bladebit/bladebit_cuda",
+            "bladebit"
+        )
+    ])
 
 if THIS_IS_WINDOWS:
     chia_mod = importlib.import_module("chia")
@@ -135,6 +139,10 @@ if THIS_IS_WINDOWS:
             f"{ROOT}\\bladebit\\bladebit.exe",
             "bladebit"
         ),
+        (
+            f"{ROOT}\\bladebit\\bladebit_cuda.exe",
+            "bladebit"
+        ),
     ]
 
 
@@ -142,7 +150,8 @@ datas = []
 
 datas.append((f"{ROOT}/chia/util/english.txt", "chia/util"))
 datas.append((f"{ROOT}/chia/util/initial-config.yaml", "chia/util"))
-datas.append((f"{ROOT}/chia/wallet/puzzles/*.hex", "chia/wallet/puzzles"))
+for path in sorted({path.parent for path in ROOT.joinpath("chia").rglob("*.hex")}):
+    datas.append((f"{path}/*.hex", path.relative_to(ROOT)))
 datas.append((f"{ROOT}/chia/ssl/*", "chia/ssl"))
 datas.append((f"{ROOT}/mozilla-ca/*", "mozilla-ca"))
 datas.append(version_data)
@@ -203,6 +212,7 @@ add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
 add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
 add_binary("start_data_layer_s3_plugin", f"{ROOT}/chia/data_layer/s3_plugin_service.py", COLLECT_ARGS)
+add_binary("timelord_launcher", f"{ROOT}/chia/timelord/timelord_launcher.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

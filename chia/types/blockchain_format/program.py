@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 from typing import Any, Callable, Dict, Set, Tuple
 
-from chia_rs import run_chia_program, tree_hash
+from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
@@ -40,7 +40,7 @@ class Program(SExp):
             b"\x01",
             blob,
             50,
-            0,
+            ALLOW_BACKREFS,
         )
         return Program.to(ret)
 
@@ -108,10 +108,13 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
+    def _run(self, max_cost: int, flags: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
-        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, 0)
+        cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
+
+    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
+        return self._run(max_cost, 0, args)
 
     def run(self, args) -> "Program":
         cost, r = self.run_with_cost(INFINITE_COST, args)

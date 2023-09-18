@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import logging
 import logging.config
 import os
 import signal
-import sys
 from pathlib import Path
 from types import FrameType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
@@ -14,6 +12,7 @@ from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Opt
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -23,7 +22,8 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
-from chia.util.network import get_host_addr
+from chia.util.misc import SignalHandlers
+from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
 from ..protocols.shared_protocol import capabilities
@@ -34,6 +34,7 @@ main_pid: Optional[int] = None
 
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
+_T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
 
@@ -42,12 +43,12 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol]):
+class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def __init__(
         self,
         root_path: Path,
         node: _T_RpcServiceProtocol,
-        peer_api: Any,
+        peer_api: _T_ApiProtocol,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
@@ -142,7 +143,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
                 resolved = resolved_peers.get(unresolved)
                 if resolved is None:
                     try:
-                        resolved = PeerInfo(get_host_addr(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
+                        resolved = PeerInfo(await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
                     except Exception as e:
                         self._log.warning(f"Failed to resolve {unresolved.host}: {e}")
                         continue
@@ -158,7 +159,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
                     # up to date.
                     try:
                         resolved_new = PeerInfo(
-                            get_host_addr(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
+                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
                         )
                     except Exception as e:
                         self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
@@ -228,7 +229,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
 
-    async def setup_process_global_state(self) -> None:
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
         # Being async forces this to be run from within an active event loop as is
         # needed for the signal handler setup.
         proctitle_name = f"chia_{self._service_name}"
@@ -236,31 +237,31 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         global main_pid
         main_pid = os.getpid()
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
-            signal.signal(signal.SIGINT, self._accept_signal)
-            signal.signal(signal.SIGTERM, self._accept_signal)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
+        signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
-        self._log.info(f"got signal {signal_number}")
-
+    def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
         global main_pid
-        if os.getpid() != main_pid:
+        ignore = os.getpid() != main_pid
+
+        # TODO: if we remove this conditional behavior, consider moving logging to common signal handling
+        if ignore:
+            message = "ignoring in worker process"
+        else:
+            message = "shutting down"
+
+        self._log.info("Received signal %s (%s), %s.", signal_.name, signal_.value, message)
+
+        if ignore:
             return
+
         self.stop()
 
     def stop(self) -> None:

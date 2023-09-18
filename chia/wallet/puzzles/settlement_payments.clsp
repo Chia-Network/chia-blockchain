@@ -10,10 +10,10 @@
   (include utility_macros.clib)
 
   (defun sha256tree (TREE)
-     (if (l TREE)
-         (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-         (sha256 1 TREE)
-     )
+    (if (l TREE)
+        (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+        (sha256 1 TREE)
+    )
   )
 
   (defun create_coins_for_payment (payment_params so_far)
@@ -27,8 +27,8 @@
   )
 
   (defun-inline create_announcement_for_payment (notarized_payment)
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-            (sha256tree notarized_payment))
+    (list CREATE_PUZZLE_ANNOUNCEMENT
+    (sha256tree notarized_payment))
   )
 
   (defun-inline augment_condition_list (notarized_payment so_far)

@@ -19,9 +19,13 @@ from chia.wallet.singleton import (
 )
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
-DID_INNERPUZ_MOD = load_clvm_maybe_recompile("did_innerpuz.clsp")
+DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
+    "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
+)
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
-INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clsp")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
+    "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 
 def create_innerpuz(

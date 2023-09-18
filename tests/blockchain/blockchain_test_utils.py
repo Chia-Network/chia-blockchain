@@ -1,10 +1,12 @@
-from typing import Optional, List
+from __future__ import annotations
 
-from chia.consensus.blockchain import Blockchain, AddBlockResult
+from typing import List, Optional
+
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32, uint64
 
 
 async def check_block_store_invariant(bc: Blockchain):
@@ -116,6 +118,16 @@ async def _validate_and_add_block_multi_error(
         return
 
     raise AssertionError("Did not return an error")
+
+
+async def _validate_and_add_block_multi_error_or_pass(
+    blockchain: Blockchain, block: FullBlock, expected_errors: List[Err], skip_prevalidation: bool = False
+) -> None:
+    # Checks that the blockchain returns one of the expected errors, also allows block to be added.
+    try:
+        await _validate_and_add_block(blockchain, block, skip_prevalidation=skip_prevalidation)
+    except AssertionError as e:
+        assert e.args[0] in expected_errors
 
 
 async def _validate_and_add_block_multi_result(
