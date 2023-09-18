@@ -228,7 +228,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
                         name=bytes32.random(seeded_random),
                         confirmed=conf,
                         confirmed_at_height=uint32(100 if conf else 0),
-                        type=type,
+                        type=uint32(type.value),
                     )
                 )
 
@@ -331,7 +331,12 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
                 TransactionType.OUTGOING_TRADE,
             ]:
                 test_trs.append(
-                    dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=uint32(wallet_id), type=type)
+                    dataclasses.replace(
+                        tr1,
+                        name=bytes32.random(seeded_random),
+                        wallet_id=uint32(wallet_id),
+                        type=uint32(type.value),
+                    )
                 )
 
         for tr in test_trs:
@@ -583,28 +588,28 @@ async def test_get_transactions_between_relevance(seeded_random: random.Random) 
             name=bytes32.random(seeded_random),
             confirmed=False,
             confirmed_at_height=uint32(2),
-            created_at_time=uint32(1000),
+            created_at_time=uint64(1000),
         )
         t2 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=False,
             confirmed_at_height=uint32(2),
-            created_at_time=uint32(999),
+            created_at_time=uint64(999),
         )
         t3 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=False,
             confirmed_at_height=uint32(1),
-            created_at_time=uint32(1000),
+            created_at_time=uint64(1000),
         )
         t4 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=False,
             confirmed_at_height=uint32(1),
-            created_at_time=uint32(999),
+            created_at_time=uint64(999),
         )
 
         t5 = dataclasses.replace(
@@ -612,28 +617,28 @@ async def test_get_transactions_between_relevance(seeded_random: random.Random) 
             name=bytes32.random(seeded_random),
             confirmed=True,
             confirmed_at_height=uint32(2),
-            created_at_time=uint32(1000),
+            created_at_time=uint64(1000),
         )
         t6 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=True,
             confirmed_at_height=uint32(2),
-            created_at_time=uint32(999),
+            created_at_time=uint64(999),
         )
         t7 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=True,
             confirmed_at_height=uint32(1),
-            created_at_time=uint32(1000),
+            created_at_time=uint64(1000),
         )
         t8 = dataclasses.replace(
             tr1,
             name=bytes32.random(seeded_random),
             confirmed=True,
             confirmed_at_height=uint32(1),
-            created_at_time=uint32(999),
+            created_at_time=uint64(999),
         )
 
         await store.add_transaction_record(t1)

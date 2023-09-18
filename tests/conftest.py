@@ -52,7 +52,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -126,15 +126,15 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=uint32(3))
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
             test_constants,
-            HARD_FORK_HEIGHT=2,
-            HARD_FORK_FIX_HEIGHT=2,
-            PLOT_FILTER_128_HEIGHT=10,
-            PLOT_FILTER_64_HEIGHT=15,
-            PLOT_FILTER_32_HEIGHT=20,
+            HARD_FORK_HEIGHT=uint32(2),
+            HARD_FORK_FIX_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
         )
     raise AssertionError("Invalid Blockchain mode in simulation")
 
