@@ -20,6 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
+from tests.util.misc import BenchmarkRunner
 
 from .make_block_generator import make_block_generator
 
@@ -250,7 +251,7 @@ class TestCostCalculation:
         assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
-    async def test_standard_tx(self, benchmark_runner):
+    async def test_standard_tx(self, benchmark_runner: BenchmarkRunner):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"

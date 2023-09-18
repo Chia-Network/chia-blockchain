@@ -67,7 +67,6 @@ multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 
-from chia._pytest_plugin import benchmark_runner_fixture_name
 from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
@@ -81,7 +80,7 @@ def seeded_random_fixture() -> random.Random:
     return seeded_random
 
 
-@pytest.fixture(name=benchmark_runner_fixture_name)
+@pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
     label = request.node.name
     return BenchmarkRunner(label=label)
@@ -376,7 +375,7 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
 
     for item in items:
-        if benchmark_runner_fixture_name in getattr(item, "fixturenames", ()):
+        if "benchmark_runner" in getattr(item, "fixturenames", ()):
             item.add_marker("benchmark")
 
 

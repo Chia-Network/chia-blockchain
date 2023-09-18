@@ -1404,8 +1404,8 @@ class BatchInsertBenchmarkCase:
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     tree_id: bytes32,
-    case: BatchInsertBenchmarkCase,
     benchmark_runner: BenchmarkRunner,
+    case: BatchInsertBenchmarkCase,
 ) -> None:
     r = random.Random()
     r.seed("shadowlands", version=2)

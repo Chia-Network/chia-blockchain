@@ -287,12 +287,6 @@ class _AssertRuntime:
             assert runtime.duration < self.seconds, results.message()
 
 
-# Related to the comment above about needing a class vs. using the context manager
-# decorator, this is just here to retain the function-style naming as the public
-# interface.  Hopefully we can switch away from the class at some point.
-# assert_runtime = _AssertRuntime
-
-
 @final
 @dataclasses.dataclass
 class BenchmarkRunner:

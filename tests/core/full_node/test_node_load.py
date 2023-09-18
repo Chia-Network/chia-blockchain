@@ -6,11 +6,12 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from tests.connection_utils import connect_and_get_peer
+from tests.util.misc import BenchmarkRunner
 
 
 class TestNodeLoad:
     @pytest.mark.asyncio
-    async def test_blocks_load(self, two_nodes, self_hostname, benchmark_runner):
+    async def test_blocks_load(self, two_nodes, self_hostname, benchmark_runner: BenchmarkRunner):
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
