@@ -67,7 +67,7 @@ multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 
-from chia._pytest_plugin import benchmark_runner_fixture_name, enable_benchmark_assertions_flag_name
+from chia._pytest_plugin import benchmark_runner_fixture_name
 from chia.simulator.block_tools import BlockTools, create_block_tools, create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
@@ -83,9 +83,8 @@ def seeded_random_fixture() -> random.Random:
 
 @pytest.fixture(name=benchmark_runner_fixture_name)
 def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
-    enable_assertion = request.config.getoption(enable_benchmark_assertions_flag_name)
     label = request.node.name
-    return BenchmarkRunner(enable_assertion=enable_assertion, label=label)
+    return BenchmarkRunner(label=label)
 
 
 @pytest.fixture(name="node_name_for_file")
