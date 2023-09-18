@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final
+from dataclasses import dataclass, fields, replace
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
 
 from blspy import G1Element
 from clvm.casts import int_to_bytes
@@ -1195,6 +1195,14 @@ class ConditionValidTimes(Streamable):
         return final_condition_list
 
 
+condition_valid_times_hints = get_type_hints(ConditionValidTimes)
+condition_valid_times_types: Dict[str, Type[int]] = {}
+for field in fields(ConditionValidTimes):
+    hint = condition_valid_times_hints[field.name]
+    [type_] = [type_ for type_ in hint.__args__ if type_ is not type(None)]
+    condition_valid_times_types[field.name] = type_
+
+
 # Properties of the dataclass above, grouped by their property
 SECONDS_PROPERTIES: Set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
 HEIGHT_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
@@ -1252,6 +1260,8 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
         else:
             new_value = timelock.timestamp
 
-        valid_times = replace(valid_times, **{final_property: new_value})
+        final_type = condition_valid_times_types[final_property]
+        replacement: Dict[str, int] = {final_property: final_type(new_value)}
+        valid_times = replace(valid_times, **replacement)
 
     return valid_times

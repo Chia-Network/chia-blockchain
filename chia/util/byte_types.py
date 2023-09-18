@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
+import random
+import secrets
+from typing import BinaryIO, Iterable, Optional, SupportsBytes, Type, TypeVar, Union
 
 from typing_extensions import SupportsIndex
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
+
+system_random = secrets.SystemRandom()
 
 
 def hexstr_to_bytes(input_str: str) -> bytes:
@@ -51,6 +55,19 @@ class SizedBytes(bytes):
         if input_str.startswith("0x") or input_str.startswith("0X"):
             return cls.fromhex(input_str[2:])
         return cls.fromhex(input_str)
+
+    @classmethod
+    def random(cls: Type[_T_SizedBytes], r: Optional[random.Random] = None) -> _T_SizedBytes:
+        if r is None:
+            getrandbits = random.getrandbits
+        else:
+            getrandbits = r.getrandbits
+
+        return cls(getrandbits(cls._size * 8).to_bytes(cls._size, "big"))
+
+    @classmethod
+    def secret(cls: Type[_T_SizedBytes]) -> _T_SizedBytes:
+        return cls.random(r=system_random)
 
     def __str__(self) -> str:
         return self.hex()

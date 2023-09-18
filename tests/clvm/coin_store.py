@@ -25,7 +25,7 @@ class BadSpendBundleError(Exception):
 @dataclass
 class CoinTimestamp:
     seconds: int
-    height: int
+    height: uint32
 
 
 class CoinStore:

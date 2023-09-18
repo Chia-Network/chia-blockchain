@@ -5,16 +5,18 @@ import dataclasses
 import enum
 import functools
 import gc
+import logging
 import math
 import os
 import subprocess
+import sys
 from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Type, Union
 
 import pytest
 from chia_rs import Coin
@@ -367,3 +369,18 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     else:
         memos = []
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
+
+
+def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=file)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
+    return logger

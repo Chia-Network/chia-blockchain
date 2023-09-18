@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
-from secrets import token_bytes
+import random
 from typing import AsyncIterator, List, Optional
 
 import pytest
@@ -34,16 +35,20 @@ log = logging.getLogger(__name__)
 @pytest_asyncio.fixture(scope="function")
 async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
-        patched_constants = blockchain_constants.replace(
-            **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
+        patched_constants = dataclasses.replace(
+            blockchain_constants,
+            DISCRIMINANT_SIZE_BITS=32,
+            SUB_SLOT_ITERS_STARTING=uint64(2**12),
         )
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
 @pytest_asyncio.fixture(scope="function")
 async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
-    patched_constants = blockchain_constants.replace(
-        **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
+    patched_constants = dataclasses.replace(
+        blockchain_constants,
+        DISCRIMINANT_SIZE_BITS=32,
+        SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
     bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1
@@ -72,6 +77,7 @@ class TestFullNodeStore:
         empty_blockchain: Blockchain,
         custom_block_tools: BlockTools,
         normalized_to_identity: bool,
+        seeded_random: random.Random,
     ) -> None:
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
@@ -114,7 +120,7 @@ class TestFullNodeStore:
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None
 
         # Test seen unfinished blocks
-        h_hash_1 = bytes32(token_bytes(32))
+        h_hash_1 = bytes32.random(seeded_random)
         assert not store.seen_unfinished_block(h_hash_1)
         assert store.seen_unfinished_block(h_hash_1)
         store.clear_seen_unfinished_blocks()
