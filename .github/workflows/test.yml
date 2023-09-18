@@ -241,7 +241,7 @@ jobs:
             IFS=$'\n'
             for LINE in $CONTENT; do
               if [[ $LINE =~ ^(.*\.py)\ \(([0-9\.]+%)\)\:\ Missing\ lines\ (.*)$ ]]; then
-                FILE="${BASH_REMATCH[1]}"
+                FILE=\`"${BASH_REMATCH[1]}"\`
                 COVERAGE="${BASH_REMATCH[2]}"
                 MISSING="${BASH_REMATCH[3]}"
                 MISSING_TRANSFORMED="lines "
