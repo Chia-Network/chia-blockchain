@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import multiprocessing
+import random
 import time
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from secrets import token_bytes
 from typing import List
 
 import pytest
@@ -52,7 +53,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block,
     _validate_and_add_block_multi_error,
-    _validate_and_add_block_multi_error_or_pass,
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
@@ -559,7 +559,11 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version, constants: ConsensusConstants):
         bt_high_iters = await create_block_tools_async(
-            constants=constants.replace(SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
+            constants=dataclasses.replace(
+                constants,
+                SUB_SLOT_ITERS_STARTING=uint64(2**12),
+                DIFFICULTY_STARTING=uint64(2**14),
+            ),
             keychain=keychain,
         )
         bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
@@ -575,7 +579,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            number_of_iterations=10000000,
+                            number_of_iterations=uint64(10000000),
                         )
                     ),
                 )
@@ -1366,16 +1370,8 @@ class TestBlockHeaderValidation:
                 return None
             attempts += 1
 
-    @pytest.mark.limit_consensus_modes(
-        allowed=[
-            ConsensusMode.PLAIN,
-            ConsensusMode.HARD_FORK_2_0,
-            ConsensusMode.SOFT_FORK3,
-        ],
-        reason="Skipped ConsensusMode.SOFT_FORK4 temporarily until adding more pool plots.",
-    )
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt):
+    async def test_pool_target_contract(self, empty_blockchain, bt, seeded_random: random.Random):
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
@@ -1389,7 +1385,7 @@ class TestBlockHeaderValidation:
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(token_bytes(32))
+                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32.random(seeded_random)
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
                 new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
@@ -1511,7 +1507,7 @@ class TestBlockHeaderValidation:
         # 26
         # the test constants set MAX_FUTURE_TIME to 10 days, restore it to
         # default for this test
-        constants = bt.constants.replace(MAX_FUTURE_TIME2=2 * 60)
+        constants = dataclasses.replace(bt.constants, MAX_FUTURE_TIME2=2 * 60)
         time_delta = 2 * 60 + 1
 
         blocks = bt.get_consecutive_blocks(1)
@@ -2682,13 +2678,17 @@ class TestBodyValidation:
         pass
         #
         # with TempKeyring() as keychain:
-        #     new_test_constants = bt.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     new_test_constants = dataclasses.replace(
+        #         bt.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     b, db_wrapper, db_path = await create_blockchain(new_test_constants, db_version)
         #     bt_2 = await create_block_tools_async(constants=new_test_constants, keychain=keychain)
-        #     bt_2.constants = bt_2.constants.replace(
-        #         **{"GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bt.pool_ph, "GENESIS_PRE_FARM_FARMER_PUZZLE_HASH": bt.pool_ph}
+        #     bt_2.constants = dataclasses.replace(
+        #         bt_2.constants,
+        #         GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bt.pool_ph,
+        #         GENESIS_PRE_FARM_FARMER_PUZZLE_HASH=bt.pool_ph,
         #     )
         #     blocks = bt_2.get_consecutive_blocks(
         #         3,
@@ -3607,61 +3607,3 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
 
     for block in chain_b[40:]:
         await _validate_and_add_block(b, block)
-
-
-@pytest.mark.parametrize("unique_plots_window", [1, 2])
-@pytest.mark.parametrize("bt_respects_soft_fork4", [True, False])
-@pytest.mark.parametrize("soft_fork4_height", [0, 10, 10000])
-@pytest.mark.limit_consensus_modes
-@pytest.mark.asyncio
-async def test_soft_fork4_activation(
-    blockchain_constants, bt_respects_soft_fork4, soft_fork4_height, db_version, unique_plots_window
-):
-    # We don't run ConsensusMode.SOFT_FORK4, since this is already parametrized by this test.
-    # Additionally, ConsensusMode.HARD_FORK_2_0 mode is incopatible with this test, since
-    # plot filter size would be zero, blocks won't ever be produced (we'll pass every
-    # consecutive plot filter, hence no block would pass CHIP-13).
-    with TempKeyring() as keychain:
-        bt = await create_block_tools_async(
-            constants=blockchain_constants.replace(
-                SOFT_FORK4_HEIGHT=(0 if bt_respects_soft_fork4 else 10000),
-                UNIQUE_PLOTS_WINDOW=unique_plots_window,
-            ),
-            keychain=keychain,
-        )
-        blockchain_constants = bt.constants.replace(SOFT_FORK3_HEIGHT=0, SOFT_FORK4_HEIGHT=soft_fork4_height)
-        b, db_wrapper, db_path = await create_blockchain(blockchain_constants, db_version)
-        blocks = bt.get_consecutive_blocks(25)
-        for height, block in enumerate(blocks):
-            await _validate_and_add_block_multi_error_or_pass(b, block, [Err.CHIP_0013_VALIDATION])
-            peak = b.get_peak()
-            assert peak is not None
-            if peak.height != height:
-                break
-
-        peak = b.get_peak()
-        assert peak is not None
-
-        # We expect to add all blocks here (25 blocks), either because `unique_plots_window`=1 means we're not
-        # checking any extra plot filter, or `unique_plots_window`=True means `BlockTools` produced blocks
-        # that respect CHIP-13.
-        if bt_respects_soft_fork4 or unique_plots_window == 1:
-            assert peak.height == 24
-        else:
-            # Here we have `bt_respects_soft_fork4`=False, which means the produced blocks by `BlockTools` will not
-            # respect the CHIP-13 condition. We expect not adding blocks at some point after the soft fork 3
-            # activation height (`soft_fork4_height`).
-            if soft_fork4_height == 0:
-                # We're not adding all blocks, since at some point `BlockTools` will break the CHIP-13 condition with
-                # very high likelyhood.
-                assert peak.height < 24
-            elif soft_fork4_height == 10:
-                # We're not adding all blocks, but we've added all of them until the soft fork 3 activated (height 10)
-                assert peak.height < 24 and peak.height >= 9
-            else:
-                # Soft fork 3 will activate in the future (height 100), so we're adding all blocks.
-                assert peak.height == 24
-
-        await db_wrapper.close()
-        b.shut_down()
-        db_path.unlink()
