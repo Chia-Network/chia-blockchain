@@ -9,7 +9,7 @@ from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transactio
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.wallet_types import WalletType
@@ -241,6 +241,7 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                 print(f"Total votes needed: {votes_needed}")
                 print(f"Blocks remaining: {blocks_needed}")
 
+        prefix = selected_network_address_prefix(config)
         if ptype == "spend":
             xch_conds = pd["xch_conditions"]
             asset_conds = pd["asset_conditions"]
@@ -248,7 +249,9 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
             if xch_conds:
                 print("Proposal XCH Conditions")
                 for pmt in xch_conds:
-                    print("{puzzle_hash} {amount}".format(**pmt))
+                    puzzle_hash = encode_puzzle_hash(bytes32.from_hexstr(pmt["puzzle_hash"]), prefix)
+                    amount = pmt["amount"]
+                    print(f"Address: {puzzle_hash}\nAmount: {amount}\n")
             if asset_conds:
                 print("Proposal asset Conditions")
                 for cond in asset_conds:
@@ -256,7 +259,9 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                     print(f"Asset ID: {asset_id}")
                     conds = cond["conditions"]
                     for pmt in conds:
-                        print("{puzzle_hash} {amount}".format(**pmt))
+                        puzzle_hash = encode_puzzle_hash(bytes32.from_hexstr(pmt["puzzle_hash"]), prefix)
+                        amount = pmt["amount"]
+                        print(f"Address: {puzzle_hash}\nAmount: {amount}\n")
 
         elif ptype == "update":
             print("")
@@ -266,7 +271,6 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
 
         elif ptype == "mint":
             mint_amount = pd["mint_amount"]
-            prefix = selected_network_address_prefix(config)
             address = encode_puzzle_hash(bytes32.from_hexstr(pd["new_cat_puzhash"]), prefix)
             print("")
             print(f"Amount of CAT to mint: {mint_amount}")
@@ -448,9 +452,21 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     asset_id = args.get("asset_id")
     address = args.get("to_address")
     amount = args.get("amount")
-    additions = args.get("from_json")
-    if additions is None and (address is None or amount is None):
+    additions_file = args.get("from_json")
+    if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
+    if additions_file:
+        import json
+
+        with open(additions_file, "r") as f:
+            additions_dict = json.load(f)
+        additions = []
+        for addition in additions_dict:
+            addition["puzzle_hash"] = decode_puzzle_hash(addition["address"]).hex()
+            del addition["address"]
+            additions.append(addition)
+    else:
+        additions = None
     vote_amount = args.get("vote_amount")
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)

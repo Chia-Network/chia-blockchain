@@ -1686,7 +1686,8 @@ class DAOWallet:
                                         "puzzle_hash": cond.at("rf").as_atom(),
                                         "amount": cond.at("rrf").as_int(),
                                     }
-                                    cc_list.append([asset_id, asset_dict])
+                                    # cc_list.append([asset_id, asset_dict])
+                                    cc_list.append(asset_dict)
                             asset_create_coins.append({"asset_id": asset_id, "conditions": cc_list})
                     dictionary: Dict[str, Any] = {
                         "state": state,
