@@ -201,7 +201,7 @@ class TestCostCalculation:
         assert npc_result.error is None
 
     @pytest.mark.asyncio
-    async def test_tx_generator_speed(self, softfork_height, benchmark_runner):
+    async def test_tx_generator_speed(self, softfork_height, benchmark_runner: BenchmarkRunner):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
@@ -217,6 +217,7 @@ class TestCostCalculation:
             )
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
 
     @pytest.mark.asyncio
@@ -275,7 +276,7 @@ class TestCostCalculation:
 
 
 @pytest.mark.asyncio
-async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner):
+async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner):
     from clvm.casts import int_from_bytes
 
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
@@ -283,6 +284,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner):
 
     spends: List[Coin] = []
 
+    assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []

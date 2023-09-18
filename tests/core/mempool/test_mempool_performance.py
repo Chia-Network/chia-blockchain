@@ -14,6 +14,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
+from tests.util.misc import BenchmarkRunner
 
 
 async def wallet_height_at_least(wallet_node, h):
@@ -37,7 +38,7 @@ class TestMempoolPerformance:
     @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
     async def test_mempool_update_performance(
-        self, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, benchmark_runner
+        self, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, benchmark_runner: BenchmarkRunner
     ):
         blocks = default_400_blocks
         full_nodes, wallets, bt = wallet_nodes_mempool_perf

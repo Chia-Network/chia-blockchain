@@ -59,6 +59,7 @@ from tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from tests.core.node_height import node_height_at_least
+from tests.util.misc import BenchmarkRunner
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
@@ -2375,7 +2376,7 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_ladder(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_large_integer_ladder(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_LADDER_COND.format(opcode=opcode.value[0], num=28, filler="0x00")
 
         with benchmark_runner.assert_runtime(seconds=0.7):
@@ -2392,7 +2393,7 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_large_integer(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
         with benchmark_runner.assert_runtime(seconds=1.1):
@@ -2409,7 +2410,7 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_substr(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_large_integer_substr(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
         with benchmark_runner.assert_runtime(seconds=1.5):
@@ -2426,7 +2427,7 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_substr_tail(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_large_integer_substr_tail(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_SUBSTR_TAIL_COND.format(
             opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
         )
@@ -2445,16 +2446,17 @@ class TestMaliciousGenerators:
             ConditionOpcode.ASSERT_SECONDS_RELATIVE,
         ],
     )
-    def test_duplicate_large_integer_negative(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_large_integer_negative(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
 
         with benchmark_runner.assert_runtime(seconds=1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == 1
 
-    def test_duplicate_reserve_fee(self, softfork_height, benchmark_runner):
+    def test_duplicate_reserve_fee(self, softfork_height, benchmark_runner: BenchmarkRunner):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
@@ -2463,7 +2465,7 @@ class TestMaliciousGenerators:
 
         assert npc_result.error == error_for_condition(opcode)
 
-    def test_duplicate_reserve_fee_negative(self, softfork_height, benchmark_runner):
+    def test_duplicate_reserve_fee_negative(self, softfork_height, benchmark_runner: BenchmarkRunner):
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
 
@@ -2479,7 +2481,7 @@ class TestMaliciousGenerators:
         "opcode", [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT]
     )
     @pytest.mark.benchmark
-    def test_duplicate_coin_announces(self, opcode, softfork_height, benchmark_runner):
+    def test_duplicate_coin_announces(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         # with soft-fork3, we only allow 1024 create- or assert announcements
         # per spend
         if softfork_height >= test_constants.SOFT_FORK3_HEIGHT:
@@ -2491,11 +2493,12 @@ class TestMaliciousGenerators:
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == 1
         # coin announcements are not propagated to python, but validated in rust
         # TODO: optimize clvm to make this run in < 1 second
 
-    def test_create_coin_duplicates(self, softfork_height, benchmark_runner):
+    def test_create_coin_duplicates(self, softfork_height, benchmark_runner: BenchmarkRunner):
         # CREATE_COIN
         # this program will emit 6000 identical CREATE_COIN conditions. However,
         # we'll just end up looking at two of them, and fail at the first
@@ -2508,7 +2511,7 @@ class TestMaliciousGenerators:
         assert npc_result.error == Err.DUPLICATE_OUTPUT.value
         assert npc_result.conds is None
 
-    def test_many_create_coin(self, softfork_height, benchmark_runner):
+    def test_many_create_coin(self, softfork_height, benchmark_runner: BenchmarkRunner):
         # CREATE_COIN
         # this program will emit many CREATE_COIN conditions, all with different
         # amounts.
@@ -2521,6 +2524,7 @@ class TestMaliciousGenerators:
             )
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == 1
         spend = npc_result.conds.spends[0]
         assert len(spend.create_coin) == 6094

@@ -22,6 +22,7 @@ from chia.util.ints import uint64
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
+from tests.util.misc import BenchmarkRunner
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ async def get_block_path(full_node: FullNodeAPI):
 class TestPerformance:
     @pytest.mark.asyncio
     async def test_full_block_performance(
-        self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner
+        self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname, benchmark_runner: BenchmarkRunner
     ):
         full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
