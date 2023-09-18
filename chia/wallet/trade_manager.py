@@ -276,7 +276,7 @@ class TradeManager:
                         selected_coins.add(coin)
                     else:
                         selected_coins = {coin}
-                    tx: TransactionRecord = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                         new_ph,
                         tx_config.override(
@@ -530,7 +530,7 @@ class TradeManager:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
-                    tx = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
                         Offer.ph(),
                         tx_config,
