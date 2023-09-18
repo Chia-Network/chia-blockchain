@@ -940,10 +940,7 @@ class Blockchain(BlockchainInterface):
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(ref_block.transactions_generator)
                 else:
-                    header_hash = self.height_to_hash(ref_height)
-                    if header_hash is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    gen = await self.block_store.get_generator(header_hash)
+                    [gen] = await self.block_store.get_generators_at([ref_height])
                     if gen is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     result.append(gen)

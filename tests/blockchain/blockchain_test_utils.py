@@ -62,7 +62,7 @@ async def _validate_and_add_block(
             [block],
             {},
             validate_signatures=False,
-            fork_height=uint32(0) if fork_point_with_peak is None else fork_point_with_peak,
+            fork_height=fork_point_with_peak,
         )
         assert pre_validation_results is not None
         results = pre_validation_results[0]

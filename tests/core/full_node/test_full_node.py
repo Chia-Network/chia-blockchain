@@ -497,10 +497,10 @@ class TestFullNodeProtocol:
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
-        for block in bt.get_consecutive_blocks(30):
+        for block in bt.get_consecutive_blocks(30, block_list_input=blocks):
             await full_node_1.full_node.add_block(block, peer)
 
-        assert full_node_1.full_node.blockchain.get_peak().height == 29
+        assert full_node_1.full_node.blockchain.get_peak().height == 30
 
     @pytest.mark.asyncio
     async def test_respond_end_of_sub_slot(self, wallet_nodes, self_hostname):

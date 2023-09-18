@@ -246,6 +246,7 @@ class TestFullNodeStore:
         # Test adding non genesis peak directly
         blocks = custom_block_tools.get_consecutive_blocks(
             2,
+            block_list_input=blocks,
             skip_slots=2,
             normalized_to_identity_cc_eos=normalized_to_identity,
             normalized_to_identity_icc_eos=normalized_to_identity,
@@ -278,6 +279,7 @@ class TestFullNodeStore:
         # Add reorg blocks
         blocks_reorg = custom_block_tools.get_consecutive_blocks(
             20,
+            block_list_input=[blocks[0]],
             normalized_to_identity_cc_eos=normalized_to_identity,
             normalized_to_identity_icc_eos=normalized_to_identity,
             normalized_to_identity_cc_ip=normalized_to_identity,
@@ -647,6 +649,7 @@ class TestFullNodeStore:
         store.initialize_genesis_sub_slot()
         blocks = custom_block_tools.get_consecutive_blocks(
             1,
+            block_list_input=[blocks[0]],
             normalized_to_identity_cc_eos=normalized_to_identity,
             normalized_to_identity_icc_eos=normalized_to_identity,
             normalized_to_identity_cc_ip=normalized_to_identity,
@@ -717,6 +720,7 @@ class TestFullNodeStore:
         store.initialize_genesis_sub_slot()
         blocks = custom_block_tools.get_consecutive_blocks(
             60,
+            block_list_input=[blocks[0]],
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
             normalized_to_identity_cc_eos=normalized_to_identity,
