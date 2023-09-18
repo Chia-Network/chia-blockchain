@@ -351,7 +351,7 @@ jobs:
     - name: Install package
       run: |
         ls -l "${{ steps.download.outputs.download-path }}"
-        apt install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+        apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
         # TODO: check gui package as well?
 
     - name: Run chia version
