@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Linux amd64 RPM Installer
+    name: Build amd64 RPM
     runs-on: ubuntu-latest
     container:
       image: chianetwork/rocky8-builder:latest
@@ -290,7 +290,7 @@ jobs:
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
-    name: Test package installation ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
     runs-on: ${{ matrix.os }}
     needs:
     - build

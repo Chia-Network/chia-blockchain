@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Windows 10 Installer
+    name: Build EXE
     runs-on: [windows-2019]
     timeout-minutes: 65
     strategy:
@@ -366,7 +366,7 @@ jobs:
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
 
   test:
-    name: Test package installation ${{ matrix.os.name }}
+    name: Test ${{ matrix.os.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
     - build

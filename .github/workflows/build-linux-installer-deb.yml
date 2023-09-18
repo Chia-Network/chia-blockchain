@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Linux ${{ matrix.os.arch }} DEB Installer
+    name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
     container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: 120
@@ -297,7 +297,7 @@ jobs:
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
-    name: Test package installation ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
     - build
