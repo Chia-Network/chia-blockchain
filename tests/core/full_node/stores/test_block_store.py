@@ -40,16 +40,9 @@ def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
 
 
-@pytest.fixture(scope="function", params=[True, False])
-def use_plot_filter_info(request: SubRequest) -> bool:
-    return cast(bool, request.param)
-
-
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.asyncio
-async def test_block_store(
-    tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool, use_plot_filter_info: bool
-) -> None:
+async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_cache: bool) -> None:
     assert sqlite3.threadsafety >= 1
 
     blocks = bt.get_consecutive_blocks(
@@ -86,13 +79,6 @@ async def test_block_store(
             block_record_hh = block_record.header_hash
             await store.add_full_block(block.header_hash, block, block_record)
             await store.add_full_block(block.header_hash, block, block_record)
-
-            if not use_plot_filter_info:
-                # in this test mode, erase the plot_filter_info column, to
-                # simulate an existing database, created before this column was
-                # added
-                async with db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute("DELETE FROM plot_info WHERE header_hash=?", (block_record.header_hash,))
 
             assert block == await store.get_full_block(block.header_hash)
             assert block == await store.get_full_block(block.header_hash)
@@ -414,75 +400,6 @@ async def test_get_block_bytes_in_range(tmp_dir: Path, bt: BlockTools, db_versio
 
             with pytest.raises(ValueError):
                 await store_2.get_block_bytes_in_range(0, 10)
-
-
-@pytest.mark.asyncio
-async def test_get_plot_filer_info(
-    default_400_blocks: List[FullBlock],
-    tmp_dir: Path,
-    db_version: int,
-    bt: BlockTools,
-    use_cache: bool,
-    use_plot_filter_info: bool,
-) -> None:
-    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
-        # Use a different file for the blockchain
-        coin_store_2 = await CoinStore.create(db_wrapper_2)
-        store_2 = await BlockStore.create(db_wrapper_2, use_cache=use_cache)
-        bc = await Blockchain.create(coin_store_2, store_2, bt.constants, tmp_dir, 2)
-
-        store = await BlockStore.create(db_wrapper, use_cache=use_cache)
-        blocks: List[FullBlock] = []
-        expected_cc_sp_hashes: List[bytes32] = []
-        for block in default_400_blocks:
-            await _validate_and_add_block(bc, block)
-            block_record_to_add = bc.block_record(block.header_hash)
-            await store.add_full_block(block.header_hash, block, block_record_to_add)
-
-            if not use_plot_filter_info:
-                # in this test mode, erase the plot_filter_info column, to
-                # simulate an existing database, created before this column was
-                # added
-                async with db_wrapper.writer_maybe_transaction() as conn:
-                    await conn.execute(
-                        "UPDATE plot_info SET plot_filter_info=NULL WHERE header_hash=?", (block.header_hash,)
-                    )
-
-            blocks.append(block)
-            if block.reward_chain_block.challenge_chain_sp_vdf is None:
-                expected_cc_sp_hashes.append(block.reward_chain_block.pos_ss_cc_challenge_hash)
-            else:
-                expected_cc_sp_hashes.append(block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash())
-            # Keep the query small.
-            if len(blocks) > 5:
-                blocks.pop(0)
-                expected_cc_sp_hashes.pop(0)
-
-            block_records = await store.get_block_records_by_hash([block.header_hash for block in blocks])
-            for full_b, block_record, expected_cc_sp in zip(blocks, block_records, expected_cc_sp_hashes):
-                assert block_record.pos_ss_cc_challenge_hash == full_b.reward_chain_block.pos_ss_cc_challenge_hash
-                assert block_record.cc_sp_hash == expected_cc_sp
-
-            opt_block_record = await store.get_block_record(block.header_hash)
-            assert opt_block_record is not None
-            assert opt_block_record.pos_ss_cc_challenge_hash == block.reward_chain_block.pos_ss_cc_challenge_hash
-            assert opt_block_record.cc_sp_hash == expected_cc_sp_hashes[-1]
-
-            opt_block_record = await store.get_block_record(bytes32([0] * 32))
-            assert opt_block_record is None
-
-            block_records_dict = await store.get_block_records_in_range(max(0, block.height - 4), block.height)
-            for full_b, expected_cc_sp in zip(blocks, expected_cc_sp_hashes):
-                block_record = block_records_dict[full_b.header_hash]
-                assert block_record.pos_ss_cc_challenge_hash == full_b.reward_chain_block.pos_ss_cc_challenge_hash
-                assert block_record.cc_sp_hash == expected_cc_sp
-
-            await store.set_peak(block.header_hash)
-            block_records_dict, _ = await store.get_block_records_close_to_peak(4)
-            for full_b, expected_cc_sp in zip(blocks, expected_cc_sp_hashes):
-                block_record = block_records_dict[full_b.header_hash]
-                assert block_record.pos_ss_cc_challenge_hash == full_b.reward_chain_block.pos_ss_cc_challenge_hash
-                assert block_record.cc_sp_hash == expected_cc_sp
 
 
 @pytest.mark.asyncio

@@ -875,6 +875,8 @@ class WebSocketServer:
             device_index = request.get("device", None)
             t1 = request.get("t", None)  # Temp directory
             t2 = request.get("t2", None)  # Temp2 directory
+            disk_128 = request.get("disk_128", False)
+            disk_16 = request.get("disk_16", False)
 
             if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
@@ -885,6 +887,10 @@ class WebSocketServer:
             if t2 is not None:
                 command_args.append("-2")
                 command_args.append(t2)
+            if disk_128:
+                command_args.append("--disk-128")
+            if disk_16:
+                command_args.append("--disk-16")
             return command_args
 
         # if plot_type == "diskplot"

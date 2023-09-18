@@ -8,7 +8,6 @@ import sqlite3
 import time
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
-from secrets import token_bytes
 from types import FrameType
 from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional, Tuple, Union
 
@@ -44,6 +43,7 @@ from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
@@ -281,7 +281,7 @@ async def setup_wallet_node(
         service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
         service_config["xch_spam_amount"] = xch_spam_amount
 
-        entropy = token_bytes(32)
+        entropy = bytes32.secret()
         if key_seed is None:
             key_seed = entropy
         keychain.add_private_key(bytes_to_mnemonic(key_seed))

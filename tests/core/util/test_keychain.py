@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import replace
-from secrets import token_bytes
 from typing import Callable, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.simulator.keyring import TempKeyring
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainFingerprintExists,
     KeychainFingerprintNotFound,
@@ -41,7 +42,7 @@ public_key = G1Element.from_bytes(
 
 
 class TestKeychain:
-    def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring):
+    def test_basic_add_delete(self, empty_temp_file_keyring: TempKeyring, seeded_random: random.Random):
         kc: Keychain = Keychain(user="testing-1.8.0", service="chia-testing-1.8.0")
         kc.delete_all_keys()
 
@@ -91,9 +92,9 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
 
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
 
         assert len(kc.get_all_public_keys()) == 3
 
@@ -101,7 +102,7 @@ class TestKeychain:
         assert kc.get_first_public_key() is not None
 
         kc.delete_all_keys()
-        kc.add_private_key(bytes_to_mnemonic(token_bytes(32)))
+        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         assert kc.get_first_public_key() is not None
 
     def test_add_private_key_label(self, empty_temp_file_keyring: TempKeyring):
