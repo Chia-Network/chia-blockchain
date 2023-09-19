@@ -304,7 +304,6 @@ jobs:
     container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         os:
         - runs-on:
