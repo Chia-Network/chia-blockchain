@@ -801,6 +801,7 @@ class NFTWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         tx_config: TXConfig,
         fee: uint64,
+        extra_conditions: Tuple[Condition, ...],
     ) -> Offer:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
@@ -951,6 +952,7 @@ class NFTWallet:
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                     txs = [tx]
                 elif asset not in fungible_asset_dict:
@@ -967,6 +969,7 @@ class NFTWallet:
                             for price in trade_prices
                             if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0
                         ],
+                        extra_conditions=extra_conditions,
                     )
                 else:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
@@ -977,9 +980,11 @@ class NFTWallet:
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                 all_transactions.extend(txs)
                 fee_left_to_pay = uint64(0)
+                extra_conditions = tuple()
 
                 # Then, adding in the spends for the royalty offer mod
                 if asset in fungible_asset_dict:
