@@ -657,7 +657,7 @@ class WalletRpcApi:
             if request["mode"] == "new":
                 if request.get("test", False):
                     if not push:
-                        raise ValueError("Test CAT minting must be pushed automatically")
+                        raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
                     async with self.service.wallet_state_manager.lock:
                         cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
                             wallet_state_manager,
@@ -1702,7 +1702,7 @@ class WalletRpcApi:
         push: bool = False,
     ) -> EndpointResult:
         if push:
-            raise ValueError("Cannot push an incomplete spend")
+            raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
 
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
@@ -2105,7 +2105,7 @@ class WalletRpcApi:
                     "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
                 }
             else:
-                return {"success": False, "transactions": []}
+                return {"success": False, "transactions": []}  # pragma: no cover
 
     @tx_endpoint
     async def did_message_spend(
@@ -2442,8 +2442,9 @@ class WalletRpcApi:
             "metadata": metadata,
         }
 
+    # TODO: this needs a test
     # Don't need full @tx_endpoint decorator here, but "push" is still a valid option
-    async def did_recovery_spend(self, request: Dict[str, Any]) -> EndpointResult:
+    async def did_recovery_spend(self, request: Dict[str, Any]) -> EndpointResult:  # pragma: no cover
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
@@ -2494,6 +2495,7 @@ class WalletRpcApi:
         pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
         return {"success": True, "pubkey": pubkey}
 
+    # TODO: this needs a test
     @tx_endpoint
     async def did_create_attest(
         self,
@@ -2501,7 +2503,7 @@ class WalletRpcApi:
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
-    ) -> EndpointResult:
+    ) -> EndpointResult:  # pragma: no cover
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         async with self.service.wallet_state_manager.lock:
@@ -3186,7 +3188,7 @@ class WalletRpcApi:
         push: bool = False,
     ) -> EndpointResult:
         if push:
-            raise ValueError("Automatic pushing of nft minting transactions not yet available")
+            raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])

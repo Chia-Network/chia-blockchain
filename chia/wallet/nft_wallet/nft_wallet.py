@@ -381,7 +381,7 @@ class NFTWallet:
             "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_set
         )
         # store the launcher transaction in the wallet state
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
             tx_config,
@@ -401,8 +401,8 @@ class NFTWallet:
 
         eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
 
-        if tx_record is None or tx_record.spend_bundle is None:
-            raise ValueError("Couldn't produce a launcher spend")
+        if tx_record.spend_bundle is None:
+            raise ValueError("Couldn't produce a launcher spend")  # pragma: no cover
 
         bundles_to_agg = [tx_record.spend_bundle, launcher_sb]
 

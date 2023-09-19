@@ -1222,8 +1222,6 @@ class DIDWallet:
         """
 
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
-        if coins is None:
-            raise ValueError(f"Not enough spendable balance to generate new DID: {amount + fee}")
 
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
