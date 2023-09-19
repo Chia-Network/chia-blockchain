@@ -62,8 +62,8 @@ class RpcClient:
         port: uint16,
         root_path: Path,
         net_config: Dict[str, Any],
-    ) -> AsyncIterator[RpcClient]:
-        client: RpcClient = await cls.create(
+    ) -> AsyncIterator[_T_RpcClient]:
+        client: _T_RpcClient = await cls.create(
             self_hostname,
             port,
             root_path,
