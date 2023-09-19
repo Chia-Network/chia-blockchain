@@ -2170,9 +2170,10 @@ async def test_dao_rpc_client(
         await rpc_state(20, client_1.dao_get_proposals, [dao_id_1], lambda x: x["proposals"][1]["closed"], True)
 
         # check dao rules are updated
-        dao_wallet = wallet_node_0.wallet_state_manager.wallets[dao_id_0]
-        assert isinstance(dao_wallet, DAOWallet)
-        assert dao_wallet.dao_rules.proposal_timelock == 10
+        new_rules = await client_0.dao_get_rules(dao_id_0)
+        assert new_rules["rules"]["proposal_timelock"] == 10
+        new_rules_1 = await client_0.dao_get_rules(dao_id_1)
+        assert new_rules_1["rules"]["proposal_timelock"] == 10
 
         # free locked cats from finished proposal
         free_coins_res = await client_0.dao_free_coins_from_finished_proposals(

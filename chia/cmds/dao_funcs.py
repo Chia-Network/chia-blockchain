@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from decimal import Decimal
 from typing import Any, Dict, Optional
@@ -455,9 +456,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
     additions_file = args.get("from_json")
     if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
-    if additions_file:
-        import json
-
+    if additions_file:  # pragma: no cover
         with open(additions_file, "r") as f:
             additions_dict = json.load(f)
         additions = []
