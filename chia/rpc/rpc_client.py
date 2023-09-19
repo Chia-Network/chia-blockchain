@@ -63,17 +63,17 @@ class RpcClient:
         root_path: Path,
         net_config: Dict[str, Any],
     ) -> AsyncIterator[_T_RpcClient]:
-        client: _T_RpcClient = await cls.create(
+        self = await cls.create(
             self_hostname,
             port,
             root_path,
             net_config,
         )
         try:
-            yield client
+            yield self
         finally:
-            client.close()
-            await client.await_closed()
+            self.close()
+            await self.await_closed()
 
     async def fetch(self, path, request_json) -> Dict[str, Any]:
         async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
