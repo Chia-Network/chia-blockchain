@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 from clvm.casts import int_to_bytes
 
 from chia.full_node.hint_store import HintStore
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -21,16 +25,16 @@ log = logging.getLogger(__name__)
 
 class TestHintStore:
     @pytest.mark.asyncio
-    async def test_basic_store(self, db_version):
+    async def test_basic_store(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
             not_existing_hint = 32 * b"\3"
 
-            coin_id_0 = 32 * b"\4"
-            coin_id_1 = 32 * b"\5"
-            coin_id_2 = 32 * b"\6"
+            coin_id_0 = bytes32(32 * b"\4")
+            coin_id_1 = bytes32(32 * b"\5")
+            coin_id_2 = bytes32(32 * b"\6")
 
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_0), (coin_id_2, hint_1)]
             await hint_store.add_hints(hints)
@@ -46,13 +50,13 @@ class TestHintStore:
             assert coins_for_non_hint == []
 
     @pytest.mark.asyncio
-    async def test_duplicate_coins(self, db_version):
+    async def test_duplicate_coins(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
 
-            coin_id_0 = 32 * b"\4"
+            coin_id_0 = bytes32(32 * b"\4")
 
             hints = [(coin_id_0, hint_0), (coin_id_0, hint_1)]
             await hint_store.add_hints(hints)
@@ -63,14 +67,14 @@ class TestHintStore:
             assert coin_id_0 in coins_for_hint_1
 
     @pytest.mark.asyncio
-    async def test_duplicate_hints(self, db_version):
+    async def test_duplicate_hints(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
 
-            coin_id_0 = 32 * b"\4"
-            coin_id_1 = 32 * b"\5"
+            coin_id_0 = bytes32(32 * b"\4")
+            coin_id_1 = bytes32(32 * b"\5")
 
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_0)]
             await hint_store.add_hints(hints)
@@ -82,11 +86,11 @@ class TestHintStore:
             assert coins_for_hint_1 == []
 
     @pytest.mark.asyncio
-    async def test_duplicates(self, db_version):
+    async def test_duplicates(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             hint_0 = 32 * b"\0"
-            coin_id_0 = 32 * b"\4"
+            coin_id_0 = bytes32(32 * b"\4")
 
             for i in range(0, 2):
                 hints = [(coin_id_0, hint_0), (coin_id_0, hint_0)]
@@ -96,14 +100,19 @@ class TestHintStore:
 
             async with db_wrapper.reader_no_transaction() as conn:
                 cursor = await conn.execute("SELECT COUNT(*) FROM hints")
-                rows = await cursor.fetchall()
+                rows = list(await cursor.fetchall())
 
             # even though we inserted the pair multiple times, there's only one
             # entry in the DB
             assert rows[0][0] == 1
 
     @pytest.mark.asyncio
-    async def test_hints_in_blockchain(self, wallet_nodes):  # noqa: F811
+    async def test_hints_in_blockchain(
+        self,
+        wallet_nodes: Tuple[
+            FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
+        ],
+    ) -> None:
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
 
         blocks = bt.get_consecutive_blocks(
@@ -125,7 +134,7 @@ class TestHintStore:
             ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
         }
         tx: SpendBundle = wt.generate_signed_transaction(
-            10,
+            uint64(10),
             wt.get_new_puzzlehash(),
             coin_spent,
             condition_dic=condition_dict,
@@ -143,7 +152,7 @@ class TestHintStore:
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 
     @pytest.mark.asyncio
-    async def test_counts(self, db_version):
+    async def test_counts(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
             count = await hint_store.count_hints()
@@ -152,8 +161,8 @@ class TestHintStore:
             # Add some hint data then test again
             hint_0 = 32 * b"\0"
             hint_1 = 32 * b"\1"
-            coin_id_0 = 32 * b"\4"
-            coin_id_1 = 32 * b"\5"
+            coin_id_0 = bytes32(32 * b"\4")
+            coin_id_1 = bytes32(32 * b"\5")
             hints = [(coin_id_0, hint_0), (coin_id_1, hint_1)]
             await hint_store.add_hints(hints)
 
@@ -161,14 +170,14 @@ class TestHintStore:
             assert count == 2
 
     @pytest.mark.asyncio
-    async def test_limits(self, db_version):
+    async def test_limits(self, db_version: int) -> None:
         async with DBConnection(db_version) as db_wrapper:
             hint_store = await HintStore.create(db_wrapper)
 
             # Add 200 coins, all with the same hint
             hint = 32 * b"\0"
             for i in range(200):
-                coin_id = (28 * b"\4") + i.to_bytes(4, "big")
+                coin_id = bytes32((28 * b"\4") + i.to_bytes(4, "big"))
                 await hint_store.add_hints([(coin_id, hint)])
 
             count = await hint_store.count_hints()
