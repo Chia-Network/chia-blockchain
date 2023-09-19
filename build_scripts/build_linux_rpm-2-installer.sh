@@ -68,7 +68,9 @@ fpm -s dir -t rpm \
   --version "$CHIA_INSTALLER_VERSION" \
   --architecture "$REDHAT_PLATFORM" \
   --description "Chia is a modern cryptocurrency built from scratch, designed to be efficient, decentralized, and secure." \
-  --depends /usr/lib64/libcrypt.so.1 \
+  --rpm-tag 'Recommends: libxcrypt-compat' \
+  --rpm-tag '%define _build_id_links none' \
+  --rpm-tag '%undefine _missing_build_ids_terminate_build' \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
