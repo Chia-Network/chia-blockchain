@@ -668,7 +668,11 @@ class FullNodeSimulator(FullNodeAPI):
         timeout: Optional[float] = 5,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            for backoff_time in backoff_times():
-                if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
-                    break
-                await asyncio.sleep(backoff_time)
+            try:
+                for backoff_time in backoff_times():
+                    print(f" ==== {backoff_time=} ====")
+                    if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                        break
+                    await asyncio.sleep(backoff_time)
+            finally:
+                print(" ==== leaving ====")
