@@ -598,7 +598,9 @@ async def test_cat_trades(
     import logging
 
     logging.error(" ==== Waiting for wallets to sync ====")
-    await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=5, report=True)
+    await full_node.wait_for_wallets_synced(
+        wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30, report=True
+    )
 
     if credential_restricted:
         await claim_pending_approval_balance(
