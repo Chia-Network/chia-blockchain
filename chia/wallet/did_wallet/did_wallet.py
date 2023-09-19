@@ -129,7 +129,7 @@ class DIDWallet:
             raise
 
         for tx in txs:
-            self.wallet_state_manager.add_pending_transaction(tx)
+            await self.wallet_state_manager.add_pending_transaction(tx)
 
         await self.wallet_state_manager.add_new_wallet(self)
 
