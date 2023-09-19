@@ -56,8 +56,19 @@ class RpcClient:
 
     @classmethod
     @asynccontextmanager
-    async def create_as_context(cls: Type[_T_RpcClient], *args) -> AsyncIterator[RpcClient]:
-        client: RpcClient = await cls.create(*args)
+    async def create_as_context(
+        cls: Type[_T_RpcClient],
+        self_hostname: str,
+        port: uint16,
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> AsyncIterator[RpcClient]:
+        client: RpcClient = await cls.create(
+            self_hostname,
+            port,
+            root_path,
+            net_config,
+        )
         try:
             yield client
         finally:
