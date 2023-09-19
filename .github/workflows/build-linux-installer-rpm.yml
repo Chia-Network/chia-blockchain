@@ -326,13 +326,6 @@ jobs:
           file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
         - name: CLI
           file: chia-blockchain-cli-[0,1,2,3,4,5,6,7,8,9]*.rpm
-        exclude:
-          - distribution:
-              # dependency
-              name: rockylinux:8
-          - distribution:
-              # dependency
-              name: build image
 
     steps:
     - name: Download packages
