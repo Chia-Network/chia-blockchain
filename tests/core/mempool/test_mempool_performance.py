@@ -60,9 +60,7 @@ class TestMempoolPerformance:
         fee_amount = 2213
         await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
-        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(
-            send_amount, ph, DEFAULT_TX_CONFIG, fee_amount
-        )
+        [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         assert big_transaction.spend_bundle

@@ -96,7 +96,7 @@ class GenesisById(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
+        [tx_record] = await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cat_puzzle_hash, tx_config, fee, coins, origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
