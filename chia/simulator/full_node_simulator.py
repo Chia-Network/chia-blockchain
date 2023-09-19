@@ -666,13 +666,30 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         wallet_nodes: List[WalletNode],
         timeout: Optional[float] = 5,
+        report: bool = False,
     ) -> None:
-        with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            try:
-                for backoff_time in backoff_times():
-                    print(f" ==== {backoff_time=} ====")
-                    if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
-                        break
-                    await asyncio.sleep(backoff_time)
-            finally:
-                print(" ==== leaving ====")
+        actual_timeout = adjusted_timeout(timeout)
+        start = time.monotonic()
+        ex = None
+        try:
+            with anyio.fail_after(delay=actual_timeout):
+                try:
+                    for backoff_time in backoff_times():
+                        self.log.error(f" ==== {backoff_time=} ====")
+                        if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                            break
+                        await asyncio.sleep(backoff_time)
+                finally:
+                    inside_end = time.monotonic()
+        except Exception as e:
+            ex = e
+            raise
+        finally:
+            self.log.error(" ==== leaving ====")
+            outside_end = time.monotonic()
+            inside_delta = inside_end - start
+            outside_delta = outside_end - start
+            if report:
+                raise Exception(
+                    f"allowed {actual_timeout}: {inside_delta=} - {outside_delta=} - ({type(ex).__name__}: {ex})"
+                ) from ex
