@@ -788,7 +788,7 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=p2_ph,
-            amount=uint64(1),
+            amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
