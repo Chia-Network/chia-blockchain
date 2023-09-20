@@ -42,7 +42,7 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: '3.9'
+          - major_dot_minor: '3.10'
         exclude:
           - os:
               matrix: windows

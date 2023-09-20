@@ -507,7 +507,7 @@ class PoolWallet:
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
-        fee_tx = await self.standard_wallet.generate_signed_transaction(
+        [fee_tx] = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
             (await self.standard_wallet.get_new_puzzlehash()),
             tx_config,
@@ -695,7 +695,7 @@ class PoolWallet:
         pool_state_bytes = Program.to([("p", bytes(initial_target_state)), ("t", delay_time), ("h", delay_ph)])
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
 
-        create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
+        [create_launcher_tx_record] = await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -709,7 +709,7 @@ class PoolWallet:
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
             ),
         )
-        assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
+        assert create_launcher_tx_record.spend_bundle is not None
 
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
