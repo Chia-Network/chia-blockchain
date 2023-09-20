@@ -11,12 +11,14 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Union
 
 import pkg_resources
 import yaml
 from typing_extensions import Literal
 
+from chia.server.outbound_message import NodeType
+from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.lock import Lockfile
 
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
@@ -325,3 +327,17 @@ def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str)
                     defaulted[service]["selected_network"] = "".join(to_be_referenced)
 
     return defaulted
+
+
+PEER_INFO_MAPPING: Dict[NodeType, str] = {
+    NodeType.FULL_NODE: "full_node_peer",
+    NodeType.FARMER: "farmer_peer",
+}
+
+
+def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeType) -> List[UnresolvedPeerInfo]:
+    peer_info_key = PEER_INFO_MAPPING[peer_type]
+    single_peer_info = service_config.get(peer_info_key)
+    peer_infos_raw = [single_peer_info] if single_peer_info is not None else service_config.get(f"{peer_info_key}s", [])
+
+    return list(map(lambda peer: UnresolvedPeerInfo(peer["host"], peer["port"]), peer_infos_raw))
