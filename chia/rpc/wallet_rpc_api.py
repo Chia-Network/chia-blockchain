@@ -22,7 +22,6 @@ from chia.rpc.util import tx_endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -43,7 +42,13 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
+    Condition,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+)
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
     master_sk_to_farmer_sk,
@@ -2051,15 +2056,14 @@ class WalletRpcApi:
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
-        coin_announcements: Set[bytes] = set([])
-        for ca in request.get("coin_announcements", []):
-            coin_announcements.add(bytes.fromhex(ca))
-        puzzle_announcements: Set[bytes] = set([])
-        for pa in request.get("puzzle_announcements", []):
-            puzzle_announcements.add(bytes.fromhex(pa))
 
         spend_bundle = await wallet.create_message_spend(
-            tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
+            tx_config,
+            extra_conditions=(
+                *extra_conditions,
+                *(CreateCoinAnnouncement(hexstr_to_bytes(ca)) for ca in request.get("coin_announcements", [])),
+                *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in request.get("puzzle_announcements", [])),
+            ),
         )
         return {"success": True, "spend_bundle": spend_bundle}
 
@@ -3299,40 +3303,6 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
-        coin_announcements: Optional[Set[Announcement]] = None
-        if (
-            "coin_announcements" in request
-            and request["coin_announcements"] is not None
-            and len(request["coin_announcements"]) > 0
-        ):
-            coin_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["coin_id"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["coin_announcements"]
-            }
-
-        puzzle_announcements: Optional[Set[Announcement]] = None
-        if (
-            "puzzle_announcements" in request
-            and request["puzzle_announcements"] is not None
-            and len(request["puzzle_announcements"]) > 0
-        ):
-            puzzle_announcements = {
-                Announcement(
-                    bytes32.from_hexstr(announcement["puzzle_hash"]),
-                    hexstr_to_bytes(announcement["message"]),
-                    hexstr_to_bytes(announcement["morph_bytes"])
-                    if "morph_bytes" in announcement and len(announcement["morph_bytes"]) > 0
-                    else None,
-                )
-                for announcement in request["puzzle_announcements"]
-            }
-
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
                 tx = await wallet.generate_signed_transaction(
@@ -3344,9 +3314,17 @@ class WalletRpcApi:
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(bytes32.from_hexstr(ca))
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(bytes32.from_hexstr(pa))
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_tx = tx.to_json_dict_convenience(self.service.config)
 
@@ -3363,9 +3341,17 @@ class WalletRpcApi:
                     coins=coins,
                     ignore_max_send_amount=True,
                     memos=[memos_0] + [output.memos for output in additional_outputs],
-                    coin_announcements_to_consume=coin_announcements,
-                    puzzle_announcements_to_consume=puzzle_announcements,
-                    extra_conditions=extra_conditions,
+                    extra_conditions=(
+                        *extra_conditions,
+                        *(
+                            AssertCoinAnnouncement(bytes32.from_hexstr(ca))
+                            for ca in request.get("coin_announcements", [])
+                        ),
+                        *(
+                            AssertPuzzleAnnouncement(bytes32.from_hexstr(pa))
+                            for pa in request.get("puzzle_announcements", [])
+                        ),
+                    ),
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
 

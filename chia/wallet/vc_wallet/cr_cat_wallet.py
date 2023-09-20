@@ -10,7 +10,6 @@ from blspy import G1Element, G2Element
 from typing_extensions import Unpack
 
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -24,7 +23,14 @@ from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
+from chia.wallet.conditions import (
+    Condition,
+    ConditionValidTimes,
+    CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
+    UnknownCondition,
+    parse_timelock_info,
+)
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -391,21 +397,9 @@ class CRCATWallet(CATWallet):
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
-        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         add_authorizations_to_cr_cats: bool = True,
     ) -> Tuple[SpendBundle, List[TransactionRecord]]:
-        if coin_announcements_to_consume is not None:  # pragma: no cover
-            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
-        else:
-            coin_announcements_bytes = None
-
-        if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
-        else:
-            puzzle_announcements_bytes = None
-
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
@@ -477,7 +471,7 @@ class CRCATWallet(CATWallet):
         inner_spends: List[Tuple[CRCAT, int, Program, Program]] = []
         chia_tx = None
         first = True
-        announcement: Announcement
+        announcement: CreateCoinAnnouncement
         coin_ids: List[bytes32] = [coin.name() for coin in cat_coins]
         coin_records: List[WalletCoinRecord] = (
             await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
@@ -507,47 +501,38 @@ class CRCATWallet(CATWallet):
             crcat: CRCAT = self.coin_record_to_crcat(coin)
             vc_announcements_to_make.append(crcat.expected_announcement())
             if first:
-                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
+                announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        chia_tx, _ = await self.create_tandem_xch_tx(
+                        chia_tx = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
-                            announcements_to_assert={announcement},
+                            extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
-                            coin_announcements={announcement.message},
-                            coin_announcements_to_assert=coin_announcements_bytes,
-                            puzzle_announcements_to_assert=puzzle_announcements_bytes,
-                            conditions=extra_conditions,
+                            conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:
-                        chia_tx, xch_announcement = await self.create_tandem_xch_tx(
+                        chia_tx = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
                         )
-                        assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
-                            coin_announcements={announcement.message},
-                            coin_announcements_to_assert={xch_announcement.name()},
-                            conditions=extra_conditions,
+                            conditions=(*extra_conditions, announcement, announcement.corresponding_assertion()),
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
-                        coin_announcements={announcement.message},
-                        coin_announcements_to_assert=coin_announcements_bytes,
-                        puzzle_announcements_to_assert=puzzle_announcements_bytes,
-                        conditions=extra_conditions,
+                        conditions=(*extra_conditions, announcement.corresponding_assertion()),
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
-                    coin_announcements_to_assert={announcement.name()},
+                    conditions=(announcement,),
                 )
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -590,8 +575,11 @@ class CRCATWallet(CATWallet):
             vc_txs: List[TransactionRecord] = await vc_wallet.generate_signed_transaction(
                 vc.launcher_id,
                 tx_config,
-                puzzle_announcements=set(vc_announcements_to_make),
-                coin_announcements_to_consume=set((*expected_announcements, announcement)),
+                extra_conditions=(
+                    *expected_announcements,
+                    announcement,
+                    *(CreatePuzzleAnnouncement(ann) for ann in vc_announcements_to_make),
+                ),
             )
         else:
             vc_txs = []
@@ -626,8 +614,6 @@ class CRCATWallet(CATWallet):
         coins: Optional[Set[Coin]] = None,
         ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
-        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
@@ -667,8 +653,6 @@ class CRCATWallet(CATWallet):
             fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
-            coin_announcements_to_consume=coin_announcements_to_consume,
-            puzzle_announcements_to_consume=puzzle_announcements_to_consume,
             extra_conditions=extra_conditions,
             add_authorizations_to_cr_cats=add_authorizations_to_cr_cats,
         )
@@ -783,11 +767,11 @@ class CRCATWallet(CATWallet):
 
         # Make the Fee TX
         if fee > 0:
-            chia_tx, _ = await self.create_tandem_xch_tx(
+            chia_tx = await self.create_tandem_xch_tx(
                 fee,
                 uint64(0),
                 tx_config,
-                announcements_to_assert=set(Announcement(coin.name(), nonce) for coin in coins.union({vc.coin})),
+                extra_conditions=tuple(expected_announcements),
             )
             if chia_tx.spend_bundle is None:
                 raise RuntimeError("Did not get spendbundle for fee transaction")  # pragma: no cover
@@ -799,10 +783,12 @@ class CRCATWallet(CATWallet):
         vc_txs: List[TransactionRecord] = await vc_wallet.generate_signed_transaction(
             vc.launcher_id,
             tx_config,
-            puzzle_announcements=set(crcat.expected_announcement() for crcat, _ in crcats_and_puzhashes),
-            coin_announcements={nonce},
-            coin_announcements_to_consume=set(expected_announcements),
-            extra_conditions=extra_conditions,
+            extra_conditions=(
+                *extra_conditions,
+                *expected_announcements,
+                CreateCoinAnnouncement(nonce),
+                *(CreatePuzzleAnnouncement(crcat.expected_announcement()) for crcat, _ in crcats_and_puzhashes),
+            ),
         )
         claim_bundle = SpendBundle.aggregate(
             [claim_bundle, *(tx.spend_bundle for tx in vc_txs if tx.spend_bundle is not None)]

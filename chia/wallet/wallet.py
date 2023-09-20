@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from blspy import AugSchemeMPL, G1Element, G2Element
 from typing_extensions import Unpack
 
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -18,7 +17,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import Condition, parse_timelock_info
+from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
@@ -29,14 +28,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_pk,
     solution_for_conditions,
 )
-from chia.wallet.puzzles.puzzle_utils import (
-    make_assert_coin_announcement,
-    make_assert_puzzle_announcement,
-    make_create_coin_announcement,
-    make_create_coin_condition,
-    make_create_puzzle_announcement,
-    make_reserve_fee_condition,
-)
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition, make_reserve_fee_condition
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
@@ -201,10 +193,6 @@ class Wallet:
     def make_solution(
         self,
         primaries: List[Payment],
-        coin_announcements: Optional[Set[bytes]] = None,
-        coin_announcements_to_assert: Optional[Set[bytes32]] = None,
-        puzzle_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements_to_assert: Optional[Set[bytes32]] = None,
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program:
@@ -215,18 +203,7 @@ class Wallet:
                 condition_list.append(make_create_coin_condition(primary.puzzle_hash, primary.amount, primary.memos))
         if fee:
             condition_list.append(make_reserve_fee_condition(fee))
-        if coin_announcements:
-            for announcement in coin_announcements:
-                condition_list.append(make_create_coin_announcement(announcement))
-        if coin_announcements_to_assert:
-            for announcement_hash in coin_announcements_to_assert:
-                condition_list.append(make_assert_coin_announcement(announcement_hash))
-        if puzzle_announcements:
-            for announcement in puzzle_announcements:
-                condition_list.append(make_create_puzzle_announcement(announcement))
-        if puzzle_announcements_to_assert:
-            for announcement_hash in puzzle_announcements_to_assert:
-                condition_list.append(make_assert_puzzle_announcement(announcement_hash))
+
         return solution_for_conditions(condition_list)
 
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
@@ -274,8 +251,6 @@ class Wallet:
         coins: Optional[Set[Coin]] = None,
         primaries_input: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
@@ -320,17 +295,8 @@ class Wallet:
 
         assert change >= 0
 
-        if coin_announcements_to_consume is not None:
-            coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
-        else:
-            coin_announcements_bytes = None
-        if puzzle_announcements_to_consume is not None:
-            puzzle_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in puzzle_announcements_to_consume}
-        else:
-            puzzle_announcements_bytes = None
-
         spends: List[CoinSpend] = []
-        primary_announcement_hash: Optional[bytes32] = None
+        primary_announcement: Optional[AssertCoinAnnouncement] = None
 
         # Check for duplicates
         all_primaries_list = [(p.puzzle_hash, p.amount) for p in primaries]
@@ -371,13 +337,10 @@ class Wallet:
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
-                    coin_announcements={message},
-                    coin_announcements_to_assert=coin_announcements_bytes,
-                    puzzle_announcements_to_assert=puzzle_announcements_bytes,
-                    conditions=extra_conditions,
+                    conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
                 solution = decorator_manager.solve(inner_puzzle, target_primary, solution)
-                primary_announcement_hash = Announcement(coin.name(), message).name()
+                primary_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=message)
 
                 spends.append(
                     CoinSpend(
@@ -393,7 +356,7 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
+            solution = self.make_solution(primaries=[], conditions=(primary_announcement,))
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 CoinSpend(
@@ -427,8 +390,6 @@ class Wallet:
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
         ignore_max_send_amount: bool = False,
-        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         memos: Optional[List[bytes]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -456,8 +417,6 @@ class Wallet:
             coins,
             primaries,
             ignore_max_send_amount,
-            coin_announcements_to_consume,
-            puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,
@@ -502,7 +461,7 @@ class Wallet:
         self,
         fee: uint64,
         tx_config: TXConfig,
-        announcement_to_assert: Optional[Announcement] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         chia_coins = await self.select_coins(fee, tx_config.coin_selection_config)
         chia_tx = await self.generate_signed_transaction(
@@ -511,7 +470,7 @@ class Wallet:
             tx_config,
             fee=fee,
             coins=chia_coins,
-            coin_announcements_to_consume={announcement_to_assert} if announcement_to_assert is not None else None,
+            extra_conditions=extra_conditions,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
