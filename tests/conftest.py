@@ -249,11 +249,13 @@ def default_10000_blocks(bt, consensus_mode):
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
-    return persistent_blocks(10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000")
+    return persistent_blocks(
+        10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000", dummy_block_references=True
+    )
 
 
 @pytest.fixture(scope="session")
-def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
+def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
     version = ""
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
@@ -261,12 +263,13 @@ def test_long_reorg_blocks(bt, consensus_mode, default_1500_blocks):
     from tests.util.blockchain import persistent_blocks
 
     return persistent_blocks(
-        758,
+        5000,
         f"test_blocks_long_reorg_{saved_blocks_version}{version}.db",
         bt,
-        block_list_input=default_1500_blocks[:320],
+        block_list_input=default_10000_blocks[:500],
         seed=b"reorg_blocks",
         time_per_block=8,
+        dummy_block_references=True,
     )
 
 
