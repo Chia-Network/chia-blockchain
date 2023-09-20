@@ -582,7 +582,7 @@ class CATWallet:
                 tx_config.coin_selection_config,
             )
             origin_id = list(chia_coins)[0].name()
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,
@@ -600,7 +600,7 @@ class CATWallet:
             )
             origin_id = list(chia_coins)[0].name()
             selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,

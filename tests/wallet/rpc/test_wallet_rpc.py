@@ -423,7 +423,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    tx = await wallet.generate_signed_transaction(
+    [tx] = await wallet.generate_signed_transaction(
         amount=uint64(5),
         puzzle_hash=bytes32([0] * 32),
         tx_config=DEFAULT_TX_CONFIG,

@@ -917,7 +917,7 @@ class TestDIDWallet:
             )
         ).pop()
         assert coin_1.amount % 2 == 0
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             odd_amount,
             ph1,
             DEFAULT_TX_CONFIG.override(

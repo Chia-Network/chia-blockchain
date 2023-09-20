@@ -1238,7 +1238,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -1268,7 +1268,7 @@ class DIDWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
-        if tx_record is None or tx_record.spend_bundle is None:
+        if tx_record.spend_bundle is None:
             return None
 
         # Only want to save this information if the transaction is valid
