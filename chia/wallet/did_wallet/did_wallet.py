@@ -1236,7 +1236,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,

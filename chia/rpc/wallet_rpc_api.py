@@ -1056,7 +1056,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
+            [tx] = await wallet.generate_signed_transaction(
                 amount,
                 puzzle_hash,
                 tx_config,
@@ -3477,7 +3477,7 @@ class WalletRpcApi:
 
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
-                tx = await wallet.generate_signed_transaction(
+                [tx] = await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),
                     tx_config,
