@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
 from typing import Any, Dict, List, Optional, Type, TypeVar
@@ -17,6 +18,7 @@ from chia.util.ints import uint16
 _T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
 
 
+@dataclass
 class RpcClient:
     """
     Client to Chia RPC, connects to a local service. Uses HTTP/JSON, and converts back from
@@ -26,12 +28,12 @@ class RpcClient:
     to the full node.
     """
 
-    url: str
-    session: aiohttp.ClientSession
-    closing_task: Optional[asyncio.Task]
-    ssl_context: Optional[SSLContext]
     hostname: str
     port: uint16
+    url: str
+    session: aiohttp.ClientSession
+    ssl_context: SSLContext
+    closing_task: Optional[asyncio.Task] = None
 
     @classmethod
     async def create(
@@ -41,16 +43,18 @@ class RpcClient:
         root_path: Path,
         net_config: Dict[str, Any],
     ) -> _T_RpcClient:
-        self = cls()
-        self.hostname = self_hostname
-        self.port = port
-        self.url = f"https://{self_hostname}:{str(port)}/"
-        self.session = aiohttp.ClientSession()
         ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
-        self.ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
-        self.closing_task = None
+
+        self = cls(
+            hostname=self_hostname,
+            port=port,
+            url=f"https://{self_hostname}:{str(port)}/",
+            session=aiohttp.ClientSession(),
+            ssl_context=ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path),
+        )
+
         return self
 
     async def fetch(self, path, request_json) -> Dict[str, Any]:
