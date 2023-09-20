@@ -162,7 +162,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
-        skip-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 
