@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root, solution_generator
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
@@ -573,12 +573,21 @@ class BlockTools:
         previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
+        dummy_block_references: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
             block_list = block_list_input.copy()
         else:
             block_list = []
+
+        tx_block_heights: List[uint32] = []
+        if dummy_block_references:
+            # block references can only point to transaction blocks, so we need
+            # to record which ones are
+            for b in block_list:
+                if b.transactions_generator is not None:
+                    tx_block_heights.append(b.height)
 
         constants = self.constants
         transaction_data_included = False
@@ -752,6 +761,23 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
+                        if dummy_block_references:
+                            if block_generator is None:
+                                program = SerializedProgram.from_bytes(solution_generator([]))
+                                block_generator = BlockGenerator(program, [], [])
+
+                            if len(tx_block_heights) > 4:
+                                block_refs = [
+                                    tx_block_heights[1],
+                                    tx_block_heights[len(tx_block_heights) // 2],
+                                    tx_block_heights[-2],
+                                ]
+                            else:
+                                block_refs = []
+                            block_generator = dataclasses.replace(
+                                block_generator, block_height_list=block_generator.block_height_list + block_refs
+                            )
+
                         (
                             full_block,
                             block_record,
@@ -795,10 +821,12 @@ class BlockTools:
                             continue
                         # print(f"{full_block.height}: difficulty {difficulty} "
                         #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
                         #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
+                            tx_block_heights.append(full_block.height)
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
                             )
@@ -1040,6 +1068,23 @@ class BlockTools:
                             block_generator = None
                             aggregate_signature = G2Element()
 
+                        if dummy_block_references:
+                            if block_generator is None:
+                                program = SerializedProgram.from_bytes(solution_generator([]))
+                                block_generator = BlockGenerator(program, [], [])
+
+                            if len(tx_block_heights) > 4:
+                                block_refs = [
+                                    tx_block_heights[1],
+                                    tx_block_heights[len(tx_block_heights) // 2],
+                                    tx_block_heights[-2],
+                                ]
+                            else:
+                                block_refs = []
+                            block_generator = dataclasses.replace(
+                                block_generator, block_height_list=block_generator.block_height_list + block_refs
+                            )
+
                         (
                             full_block,
                             block_record,
@@ -1086,11 +1131,13 @@ class BlockTools:
                             continue
                         # print(f"{full_block.height}: difficulty {difficulty} "
                         #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
                         #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
 
                         block_list.append(full_block)
                         if full_block.transactions_generator is not None:
+                            tx_block_heights.append(full_block.height)
                             compressor_arg = detect_potential_template_generator(
                                 full_block.height, full_block.transactions_generator
                             )
