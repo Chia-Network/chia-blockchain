@@ -33,7 +33,7 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Generate matrix configuration
         id: configure
@@ -100,11 +100,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
+          - name: '3.10'
+            action: '3.10'
+            apt: '3.10'
+            install_sh: '3.10'
+            matrix: '3.10'
 
     steps:
       - uses: actions/checkout@v3
@@ -241,7 +241,7 @@ jobs:
             IFS=$'\n'
             for LINE in $CONTENT; do
               if [[ $LINE =~ ^(.*\.py)\ \(([0-9\.]+%)\)\:\ Missing\ lines\ (.*)$ ]]; then
-                FILE="${BASH_REMATCH[1]}"
+                FILE=\`"${BASH_REMATCH[1]}"\`
                 COVERAGE="${BASH_REMATCH[2]}"
                 MISSING="${BASH_REMATCH[3]}"
                 MISSING_TRANSFORMED="lines "

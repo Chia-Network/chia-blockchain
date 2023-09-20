@@ -1042,7 +1042,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
+            [tx] = await wallet.generate_signed_transaction(
                 amount,
                 puzzle_hash,
                 tx_config,
@@ -2058,9 +2058,11 @@ class WalletRpcApi:
         for pa in request.get("puzzle_announcements", []):
             puzzle_announcements.add(bytes.fromhex(pa))
 
-        spend_bundle = await wallet.create_message_spend(
-            tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
-        )
+        spend_bundle = (
+            await wallet.create_message_spend(
+                tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
+            )
+        ).spend_bundle
         return {"success": True, "spend_bundle": spend_bundle}
 
     async def did_get_info(self, request: Dict[str, Any]) -> EndpointResult:
@@ -3335,7 +3337,7 @@ class WalletRpcApi:
 
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
-                tx = await wallet.generate_signed_transaction(
+                [tx] = await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),
                     tx_config,
