@@ -616,7 +616,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            challenge=bytes([0] * 32),
+                            challenge=bytes32([0] * 32),
                         )
                     ),
                 )
