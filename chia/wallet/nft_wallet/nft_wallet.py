@@ -964,13 +964,12 @@ class NFTWallet:
                         tx_config,
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
-                        extra_conditions=announcements_to_assert,
                         trade_prices_list=[
                             list(price)
                             for price in trade_prices
                             if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0
                         ],
-                        extra_conditions=extra_conditions,
+                        extra_conditions=(*extra_conditions, *announcements_to_assert),
                     )
                 else:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
