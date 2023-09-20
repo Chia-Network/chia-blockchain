@@ -387,6 +387,8 @@ jobs:
             matrix: intel
 
     steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
     - name: Download packages
       uses: actions/download-artifact@v3
       with:
