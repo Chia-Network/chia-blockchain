@@ -64,10 +64,10 @@ class RpcClient:
         net_config: Dict[str, Any],
     ) -> AsyncIterator[_T_RpcClient]:
         self = await cls.create(
-            self_hostname,
-            port,
-            root_path,
-            net_config,
+            self_hostname=self_hostname,
+            port=port,
+            root_path=root_path,
+            net_config=net_config,
         )
         try:
             yield self
