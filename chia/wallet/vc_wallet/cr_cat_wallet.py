@@ -504,7 +504,7 @@ class CRCATWallet(CATWallet):
                 announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        chia_tx = await self.create_tandem_xch_tx(
+                        chia_tx, _ = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
@@ -515,24 +515,25 @@ class CRCATWallet(CATWallet):
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:
-                        chia_tx = await self.create_tandem_xch_tx(
+                        chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
                         )
+                        assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
-                            conditions=(*extra_conditions, announcement, announcement.corresponding_assertion()),
+                            conditions=(*extra_conditions, xch_announcement, announcement),
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
-                        conditions=(*extra_conditions, announcement.corresponding_assertion()),
+                        conditions=(*extra_conditions, announcement),
                     )
             else:
                 innersol = self.standard_wallet.make_solution(
                     primaries=[],
-                    conditions=(announcement,),
+                    conditions=(announcement.corresponding_assertion(),),
                 )
             inner_derivation_record = (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
@@ -767,7 +768,7 @@ class CRCATWallet(CATWallet):
 
         # Make the Fee TX
         if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(
+            chia_tx, _ = await self.create_tandem_xch_tx(
                 fee,
                 uint64(0),
                 tx_config,

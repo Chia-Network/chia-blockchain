@@ -13,6 +13,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -30,6 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
     Condition,
     ConditionValidTimes,
     CreateCoinAnnouncement,
@@ -573,12 +575,13 @@ class CATWallet:
         amount_to_claim: uint64,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> Tuple[TransactionRecord, Optional[AssertCoinAnnouncement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
         It is meant to be called in `generate_unsigned_spendbundle` and as such should be called under the
         wallet_state_manager lock
         """
+        announcement: Optional[AssertCoinAnnouncement] = None
         if fee > amount_to_claim:
             chia_coins = await self.standard_wallet.select_coins(
                 fee,
@@ -613,7 +616,18 @@ class CATWallet:
             )
             assert chia_tx.spend_bundle is not None
 
-        return chia_tx
+            message = None
+            for spend in chia_tx.spend_bundle.coin_spends:
+                if spend.coin.name() == origin_id:
+                    conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
+                    for condition in conditions:
+                        if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                            message = condition[1]
+
+            assert message is not None
+            announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
+
+        return chia_tx, announcement
 
     async def generate_unsigned_spendbundle(
         self,
@@ -693,7 +707,7 @@ class CATWallet:
                 announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        chia_tx = await self.create_tandem_xch_tx(
+                        chia_tx, _ = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
@@ -704,14 +718,15 @@ class CATWallet:
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:
-                        chia_tx = await self.create_tandem_xch_tx(
+                        chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
                         )
+                        assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
-                            conditions=(*extra_conditions, announcement, announcement.corresponding_assertion()),
+                            conditions=(*extra_conditions, xch_announcement, announcement),
                         )
                 else:
                     innersol = self.standard_wallet.make_solution(
