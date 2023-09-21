@@ -594,7 +594,9 @@ async def test_cat_trades(
     await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
     await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-    await full_node.process_transaction_records(records=tx_records)
+    await full_node.wait_transaction_records_entered_mempool([tx_records])
+    await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
+    await full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
 
     if credential_restricted:
