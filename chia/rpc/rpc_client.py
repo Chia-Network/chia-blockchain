@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, AsyncIterator, Dict, List, Optional, Type, TypeVar
 
 import aiohttp
 
@@ -52,6 +53,27 @@ class RpcClient:
         self.ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path)
         self.closing_task = None
         return self
+
+    @classmethod
+    @asynccontextmanager
+    async def create_as_context(
+        cls: Type[_T_RpcClient],
+        self_hostname: str,
+        port: uint16,
+        root_path: Path,
+        net_config: Dict[str, Any],
+    ) -> AsyncIterator[_T_RpcClient]:
+        self = await cls.create(
+            self_hostname=self_hostname,
+            port=port,
+            root_path=root_path,
+            net_config=net_config,
+        )
+        try:
+            yield self
+        finally:
+            self.close()
+            await self.await_closed()
 
     async def fetch(self, path, request_json) -> Dict[str, Any]:
         async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
