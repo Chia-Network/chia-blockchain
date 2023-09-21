@@ -89,7 +89,10 @@ async def summary(
     root_path: Path = DEFAULT_ROOT_PATH,
 ) -> None:
     harvesters_summary = await get_harvesters_summary(farmer_rpc_port, root_path)
-    blockchain_state = await get_blockchain_state(rpc_port, root_path)
+    try:
+        blockchain_state = await get_blockchain_state(rpc_port, root_path)
+    except Exception:
+        blockchain_state = None
     farmer_running = False if harvesters_summary is None else True  # harvesters uses farmer rpc too
 
     wallet_not_ready: bool = False
