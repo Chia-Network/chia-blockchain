@@ -27,6 +27,7 @@ from chia.wallet.conditions import (
     AssertPuzzleAnnouncement,
     Condition,
     CreateCoinAnnouncement,
+    CreatePuzzleAnnouncement,
     UnknownCondition,
     parse_timelock_info,
 )
@@ -316,7 +317,7 @@ class NFTWallet:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
                     did_bundle = (
                         await wallet.create_message_spend(
-                            tx_config, extra_conditions=(CreateCoinAnnouncement(id) for id in nft_ids)
+                            tx_config, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
                         )
                     ).spend_bundle
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
