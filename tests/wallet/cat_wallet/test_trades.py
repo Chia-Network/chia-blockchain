@@ -103,6 +103,8 @@ async def test_cat_trades(
     tx_config: TXConfig = DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash)
 
     # Create two new CATs, one in each wallet
+    import logging
+    logging.error(f"BEGINNING TRADE TEST - Maker: {wallet_node_maker.wallet_state_manager.private_key}, Taker: {wallet_node_taker.wallet_state_manager.private_key}")
     if credential_restricted:
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)

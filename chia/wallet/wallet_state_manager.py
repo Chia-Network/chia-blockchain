@@ -1471,6 +1471,9 @@ class WalletStateManager:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
+                    if wallet_identifier.type in (WalletType.CAT, WalletType.CRCAT):
+                        self.log.error(f"{self.private_key} Got coin state {coin_state}")
+
                     # Update the DB to signal that we used puzzle hashes up to this one
                     derivation_index = ph_to_index_cache.get(coin_state.coin.puzzle_hash)
                     if derivation_index is None:
@@ -1480,6 +1483,9 @@ class WalletStateManager:
                         if derivation_index > used_up_to:
                             await self.puzzle_store.set_used_up_to(derivation_index)
                             used_up_to = derivation_index
+
+                    if wallet_identifier.type in (WalletType.CAT, WalletType.CRCAT):
+                        self.log.error(f"{self.private_key} Processing coin state {coin_state}")
 
                     if coin_state.created_height is None:
                         # TODO implements this coin got reorged
