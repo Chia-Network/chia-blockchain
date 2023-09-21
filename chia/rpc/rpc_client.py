@@ -29,11 +29,11 @@ class RpcClient:
     to the full node.
     """
 
-    hostname: str
-    port: uint16
     url: str
     session: aiohttp.ClientSession
     ssl_context: SSLContext
+    hostname: str
+    port: uint16
     closing_task: Optional[asyncio.Task] = None
 
     @classmethod
