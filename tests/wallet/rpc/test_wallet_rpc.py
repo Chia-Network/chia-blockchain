@@ -180,29 +180,23 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    client = await WalletRpcClient.create(
+    async with WalletRpcClient.create_as_context(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
-    )
-    client_2 = await WalletRpcClient.create(
-        hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
-    )
-    client_node = await FullNodeRpcClient.create(
-        hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
-    )
+    ) as client:
+        async with WalletRpcClient.create_as_context(
+            hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
+        ) as client_2:
+            async with FullNodeRpcClient.create_as_context(
+                hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            ) as client_node:
+                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
+                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
-    wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
-    wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
-    node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
-
-    yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
-
-    # Checks that the RPC manages to stop the node
-    client.close()
-    client_2.close()
-    client_node.close()
-    await client.await_closed()
-    await client_2.await_closed()
-    await client_node.await_closed()
+                yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:
