@@ -1262,6 +1262,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
 
         final_type = condition_valid_times_types[final_property]
         replacement: Dict[str, int] = {final_property: final_type(new_value)}
-        valid_times = replace(valid_times, **replacement)
+        # the type is enforced above
+        valid_times = replace(valid_times, **replacement)  # type: ignore[arg-type]
 
     return valid_times
