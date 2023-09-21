@@ -89,9 +89,6 @@ jobs:
             apt: '3.11'
             install_sh: '3.11'
             matrix: '3.11'
-            exclude_from:
-              limited: True
-              main: True
         exclude:
           - os:
               matrix: macos
