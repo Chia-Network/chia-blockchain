@@ -10,7 +10,6 @@ import pytest
 import pytest_asyncio
 
 from chia.consensus.constants import ConsensusConstants
-from chia.rpc.rpc_client import client_as_context_manager
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
@@ -345,8 +344,7 @@ async def wallet_environments(
                 )
                 rpc_clients.append(
                     await astack.enter_async_context(
-                        client_as_context_manager(
-                            WalletRpcClient,
+                        WalletRpcClient.create_as_context(
                             bt.config["self_hostname"],
                             # Semantics guarantee us a non-None value here
                             service.rpc_server.listen_port,  # type: ignore[union-attr]
