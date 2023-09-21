@@ -27,9 +27,9 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
     AssertAnnouncement,
     AssertCoinAnnouncement,
+    AssertPuzzleAnnouncement,
     Condition,
     CreateCoinAnnouncement,
-    CreatePuzzleAnnouncement,
     UnknownCondition,
     parse_timelock_info,
 )
@@ -505,7 +505,9 @@ class DataLayerWallet:
                     ]
                 ),
             )
-            extra_conditions += (CreatePuzzleAnnouncement(b"$", second_full_puz.get_tree_hash()),)
+            extra_conditions += (
+                AssertPuzzleAnnouncement(asserted_ph=second_full_puz.get_tree_hash(), asserted_msg=b"$"),
+            )
             second_singleton_record = SingletonRecord(
                 coin_id=second_coin.name(),
                 launcher_id=launcher_id,

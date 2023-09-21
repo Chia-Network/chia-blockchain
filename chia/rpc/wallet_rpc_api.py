@@ -33,6 +33,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.misc import UInt32Range
@@ -3319,11 +3320,21 @@ class WalletRpcApi:
                     extra_conditions=(
                         *extra_conditions,
                         *(
-                            AssertCoinAnnouncement(bytes32.from_hexstr(ca))
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
                             for ca in request.get("coin_announcements", [])
                         ),
                         *(
-                            AssertPuzzleAnnouncement(bytes32.from_hexstr(pa))
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
                             for pa in request.get("puzzle_announcements", [])
                         ),
                     ),
@@ -3346,11 +3357,21 @@ class WalletRpcApi:
                     extra_conditions=(
                         *extra_conditions,
                         *(
-                            AssertCoinAnnouncement(bytes32.from_hexstr(ca))
+                            AssertCoinAnnouncement(
+                                asserted_id=bytes32.from_hexstr(ca["coin_id"]),
+                                asserted_msg=hexstr_to_bytes(ca["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(ca["morph_bytes"]) + hexstr_to_bytes(ca["message"])),
+                            )
                             for ca in request.get("coin_announcements", [])
                         ),
                         *(
-                            AssertPuzzleAnnouncement(bytes32.from_hexstr(pa))
+                            AssertPuzzleAnnouncement(
+                                asserted_ph=bytes32.from_hexstr(pa["puzzle_hash"]),
+                                asserted_msg=hexstr_to_bytes(pa["message"])
+                                if request.get("morph_bytes") is None
+                                else std_hash(hexstr_to_bytes(pa["morph_bytes"]) + hexstr_to_bytes(pa["message"])),
+                            )
                             for pa in request.get("puzzle_announcements", [])
                         ),
                     ),
