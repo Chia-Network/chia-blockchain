@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable, List, Optional
 
+import json
 import pytest
 from blspy import G2Element
 from typing_extensions import Literal
@@ -213,6 +214,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     vc_records, fetched_proofs = await client_0.vc_get_list()
     assert len(vc_records) == 1
     assert fetched_proofs[proof_root.hex()] == proofs.key_value_pairs
+
+    # Add proofs to DB (String input)
+    proofs = {'criminal': True}
+    proofs_str = json.dumps(proofs)
+    await client_0.vc_add_proofs(proofs_str)
+    await client_0.vc_add_proofs(proofs_str)  # Doing it again just to make sure it doesn't care
+    assert await client_0.vc_get_proofs_for_root(proof_root) == proofs
+    vc_records, fetched_proofs = await client_0.vc_get_list()
+    assert len(vc_records) == 1
+    assert fetched_proofs[proof_root.hex()] == proofs
 
     await mint_cr_cat(1, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
     await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet_0)
