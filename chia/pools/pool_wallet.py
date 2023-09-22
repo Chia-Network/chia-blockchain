@@ -516,7 +516,6 @@ class PoolWallet:
             origin_id=None,
             coins=None,
             primaries=None,
-            ignore_max_send_amount=False,
             coin_announcements_to_consume=coin_announcements,
         )
         return fee_tx
@@ -705,7 +704,6 @@ class PoolWallet:
             fee,
             coins,
             None,
-            False,
             announcement_set,
             origin_id=launcher_parent.name(),
             extra_conditions=extra_conditions,
