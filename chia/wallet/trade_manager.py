@@ -611,6 +611,8 @@ class TradeManager:
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
+        # if offer.name().hex() == "8608fa50f6c2ac7cc07f290df038a786a625f7bc3778a6b4a0114165fcd441ad":
+        #     breakpoint()
         if validate:
             final_spend_bundle: SpendBundle = offer.to_valid_spend()
         else:

@@ -21,7 +21,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.misc import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
@@ -867,26 +867,28 @@ class CRCATWallet(CATWallet):
         This matches coins that are either CRCATs with the hint as the inner puzzle, or CRCATs in the pending approval
         state that will come to us once claimed.
         """
+        proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
+        authorized_providers_hash: bytes32 = Program.to(self.authorized_providers).get_tree_hash()
         return (
             construct_cat_puzzle(
-                CAT_MOD,
+                CAT_MOD_HASH,
                 self.info.limitations_program_hash,
                 construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
+                    authorized_providers_hash,  # type: ignore
+                    proofs_checker_hash,  # type: ignore
                     hint,  # type: ignore
                 ),
-            ).get_tree_hash_precalc(hint)
+            ).get_tree_hash_precalc(hint, proofs_checker_hash, authorized_providers_hash, CAT_MOD_HASH)
             == coin.puzzle_hash
             or construct_cat_puzzle(
-                CAT_MOD,
+                CAT_MOD_HASH,
                 self.info.limitations_program_hash,
                 construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
+                    authorized_providers_hash,  # type: ignore
+                    proofs_checker_hash,  # type: ignore
                     construct_pending_approval_state(hint, uint64(coin.amount)),
                 ),
-            ).get_tree_hash()
+            ).get_tree_hash_precalc(proofs_checker_hash, authorized_providers_hash, CAT_MOD_HASH)
             == coin.puzzle_hash
         )
 
