@@ -1403,7 +1403,7 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
-    async def vc_add_proofs(self, proofs: Dict[str, Any]) -> None:
+    async def vc_add_proofs(self, proofs: Union[Dict[str, Any], str]) -> None:
         await self.fetch("vc_add_proofs", {"proofs": proofs})
 
     async def vc_get_proofs_for_root(self, root: bytes32) -> Dict[str, Any]:
