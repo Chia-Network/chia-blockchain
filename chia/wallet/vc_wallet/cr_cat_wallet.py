@@ -868,7 +868,7 @@ class CRCATWallet(CATWallet):
         state that will come to us once claimed.
         """
         proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
-        authorized_providers_hash: bytes32 = Program.to(self.authorized_providers).get_tree_hash()
+        authorized_providers_hash: bytes32 = Program.to(self.info.authorized_providers).get_tree_hash()
         return (
             construct_cat_puzzle(
                 CAT_MOD_HASH,
