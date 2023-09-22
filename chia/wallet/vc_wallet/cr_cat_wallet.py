@@ -45,6 +45,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
     CRCATVersion,
     ProofsChecker,
     construct_cr_layer,
+    construct_cr_layer_hash,
     construct_pending_approval_state,
 )
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -867,32 +868,35 @@ class CRCATWallet(CATWallet):
         This matches coins that are either CRCATs with the hint as the inner puzzle, or CRCATs in the pending approval
         state that will come to us once claimed.
         """
-        proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
         authorized_providers_hash: bytes32 = Program.to(self.info.authorized_providers).get_tree_hash()
-        return (
-            construct_cat_puzzle(
-                Program.to(CAT_MOD_HASH),
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    authorized_providers_hash,  # type: ignore
-                    proofs_checker_hash,  # type: ignore
-                    hint,  # type: ignore
-                ),
-                mod_code_hash=CAT_MOD_HASH_HASH,
-            ).get_tree_hash_precalc(hint, proofs_checker_hash, authorized_providers_hash, CAT_MOD_HASH, CAT_MOD_HASH_HASH)
-            == coin.puzzle_hash
-            or construct_cat_puzzle(
-                Program.to(CAT_MOD_HASH),
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    authorized_providers_hash,  # type: ignore
-                    proofs_checker_hash,  # type: ignore
-                    construct_pending_approval_state(hint, uint64(coin.amount)),
-                ),
-                mod_code_hash=CAT_MOD_HASH_HASH,
-            ).get_tree_hash_precalc(proofs_checker_hash, authorized_providers_hash, CAT_MOD_HASH, CAT_MOD_HASH_HASH)
-            == coin.puzzle_hash
+        proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
+        hint_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            hint,  # type: ignore
         )
+        if construct_cat_puzzle(
+            Program.to(CAT_MOD_HASH),
+            self.info.limitations_program_hash,
+            hint_inner_hash,
+            mod_code_hash=CAT_MOD_HASH_HASH,
+        ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash) == coin.puzzle_hash:
+            return True
+
+        pending_approval_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            construct_pending_approval_state(hint, uint64(coin.amount)).get_tree_hash(),
+        )
+        if construct_cat_puzzle(
+            Program.to(CAT_MOD_HASH),
+            self.info.limitations_program_hash,
+            pending_approval_inner_hash,
+            mod_code_hash=CAT_MOD_HASH_HASH,
+        ).get_tree_hash_precalc(CAT_MOD_HASH, CAT_MOD_HASH_HASH, pending_approval_inner_hash) == coin.puzzle_hash:
+            return True
+        else:
+            return False
 
 
 if TYPE_CHECKING:

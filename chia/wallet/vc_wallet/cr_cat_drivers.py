@@ -49,6 +49,50 @@ PENDING_VC_ANNOUNCEMENT: Program = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.vc_wallet.cr_puzzles",
     include_standard_libraries=True,
 )
+CREDENTIAL_STRUCT: Program = Program.to(
+    (
+        (
+            (
+                SINGLETON_MOD_HASH,
+                SINGLETON_LAUNCHER_HASH,
+            ),
+            (
+                EXTIGENT_METADATA_LAYER_HASH,
+                EML_TP_COVENANT_ADAPTER_HASH,
+            ),
+        ),
+        (
+            Program.to(EXTIGENT_METADATA_LAYER_HASH)
+            .curry(
+                Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
+                Program.to(None),
+                GUARANTEED_NIL_TP,
+                GUARANTEED_NIL_TP.get_tree_hash(),
+                P2_ANNOUNCED_DELEGATED_PUZZLE,
+            )
+            .get_tree_hash_precalc(
+                EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()
+            ),
+            (
+                Program.to(
+                    int_to_bytes(2)
+                    + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
+                ),
+                Program.to(
+                    (
+                        [
+                            4,
+                            (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
+                            [4, (1, create_did_tp()), 1],
+                        ],
+                        None,
+                    )
+                ).get_tree_hash(),
+            ),
+        ),
+    ),
+)
+CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 
 
 # Basic drivers
@@ -58,53 +102,25 @@ def construct_cr_layer(
     inner_puzzle: Program,
 ) -> Program:
     first_curry: Program = CREDENTIAL_RESTRICTION.curry(
-        Program.to(
-            (
-                (
-                    (
-                        SINGLETON_MOD_HASH,
-                        SINGLETON_LAUNCHER_HASH,
-                    ),
-                    (
-                        EXTIGENT_METADATA_LAYER_HASH,
-                        EML_TP_COVENANT_ADAPTER_HASH,
-                    ),
-                ),
-                (
-                    Program.to(EXTIGENT_METADATA_LAYER_HASH)
-                    .curry(
-                        Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash(),
-                        Program.to(None),
-                        GUARANTEED_NIL_TP,
-                        GUARANTEED_NIL_TP.get_tree_hash(),
-                        P2_ANNOUNCED_DELEGATED_PUZZLE,
-                    )
-                    .get_tree_hash_precalc(
-                        EXTIGENT_METADATA_LAYER_HASH, Program.to(EXTIGENT_METADATA_LAYER_HASH).get_tree_hash()
-                    ),
-                    (
-                        Program.to(
-                            int_to_bytes(2)
-                            + Program.to((1, COVENANT_LAYER_HASH)).get_tree_hash_precalc(COVENANT_LAYER_HASH)
-                        ),
-                        Program.to(
-                            (
-                                [
-                                    4,
-                                    (1, create_eml_covenant_morpher(create_did_tp().get_tree_hash())),
-                                    [4, (1, create_did_tp()), 1],
-                                ],
-                                None,
-                            )
-                        ).get_tree_hash(),
-                    ),
-                ),
-            ),
-        ),
+        CREDENTIAL_STRUCT,
         authorized_providers,
         proofs_checker,
     )
     return first_curry.curry(first_curry.get_tree_hash(), inner_puzzle)
+
+
+def construct_cr_layer_hash(
+    authorized_providers_hash: bytes32,
+    proofs_checker_hash: bytes32,
+    inner_puzzle_hash: bytes32,
+) -> bytes32:
+    first_curry_hash: bytes32 = Program.to(CREDENTIAL_RESTRICTION_HASH).curry(
+        CREDENTIAL_STRUCT_HASH,
+        authorized_providers_hash,
+        proofs_checker_hash,
+    ).get_tree_hash_precalc(CREDENTIAL_RESTRICTION_HASH, CREDENTIAL_STRUCT_HASH, authorized_providers_hash, proofs_checker_hash)
+    first_curry_hash_hash: bytes32 = Program.to(first_curry_hash).get_tree_hash()
+    return Program.to(first_curry_hash).curry(first_curry_hash_hash, inner_puzzle_hash).get_tree_hash_precalc(first_curry_hash, first_curry_hash_hash, inner_puzzle_hash)
 
 
 def match_cr_layer(
