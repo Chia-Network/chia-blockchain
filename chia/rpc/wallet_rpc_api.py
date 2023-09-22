@@ -3869,7 +3869,8 @@ class WalletRpcApi:
         """
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
-        await vc_wallet.store.add_vc_proofs(VCProofs(request["proofs"]))
+        proofs = request["proofs"]
+        await vc_wallet.store.add_vc_proofs(VCProofs(json.loads(proofs) if isinstance(proofs, str) else proofs))
 
         return {}
 
