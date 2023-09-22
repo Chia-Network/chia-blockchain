@@ -615,18 +615,22 @@ class TradeManager:
         #     breakpoint()
         if validate:
             final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            hint_dict: Dict[bytes32, bytes32] = {}
+            additions_dict: Dict[bytes32, Coin] = {}
+            for hinted_coins, _ in (compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends):
+                hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
+                additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+            all_additions: List[Coin] = list(a for a in additions_dict.values())
         else:
             final_spend_bundle = offer._bundle
+            hint_dict = offer.hints()
+            all_additions = offer.additions()
 
         settlement_coins: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        hint_dict: Dict[bytes32, bytes32] = {}
-        additions_dict: Dict[bytes32, Coin] = {}
-        for hinted_coins in (compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends):
-            hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
-            additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+
         removals: List[Coin] = final_spend_bundle.removals()
-        additions: List[Coin] = list(a for a in additions_dict.values() if a not in removals)
+        additions: List[Coin] = list(a for a in all_additions if a not in removals)
         valid_times: ConditionValidTimes = parse_timelock_info(
             parse_conditions_non_consensus(
                 condition

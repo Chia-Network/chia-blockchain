@@ -209,7 +209,7 @@ class CRCATWallet(CATWallet):
         try:
             new_cr_cats: List[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
             hint_dict = {
-                id: hc.hint for id, hc in compute_spend_hints_and_additions(coin_spend).items() if hc.hint is not None
+                id: hc.hint for id, hc in compute_spend_hints_and_additions(coin_spend)[0].items() if hc.hint is not None
             }
             cr_cat: CRCAT = list(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))[0]
             if (

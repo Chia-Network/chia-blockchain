@@ -25,7 +25,7 @@ def test_compute_spend_hints_and_additions() -> None:
         Program.to(create_coin_args),
     )
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
-    assert compute_spend_hints_and_additions(coin_spend) == expected_dict
+    assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
 
 
 def test_cs_config() -> None:

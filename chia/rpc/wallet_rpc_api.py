@@ -2138,7 +2138,7 @@ class WalletRpcApi:
             singleton_struct,
             metadata,
         )
-        hinted_coins = compute_spend_hints_and_additions(coin_spend)
+        hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
         for hinted_coin in hinted_coins.values():
