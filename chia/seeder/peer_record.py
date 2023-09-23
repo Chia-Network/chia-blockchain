@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import time
 from dataclasses import dataclass
@@ -6,8 +8,8 @@ from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class PeerRecord(Streamable):
     peer_id: str
     ip_address: str
@@ -22,23 +24,19 @@ class PeerRecord(Streamable):
     handshake_time: uint64
     tls_version: str
 
-    def update_version(self, version, now):
+    def update_version(self, version: str, now: uint64) -> None:
         if version != "undefined":
             object.__setattr__(self, "version", version)
-        object.__setattr__(self, "handshake_time", uint64(now))
+        object.__setattr__(self, "handshake_time", now)
 
 
+@dataclass
 class PeerStat:
     weight: float
     count: float
     reliability: float
 
-    def __init__(self, weight, count, reliability):
-        self.weight = weight
-        self.count = count
-        self.reliability = reliability
-
-    def update(self, is_reachable: bool, age: int, tau: int):
+    def update(self, is_reachable: bool, age: int, tau: int) -> None:
         f = math.exp(-age / tau)
         self.reliability = self.reliability * f + (1.0 - f if is_reachable else 0.0)
         self.count = self.count * f + 1.0
@@ -79,7 +77,7 @@ class PeerReliability:
         stat_1m_reliability: float = 0.0,
         tries: int = 0,
         successes: int = 0,
-    ):
+    ) -> None:
         self.peer_id = peer_id
         self.ignore_till = ignore_till
         self.ban_till = ban_till
@@ -130,7 +128,7 @@ class PeerReliability:
             return 2 * 3600
         return 0
 
-    def update(self, is_reachable: bool, age: int):
+    def update(self, is_reachable: bool, age: int) -> None:
         self.stat_2h.update(is_reachable, age, 2 * 3600)
         self.stat_8h.update(is_reachable, age, 8 * 3600)
         self.stat_1d.update(is_reachable, age, 24 * 3600)

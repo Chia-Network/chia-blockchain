@@ -1,6 +1,8 @@
 #!/bin/bash
 # Cleans up files/directories that may be left over from previous runs for a clean slate before starting a new build
 
+set -o errexit
+
 PWD=$(pwd)
 
 rm -rf ../venv || true

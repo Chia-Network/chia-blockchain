@@ -11,6 +11,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    labels:
+      - "Changed"
     target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen
@@ -24,6 +26,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
+    labels:
+      - "Changed"
     target-branch: "main"
     pull-request-branch-name:
       # Separate sections of the branch name with a hyphen

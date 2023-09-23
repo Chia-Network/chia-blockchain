@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from chia.consensus.constants import ConsensusConstants
@@ -5,8 +7,8 @@ from chia.types.blockchain_format.sized_bytes import bytes100
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ClassgroupElement(Streamable):
     """
     Represents a classgroup element (a,b,c) where a, b, and c are 512 bit signed integers. However this is using
@@ -17,7 +19,7 @@ class ClassgroupElement(Streamable):
     data: bytes100
 
     @staticmethod
-    def from_bytes(data) -> "ClassgroupElement":
+    def from_bytes(data: bytes) -> ClassgroupElement:
         if len(data) < 100:
             data += b"\x00" * (100 - len(data))
         return ClassgroupElement(bytes100(data))
@@ -29,5 +31,5 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement.from_bytes(b"\x08")
 
     @staticmethod
-    def get_size(constants: ConsensusConstants):
+    def get_size(constants: ConsensusConstants) -> int:
         return 100

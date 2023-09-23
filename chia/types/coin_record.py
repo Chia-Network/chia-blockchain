@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -8,8 +10,8 @@ from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class CoinRecord(Streamable):
     """
     These are values that correspond to a CoinName that are used

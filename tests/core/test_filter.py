@@ -1,28 +1,15 @@
-import asyncio
+from __future__ import annotations
+
 from typing import List
 
 import pytest
-import pytest_asyncio
 from chiabip158 import PyBIP158
-
-from tests.setup_nodes import setup_simulators_and_wallets, bt
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestFilter:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_and_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_basic_filter_test(self, wallet_and_node):
-        full_nodes, wallets = wallet_and_node
+    async def test_basic_filter_test(self, simulator_and_wallet):
+        full_nodes, wallets, bt = simulator_and_wallet
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 

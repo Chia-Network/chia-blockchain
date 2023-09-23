@@ -1,59 +1,71 @@
+from __future__ import annotations
+
 import asyncio
-import functools
-import os
 import logging
 import logging.config
+import os
 import signal
-from sys import platform
-from typing import Any, Callable, List, Optional, Tuple
+from pathlib import Path
+from types import FrameType
+from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
 
-from chia.daemon.server import singleton, service_launch_lock_path
-from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
-from chia.rpc.rpc_server import start_rpc_server
+from chia.cmds.init_funcs import chia_full_version_str
+from chia.daemon.server import service_launch_lock_path
+from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.server.api_protocol import ApiProtocol
+from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
-from chia.types.peer_info import PeerInfo
-from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config, load_config_cli
-from chia.util.setproctitle import setproctitle
+from chia.server.ws_connection import WSChiaConnection
+from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
+from chia.util.lock import Lockfile, LockfileError
+from chia.util.misc import SignalHandlers
+from chia.util.network import resolve
+from chia.util.setproctitle import setproctitle
 
-from .reconnect_task import start_reconnect_task
-
+from ..protocols.shared_protocol import capabilities
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
 main_pid: Optional[int] = None
 
+T = TypeVar("T")
+_T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
+_T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 
-class Service:
+RpcInfo = Tuple[Type[RpcApiProtocol], int]
+
+
+class ServiceException(Exception):
+    pass
+
+
+class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     def __init__(
         self,
-        root_path,
-        node: Any,
-        peer_api: Any,
+        root_path: Path,
+        node: _T_RpcServiceProtocol,
+        peer_api: _T_ApiProtocol,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
         network_id: str,
+        *,
+        config: Dict[str, Any],
         upnp_ports: List[int] = [],
-        server_listen_ports: List[int] = [],
-        connect_peers: List[PeerInfo] = [],
-        auth_connect_peers: bool = True,
-        on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[Tuple[type, int]] = None,
-        parse_cli_args=True,
-        connect_to_daemon=True,
+        connect_peers: Set[UnresolvedPeerInfo] = set(),
+        on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
+        rpc_info: Optional[RpcInfo] = None,
+        connect_to_daemon: bool = True,
+        max_request_body_size: Optional[int] = None,
+        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        listen: bool = True,
     ) -> None:
         self.root_path = root_path
-        self.config = load_config(root_path, "config.yaml")
+        self.config = config
         ping_interval = self.config.get("ping_interval")
         self.self_hostname = self.config.get("self_hostname")
         self.daemon_port = self.config.get("daemon_port")
@@ -61,19 +73,18 @@ class Service:
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self._rpc_task: Optional[asyncio.Task] = None
-        self._rpc_close_task: Optional[asyncio.Task] = None
+        self.rpc_server: Optional[RpcServer] = None
+        self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
+        self.max_request_body_size = max_request_body_size
+        self._listen = listen
+        self.reconnect_retry_seconds: int = 3
 
-        proctitle_name = f"chia_{service_name}"
-        setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
+        self._log.info(f"Starting service {self._service_name} ...")
+        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
-        if parse_cli_args:
-            service_config = load_config_cli(root_path, "config.yaml", service_name)
-        else:
-            service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, service_config["logging"], root_path)
+        self.service_config = self.config[service_name]
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
@@ -81,11 +92,14 @@ class Service:
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         if node_type == NodeType.WALLET:
-            inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
+            inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
+        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        if override_capabilities is not None:
+            capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
-        self._server = ChiaServer(
+        self._server = ChiaServer.create(
             advertised_port,
             node,
             peer_api,
@@ -94,8 +108,9 @@ class Service:
             network_id,
             inbound_rlp,
             outbound_rlp,
+            capabilities_to_use,
             root_path,
-            service_config,
+            self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
             name=f"{service_name}_server",
@@ -106,10 +121,7 @@ class Service:
         else:
             self._log.warning(f"No set_server method for {service_name}")
 
-        self._connect_peers = connect_peers
-        self._auth_connect_peers = auth_connect_peers
         self._upnp_ports = upnp_ports
-        self._server_listen_ports = server_listen_ports
 
         self._api = peer_api
         self._node = node
@@ -119,13 +131,45 @@ class Service:
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: List[asyncio.Task] = []
-        self.upnp: Optional[UPnP] = None
+        self._connect_peers = connect_peers
+        self._connect_peers_task: Optional[asyncio.Task[None]] = None
+        self.upnp: UPnP = UPnP()
 
-    async def start(self, **kwargs) -> None:
-        # we include `kwargs` as a hack for the wallet, which for some
-        # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
-        # and should be fixed at some point.
+    async def _connect_peers_task_handler(self) -> None:
+        resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
+        prefer_ipv6 = self.config.get("prefer_ipv6", False)
+        while True:
+            for unresolved in self._connect_peers:
+                resolved = resolved_peers.get(unresolved)
+                if resolved is None:
+                    try:
+                        resolved = PeerInfo(await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port)
+                    except Exception as e:
+                        self._log.warning(f"Failed to resolve {unresolved.host}: {e}")
+                        continue
+                    self._log.info(f"Add resolved {resolved}")
+                    resolved_peers[unresolved] = resolved
+
+                if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    continue
+
+                if not await self._server.start_client(resolved, None):
+                    self._log.info(f"Failed to connect to {resolved}")
+                    # Re-resolve to make sure the IP didn't change, this helps for example to keep dyndns hostnames
+                    # up to date.
+                    try:
+                        resolved_new = PeerInfo(
+                            await resolve(unresolved.host, prefer_ipv6=prefer_ipv6), unresolved.port
+                        )
+                    except Exception as e:
+                        self._log.warning(f"Failed to resolve after connection failure {unresolved.host}: {e}")
+                        continue
+                    if resolved_new != resolved:
+                        self._log.info(f"Host {unresolved.host} changed from {resolved} to {resolved_new}")
+                        resolved_peers[unresolved] = resolved_new
+            await asyncio.sleep(self.reconnect_retry_seconds)
+
+    async def start(self) -> None:
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return None
@@ -135,93 +179,104 @@ class Service:
 
         self._did_start = True
 
-        self._enable_signals()
-
-        await self._node._start(**kwargs)
+        await self._node._start()
         self._node._shut_down = False
 
-        for port in self._upnp_ports:
-            if self.upnp is None:
-                self.upnp = UPnP()
+        if len(self._upnp_ports) > 0:
+            self.upnp.setup()
 
-            self.upnp.remap(port)
+            for port in self._upnp_ports:
+                self.upnp.remap(port)
 
-        await self._server.start_server(self._on_connect_callback)
+        await self._server.start(
+            listen=self._listen,
+            prefer_ipv6=self.config.get("prefer_ipv6", False),
+            on_connect=self._on_connect_callback,
+        )
+        self._advertised_port = self._server.get_port()
 
-        self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
-            for _ in self._connect_peers
-        ]
-        self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
+        self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
+
+        self._log.info(
+            f"Started {self._service_name} service on network_id: {self._network_id} "
+            f"at port {self._advertised_port}"
+        )
 
         self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
-            self._rpc_task = asyncio.create_task(
-                start_rpc_server(
-                    rpc_api(self._node),
-                    self.self_hostname,
-                    self.daemon_port,
-                    uint16(rpc_port),
-                    self.stop,
-                    self.root_path,
-                    self.config,
-                    self._connect_to_daemon,
-                )
+            self.rpc_server = await start_rpc_server(
+                rpc_api(self._node),
+                self.self_hostname,
+                self.daemon_port,
+                uint16(rpc_port),
+                self.stop,
+                self.root_path,
+                self.config,
+                self._connect_to_daemon,
+                max_request_body_size=self.max_request_body_size,
             )
 
     async def run(self) -> None:
-        lockfile = singleton(service_launch_lock_path(self.root_path, self._service_name))
-        if lockfile is None:
+        try:
+            with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
+                await self.start()
+                await self.wait_closed()
+        except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
-            raise ValueError(f"{self._service_name}: already running")
-        await self.start()
-        await self.wait_closed()
+            raise ValueError(f"{self._service_name}: already running") from e
 
-    def _enable_signals(self) -> None:
+    def add_peer(self, peer: UnresolvedPeerInfo) -> None:
+        self._connect_peers.add(peer)
+
+    async def setup_process_global_state(self, signal_handlers: SignalHandlers) -> None:
+        # Being async forces this to be run from within an active event loop as is
+        # needed for the signal handler setup.
+        proctitle_name = f"chia_{self._service_name}"
+        setproctitle(proctitle_name)
 
         global main_pid
         main_pid = os.getpid()
-        if platform == "win32" or platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
-            signal.signal(signal.SIGINT, self._accept_signal)
-            signal.signal(signal.SIGTERM, self._accept_signal)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
+        signal_handlers.setup_sync_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame=None):
-        self._log.info(f"got signal {signal_number}")
-
+    def _accept_signal(
+        self,
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
         global main_pid
-        if os.getpid() != main_pid:
+        ignore = os.getpid() != main_pid
+
+        # TODO: if we remove this conditional behavior, consider moving logging to common signal handling
+        if ignore:
+            message = "ignoring in worker process"
+        else:
+            message = "shutting down"
+
+        self._log.info("Received signal %s (%s), %s.", signal_.name, signal_.value, message)
+
+        if ignore:
             return
+
         self.stop()
 
     def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+            self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
 
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
             for port in self._upnp_ports:
-                if self.upnp is not None:
-                    self.upnp.release(port)
+                self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
-            for _ in self._reconnect_tasks:
-                _.cancel()
+            if self._connect_peers_task is not None:
+                self._connect_peers_task.cancel()
             self._log.info("Closing connections")
             self._server.close_all()
             self._node._close()
@@ -229,14 +284,9 @@ class Service:
 
             self._log.info("Calling service stop callback")
 
-            if self._rpc_task is not None:
+            if self.rpc_server is not None:
                 self._log.info("Closing RPC server")
-
-                async def close_rpc_server() -> None:
-                    if self._rpc_task:
-                        await (await self._rpc_task)()
-
-                self._rpc_close_task = asyncio.create_task(close_rpc_server())
+                self.rpc_server.close()
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
@@ -246,29 +296,23 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
 
-        if self._rpc_close_task:
+        if self.rpc_server:
             self._log.info("Waiting for RPC server")
-            await self._rpc_close_task
+            await self.rpc_server.await_closed()
             self._log.info("Closed RPC server")
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
 
-        if self.upnp is not None:
-            # this is a blocking call, waiting for the UPnP thread to exit
-            self.upnp.shutdown()
+        # this is a blocking call, waiting for the UPnP thread to exit
+        self.upnp.shutdown()
 
         self._did_start = False
         self._is_stopping.clear()
-        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
+        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully stopped")
 
 
-async def async_run_service(*args, **kwargs) -> None:
-    service = Service(*args, **kwargs)
-    return await service.run()
-
-
-def run_service(*args, **kwargs) -> None:
-    if uvloop is not None:
-        uvloop.install()
-    return asyncio.run(async_run_service(*args, **kwargs))
+def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
+    if connection_limit is not None:
+        set_chia_policy(connection_limit)
+    return asyncio.run(coro)

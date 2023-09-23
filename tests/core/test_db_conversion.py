@@ -1,36 +1,22 @@
-import pytest
-import pytest_asyncio
-import aiosqlite
-import tempfile
+from __future__ import annotations
+
 import random
-import asyncio
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
-from tests.setup_nodes import test_constants
+import pytest
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
-from chia.util.db_wrapper import DBWrapper
+from chia.consensus.blockchain import Blockchain
+from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.consensus.blockchain import Blockchain
-from chia.consensus.multiprocess_validation import PreValidationResult
-
-
-class TempFile:
-    def __init__(self):
-        self.path = Path(tempfile.NamedTemporaryFile().name)
-
-    def __enter__(self) -> Path:
-        if self.path.exists():
-            self.path.unlink()
-        return self.path
-
-    def __exit__(self, exc_t, exc_v, exc_tb):
-        self.path.unlink()
+from chia.simulator.block_tools import test_constants
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint64
+from tests.util.temp_file import TempFile
 
 
 def rand_bytes(num) -> bytes:
@@ -40,17 +26,11 @@ def rand_bytes(num) -> bytes:
     return bytes(ret)
 
 
-@pytest_asyncio.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestDbUpgrade:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("with_hints", [True, False])
+    @pytest.mark.skip("we no longer support DB v1")
     async def test_blocks(self, default_1000_blocks, with_hints: bool):
-
         blocks = default_1000_blocks
 
         hints: List[Tuple[bytes32, bytes]] = []
@@ -74,55 +54,56 @@ class TestDbUpgrade:
             hints.append((coin_id, hint))
 
         with TempFile() as in_file, TempFile() as out_file:
+            db_wrapper1 = await DBWrapper2.create(
+                database=in_file,
+                reader_count=1,
+                db_version=1,
+                journal_mode="OFF",
+                synchronous="OFF",
+            )
 
-            async with aiosqlite.connect(in_file) as conn:
-
-                await conn.execute("pragma journal_mode=OFF")
-                await conn.execute("pragma synchronous=OFF")
-                await conn.execute("pragma locking_mode=exclusive")
-
-                db_wrapper1 = DBWrapper(conn, 1)
+            try:
                 block_store1 = await BlockStore.create(db_wrapper1)
-                coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
+                coin_store1 = await CoinStore.create(db_wrapper1)
                 if with_hints:
-                    hint_store1 = await HintStore.create(db_wrapper1)
+                    hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
                     for h in hints:
+                        assert hint_store1 is not None
                         await hint_store1.add_hints([(h[0], h[1])])
                 else:
                     hint_store1 = None
 
-                bc = await Blockchain.create(
-                    coin_store1, block_store1, test_constants, hint_store1, Path("."), reserved_cores=0
-                )
-                await db_wrapper1.commit_transaction()
+                bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
 
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
                     results = PreValidationResult(None, uint64(1), None, False)
-                    result, err, _, _ = await bc.receive_block(block, results)
+                    result, err, _ = await bc.add_block(block, results)
                     assert err is None
+            finally:
+                await db_wrapper1.close()
 
             # now, convert v1 in_file to v2 out_file
             convert_v1_to_v2(in_file, out_file)
 
-            async with aiosqlite.connect(in_file) as conn, aiosqlite.connect(out_file) as conn2:
+            db_wrapper1 = await DBWrapper2.create(database=in_file, reader_count=1, db_version=1)
+            db_wrapper2 = await DBWrapper2.create(database=out_file, reader_count=1, db_version=2)
 
-                db_wrapper1 = DBWrapper(conn, 1)
+            try:
                 block_store1 = await BlockStore.create(db_wrapper1)
-                coin_store1 = await CoinStore.create(db_wrapper1, uint32(0))
+                coin_store1 = await CoinStore.create(db_wrapper1)
+                hint_store1 = None
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
-                else:
-                    hint_store1 = None
 
-                db_wrapper2 = DBWrapper(conn2, 2)
                 block_store2 = await BlockStore.create(db_wrapper2)
-                coin_store2 = await CoinStore.create(db_wrapper2, uint32(0))
+                coin_store2 = await CoinStore.create(db_wrapper2)
                 hint_store2 = await HintStore.create(db_wrapper2)
 
                 if with_hints:
                     # check hints
                     for h in hints:
+                        assert hint_store1 is not None
                         assert h[0] in await hint_store1.get_coin_ids(h[1])
                         assert h[0] in await hint_store2.get_coin_ids(h[1])
 
@@ -154,3 +135,6 @@ class TestDbUpgrade:
                     for c in coins:
                         n = c.coin.name()
                         assert await coin_store1.get_coin_record(n) == await coin_store2.get_coin_record(n)
+            finally:
+                await db_wrapper1.close()
+                await db_wrapper2.close()

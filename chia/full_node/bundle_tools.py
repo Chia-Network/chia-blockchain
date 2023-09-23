@@ -1,42 +1,29 @@
-import re
-from typing import Optional, Tuple, List, Union
+from __future__ import annotations
 
-from clvm import SExp
-from clvm_tools import binutils
+import re
+from typing import List, Optional, Tuple, Union
+
+from chia_rs import solution_generator, solution_generator_backrefs
 
 from chia.full_node.generator import create_compressed_generator
-from chia.types.blockchain_format.program import SerializedProgram, Program
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
-
-
-def spend_bundle_to_serialized_coin_spend_entry_list(bundle: SpendBundle) -> bytes:
-    r = b""
-    for coin_spend in bundle.coin_spends:
-        r += b"\xff"
-        r += b"\xff" + SExp.to(coin_spend.coin.parent_coin_info).as_bin()
-        r += b"\xff" + bytes(coin_spend.puzzle_reveal)
-        r += b"\xff" + SExp.to(coin_spend.coin.amount).as_bin()
-        r += b"\xff" + bytes(coin_spend.solution)
-        r += b"\x80"
-    r += b"\x80"
-    return r
+from chia.util.ints import uint32
 
 
 def simple_solution_generator(bundle: SpendBundle) -> BlockGenerator:
-    """
-    Simply quotes the solutions we know.
-    """
-    cse_list = spend_bundle_to_serialized_coin_spend_entry_list(bundle)
-    block_program = b"\xff"
+    spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in bundle.coin_spends]
+    block_program = solution_generator(spends)
+    return BlockGenerator(SerializedProgram.from_bytes(block_program), [], [])
 
-    block_program += SExp.to(binutils.assemble("#q")).as_bin()
 
-    block_program += b"\xff" + cse_list + b"\x80"
-
+def simple_solution_generator_backrefs(bundle: SpendBundle) -> BlockGenerator:
+    spends = [(cs.coin, bytes(cs.puzzle_reveal), bytes(cs.solution)) for cs in bundle.coin_spends]
+    block_program = solution_generator_backrefs(spends)
     return BlockGenerator(SerializedProgram.from_bytes(block_program), [], [])
 
 
@@ -72,7 +59,7 @@ def compress_cse_puzzle(puzzle: SerializedProgram) -> Optional[bytes]:
     return match_standard_transaction_exactly_and_return_pubkey(puzzle)
 
 
-def compress_coin_spend(coin_spend: CoinSpend):
+def compress_coin_spend(coin_spend: CoinSpend) -> List[List[Union[bytes, None, int, Program]]]:
     compressed_puzzle = compress_cse_puzzle(coin_spend.puzzle_reveal)
     return [
         [coin_spend.coin.parent_coin_info, coin_spend.coin.amount],
@@ -84,15 +71,12 @@ def puzzle_suitable_for_compression(puzzle: SerializedProgram) -> bool:
     return True if match_standard_transaction_exactly_and_return_pubkey(puzzle) else False
 
 
-def bundle_suitable_for_compression(bundle: SpendBundle):
-    ok = []
-    for coin_spend in bundle.coin_spends:
-        ok.append(puzzle_suitable_for_compression(coin_spend.puzzle_reveal))
-    return all(ok)
+def bundle_suitable_for_compression(bundle: SpendBundle) -> bool:
+    return all(puzzle_suitable_for_compression(coin_spend.puzzle_reveal) for coin_spend in bundle.coin_spends)
 
 
-def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List:
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]] = []
+def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List[List[List[Union[bytes, None, int, Program]]]]:
+    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]] = []
     for coin_spend in bundle.coin_spends:
         compressed_cse_list.append(compress_coin_spend(coin_spend))
     return compressed_cse_list

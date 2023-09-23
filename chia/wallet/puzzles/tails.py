@@ -1,25 +1,38 @@
-from typing import Tuple, Dict, List, Optional, Any
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
-from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.util.ints import uint64
+from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
+    SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
-    SpendableCAT,
 )
-from chia.wallet.cat_wallet.cat_info import CATInfo
+from chia.wallet.cat_wallet.lineage_store import CATLineageStore
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.payment import Payment
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import TXConfig
 
-GENESIS_BY_ID_MOD = load_clvm("genesis_by_coin_id.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm("genesis_by_puzzle_hash.clvm")
-EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_tail.clvm")
+GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
+    "genesis_by_coin_id.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+)
+GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile(
+    "genesis_by_puzzle_hash.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+)
+EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile(
+    "everything_with_signature.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+)
+DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile(
+    "delegated_tail.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
+)
 
 
 class LimitationsProgram:
@@ -37,7 +50,7 @@ class LimitationsProgram:
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: Dict, amount: uint64
+        cls, wallet, cat_tail_info: Dict, amount: uint64, tx_config: TXConfig
     ) -> Tuple[TransactionRecord, SpendBundle]:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -65,28 +78,33 @@ class GenesisById(LimitationsProgram):
         return Program.to([])
 
     @classmethod
-    async def generate_issuance_bundle(cls, wallet, _: Dict, amount: uint64) -> Tuple[TransactionRecord, SpendBundle]:
-        coins = await wallet.standard_wallet.select_coins(amount)
+    async def generate_issuance_bundle(
+        cls, wallet, _: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+    ) -> Tuple[TransactionRecord, SpendBundle]:
+        coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
-        await wallet.add_lineage(origin_id, LineageProof())
         tail: Program = cls.construct([Program.to(origin_id)])
+
+        wallet.lineage_store = await CATLineageStore.create(
+            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+        )
+        await wallet.add_lineage(origin_id, LineageProof())
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
+        [tx_record] = await wallet.standard_wallet.generate_signed_transaction(
+            amount, minted_cat_puzzle_hash, tx_config, fee, coins, origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
 
+        inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
-            ),
+            wallet.standard_wallet.make_solution(primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])]),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
@@ -103,10 +121,7 @@ class GenesisById(LimitationsProgram):
         signed_eve_spend = await wallet.sign(eve_spend)
 
         if wallet.cat_info.my_tail is None:
-            await wallet.save_info(
-                CATInfo(tail.get_tree_hash(), tail),
-                False,
-            )
+            await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
         return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
 

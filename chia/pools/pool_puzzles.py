@@ -1,29 +1,32 @@
+from __future__ import annotations
+
 import logging
-from typing import Tuple, List, Optional
+from typing import List, Optional, Tuple
+
 from blspy import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
-from chia.pools.pool_wallet_info import PoolState, LEAVING_POOL, SELF_POOLING
-
+from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
-
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
-from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
-
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.ints import uint32, uint64
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
 
 log = logging.getLogger(__name__)
 # "Full" is the outer singleton, with the inner puzzle filled in
-SINGLETON_MOD = load_clvm("singleton_top_layer.clvm")
-POOL_WAITING_ROOM_MOD = load_clvm("pool_waitingroom_innerpuz.clvm")
-POOL_MEMBER_MOD = load_clvm("pool_member_innerpuz.clvm")
-P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
+SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer.clsp")
+POOL_WAITING_ROOM_MOD = load_clvm_maybe_recompile(
+    "pool_waitingroom_innerpuz.clsp", package_or_requirement="chia.pools.puzzles"
+)
+POOL_MEMBER_MOD = load_clvm_maybe_recompile("pool_member_innerpuz.clsp", package_or_requirement="chia.pools.puzzles")
+P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clsp")
 POOL_OUTER_MOD = SINGLETON_MOD
 
 POOL_MEMBER_HASH = POOL_MEMBER_MOD.get_tree_hash()
@@ -169,7 +172,7 @@ def create_travel_spend(
     if is_pool_member_inner_puzzle(inner_puzzle):
         # inner sol is key_value_list ()
         # key_value_list is:
-        # "ps" -> poolstate as bytes
+        # "p" -> poolstate as bytes
         inner_sol: Program = Program.to([[("p", bytes(target))], 0])
     elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
         # inner sol is (spend_type, key_value_list, pool_reward_height)
@@ -182,7 +185,7 @@ def create_travel_spend(
             f"hash:{Program.to(bytes(target)).get_tree_hash()}"
         )
         # key_value_list is:
-        # "ps" -> poolstate as bytes
+        # "p" -> poolstate as bytes
         inner_sol = Program.to([1, [("p", bytes(target))], destination_inner.get_tree_hash()])  # current or target
     else:
         raise ValueError
@@ -282,7 +285,7 @@ def create_absorb_spend(
 
 
 def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
-    additions: List[Coin] = coin_sol.additions()
+    additions: List[Coin] = compute_additions(coin_sol)
     for coin in additions:
         if coin.amount % 2 == 1:
             return coin

@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
-from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
+from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -17,21 +20,21 @@ from chia.wallet.puzzles import (
     p2_m_of_n_delegate_direct,
     p2_puzzle_hash,
 )
+from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 from tests.util.key_tool import KeyTool
 
 from ..core.make_block_generator import int_to_public_key
 from .coin_store import CoinStore, CoinTimestamp
 
-T1 = CoinTimestamp(1, 10000000)
-T2 = CoinTimestamp(5, 10003000)
+T1 = CoinTimestamp(1, uint32(10000000))
+T2 = CoinTimestamp(5, uint32(10003000))
 
 MAX_BLOCK_COST_CLVM = int(1e18)
-COST_PER_BYTE = int(12000)
 
 
 def secret_exponent_for_index(index: int) -> int:
     blob = index.to_bytes(32, "big")
-    hashed_blob = BasicSchemeMPL.key_gen(std_hash(b"foo" + blob))
+    hashed_blob = AugSchemeMPL.key_gen(std_hash(b"foo" + blob))
     r = int.from_bytes(hashed_blob, "big")
     return r
 
@@ -62,7 +65,7 @@ def do_test_spend(
     this time, signatures are not verified.
     """
 
-    coin_db = CoinStore()
+    coin_db = CoinStore(DEFAULT_CONSTANTS)
 
     puzzle_hash = puzzle_reveal.get_tree_hash()
 
@@ -73,7 +76,7 @@ def do_test_spend(
     coin_spend = CoinSpend(coin, puzzle_reveal, solution)
 
     spend_bundle = SpendBundle([coin_spend], G2Element())
-    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM, COST_PER_BYTE)
+    coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
 
     # ensure all outputs are there
     for puzzle_hash, amount in payments:
@@ -84,7 +87,7 @@ def do_test_spend(
             assert 0
 
     # make sure we can actually sign the solution
-    signatures = []
+    signatures: List[G2Element] = []
     for coin_spend in spend_bundle.coin_spends:
         signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)
@@ -94,17 +97,14 @@ def do_test_spend(
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
 ) -> Tuple[List[Tuple[bytes32, int]], Program]:
-
+    # the coin we get from coin_db.farm_coin only has amount 1024, so we can
+    # only make small payments to avoid failing with MINTING_COIN
     payments = [
-        (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 1000),
-        (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 1000),
+        (throwaway_puzzle_hash(initial_index + 1, key_lookup), initial_index * 10),
+        (throwaway_puzzle_hash(initial_index + 2, key_lookup), (initial_index + 1) * 10),
     ]
-    conditions = Program.to([make_create_coin_condition(ph, amount) for ph, amount in payments])
+    conditions = Program.to([make_create_coin_condition(ph, uint64(amount), []) for ph, amount in payments])
     return payments, conditions
-
-
-def make_create_coin_condition(puzzle_hash, amount):
-    return Program.to([ConditionOpcode.CREATE_COIN, puzzle_hash, amount])
 
 
 class TestPuzzles(TestCase):
@@ -191,10 +191,10 @@ class TestPuzzles(TestCase):
         hidden_public_key = public_key_for_index(10, key_lookup)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
         )
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
-            hidden_public_key, hidden_puzzle, Program.to(0)
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
         )
 
         do_test_spend(puzzle, solution, payments, key_lookup)
@@ -205,9 +205,10 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
         hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)
+        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            hidden_pub_key_point, hidden_puzzle
         )
         payable_payments, payable_conditions = default_payments_and_conditions(5, key_lookup)
 
@@ -215,7 +216,7 @@ class TestPuzzles(TestCase):
         delegated_solution = []
 
         synthetic_public_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_public_key(
-            hidden_public_key, hidden_puzzle.get_tree_hash()
+            G1Element.from_bytes(hidden_public_key), hidden_puzzle.get_tree_hash()
         )
 
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_delegated_puzzle(
@@ -224,10 +225,9 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
         synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
-            hidden_public_key, hidden_puzzle_hash
+            hidden_pub_key_point, hidden_puzzle_hash
         )
 
-        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
         assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
         secret_exponent = key_lookup.get(hidden_public_key)

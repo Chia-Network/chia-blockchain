@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import random
@@ -13,11 +15,10 @@ from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_version import lookup_db_version
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32
 
 # the first transaction block. Each byte in transaction_height_delta is the
@@ -47,8 +48,7 @@ def random_refs() -> List[uint32]:
 REPETITIONS = 100
 
 
-async def main(db_path: Path):
-
+async def main(db_path: Path) -> None:
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:
@@ -57,19 +57,19 @@ async def main(db_path: Path):
         await connection.execute("pragma query_only=ON")
         db_version: int = await lookup_db_version(connection)
 
-        db_wrapper = DBWrapper(connection, db_version=db_version)
+        db_wrapper = DBWrapper2(connection, db_version=db_version)
+        await db_wrapper.add_connection(await aiosqlite.connect(db_path))
+
         block_store = await BlockStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
 
         start_time = monotonic()
         # make configurable
         reserved_cores = 4
-        blockchain = await Blockchain.create(
-            coin_store, block_store, DEFAULT_CONSTANTS, hint_store, db_path.parent, reserved_cores
-        )
+        blockchain = await Blockchain.create(coin_store, block_store, DEFAULT_CONSTANTS, db_path.parent, reserved_cores)
 
         peak = blockchain.get_peak()
+        assert peak is not None
         timing = 0.0
         for i in range(REPETITIONS):
             block = BlockInfo(
@@ -91,7 +91,7 @@ async def main(db_path: Path):
 
 @click.command()
 @click.argument("db-path", type=click.Path())
-def entry_point(db_path: Path):
+def entry_point(db_path: Path) -> None:
     asyncio.run(main(Path(db_path)))
 
 

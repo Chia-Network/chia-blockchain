@@ -2,12 +2,18 @@
 NOTE: This contains duplicate code from `chia.cmds.plots`.
 After `chia plots create` becomes obsolete, consider removing it from there.
 """
+from __future__ import annotations
+
 import asyncio
 import logging
-import pkg_resources
-from chia.plotting.create_plots import create_plots, resolve_plot_keys
+from argparse import Namespace
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+import pkg_resources
+
+from chia.plotting.create_plots import create_plots, resolve_plot_keys
+from chia.plotting.util import Params, add_plot_directory, validate_plot_size
 
 log = logging.getLogger(__name__)
 
@@ -17,33 +23,14 @@ def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 
-class Params:
-    def __init__(self, args):
-        self.size = args.size
-        self.num = args.count
-        self.buffer = args.buffer
-        self.num_threads = args.threads
-        self.buckets = args.buckets
-        self.stripe_size = args.stripes
-        self.tmp_dir = Path(args.tmpdir)
-        self.tmp2_dir = Path(args.tmpdir2) if args.tmpdir2 else None
-        self.final_dir = Path(args.finaldir)
-        self.plotid = args.id
-        self.memo = args.memo
-        self.nobitfield = args.nobitfield
-        self.exclude_final_dir = args.exclude_final_dir
-
-
-def plot_chia(args, root_path):
-    if args.size < 32 and not args.override:
-        print("k=32 is the minimum size for farming.")
-        print("If you are testing and you want to use smaller size please add the --override flag.")
-        return
-    elif args.size < 25 and args.override:
-        print("Error: The minimum k size allowed from the cli is k=25.")
+def plot_chia(args: Namespace, root_path: Path) -> None:
+    try:
+        validate_plot_size(root_path, args.size, args.override)
+    except ValueError as e:
+        print(e)
         return
 
-    plot_keys = asyncio.get_event_loop().run_until_complete(
+    plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
             args.alt_fingerprint,
@@ -54,4 +41,23 @@ def plot_chia(args, root_path):
             args.connect_to_daemon,
         )
     )
-    asyncio.get_event_loop().run_until_complete(create_plots(Params(args), plot_keys, root_path))
+    params = Params(
+        size=args.size,
+        num=args.count,
+        buffer=args.buffer,
+        num_threads=args.threads,
+        buckets=args.buckets,
+        stripe_size=args.stripes,
+        tmp_dir=Path(args.tmpdir),
+        tmp2_dir=Path(args.tmpdir2) if args.tmpdir2 else None,
+        final_dir=Path(args.finaldir),
+        plotid=args.id,
+        memo=args.memo,
+        nobitfield=args.nobitfield,
+    )
+    asyncio.run(create_plots(params, plot_keys))
+    if not args.exclude_final_dir:
+        try:
+            add_plot_directory(root_path, args.finaldir)
+        except ValueError as e:
+            print(e)

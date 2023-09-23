@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 
 from blspy import G2Element
@@ -13,17 +15,14 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint16
+from chia.util.ints import uint16, uint32
 
 
 def print_conditions(spend_bundle: SpendBundle):
     print("\nConditions:")
     for coin_spend in spend_bundle.coin_spends:
         result = Program.from_bytes(bytes(coin_spend.puzzle_reveal)).run(Program.from_bytes(bytes(coin_spend.solution)))
-        error, result_human = parse_sexp_to_conditions(result)
-        assert error is None
-        assert result_human is not None
-        for cvp in result_human:
+        for cvp in parse_sexp_to_conditions(result):
             print(f"{ConditionOpcode(cvp.opcode).name}: {[var.hex() for var in cvp.vars]}")
     print("")
 
@@ -35,8 +34,11 @@ async def main() -> None:
     config = load_config(path, "config.yaml")
     client = await FullNodeRpcClient.create(self_hostname, rpc_port, path, config)
     try:
-        farmer_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[1]
-        pool_prefarm = (await client.get_block_record_by_height(1)).reward_claims_incorporated[0]
+        block_record = await client.get_block_record_by_height(1)
+        assert block_record is not None
+        assert block_record.reward_claims_incorporated is not None
+        farmer_prefarm = block_record.reward_claims_incorporated[1]
+        pool_prefarm = block_record.reward_claims_incorporated[0]
 
         pool_amounts = int(calculate_pool_reward(uint32(0)) / 2)
         farmer_amounts = int(calculate_base_farmer_reward(uint32(0)) / 2)

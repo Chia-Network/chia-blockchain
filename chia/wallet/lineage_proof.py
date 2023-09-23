@@ -1,14 +1,16 @@
-from dataclasses import dataclass
-from typing import Optional, Any, List
+from __future__ import annotations
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from dataclasses import dataclass
+from typing import Any, List, Optional
+
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class LineageProof(Streamable):
     parent_name: Optional[bytes32] = None
     inner_puzzle_hash: Optional[bytes32] = None

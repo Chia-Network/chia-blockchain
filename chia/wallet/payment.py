@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import List
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
 
@@ -12,7 +13,7 @@ from chia.util.ints import uint64
 class Payment:
     puzzle_hash: bytes32
     amount: uint64
-    memos: List[bytes]
+    memos: List[bytes] = field(default_factory=list)
 
     def as_condition_args(self) -> List:
         return [self.puzzle_hash, self.amount, self.memos]

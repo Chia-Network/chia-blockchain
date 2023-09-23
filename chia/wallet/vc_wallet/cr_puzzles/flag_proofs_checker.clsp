@@ -1,0 +1,45 @@
+; This is a PROOFS_CHECKER for use with credential_restriction.clsp
+;
+; In an attempt to be as simple as possible, this puzzle is curried a list of key/value pairs sorted by keys. This sort
+; is crucial to the program functioning as the key/value pairs of the proofs will be sorted before being compared to
+; the curried list.
+(mod
+  (
+    FLAGS  ; must be sorted
+    proofs  ; will be sorted
+    solution  ; unused
+  )
+
+  (include utility_macros.clib)
+
+  (defun insertion_sort_by_keys (sorted insertions)
+    (if insertions
+        (if (or (not sorted) (>s (f (f insertions)) (f (f sorted))))
+            (insertion_sort_by_keys (c (f insertions) sorted) (r insertions))
+            (insertion_sort_by_keys (c (f sorted) (insertion_sort_by_keys (r sorted) (list (f insertions)))) (r insertions))
+        )
+        sorted
+    )
+  )
+
+  (defun merge_insertion_sort (proofs)
+    (if (r proofs)
+        (insertion_sort_by_keys (merge_insertion_sort (r proofs)) (merge_insertion_sort (list (f proofs))))
+        proofs
+    )
+  )
+
+  ; This function checks that the revealed proofs START WITH the same key/value pairs as are in FLAGS. This is not for
+  ; any particular reason except optimization. We don't really care if EXTRA proof pairs are revealed.
+  (defun compare_first_pairs_against_flags (subject comp)
+    (if subject
+        (if (logand (= (f (f subject)) (f (f comp))) (= (r (f subject)) (r (f comp))))
+            (compare_first_pairs_against_flags (r subject) (r comp))
+            ()
+        )
+        1
+    )
+  )
+
+  (compare_first_pairs_against_flags FLAGS (merge_insertion_sort proofs))
+)

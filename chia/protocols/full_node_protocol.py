@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -18,8 +20,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewPeak(Streamable):
     header_hash: bytes32
     height: uint32
@@ -28,102 +30,102 @@ class NewPeak(Streamable):
     unfinished_reward_block_hash: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewTransaction(Streamable):
     transaction_id: bytes32
     cost: uint64
     fees: uint64
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestTransaction(Streamable):
     transaction_id: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondTransaction(Streamable):
     transaction: SpendBundle
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestProofOfWeight(Streamable):
     total_number_of_blocks: uint32
     tip: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondProofOfWeight(Streamable):
     wp: WeightProof
     tip: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestBlock(Streamable):
     height: uint32
     include_transaction_block: bool
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RejectBlock(Streamable):
     height: uint32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     include_transaction_block: bool
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondBlocks(Streamable):
     start_height: uint32
     end_height: uint32
     blocks: List[FullBlock]
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RejectBlocks(Streamable):
     start_height: uint32
     end_height: uint32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondBlock(Streamable):
     block: FullBlock
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewUnfinishedBlock(Streamable):
     unfinished_reward_hash: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestUnfinishedBlock(Streamable):
     unfinished_reward_hash: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondUnfinishedBlock(Streamable):
     unfinished_block: UnfinishedBlock
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewSignagePointOrEndOfSubSlot(Streamable):
     prev_challenge_hash: Optional[bytes32]
     challenge_hash: bytes32
@@ -131,16 +133,16 @@ class NewSignagePointOrEndOfSubSlot(Streamable):
     last_rc_infusion: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestSignagePointOrEndOfSubSlot(Streamable):
     challenge_hash: bytes32
     index_from_challenge: uint8
     last_rc_infusion: bytes32
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondSignagePoint(Streamable):
     index_from_challenge: uint8
     challenge_chain_vdf: VDFInfo
@@ -149,20 +151,20 @@ class RespondSignagePoint(Streamable):
     reward_chain_proof: VDFProof
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondEndOfSubSlot(Streamable):
     end_of_slot_bundle: EndOfSubSlotBundle
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestMempoolTransactions(Streamable):
     filter: bytes
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class NewCompactVDF(Streamable):
     height: uint32
     header_hash: bytes32
@@ -170,8 +172,8 @@ class NewCompactVDF(Streamable):
     vdf_info: VDFInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestCompactVDF(Streamable):
     height: uint32
     header_hash: bytes32
@@ -179,8 +181,8 @@ class RequestCompactVDF(Streamable):
     vdf_info: VDFInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondCompactVDF(Streamable):
     height: uint32
     header_hash: bytes32
@@ -189,15 +191,15 @@ class RespondCompactVDF(Streamable):
     vdf_proof: VDFProof
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RequestPeers(Streamable):
     """
     Return full list of peers
     """
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RespondPeers(Streamable):
     peer_list: List[TimestampedPeerInfo]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -47,7 +49,7 @@ class LastState:
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False
 
-    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]):
+    def set_state(self, state: Union[timelord_protocol.NewPeakTimelord, EndOfSubSlotBundle]) -> None:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
@@ -57,6 +59,7 @@ class LastState:
                 state.reward_chain_block,
                 state.sub_slot_iters,
                 state.difficulty,
+                state.reward_chain_block.height,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
@@ -104,11 +107,10 @@ class LastState:
         else:
             assert False
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "append" of "list" has incompatible type "Tuple[Optional[bytes32], uint128]";
-        #       expected "Tuple[bytes32, uint128]"  [arg-type]
-        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))  # type: ignore[arg-type]  # noqa: E501
-        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
+        reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
+        assert reward_challenge is not None  # Reward chain always has VDFs
+        self.reward_challenge_cache.append((reward_challenge, self.total_iters))
+        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

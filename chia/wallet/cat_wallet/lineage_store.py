@@ -1,11 +1,10 @@
-import asyncio
+from __future__ import annotations
+
 import logging
 from typing import Dict, Optional
 
-import aiosqlite
-
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.wallet.lineage_proof import LineageProof
 
 log = logging.getLogger(__name__)
@@ -18,70 +17,56 @@ class CATLineageStore:
     WalletInterestedStore to keep track of puzzle hashes which we are interested in.
     """
 
-    db_connection: aiosqlite.Connection
-    lock: asyncio.Lock
-    db_wrapper: DBWrapper
+    db_wrapper: DBWrapper2
     table_name: str
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, asset_id: str):
+    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> "CATLineageStore":
         self = cls()
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper
-        self.db_connection = self.db_wrapper.db
-        await self.db_connection.execute(
-            (f"CREATE TABLE IF NOT EXISTS {self.table_name}(" " coin_id text PRIMARY_KEY," " lineage blob)")
-        )
-
-        await self.db_connection.commit()
-        # Lock
-        self.lock = asyncio.Lock()  # external
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute(
+                (f"CREATE TABLE IF NOT EXISTS {self.table_name}(coin_id text PRIMARY KEY, lineage blob)")
+            )
         return self
 
-    async def close(self):
-        await self.db_connection.close()
-
-    async def _clear_database(self):
-        cursor = await self.db_connection.execute(f"DELETE FROM {self.table_name}")
-        await cursor.close()
-        await self.db_connection.commit()
-
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
-        cursor = await self.db_connection.execute(
-            f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)",
-            (coin_id.hex(), bytes(lineage)),
-        )
-
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                f"INSERT OR REPLACE INTO {self.table_name} VALUES(?, ?)",
+                (coin_id.hex(), bytes(lineage)),
+            )
+            await cursor.close()
 
     async def remove_lineage_proof(self, coin_id: bytes32) -> None:
-        cursor = await self.db_connection.execute(
-            f"DELETE FROM {self.table_name} WHERE coin_id=?;",
-            (coin_id.hex(),),
-        )
-
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                f"DELETE FROM {self.table_name} WHERE coin_id=?;",
+                (coin_id.hex(),),
+            )
+            await cursor.close()
 
     async def get_lineage_proof(self, coin_id: bytes32) -> Optional[LineageProof]:
-
-        cursor = await self.db_connection.execute(
-            f"SELECT * FROM {self.table_name} WHERE coin_id=?;",
-            (coin_id.hex(),),
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(
+                f"SELECT * FROM {self.table_name} WHERE coin_id=?;",
+                (coin_id.hex(),),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
 
         if row is not None and row[0] is not None:
-            return LineageProof.from_bytes(row[1])
+            ret: LineageProof = LineageProof.from_bytes(row[1])
+            return ret
 
         return None
 
     async def get_all_lineage_proofs(self) -> Dict[bytes32, LineageProof]:
-        cursor = await self.db_connection.execute(f"SELECT * FROM {self.table_name}")
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(f"SELECT * FROM {self.table_name}")
+            rows = await cursor.fetchall()
+            await cursor.close()
 
         lineage_dict = {}
 

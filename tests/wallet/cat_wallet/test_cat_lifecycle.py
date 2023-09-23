@@ -1,112 +1,101 @@
-import pytest
-import pytest_asyncio
+from __future__ import annotations
 
-from typing import List, Tuple, Optional, Dict
-from blspy import PrivateKey, AugSchemeMPL, G2Element
+from typing import List, Optional, Tuple
+
+import pytest
+from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
-from chia.clvm.spend_sim import SpendSim, SimClient
-from chia.types.blockchain_format.program import Program
+from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.puzzles.tails import (
-    GenesisById,
-    GenesisByPuzhash,
-    EverythingWithSig,
-    DelegatedLimitations,
-)
-
-from tests.clvm.test_puzzles import secret_exponent_for_index
+from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
 from tests.clvm.benchmark_costs import cost_of_spend_bundle
+from tests.clvm.test_puzzles import secret_exponent_for_index
+from tests.conftest import ConsensusMode
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
 NO_LINEAGE_PROOF = LineageProof()
 
 
-class TestCATLifecycle:
-    cost: Dict[str, int] = {}
+async def do_spend(
+    sim: SpendSim,
+    sim_client: SimClient,
+    tail: Program,
+    coins: List[Coin],
+    lineage_proofs: List[Program],
+    inner_solutions: List[Program],
+    expected_result: Tuple[MempoolInclusionStatus, Err],
+    reveal_limitations_program: bool = True,
+    signatures: List[G2Element] = [],
+    extra_deltas: Optional[List[int]] = None,
+    additional_spends: List[SpendBundle] = [],
+    limitations_solutions: Optional[List[Program]] = None,
+    cost_logger: Optional[CostLogger] = None,
+    cost_log_msg: str = "",
+) -> int:
+    if limitations_solutions is None:
+        limitations_solutions = [Program.to([])] * len(coins)
+    if extra_deltas is None:
+        extra_deltas = [0] * len(coins)
 
-    @pytest_asyncio.fixture(scope="function")
-    async def setup_sim(self):
-        sim = await SpendSim.create()
-        sim_client = SimClient(sim)
-        await sim.farm_block()
-        return sim, sim_client
-
-    async def do_spend(
-        self,
-        sim: SpendSim,
-        sim_client: SimClient,
-        tail: Program,
-        coins: List[Coin],
-        lineage_proofs: List[Program],
-        inner_solutions: List[Program],
-        expected_result: Tuple[MempoolInclusionStatus, Err],
-        reveal_limitations_program: bool = True,
-        signatures: List[G2Element] = [],
-        extra_deltas: Optional[List[int]] = None,
-        additional_spends: List[SpendBundle] = [],
-        limitations_solutions: Optional[List[Program]] = None,
-        cost_str: str = "",
+    spendable_cat_list: List[SpendableCAT] = []
+    for coin, innersol, proof, limitations_solution, extra_delta in zip(
+        coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
     ):
-        if limitations_solutions is None:
-            limitations_solutions = [Program.to([])] * len(coins)
-        if extra_deltas is None:
-            extra_deltas = [0] * len(coins)
-
-        spendable_cat_list: List[SpendableCAT] = []
-        for coin, innersol, proof, limitations_solution, extra_delta in zip(
-            coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
-        ):
-            spendable_cat_list.append(
-                SpendableCAT(
-                    coin,
-                    tail.get_tree_hash(),
-                    acs,
-                    innersol,
-                    limitations_solution=limitations_solution,
-                    lineage_proof=proof,
-                    extra_delta=extra_delta,
-                    limitations_program_reveal=tail if reveal_limitations_program else Program.to([]),
-                )
-            )
-
-        spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
-            CAT_MOD,
-            spendable_cat_list,
-        )
-        agg_sig = AugSchemeMPL.aggregate(signatures)
-        result = await sim_client.push_tx(
-            SpendBundle.aggregate(
-                [
-                    *additional_spends,
-                    spend_bundle,
-                    SpendBundle([], agg_sig),  # "Signing" the spend bundle
-                ]
+        spendable_cat_list.append(
+            SpendableCAT(
+                coin,
+                tail.get_tree_hash(),
+                acs,
+                innersol,
+                limitations_solution=limitations_solution,
+                lineage_proof=proof,
+                extra_delta=extra_delta,
+                limitations_program_reveal=tail if reveal_limitations_program else Program.to([]),
             )
         )
-        assert result == expected_result
-        self.cost[cost_str] = cost_of_spend_bundle(spend_bundle)
-        await sim.farm_block()
 
-    @pytest.mark.asyncio()
-    async def test_cat_mod(self, setup_sim):
-        sim, sim_client = setup_sim
+    spend_bundle: SpendBundle = unsigned_spend_bundle_for_spendable_cats(
+        CAT_MOD,
+        spendable_cat_list,
+    )
+    agg_sig = AugSchemeMPL.aggregate(signatures)
+    final_bundle = SpendBundle.aggregate(
+        [
+            *additional_spends,
+            spend_bundle,
+            SpendBundle([], agg_sig),  # "Signing" the spend bundle
+        ]
+    )
+    if cost_logger is not None:
+        final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
+    result = await sim_client.push_tx(final_bundle)
+    assert result == expected_result
+    cost = cost_of_spend_bundle(spend_bundle)
+    await sim.farm_block()
+    return cost
 
-        try:
+
+class TestCATLifecycle:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_cat_mod(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -115,7 +104,7 @@ class TestCATLifecycle:
             starting_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(cat_ph))[0].coin
 
             # Testing the eve spend
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -133,7 +122,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Eve Spend",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend + create three children (TAIL: ())",
             )
 
             # There's 4 total coins at this point. A farming reward and the three children of the spend above.
@@ -144,7 +134,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             coins = [coins[0], coins[1]]
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -161,7 +151,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
-                cost_str="Two CATs",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend x2 + create one child (TAIL: ())",
             )
 
             # Testing a combination of three
@@ -170,7 +161,7 @@ class TestCATLifecycle:
                 for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
             ]
             total_amount: uint64 = uint64(sum([c.amount for c in coins]))
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -188,7 +179,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 3,
-                cost_str="Three CATs",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend x3 + create one child (TAIL: ())",
             )
 
             # Spend with a standard lineage proof
@@ -196,7 +188,7 @@ class TestCATLifecycle:
             _, curried_args = cat_puzzle.uncurry()
             _, _, innerpuzzle = curried_args.as_iter()
             lineage_proof = LineageProof(parent_coin.parent_coin_info, innerpuzzle.get_tree_hash(), parent_coin.amount)
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -205,11 +197,12 @@ class TestCATLifecycle:
                 [Program.to([[51, acs.get_tree_hash(), total_amount]])],
                 (MempoolInclusionStatus.SUCCESS, None),
                 reveal_limitations_program=False,
-                cost_str="Standard Lineage Check",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend + create one child",
             )
 
             # Melt some value
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -226,7 +219,8 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
-                cost_str="Melting Value",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend (Melt) + create one child (TAIL: ())",
             )
 
             # Mint some value
@@ -246,7 +240,7 @@ class TestCATLifecycle:
                 ],
                 G2Element(),
             )
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -264,17 +258,14 @@ class TestCATLifecycle:
                 extra_deltas=[1],
                 additional_spends=[acs_bundle],
                 limitations_solutions=[checker_solution],
-                cost_str="Mint Value",
+                cost_logger=cost_logger,
+                cost_log_msg="ACS burn + Cat Spend (Mint) + create one child (TAIL: ())",
             )
 
-        finally:
-            await sim.close()
-
-    @pytest.mark.asyncio()
-    async def test_complex_spend(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_complex_spend(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             tail = Program.to([])
             checker_solution = Program.to([])
             cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), acs)
@@ -289,7 +280,7 @@ class TestCATLifecycle:
             eve_to_melt = cat_records[3].coin
 
             # Spend two of them to make them non-eve
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -311,7 +302,8 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 2,
-                cost_str="Spend two eves",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend x2 + create one child each (TAIL: ())",
             )
 
             # Make the lineage proofs for the non-eves
@@ -326,7 +318,7 @@ class TestCATLifecycle:
 
             # Do the complex spend
             # We have both and eve and non-eve doing both minting and melting
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -361,16 +353,14 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution] * 4,
                 extra_deltas=[13, -21, 21, -13],
-                cost_str="Complex Spend",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend x2 (mint & melt) + Cat Spend x2 (mint & melt) - one child each (TAIL: ())",
             )
-        finally:
-            await sim.close()
 
-    @pytest.mark.asyncio()
-    async def test_genesis_by_id(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_genesis_by_id(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -389,7 +379,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -405,17 +395,14 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Genesis by ID",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_id)",
             )
 
-        finally:
-            await sim.close()
-
-    @pytest.mark.asyncio()
-    async def test_genesis_by_puzhash(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_genesis_by_puzhash(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -434,7 +421,7 @@ class TestCATLifecycle:
             )
             await sim.farm_block()
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -450,17 +437,14 @@ class TestCATLifecycle:
                 ],
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
-                cost_str="Genesis by Puzhash",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: genesis_by_puzhash)",
             )
 
-        finally:
-            await sim.close()
-
-    @pytest.mark.asyncio()
-    async def test_everything_with_signature(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_everything_with_signature(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
             tail: Program = EverythingWithSig.construct([Program.to(sk.get_g1())])
             checker_solution: Program = EverythingWithSig.solve([], {})
@@ -475,7 +459,7 @@ class TestCATLifecycle:
                 sk, (starting_coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -492,7 +476,8 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
-                cost_str="Signature Issuance",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: everything_with_signature)",
             )
 
             # Test melting value
@@ -501,7 +486,7 @@ class TestCATLifecycle:
                 sk, (int_to_bytes(-1) + coin.name() + sim.defaults.AGG_SIG_ME_ADDITIONAL_DATA)
             )
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -519,7 +504,8 @@ class TestCATLifecycle:
                 extra_deltas=[-1],
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
-                cost_str="Signature Melt",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Spend (Melt) - create one child (TAIL: everything_with_signature)",
             )
 
             # Test minting value
@@ -544,7 +530,7 @@ class TestCATLifecycle:
                 G2Element(),
             )
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -563,17 +549,14 @@ class TestCATLifecycle:
                 limitations_solutions=[checker_solution],
                 signatures=[signature],
                 additional_spends=[acs_bundle],
-                cost_str="Signature Mint",
+                cost_logger=cost_logger,
+                cost_log_msg="ACS Burn + Cat Spend (Mint) - create one child (TAIL: everything_with_signature)",
             )
 
-        finally:
-            await sim.close()
-
-    @pytest.mark.asyncio()
-    async def test_delegated_tail(self, setup_sim):
-        sim, sim_client = setup_sim
-
-        try:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.asyncio
+    async def test_delegated_tail(self, cost_logger, consensus_mode):
+        async with sim_and_client() as (sim, sim_client):
             standard_acs = Program.to(1)
             standard_acs_ph: bytes32 = standard_acs.get_tree_hash()
             await sim.farm_block(standard_acs_ph)
@@ -607,7 +590,7 @@ class TestCATLifecycle:
             )
             signature: G2Element = AugSchemeMPL.sign(sk, new_tail.get_tree_hash())
 
-            await self.do_spend(
+            await do_spend(
                 sim,
                 sim_client,
                 tail,
@@ -624,15 +607,6 @@ class TestCATLifecycle:
                 (MempoolInclusionStatus.SUCCESS, None),
                 signatures=[signature],
                 limitations_solutions=[checker_solution],
-                cost_str="Delegated Genesis",
+                cost_logger=cost_logger,
+                cost_log_msg="Cat Eve Spend - create one child (TAIL: delegated_tail - genesis_by_id)",
             )
-
-        finally:
-            await sim.close()
-
-    def test_cost(self):
-        import json
-        import logging
-
-        log = logging.getLogger(__name__)
-        log.warning(json.dumps(self.cost))

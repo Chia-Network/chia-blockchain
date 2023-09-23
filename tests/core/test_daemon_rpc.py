@@ -1,23 +1,25 @@
-import pytest
-import pytest_asyncio
+from __future__ import annotations
 
-from tests.setup_nodes import setup_daemon
-from chia.daemon.client import connect_to_daemon
-from tests.setup_nodes import bt
+import pytest
+
 from chia import __version__
+from chia.daemon.client import connect_to_daemon
 
 
 class TestDaemonRpc:
-    @pytest_asyncio.fixture(scope="function")
-    async def get_daemon(self):
-        async for _ in setup_daemon(btools=bt):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_get_version_rpc(self, get_daemon):
+    async def test_get_version_rpc(self, get_daemon, bt):
+        ws_server = get_daemon
         config = bt.config
-        client = await connect_to_daemon(config["self_hostname"], config["daemon_port"], bt.get_daemon_ssl_context())
+        client = await connect_to_daemon(
+            config["self_hostname"],
+            config["daemon_port"],
+            50 * 1000 * 1000,
+            bt.get_daemon_ssl_context(),
+            heartbeat=config["daemon_heartbeat"],
+        )
         response = await client.get_version()
 
         assert response["data"]["success"]
         assert response["data"]["version"] == __version__
+        ws_server.stop()

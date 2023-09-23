@@ -1,0 +1,25 @@
+[run]
+branch=True
+relative_files=True
+source_pkgs=
+  chia
+  tests
+omit=
+  tests/**/config.py
+concurrency=multiprocessing, thread
+parallel=True
+
+[paths]
+source =
+  chia/
+  venv/**/site-packages/chia/
+
+[report]
+precision = 1
+exclude_lines =
+  pragma: no cover
+  abc\.abstractmethod
+  typing\.overload
+  ^\s*\.\.\.\s*$
+  if typing.TYPE_CHECKING:
+  if TYPE_CHECKING:

@@ -1,47 +1,27 @@
+from __future__ import annotations
+
 import asyncio
-from secrets import token_bytes
+import random
 from typing import Optional
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
-from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.setup_nodes import self_hostname, setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 class TestTransactions:
-    @pytest_asyncio.fixture(scope="function")
-    async def wallet_node(self):
-        async for _ in setup_simulators_and_wallets(1, 1, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(1, 2, {}):
-            yield _
-
-    @pytest_asyncio.fixture(scope="function")
-    async def three_nodes_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(3, 2, {}):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_wallet_coinbase(self, wallet_node):
+    async def test_wallet_coinbase(self, simulator_and_wallet, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = wallet_node
+        full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -58,12 +38,12 @@ class TestTransactions:
         # funds += calculate_base_farmer_reward(0)
         await asyncio.sleep(2)
         print(await wallet.get_confirmed_balance(), funds)
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.asyncio
-    async def test_tx_propagation(self, three_nodes_two_wallets):
+    async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
-        full_nodes, wallets = three_nodes_two_wallets
+        full_nodes, wallets, _ = three_nodes_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
         wallet_1, wallet_server_1 = wallets[1]
@@ -91,7 +71,7 @@ class TestTransactions:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         async def peak_height(fna: FullNodeAPI):
             peak: Optional[BlockRecord] = fna.full_node.blockchain.get_peak()
@@ -100,10 +80,12 @@ class TestTransactions:
             peak_height = peak.height
             return peak_height
 
-        await time_out_assert(10, peak_height, num_blocks, full_node_api_1)
-        await time_out_assert(10, peak_height, num_blocks, full_node_api_2)
+        await time_out_assert(20, peak_height, num_blocks, full_node_api_1)
+        await time_out_assert(20, peak_height, num_blocks, full_node_api_2)
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+            10, ph1, DEFAULT_TX_CONFIG, 0
+        )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
@@ -127,7 +109,7 @@ class TestTransactions:
 
         # Farm another block
         for i in range(1, 8):
-            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random(seeded_random)))
         funds = sum(
             [
                 calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
@@ -140,12 +122,12 @@ class TestTransactions:
             wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance,
             (funds - 10),
         )
-        await time_out_assert(15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
+        await time_out_assert(20, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
     @pytest.mark.asyncio
-    async def test_mempool_tx_sync(self, three_nodes_two_wallets):
+    async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
-        full_nodes, wallets = three_nodes_two_wallets
+        full_nodes, wallets, _ = three_nodes_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
         full_node_api_0 = full_nodes[0]
@@ -168,14 +150,16 @@ class TestTransactions:
         all_blocks = await full_node_api_0.get_all_full_blocks()
 
         for block in all_blocks:
-            await full_node_api_2.full_node.respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_api_2.full_node.add_block(block)
 
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+            10, bytes32.random(seeded_random), DEFAULT_TX_CONFIG, 0
+        )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(

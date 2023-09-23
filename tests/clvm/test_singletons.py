@@ -1,38 +1,33 @@
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 import pytest
-
-from typing import List, Tuple, Optional
-
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
+from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles import (
-    p2_conditions,
-    p2_delegated_puzzle_or_hidden_puzzle,
-    singleton_top_layer,
-)
+from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
+from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
-from tests.clvm.test_puzzles import (
-    public_key_for_index,
-    secret_exponent_for_index,
-)
-
-from chia.clvm.spend_sim import SpendSim, SimClient
 
 """
 This test suite aims to test:
     - chia.wallet.puzzles.singleton_top_layer.py
-    - chia.wallet.puzzles.singleton_top_layer.clvm
-    - chia.wallet.puzzles.p2_singleton.clvm
-    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
+    - chia.wallet.puzzles.singleton_top_layer.clsp
+    - chia.wallet.puzzles.singleton_top_layer_v1_1.py
+    - chia.wallet.puzzles.singleton_top_layer_v1_1.clsp
+    - chia.wallet.puzzles.p2_singleton.clsp
+    - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clsp
 """
 
 
@@ -64,12 +59,16 @@ class TestSingleton:
         coinsols: List[CoinSpend],
         ex_error: Optional[Err] = None,
         fail_msg: str = "",
+        cost_logger: Optional[CostLogger] = None,
+        cost_log_msg: str = "",
     ):
         signature: G2Element = self.sign_delegated_puz(delegated_puzzle, coin)
         spend_bundle = SpendBundle(
             coinsols,
             signature,
         )
+        if cost_logger is not None:
+            spend_bundle = cost_logger.add_cost(cost_log_msg, spend_bundle)
 
         try:
             result, error = await sim_client.push_tx(spend_bundle)
@@ -83,20 +82,27 @@ class TestSingleton:
             raise AssertionError(fail_msg)
 
     @pytest.mark.asyncio
-    async def test_singleton_top_layer(self):
-        try:
+    @pytest.mark.parametrize("version", [0, 1])
+    async def test_singleton_top_layer(self, version, cost_logger):
+        async with sim_and_client() as (sim, sim_client):
             # START TESTS
             # Generate starting info
             key_lookup = KeyTool()
-            pk: G1Element = public_key_for_index(1, key_lookup)
+            pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
             starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
-            adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+
+            if version == 0:
+                from chia.wallet.puzzles import singleton_top_layer
+
+                adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+            else:
+                from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
+
+                adapted_puzzle = starting_puzzle
             adapted_puzzle_hash: bytes32 = adapted_puzzle.get_tree_hash()
 
             # Get our starting standard coin created
             START_AMOUNT: uint64 = 1023
-            sim = await SpendSim.create()
-            sim_client = SimClient(sim)
             await sim.farm_block(starting_puzzle.get_tree_hash())
             starting_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
             starting_coin = starting_coin[0].coin
@@ -131,6 +137,8 @@ class TestSingleton:
                 starting_coin,
                 delegated_puzzle,
                 [starting_coinsol, launcher_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton Launch + Standard TX",
             )
 
             # EVE
@@ -178,6 +186,8 @@ class TestSingleton:
                 singleton_eve,
                 delegated_puzzle,
                 [singleton_eve_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton Eve Spend w/ Standard TX",
             )
 
             # POST-EVE
@@ -203,6 +213,8 @@ class TestSingleton:
                 singleton,
                 delegated_puzzle,
                 [singleton_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton Spend + Standard TX",
             )
 
             # CLAIM A P2_SINGLETON
@@ -245,7 +257,13 @@ class TestSingleton:
             )
 
             await self.make_and_spend_bundle(
-                sim, sim_client, singleton_child, delegated_puzzle, [singleton_claim_coinsol, claim_coinsol]
+                sim,
+                sim_client,
+                singleton_child,
+                delegated_puzzle,
+                [singleton_claim_coinsol, claim_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton w/ Standard TX claim p2_singleton",
             )
 
             # CLAIM A P2_SINGLETON_OR_DELAYED
@@ -301,7 +319,13 @@ class TestSingleton:
                 sim.get_height()
             )  # The last coin solution before this point is singleton_claim_coinsol
             await self.make_and_spend_bundle(
-                sim, sim_client, singleton_child, delegated_puzzle, [delay_claim_coinsol, claim_coinsol]
+                sim,
+                sim_client,
+                singleton_child,
+                delegated_puzzle,
+                [delay_claim_coinsol, claim_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton w/ Standard TX claim p2_singleton_or_delayed",
             )
 
             # TRY TO SPEND AWAY TOO SOON (Negative Test)
@@ -436,7 +460,7 @@ class TestSingleton:
             )
 
             # Now try a perfectly innocent spend
-            evil_coin: Coin = (await sim.all_non_reward_coins())[0]
+            evil_coin: Coin = next(filter(lambda c: c.amount == 2, (await sim.all_non_reward_coins())))
             delegated_puzzle: Program = Program.to(
                 (
                     1,
@@ -473,7 +497,7 @@ class TestSingleton:
                 evil_coin,
                 delegated_puzzle,
                 [evil_coinsol],
-                ex_error=Err.ASSERT_MY_COIN_ID_FAILED,
+                ex_error=Err.ASSERT_MY_COIN_ID_FAILED if version == 0 else Err.ASSERT_MY_AMOUNT_FAILED,
                 fail_msg="This coin is even!",
             )
 
@@ -511,9 +535,9 @@ class TestSingleton:
                 singleton_child,
                 delegated_puzzle,
                 [melt_coinsol],
+                cost_logger=cost_logger,
+                cost_log_msg="Singleton w/ Standard TX melt",
             )
 
             melted_coin: Coin = (await sim.all_non_reward_coins())[0]
             assert melted_coin.puzzle_hash == adapted_puzzle_hash
-        finally:
-            await sim.close()

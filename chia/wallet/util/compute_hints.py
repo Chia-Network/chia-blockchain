@@ -1,34 +1,37 @@
-from typing import List
+from __future__ import annotations
 
-from blspy import G2Element
+from dataclasses import dataclass
+from typing import Dict, Optional
 
-from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.blockchain_format.program import INFINITE_COST
+from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.spend_bundle import SpendBundle
-from chia.full_node.bundle_tools import simple_solution_generator
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.ints import uint64
 
 
-def compute_coin_hints(cs: CoinSpend) -> List[bytes]:
+@dataclass(frozen=True)
+class HintedCoin:
+    coin: Coin
+    hint: Optional[bytes32]
 
-    bundle = SpendBundle([cs], G2Element())
-    generator = simple_solution_generator(bundle)
 
-    npc_result = get_name_puzzle_conditions(
-        generator,
-        INFINITE_COST,
-        cost_per_byte=DEFAULT_CONSTANTS.COST_PER_BYTE,
-        mempool_mode=False,
-        height=DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT,
-    )
-    h_list = []
-    for npc in npc_result.npc_list:
-        for opcode, conditions in npc.conditions:
-            if opcode == ConditionOpcode.CREATE_COIN:
-                for condition in conditions:
-                    if len(condition.vars) > 2 and condition.vars[2] != b"":
-                        h_list.append(condition.vars[2])
+def compute_spend_hints_and_additions(cs: CoinSpend) -> Dict[bytes32, HintedCoin]:
+    _, result_program = cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)
 
-    return h_list
+    hinted_coins: Dict[bytes32, HintedCoin] = {}
+    for condition in result_program.as_iter():
+        if condition.at("f").atom == ConditionOpcode.CREATE_COIN:  # It's a create coin:
+            coin: Coin = Coin(cs.coin.name(), bytes32(condition.at("rf").atom), uint64(condition.at("rrf").as_int()))
+            hint: Optional[bytes32] = None
+            if (
+                condition.at("rrr") != Program.to(None)  # There's more than two arguments
+                and condition.at("rrrf").atom is None  # The 3rd argument is a cons
+            ):
+                potential_hint: bytes = condition.at("rrrff").atom
+                if len(potential_hint) == 32:
+                    hint = bytes32(potential_hint)
+            hinted_coins[bytes32(coin.name())] = HintedCoin(coin, hint)
+
+    return hinted_coins

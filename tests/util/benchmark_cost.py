@@ -1,15 +1,18 @@
+from __future__ import annotations
+
+import random
 import time
-from secrets import token_bytes
 
 from blspy import AugSchemeMPL, PrivateKey
 from clvm_tools import binutils
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.types.blockchain_format.program import Program, INFINITE_COST
+from chia.simulator.wallet_tools import WalletTool
+from chia.types.blockchain_format.program import INFINITE_COST, Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.ints import uint32
-from tests.wallet_tools import WalletTool
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 
@@ -30,7 +33,6 @@ def float_to_str(f):
 
 
 def run_and_return_cost_time(chialisp):
-
     start = time.time()
     clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
@@ -110,11 +112,18 @@ if __name__ == "__main__":
     private_keys = []
     public_keys = []
 
+    seeded_random = random.Random()
+    seeded_random.seed(a=0, version=2)
+
     for i in range(0, 1000):
         private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
-        public_key = private_key.public_key()
+        public_key = private_key.get_g1()
         solution = wallet_tool.make_solution(
-            {ConditionOpcode.ASSERT_MY_COIN_ID: [ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [token_bytes()])]}
+            {
+                ConditionOpcode.ASSERT_MY_COIN_ID: [
+                    ConditionWithArgs(ConditionOpcode.ASSERT_MY_COIN_ID, [bytes32.random(seeded_random)])
+                ]
+            }
         )
         puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)
@@ -136,7 +145,7 @@ if __name__ == "__main__":
 
     private_key = master_sk_to_wallet_sk(secret_key, uint32(0))
     public_key = private_key.get_g1()
-    message = token_bytes()
+    message = bytes32.random(seeded_random)
     signature = AugSchemeMPL.sign(private_key, message)
     pk_message_pair = (public_key, message)
 
