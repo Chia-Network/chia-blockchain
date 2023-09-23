@@ -662,6 +662,7 @@ class TestWalletSync:
        Send the NFT to the dust wallet. The NFT should not be filtered.
     """
 
+    @pytest.mark.skip(reason="MemoryError")
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "spam_filter_after_n_txs, xch_spam_amount, dust_value",
