@@ -236,7 +236,6 @@ jobs:
 
       - name: Process coverage data
         run: |
-          coverage xml --rcfile=.coveragerc -o coverage.xml
           mkdir coverage-data
           cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
           cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
