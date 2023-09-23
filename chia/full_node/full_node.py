@@ -11,7 +11,7 @@ import time
 import traceback
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, final
 
 from blspy import AugSchemeMPL
 
@@ -97,47 +97,54 @@ class WalletUpdate:
     hints: Dict[bytes32, bytes32]
 
 
+@final
+@dataclasses.dataclass
 class FullNode:
-    _segment_task: Optional[asyncio.Task[None]]
-    initialized: bool
     root_path: Path
     config: Dict[str, Any]
-    _server: Optional[ChiaServer]
-    _shut_down: bool
     constants: ConsensusConstants
-    pow_creation: Dict[bytes32, asyncio.Event]
-    state_changed_callback: Optional[StateChangedProtocol] = None
-    full_node_peers: Optional[FullNodePeers]
-    sync_store: SyncStore
     signage_point_times: List[float]
     full_node_store: FullNodeStore
-    uncompact_task: Optional[asyncio.Task[None]]
-    compact_vdf_requests: Set[bytes32]
     log: logging.Logger
-    multiprocessing_context: Optional[BaseContext]
-    _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
-    subscriptions: PeerSubscriptions
-    _transaction_queue_task: Optional[asyncio.Task[None]]
-    simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
-    _sync_task: Optional[asyncio.Task[None]]
-    _transaction_queue: Optional[TransactionQueue]
-    _compact_vdf_sem: Optional[LimitedSemaphore]
-    _new_peak_sem: Optional[LimitedSemaphore]
-    _add_transaction_semaphore: Optional[asyncio.Semaphore]
-    _db_wrapper: Optional[DBWrapper2]
-    _hint_store: Optional[HintStore]
-    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
-    _block_store: Optional[BlockStore]
-    _coin_store: Optional[CoinStore]
-    _mempool_manager: Optional[MempoolManager]
-    _init_weight_proof: Optional[asyncio.Task[None]]
-    _blockchain: Optional[Blockchain]
-    _timelord_lock: Optional[asyncio.Lock]
-    weight_proof_handler: Optional[WeightProofHandler]
-    bad_peak_cache: Dict[bytes32, uint32]  # hashes of peaks that failed long sync on chip13 Validation
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
-    wallet_sync_task: Optional[asyncio.Task[None]]
+    _segment_task: Optional[asyncio.Task[None]] = None
+    initialized: bool = False
+    _server: Optional[ChiaServer] = None
+    _shut_down: bool = False
+    pow_creation: Dict[bytes32, asyncio.Event] = dataclasses.field(default_factory=dict)
+    state_changed_callback: Optional[StateChangedProtocol] = None
+    full_node_peers: Optional[FullNodePeers] = None
+    sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
+    uncompact_task: Optional[asyncio.Task[None]] = None
+    compact_vdf_requests: Set[bytes32] = dataclasses.field(default_factory=set)
+    # TODO: Logging isn't setup yet so the log entries related to parsing the
+    #       config would end up on stdout if handled here.
+    multiprocessing_context: Optional[BaseContext] = None
+    _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
+    subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
+    _transaction_queue_task: Optional[asyncio.Task[None]] = None
+    simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
+    _sync_task: Optional[asyncio.Task[None]] = None
+    _transaction_queue: Optional[TransactionQueue] = None
+    _compact_vdf_sem: Optional[LimitedSemaphore] = None
+    _new_peak_sem: Optional[LimitedSemaphore] = None
+    _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
+    _db_wrapper: Optional[DBWrapper2] = None
+    _hint_store: Optional[HintStore] = None
+    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = dataclasses.field(
+        default_factory=list
+    )
+    _block_store: Optional[BlockStore] = None
+    _coin_store: Optional[CoinStore] = None
+    _mempool_manager: Optional[MempoolManager] = None
+    _init_weight_proof: Optional[asyncio.Task[None]] = None
+    _blockchain: Optional[Blockchain] = None
+    _timelord_lock: Optional[asyncio.Lock] = None
+    weight_proof_handler: Optional[WeightProofHandler] = None
+    # hashes of peaks that failed long sync on chip13 Validation
+    bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
+    wallet_sync_task: Optional[asyncio.Task[None]] = None
 
     @property
     def server(self) -> ChiaServer:
@@ -148,61 +155,29 @@ class FullNode:
 
         return self._server
 
-    def __init__(
-        self,
+    @classmethod
+    async def create(
+        cls,
         config: Dict[str, Any],
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = __name__,
-    ) -> None:
-        self._segment_task = None
-        self.initialized = False
-        self.root_path = root_path
-        self.config = config
-        self._server = None
-        self._shut_down = False  # Set to true to close all infinite loops
-        self.constants = consensus_constants
-        self.pow_creation = {}
-        self.state_changed_callback = None
-        self.full_node_peers = None
-        self.sync_store = SyncStore()
-        self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
-        self.full_node_store = FullNodeStore(self.constants)
-        self.uncompact_task = None
-        self.compact_vdf_requests = set()
-        self.log = logging.getLogger(name)
-
-        # TODO: Logging isn't setup yet so the log entries related to parsing the
-        #       config would end up on stdout if handled here.
-        self.multiprocessing_context = None
-
-        self._ui_tasks = set()
-
+    ) -> FullNode:
+        # NOTE: async to force the queue creation to occur when an event loop is available
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(root_path, db_path_replaced)
-        self.subscriptions = PeerSubscriptions()
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._transaction_queue_task = None
-        self.simulator_transaction_callback = None
+        db_path = path_from_root(root_path, db_path_replaced)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._sync_task = None
-        self._transaction_queue = None
-        self._compact_vdf_sem = None
-        self._new_peak_sem = None
-        self._add_transaction_semaphore = None
-        self._db_wrapper = None
-        self._hint_store = None
-        self.transaction_responses = []
-        self._block_store = None
-        self._coin_store = None
-        self._mempool_manager = None
-        self._init_weight_proof = None
-        self._blockchain = None
-        self._timelord_lock = None
-        self.weight_proof_handler = None
-        self.bad_peak_cache = {}
-        self.wallet_sync_queue = asyncio.Queue()
-        self.wallet_sync_task = None
+        return cls(
+            root_path=root_path,
+            config=config,
+            constants=consensus_constants,
+            signage_point_times=[time.time() for _ in range(consensus_constants.NUM_SPS_SUB_SLOT)],
+            full_node_store=FullNodeStore(consensus_constants),
+            log=logging.getLogger(name),
+            db_path=db_path,
+            wallet_sync_queue=asyncio.Queue(),
+        )
 
     @property
     def block_store(self) -> BlockStore:

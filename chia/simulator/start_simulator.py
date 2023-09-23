@@ -30,7 +30,7 @@ PLOTS = 3  # 3 plots should be enough
 PLOT_SIZE = 19  # anything under k19 is a bit buggy
 
 
-def create_full_node_simulator_service(
+async def create_full_node_simulator_service(
     root_path: Path,
     config: Dict,
     bt: BlockTools,
@@ -40,7 +40,7 @@ def create_full_node_simulator_service(
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
-    node = FullNode(
+    node = await FullNode.create(
         config=service_config,
         root_path=root_path,
         consensus_constants=constants,
@@ -105,7 +105,7 @@ async def async_main(test_mode: bool = False, automated_testing: bool = False, r
         logging_config=service_config["logging"],
         root_path=root_path,
     )
-    service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
+    service = await create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if test_mode:
         return service
 
