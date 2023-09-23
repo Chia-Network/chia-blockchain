@@ -917,6 +917,7 @@ class TestCATTrades:
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
+    @pytest.mark.skip(reason="MemoryError")
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.asyncio
     async def test_trade_conflict(self, three_wallets_prefarm):
