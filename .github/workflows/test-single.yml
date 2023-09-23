@@ -234,20 +234,6 @@ jobs:
           path: junit-data/*
           if-no-files-found: error
 
-      - name: Process coverage data
-        run: |
-          mkdir coverage-data
-          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
-          cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
-          coverage report --rcfile=.coveragerc --show-missing
-
-      - name: Publish coverage data
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-data
-          path: coverage-data/*
-          if-no-files-found: error
-
       - name: Check resource usage
         if: matrix.os.matrix == 'ubuntu' && matrix.configuration.check_resource_usage
         run: |
