@@ -12,6 +12,6 @@ parallel: Union[bool, int, Literal["auto"]] = True
 checkout_blocks_and_plots = False
 install_timelord = False
 check_resource_usage = False
-job_timeout = 30
+job_timeout = 60
 custom_vars: List[str] = []
 os_skip: List[Oses] = []
