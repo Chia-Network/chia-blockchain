@@ -28,7 +28,7 @@ _T_SSLTestCollateral = TypeVar("_T_SSLTestCollateral", bound="SSLTestCollateralT
 
 @dataclass
 class SSLTestCollateralTracker:
-    in_use = False
+    in_use: bool = False
 
     def mark_in_use(self) -> None:
         self.in_use = True
