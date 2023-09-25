@@ -2122,8 +2122,20 @@ class TestGeneratorConditions:
         )
         assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
 
-    def test_agg_sig_cost(self, softfork_height):
-        # AGG_SIG_ME
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
+        ],
+    )
+    def test_agg_sig_cost(self, condition, softfork_height):
         pubkey = "abababababababababababababababababababababababab"
 
         if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
@@ -2131,23 +2143,105 @@ class TestGeneratorConditions:
         else:
             generator_base_cost = 20512
 
+        if softfork_height < test_constants.HARD_FORK_HEIGHT and condition in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ]:
+            expected_cost = 0
+        else:
+            expected_cost = ConditionCost.AGG_SIG.value
+
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ',
-            max_cost=generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value,
+            f'({condition[0]} "{pubkey}" "foobar") ',
+            max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost,
             height=softfork_height,
         )
         assert npc_result.error is None
-        assert npc_result.cost == generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value
+        assert npc_result.cost == generator_base_cost + 117 * COST_PER_BYTE + expected_cost
         assert len(npc_result.conds.spends) == 1
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'(49 "{pubkey}" "foobar") ',
-            max_cost=generator_base_cost + 117 * COST_PER_BYTE + ConditionCost.AGG_SIG.value - 1,
+            f'({condition[0]} "{pubkey}" "foobar") ',
+            max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost - 1,
             height=softfork_height,
         )
-        assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
+        assert npc_result.error in [
+            Err.GENERATOR_RUNTIME_ERROR.value,
+            Err.BLOCK_COST_EXCEEDS_MAX.value,
+            Err.INVALID_BLOCK_COST.value,
+        ]
+
+    @pytest.mark.parametrize(
+        "condition",
+        [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
+        ],
+    )
+    @pytest.mark.parametrize("extra_arg", [' "baz"', ""])
+    @pytest.mark.parametrize("mempool", [True, False])
+    def test_agg_sig_extra_arg(self, condition, extra_arg, mempool, softfork_height):
+        pubkey = "abababababababababababababababababababababababab"
+
+        new_condition = condition in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ]
+
+        hard_fork_activated = softfork_height >= test_constants.HARD_FORK_HEIGHT
+
+        expected_error = None
+
+        # in mempool mode, we don't allow extra arguments
+        if mempool and extra_arg != "":
+            expected_error = Err.INVALID_CONDITION.value
+
+        # the original AGG_SIG_* conditions had a quirk (fixed in the hard fork)
+        # where they always required exactly two arguments, regardless of
+        # mempool or not. After the hard fork, they behave like all other
+        # conditions
+        if not new_condition and not hard_fork_activated and extra_arg != "":
+            expected_error = Err.INVALID_CONDITION.value
+
+        # except before the hard fork has activated, new conditions are just
+        # unknown
+        if new_condition and not hard_fork_activated:
+            expected_error = None
+
+        # before the hard fork activates, the new conditions are unknown and
+        # fail in mempool mode, regardless of whether they have extra arguments
+        # or not
+        if new_condition and not hard_fork_activated and mempool:
+            expected_error = Err.INVALID_CONDITION.value
+
+        # this max cost is exactly enough for the AGG_SIG condition
+        npc_result = generator_condition_tester(
+            f'({condition[0]} "{pubkey}" "foobar"{extra_arg}) ',
+            max_cost=11000000000,
+            height=softfork_height,
+            mempool_mode=mempool,
+        )
+        assert npc_result.error == expected_error
+        if npc_result.error is None:
+            assert len(npc_result.conds.spends) == 1
+        else:
+            assert npc_result.conds is None
 
     def test_create_coin_different_parent(self, softfork_height):
         # if the coins we create have different parents, they are never
