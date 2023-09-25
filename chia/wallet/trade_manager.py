@@ -83,6 +83,7 @@ class TradeManager:
     wallet_state_manager: Any
     log: logging.Logger
     trade_store: TradeStore
+    most_recently_deserialized_trade: Optional[Tuple[bytes32, Offer]]
 
     @staticmethod
     async def create(
@@ -98,6 +99,7 @@ class TradeManager:
 
         self.wallet_state_manager = wallet_state_manager
         self.trade_store = await TradeStore.create(db_wrapper)
+        self.most_recently_deserialized_trade = None
         return self
 
     async def get_offers_with_status(self, status: TradeStatus) -> List[TradeRecord]:
@@ -142,7 +144,11 @@ class TradeManager:
         if coin_state.spent_height is None:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
         # Then let's filter the offer into coins that WE offered
-        offer = Offer.from_bytes(trade.offer)
+        if self.most_recently_deserialized_trade is not None and trade.trade_id == self.most_recently_deserialized_trade[0]:
+            offer = self.most_recently_deserialized_trade[1]
+        else:
+            offer = Offer.from_bytes(trade.offer)
+            self.most_recently_deserialized_trade = (trade.trade_id, offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
         # TODO: Add `WalletCoinStore.get_coins`.
         result = await self.wallet_state_manager.coin_store.get_coin_records(
