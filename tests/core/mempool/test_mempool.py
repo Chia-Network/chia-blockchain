@@ -198,6 +198,20 @@ class TestPendingTxCache:
         tx = c.drain(101)
         assert tx == {items[-2].spend_bundle_name: items[-2], items[-1].spend_bundle_name: items[-1]}
 
+    def test_add_eviction(self):
+        c = PendingTxCache(160)
+        item = make_item(1, assert_height=100)
+        c.add(item)
+
+        for i in range(3):
+            item = make_item(i + 1, assert_height=50)
+            c.add(item)
+
+        txs = c.drain(161)
+        assert len(txs) == 2
+        for name, tx in txs.items():
+            assert tx.assert_height == 50
+
     def test_item_limit(self):
         c = PendingTxCache(1000000, 2)
         # each item has cost 80
