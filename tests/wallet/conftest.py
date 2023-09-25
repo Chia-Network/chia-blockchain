@@ -275,7 +275,7 @@ class WalletTestFramework:
         for i, (env, txs) in enumerate(zip(self.environments, pending_txs)):
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
-            except TimeoutError:
+            except TimeoutError:  # pragma: no cover
                 unconfirmed: List[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
@@ -319,7 +319,7 @@ async def wallet_environments(
     assert len(request.param["blocks_needed"]) == request.param["num_environments"]
     if "config_overrides" in request.param:
         config_overrides: Dict[str, Any] = request.param["config_overrides"]
-    else:
+    else:  # pragma: no cover
         config_overrides = {}
     async with setup_simulators_and_wallets_service(
         1, request.param["num_environments"], blockchain_constants
