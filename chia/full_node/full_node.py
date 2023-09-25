@@ -298,7 +298,170 @@ class FullNode:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
+    async def debug(self) -> None:
+        while True:
+            with log_exceptions(log=self.log, consume=True):
+                import json
+
+                import objgraph
+
+                oc_data: Dict[str, int] = {
+                    # name: [peak, delta]
+                    name: peak
+                    for [name, peak, delta] in objgraph.growth(limit=10_000, shortnames=False)
+                    if name.startswith("chia.")
+                }.items()
+                oc_data = dict(
+                    sorted(
+                        oc_data,
+                        # key=lambda x: [x[1][1], x[0]],
+                        key=lambda x: [x[1], x[0]],
+                        reverse=True,
+                    )
+                )
+
+                # j = json.dumps(oc_data)
+                # self.log.debug(f"json_type_stats: {j}")
+
+                length_attributes: List[List[str]] = [
+                    ["pow_creation"],
+                    ["sync_store", "peak_to_peer"],
+                    ["sync_store", "peak_to_peer", "<values>"],
+                    ["sync_store", "peer_to_peak"],
+                    ["sync_store", "batch_syncing"],
+                    ["sync_store", "backtrack_syncing"],
+                    ["signage_point_times"],
+                    ["full_node_store", "candidate_blocks"],
+                    ["full_node_store", "candidate_backup_blocks"],
+                    ["full_node_store", "seen_unfinished_blocks"],
+                    ["full_node_store", "unfinished_blocks"],
+                    ["full_node_store", "finished_sub_slots"],
+                    ["full_node_store", "future_eos_cache"],
+                    ["full_node_store", "future_eos_cache", "<values>"],
+                    ["full_node_store", "future_sp_cache"],
+                    ["full_node_store", "future_sp_cache", "<values>"],
+                    ["full_node_store", "future_ip_cache"],
+                    ["full_node_store", "future_ip_cache", "<values>"],
+                    ["full_node_store", "future_cache_key_times"],
+                    ["full_node_store", "recent_signage_points", "cache"],
+                    ["full_node_store", "recent_eos", "cache"],
+                    ["full_node_store", "requesting_unfinished_blocks"],
+                    ["full_node_store", "pending_tx_request"],
+                    ["full_node_store", "peers_with_tx"],
+                    ["full_node_store", "peers_with_tx", "<values>"],
+                    ["full_node_store", "tx_fetch_tasks"],
+                    ["compact_vdf_requests"],
+                    ["_ui_tasks"],
+                    ["subscriptions", "_coin_subscriptions"],
+                    ["subscriptions", "_coin_subscriptions", "<values>"],
+                    ["subscriptions", "_ph_subscriptions"],
+                    ["subscriptions", "_ph_subscriptions", "<values>"],
+                    ["subscriptions", "_peer_coin_ids"],
+                    ["subscriptions", "_peer_coin_ids", "<values>"],
+                    ["subscriptions", "_peer_puzzle_hash"],
+                    ["subscriptions", "_peer_puzzle_hash", "<values>"],
+                    ["subscriptions", "_peer_sub_counter"],
+                    ["_transaction_queue", "_index_to_peer_map"],
+                    ["_transaction_queue", "_queue_dict"],
+                    ["_transaction_queue", "_queue_dict", "<values>"],
+                    # ["_transaction_queue", "_high_priority_queue"],
+                    ["transaction_responses"],
+                    ["_block_store", "block_cache", "cache"],
+                    ["_block_store", "ses_challenge_cache", "cache"],
+                    ["_block_store", "ses_challenge_cache", "cache", "<values>"],
+                    ["_coin_store", "coins_added_at_height_cache", "cache", "<values>"],
+                    ["_mempool_manager", "seen_bundle_hashes"],
+                    ["_mempool_manager", "_conflict_cache", "_txs"],
+                    ["_mempool_manager", "_pending_cache", "_txs"],
+                    ["_mempool_manager", "_pending_cache", "_by_height"],
+                    ["_mempool_manager", "_pending_cache", "_by_height", "<values>"],
+                    ["_mempool_manager", "mempool", "_items"],
+                    ["_blockchain", "_block_records"],
+                    ["_blockchain", "_heights_in_cache"],
+                    ["_blockchain", "_heights_in_cache", "<values>"],
+                    ["_blockchain", "_height_map", "_sub_epoch_summaries"],
+                    ["_blockchain", "coin_store", "coins_added_at_height_cache", "cache", "<values>"],
+                    # ["_blockchain", "block_store", "block_cache", "cache"],
+                    # ["_blockchain", "block_store", "ses_challenge_cache", "cache"],
+                    # ["_blockchain", "block_store", "ses_challenge_cache", "cache", "<values>"],
+                    ["_blockchain", "_seen_compact_proofs"],
+                    ["_blockchain", "priority_mutex", "_deques"],
+                    ["_blockchain", "priority_mutex", "_deques", "<values>"],
+                    ["bad_peak_cache"],
+                    # ["wallet_sync_queue"]
+                    # and the coin records list and hints
+                ]
+                lengths: Dict[str, int] = {
+                    "all_tasks": len(asyncio.all_tasks()),
+                }
+                for path in length_attributes:
+                    name = ".".join(path)
+
+                    value = 0
+
+                    o = self
+                    for element in path:
+                        if element == "<values>":
+                            try:
+                                value = sum(len(value) for value in o.values())
+                            except TypeError as e:
+                                raise Exception(f"Could not get length of {name}") from e
+                            break
+
+                        o = getattr(o, element)
+
+                        if o is None:
+                            break
+                    else:
+                        try:
+                            value = len(o)
+                        except TypeError as e:
+                            raise Exception(f"Could not get length of {name}") from e
+
+                    lengths[name] = value
+
+                # lengths: Dict[str, int] = {
+                #     "all_tasks": len(asyncio.all_tasks()),
+                #     "FullNode.pow_creation": len(self.pow_creation),
+                #     "FullNode.sync_store.peak_to_peer": len(self.sync_store.peak_to_peer),
+                #     "FullNode.sync_store.peak_to_peer-sets": sum(len(peers) for peers in self.sync_store.peak_to_peer.values()),
+                #     "FullNode.sync_store.peer_to_peak": len(self.sync_store.peer_to_peak),
+                #     "FullNode.sync_store.batch_syncing": len(self.sync_store.batch_syncing),
+                #     "FullNode.sync_store.backtrack_syncing": len(self.sync_store.backtrack_syncing),
+                #     "FullNode.signage_point_times": len(self.signage_point_times),
+                #     "FullNode.full_node_store": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                #     "FullNode.": len(self.),
+                # }
+
+                data_groups: Dict[str, Dict[str, float]] = {
+                    "oc": oc_data,
+                    "len": lengths,
+                }
+
+                final_data: Dict[str, float] = {
+                    f"{group_name}-{key}": final_value
+                    for group_name, group in data_groups.items()
+                    for key, final_value in group.items()
+                }
+
+                self._state_changed(change="debug", change_data={"data": final_data})
+            await asyncio.sleep(12)
+
     async def _start(self) -> None:
+        self.debug_task = asyncio.create_task(self.debug())
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 

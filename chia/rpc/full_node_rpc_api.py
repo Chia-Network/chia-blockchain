@@ -144,7 +144,7 @@ class FullNodeRpcApi:
                 )
             )
 
-        if change in ("block", "signage_point"):
+        if change in ("block", "signage_point", "debug"):
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads
