@@ -6,6 +6,7 @@ import sys
 from setuptools import find_packages, setup
 
 dependencies = [
+    "objgraph==3.6.0",
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==3.7.1",
     "blspy==2.0.2",  # Signature library
@@ -44,7 +45,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "objgraph==3.6.0",
     "build==0.10.0",
     "coverage==7.3.0",
     "diff-cover==7.7.0",
