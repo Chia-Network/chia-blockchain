@@ -44,6 +44,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    # pinned for https://github.com/pylint-dev/pylint/issues/9069
+    "astroid==2.15.6",
     "build==0.10.0",
     "coverage==7.3.0",
     "diff-cover==7.7.0",
