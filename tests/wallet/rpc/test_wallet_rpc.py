@@ -42,7 +42,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import ConditionValidTimes, Remark
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -312,6 +312,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             excluded_coin_amounts=[uint64(250000000000)],
             excluded_coin_ids=[bytes32([0] * 32)],
         ),
+        extra_conditions=(Remark(Program.to(("test", None))),),
     )
     transaction_id = tx.name
 
