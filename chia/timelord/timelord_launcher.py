@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from types import FrameType
 from typing import Any, Dict, List, Optional
 
+import anyio
 import pkg_resources
 
 from chia.util.chia_logging import initialize_logging
@@ -54,7 +55,7 @@ def find_vdf_client() -> pathlib.Path:
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
-    raise FileNotFoundError("can't find vdf_client binary")
+    raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed?")
 
 
 async def spawn_process(
@@ -64,10 +65,13 @@ async def spawn_process(
     process_mgr: VDFClientProcessMgr,
     *,
     prefer_ipv6: bool,
+    task_status: Optional[anyio.abc.TaskStatus[None]] = None,
 ):
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
     start_time = time.time()
+    if task_status is not None:
+        task_status.started()
     while not process_mgr.stopped:
         try:
             dirname = path_to_vdf_client.parent

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -13,6 +13,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
+from chia.introducer.introducer_api import IntroducerAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
@@ -301,7 +302,15 @@ async def setup_full_system(
     b_tools_1: Optional[BlockTools] = None,
     db_version: int = 1,
 ) -> AsyncIterator[
-    Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer]
+    Tuple[
+        FullNodeSimulator | FullNodeAPI,
+        FullNodeSimulator | FullNodeAPI,
+        Harvester,
+        Farmer,
+        IntroducerAPI,
+        Service[Timelord, TimelordAPI],
+        Service[Timelord, TimelordAPI],
+    ]
 ]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
@@ -319,16 +328,13 @@ async def setup_full_system_connect_to_deamon(
     db_version: int = 1,
 ) -> AsyncIterator[
     Tuple[
-        Any,
-        Any,
+        FullNodeSimulator | FullNodeAPI,
+        FullNodeSimulator | FullNodeAPI,
         Harvester,
         Farmer,
-        Any,
+        IntroducerAPI,
         Service[Timelord, TimelordAPI],
-        object,
-        object,
-        Any,
-        ChiaServer,
+        Service[Timelord, TimelordAPI],
         Optional[WebSocketServer],
     ],
 ]:
@@ -352,7 +358,15 @@ async def setup_full_system_inner(
 ) -> AsyncIterator[
     Tuple[
         Optional[WebSocketServer],
-        Tuple[Any, Any, Harvester, Farmer, Any, Service[Timelord, TimelordAPI], object, object, Any, ChiaServer],
+        Tuple[
+            FullNodeSimulator | FullNodeAPI,
+            FullNodeSimulator | FullNodeAPI,
+            Harvester,
+            Farmer,
+            IntroducerAPI,
+            Service[Timelord, TimelordAPI],
+            Service[Timelord, TimelordAPI],
+        ],
     ]
 ]:
     if b_tools is None:
@@ -360,11 +374,19 @@ async def setup_full_system_inner(
     if b_tools_1 is None:
         b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
 
-    # Make sure the first node, timelord and farmer can find the daemon
-    # config = b_tools.config
-    # config["daemon_port"] = shared_b_tools.config["daemon_port"]
-    # b_tools.change_config(new_config=config)
+    self_hostname = shared_b_tools.config["self_hostname"]
+
     async with AsyncExitStack() as async_exit_stack:
+        vdf1_port = uint16(find_available_listen_port("vdf1"))
+        vdf2_port = uint16(find_available_listen_port("vdf2"))
+
+        await async_exit_stack.enter_async_context(
+            setup_vdf_clients(bt=b_tools, self_hostname=self_hostname, port=vdf1_port)
+        )
+        await async_exit_stack.enter_async_context(
+            setup_vdf_client(bt=shared_b_tools, self_hostname=self_hostname, port=vdf2_port)
+        )
+
         daemon_ws = await async_exit_stack.enter_async_context(setup_daemon(btools=b_tools))
 
         # Start the introducer first so we can find out the port, and use that for the nodes
@@ -377,12 +399,12 @@ async def setup_full_system_inner(
             setup_full_node(
                 consensus_constants,
                 "blockchain_test_1.db",
-                shared_b_tools.config["self_hostname"],
-                b_tools,
-                introducer_server._port,
-                False,
-                10,
-                True,
+                self_hostname=self_hostname,
+                local_bt=b_tools,
+                introducer_port=introducer_server._port,
+                simulator=False,
+                send_uncompact_interval=0,
+                sanitize_weight_proof_only=False,
                 connect_to_daemon=connect_to_daemon,
                 db_version=db_version,
             )
@@ -391,12 +413,12 @@ async def setup_full_system_inner(
             setup_full_node(
                 consensus_constants,
                 "blockchain_test_2.db",
-                shared_b_tools.config["self_hostname"],
-                b_tools_1,
-                introducer_server._port,
-                False,
-                10,
-                True,
+                self_hostname=self_hostname,
+                local_bt=b_tools_1,
+                introducer_port=introducer_server._port,
+                simulator=False,
+                send_uncompact_interval=10,
+                sanitize_weight_proof_only=True,
                 connect_to_daemon=False,  # node 2 doesn't connect to the daemon
                 db_version=db_version,
             )
@@ -409,31 +431,28 @@ async def setup_full_system_inner(
             setup_farmer(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
-                shared_b_tools.config["self_hostname"],
-                consensus_constants,
-                full_node_0_port,
+                self_hostname=self_hostname,
+                consensus_constants=consensus_constants,
+                full_node_port=full_node_0_port,
             )
         )
         harvester_service = await async_exit_stack.enter_async_context(
             setup_harvester(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
-                UnresolvedPeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+                UnresolvedPeerInfo(self_hostname, farmer_service._server.get_port()),
                 consensus_constants,
             )
         )
         harvester = harvester_service._node
 
-        vdf1_port = uint16(find_available_listen_port("vdf1"))
-        vdf2_port = uint16(find_available_listen_port("vdf2"))
-
         timelord = await async_exit_stack.enter_async_context(
             setup_timelord(
-                full_node_0_port,
-                False,
-                consensus_constants,
-                b_tools.config,
-                b_tools.root_path,
+                full_node_port=full_node_0_port,
+                sanitizer=False,
+                consensus_constants=consensus_constants,
+                config=b_tools.config,
+                root_path=b_tools.root_path,
                 vdf_port=vdf1_port,
             )
         )
@@ -453,14 +472,7 @@ async def setup_full_system_inner(
             return count
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
-        vdf_clients = await async_exit_stack.enter_async_context(
-            setup_vdf_clients(shared_b_tools, shared_b_tools.config["self_hostname"], vdf1_port)
-        )
-        vdf_bluebox_clients = await async_exit_stack.enter_async_context(
-            setup_vdf_client(shared_b_tools, shared_b_tools.config["self_hostname"], vdf2_port)
-        )
-        timelord_bluebox = timelord_bluebox_service._api
-        timelord_bluebox_server = timelord_bluebox_service._node.server
+
         ret = (
             node_apis[0],
             node_apis[1],
@@ -468,9 +480,6 @@ async def setup_full_system_inner(
             farmer_service._node,
             introducer,
             timelord,
-            vdf_clients,
-            vdf_bluebox_clients,
-            timelord_bluebox,
-            timelord_bluebox_server,
+            timelord_bluebox_service,
         )
         yield daemon_ws, ret

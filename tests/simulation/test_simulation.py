@@ -462,9 +462,10 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, self_hostname, daemon_simulation):
         deamon_and_nodes, get_b_tools, bt = daemon_simulation
-        node1, node2, _, _, _, _, _, _, _, _, daemon1 = deamon_and_nodes
+        node1, node2, _, _, _, _, _, daemon1 = deamon_and_nodes
         server1 = node1.full_node.server
         node2_port = node2.full_node.server.get_port()
+
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
         async def num_connections():
@@ -492,26 +493,6 @@ class TestSimulation:
                     print("node2 peak height: None")
             else:
                 print("node2 peak height: None")
-
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
-        await asyncio.sleep(10)
-        print_height()
 
         await time_out_assert(1500, node_height_at_least, True, node2, 1)
 
