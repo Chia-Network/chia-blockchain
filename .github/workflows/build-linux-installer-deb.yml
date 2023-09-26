@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Linux ${{ matrix.os.arch }} DEB Installer
+    name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
     container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: 120
@@ -295,3 +295,72 @@ jobs:
     - name: Remove working files to exclude from cache
       run: |
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  test:
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - runs-on:
+            arm: [linux, arm64]
+            intel: [ubuntu-latest]
+        distribution:
+        - name: debian:bullseye
+          type: debian
+          # https://packages.debian.org/bullseye/python/python3 (3.9)
+          url: "docker://debian:bullseye"
+        - name: debian:bookworm
+          type: debian
+          # https://packages.debian.org/bookworm/python/python3 (3.11)
+          url: "docker://debian:bookworm"
+        - name: ubuntu:focal (20.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
+          url: "docker://ubuntu:focal"
+        - name: ubuntu:jammy (22.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+          url: "docker://ubuntu:jammy"
+        mode:
+        - name: GUI
+          file: chia-blockchain_*.deb
+        - name: CLI
+          file: chia-blockchain-cli_*.deb
+        arch:
+        - name: ARM64
+          matrix: arm
+          artifact-name: arm64
+        - name: Intel
+          matrix: intel
+          artifact-name: amd64
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      id: download
+      with:
+        name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
+        path: packages
+
+    - name: Update apt repos
+      run: |
+        apt-get update --yes
+
+    - name: Install package
+      run: |
+        ls -l "${{ steps.download.outputs.download-path }}"
+        apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+
+    - name: Run chia version
+      run: |
+        chia version

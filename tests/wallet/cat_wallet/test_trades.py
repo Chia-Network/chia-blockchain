@@ -798,10 +798,9 @@ class TestCATTrades:
         assert trade_make is not None
 
         # Cancelling the trade and trying an ID that doesn't exist just in case
-        txs = await trade_manager_maker.cancel_pending_offers(
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id, bytes32([0] * 32)], DEFAULT_TX_CONFIG, secure=False
         )
-        await wallet_taker.wallet_state_manager.add_pending_transactions(txs)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
         # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.

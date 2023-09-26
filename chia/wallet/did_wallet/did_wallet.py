@@ -129,7 +129,7 @@ class DIDWallet:
             raise
 
         for tx in txs:
-            self.wallet_state_manager.add_pending_transaction(tx)
+            await self.wallet_state_manager.add_pending_transaction(tx)
 
         await self.wallet_state_manager.add_new_wallet(self)
 
@@ -791,7 +791,7 @@ class DIDWallet:
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=p2_ph,
-            amount=uint64(1),
+            amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
             sent=uint32(0),
@@ -1222,8 +1222,6 @@ class DIDWallet:
         """
 
         coins = await self.standard_wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
-        if coins is None:
-            raise ValueError(f"Not enough spendable balance to generate new DID: {amount + fee}")
 
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
@@ -1238,7 +1236,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,

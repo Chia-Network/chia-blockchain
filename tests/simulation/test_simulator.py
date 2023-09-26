@@ -159,7 +159,7 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             tx_config=DEFAULT_TX_CONFIG,
@@ -194,7 +194,7 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             amount=uint64(tx_amount),
             puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             tx_config=DEFAULT_TX_CONFIG,

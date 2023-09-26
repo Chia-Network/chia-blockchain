@@ -42,7 +42,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import ConditionValidTimes, Remark
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -180,29 +180,23 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
     await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    client = await WalletRpcClient.create(
+    async with WalletRpcClient.create_as_context(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
-    )
-    client_2 = await WalletRpcClient.create(
-        hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
-    )
-    client_node = await FullNodeRpcClient.create(
-        hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
-    )
+    ) as client:
+        async with WalletRpcClient.create_as_context(
+            hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
+        ) as client_2:
+            async with FullNodeRpcClient.create_as_context(
+                hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            ) as client_node:
+                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
+                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
-    wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
-    wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
-    node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
-
-    yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
-
-    # Checks that the RPC manages to stop the node
-    client.close()
-    client_2.close()
-    client_node.close()
-    await client.await_closed()
-    await client_2.await_closed()
-    await client_node.await_closed()
+                yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:
@@ -318,6 +312,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             excluded_coin_amounts=[uint64(250000000000)],
             excluded_coin_ids=[bytes32([0] * 32)],
         ),
+        extra_conditions=(Remark(Program.to(("test", None))),),
     )
     transaction_id = tx.name
 
@@ -427,7 +422,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    tx = await wallet.generate_signed_transaction(
+    [tx] = await wallet.generate_signed_transaction(
         amount=uint64(5),
         puzzle_hash=bytes32([0] * 32),
         tx_config=DEFAULT_TX_CONFIG,
@@ -532,6 +527,7 @@ async def test_create_signed_transaction(
         tx_config=DEFAULT_TX_CONFIG.override(
             excluded_coin_amounts=[uint64(selected_coin[0].amount)] if selected_coin is not None else [],
         ),
+        push=True,
     )
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
     assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
@@ -539,8 +535,6 @@ async def test_create_signed_transaction(
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
-    push_res = await wallet_1_rpc.push_transactions([tx])
-    assert push_res["success"]
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
 
@@ -1480,10 +1474,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert metadata["Twitter"] == "Https://test"
 
     last_did_coin = await did_wallet_2.get_coin()
-    bundle = SpendBundle.from_json_dict(
-        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG))["spend_bundle"]
+    SpendBundle.from_json_dict(
+        (await wallet_2_rpc.did_message_spend(did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG, push=True))["spend_bundle"]
     )
-    await env.full_node.rpc_client.push_tx(bundle)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -1493,14 +1486,13 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     last_did_coin = next_did_coin
 
-    bundle = SpendBundle.from_json_dict(
+    SpendBundle.from_json_dict(
         (
             await wallet_2_rpc.did_message_spend(
-                did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG.override(reuse_puzhash=True)
+                did_wallet_2.id(), [], [], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), push=True
             )
-        )["spend_bundle"]
+        )["spend_bundle"],
     )
-    await env.full_node.rpc_client.push_tx(bundle)
     await wallet_2_node.wallet_state_manager.add_interested_coin_ids([last_did_coin.name()])
 
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
