@@ -90,7 +90,9 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants,
 ) -> NPCResult:
+    run_block = run_block_generator
     flags = get_flags_for_height_and_constants(height, constants)
+
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
 
