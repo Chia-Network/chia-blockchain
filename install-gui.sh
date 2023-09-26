@@ -65,7 +65,7 @@ do_install_npm_locally(){
       npm ci
     fi
     export N_PREFIX=${SCRIPT_DIR}/.n
-    PATH="${N_PREFIX}/bin:$(npm prefix)/bin:${PATH}"
+    PATH="${N_PREFIX}/bin:$(npm prefix)/node_modules/.bin:${PATH}"
     export PATH
     # `n 18` here installs nodejs@18 under $N_PREFIX directory
     echo "n 18"
