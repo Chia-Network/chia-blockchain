@@ -177,7 +177,9 @@ class CRCATWallet(CATWallet):
                 cat_wallet.id(), cat_wallet.get_name(), uint8(WalletType.CRCAT.value), bytes(replace_self.info).hex()
             )
         )
-        replace_self.wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
+        updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
+        assert updated_wallet_info is not None
+        replace_self.wallet_info = updated_wallet_info
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
 
