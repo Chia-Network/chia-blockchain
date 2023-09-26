@@ -32,7 +32,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, SpendInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.condition_tools import parse_sexp_to_conditions
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
