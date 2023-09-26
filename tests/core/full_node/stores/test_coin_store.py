@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
 import pytest
+from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -17,6 +19,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.eligible_coin_spends import UnspentLineageIds
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
@@ -24,6 +27,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.util.db_connection import DBConnection
+from tests.util.misc import Marks, datacases
 
 constants = test_constants
 
@@ -501,3 +505,136 @@ async def test_unsupported_version(tmp_dir: Path) -> None:
     with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await CoinStore.create(db_wrapper)
+
+
+TEST_COIN_ID = b"c" * 32
+TEST_PUZZLEHASH = b"p" * 32
+TEST_AMOUNT = 1337
+TEST_PARENT_ID = Coin(b"a" * 32, TEST_PUZZLEHASH, TEST_AMOUNT).name()
+TEST_PARENT_PARENT_ID = b"f" * 32
+
+
+@dataclass(frozen=True)
+class UnspentLineageIdsTestItem:
+    coin_id: bytes
+    puzzlehash: bytes
+    amount: int
+    parent_id: bytes
+    is_spent: bool = False
+
+
+@dataclass
+class UnspentLineageIdsCase:
+    id: str
+    items: List[UnspentLineageIdsTestItem]
+    expected_success: bool
+    marks: Marks = ()
+
+
+@pytest.mark.asyncio
+@datacases(
+    UnspentLineageIdsCase(
+        id="Unspent with parent that has same amount but different puzzlehash",
+        items=[
+            UnspentLineageIdsTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageIdsTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageIdsTestItem(TEST_PARENT_ID, b"4" * 32, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageIdsCase(
+        id="Unspent with parent that has same puzzlehash but different amount",
+        items=[
+            UnspentLineageIdsTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageIdsTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageIdsTestItem(TEST_PARENT_ID, TEST_PUZZLEHASH, 4, TEST_PARENT_PARENT_ID, is_spent=True),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageIdsCase(
+        id="Unspent with parent that has same puzzlehash and amount but is also unspent",
+        items=[
+            UnspentLineageIdsTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageIdsTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageIdsTestItem(TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageIdsCase(
+        id="More than one unspent with parent that has same puzzlehash and amount",
+        items=[
+            UnspentLineageIdsTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"2" * 32, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageIdsTestItem(
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+            ),
+        ],
+        expected_success=False,
+    ),
+    UnspentLineageIdsCase(
+        id="Unspent with parent that has same puzzlehash and amount",
+        items=[
+            UnspentLineageIdsTestItem(TEST_COIN_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_ID),
+            UnspentLineageIdsTestItem(b"2" * 32, b"2" * 32, 2, b"1" * 32),
+            UnspentLineageIdsTestItem(b"3" * 32, b"3" * 32, 3, b"2" * 32),
+            UnspentLineageIdsTestItem(
+                TEST_PARENT_ID, TEST_PUZZLEHASH, TEST_AMOUNT, TEST_PARENT_PARENT_ID, is_spent=True
+            ),
+        ],
+        expected_success=True,
+    ),
+)
+async def test_get_unspent_lineage_ids_for_puzzle_hash(case: UnspentLineageIdsCase) -> None:
+    CoinRecordRawData = Tuple[
+        bytes,  # coin_name (blob)
+        int,  # confirmed_index (bigint)
+        int,  # spent_index (bigint)
+        int,  # coinbase (int)
+        bytes,  # puzzle_hash (blob)
+        bytes,  # coin_parent (blob)
+        bytes,  # amount (blob)
+        int,  # timestamp (bigint)
+    ]
+
+    def make_test_data(test_items: List[UnspentLineageIdsTestItem]) -> List[CoinRecordRawData]:
+        test_data = []
+        for item in test_items:
+            test_data.append(
+                (
+                    item.coin_id,
+                    0,
+                    1 if item.is_spent else 0,
+                    0,
+                    item.puzzlehash,
+                    item.parent_id,
+                    int_to_bytes(item.amount),
+                    0,
+                )
+            )
+        return test_data
+
+    async with DBConnection(2) as db_wrapper:
+        # Prepare the coin store with the test case's data
+        coin_store = await CoinStore.create(db_wrapper)
+        async with db_wrapper.writer() as writer:
+            for item in make_test_data(case.items):
+                await writer.execute(
+                    "INSERT INTO coin_record "
+                    "(coin_name, confirmed_index, spent_index, coinbase, puzzle_hash, coin_parent, amount, timestamp) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    item,
+                )
+        # Run the test case
+        result = await coin_store.get_unspent_lineage_ids_for_puzzle_hash(bytes32(TEST_PUZZLEHASH))
+        if case.expected_success:
+            assert result == UnspentLineageIds(
+                coin_id=bytes32(TEST_COIN_ID),
+                parent_id=bytes32(TEST_PARENT_ID),
+                parent_parent_id=bytes32(TEST_PARENT_PARENT_ID),
+            )
+        else:
+            assert result is None
