@@ -174,30 +174,31 @@ async def setup_full_node(
         )
     await service.start()
 
-    yield service
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
+        if not reuse_db and db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-    service.stop()
-    await service.wait_closed()
-    if not reuse_db and db_path.exists():
-        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-
-        # 3.11 switched to using functools.lru_cache for the statement cache.
-        # See #87028. This introduces a reference cycle involving the connection
-        # object, so the connection object no longer gets immediately
-        # deallocated, not until, for example, gc.collect() is called to break
-        # the cycle.
-        gc.collect()
-        for _ in range(10):
-            try:
-                db_path.unlink()
-                break
-            except PermissionError as e:
-                print(f"db_path.unlink(): {e}")
-                time.sleep(0.1)
-                # filesystem operations are async on windows
-                # [WinError 32] The process cannot access the file because it is
-                # being used by another process
-                pass
+            # 3.11 switched to using functools.lru_cache for the statement cache.
+            # See #87028. This introduces a reference cycle involving the connection
+            # object, so the connection object no longer gets immediately
+            # deallocated, not until, for example, gc.collect() is called to break
+            # the cycle.
+            gc.collect()
+            for _ in range(10):
+                try:
+                    db_path.unlink()
+                    break
+                except PermissionError as e:
+                    print(f"db_path.unlink(): {e}")
+                    time.sleep(0.1)
+                    # filesystem operations are async on windows
+                    # [WinError 32] The process cannot access the file because it is
+                    # being used by another process
+                    pass
 
 
 @asynccontextmanager
@@ -324,15 +325,16 @@ async def setup_wallet_node(
 
         await service.start()
 
-        yield service
-
-        service.stop()
-        await service.wait_closed()
-        if db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-            gc.collect()
-            db_path.unlink()
-        keychain.delete_all_keys()
+        try:
+            yield service
+        finally:
+            service.stop()
+            await service.wait_closed()
+            if db_path.exists():
+                # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+                gc.collect()
+                db_path.unlink()
+            keychain.delete_all_keys()
 
 
 @asynccontextmanager
@@ -364,10 +366,11 @@ async def setup_harvester(
     if start_service:
         await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -412,10 +415,11 @@ async def setup_farmer(
     if start_service:
         await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -429,10 +433,11 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
 
     await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -451,8 +456,10 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
 
     async with SignalHandlers.manage() as signal_handlers:
         signal_handlers.setup_async_signal_handler(handler=stop)
-        yield vdf_task_1
-        await kill_processes(lock)
+        try:
+            yield vdf_task_1
+        finally:
+            await kill_processes(lock)
 
 
 @asynccontextmanager
@@ -481,9 +488,10 @@ async def setup_vdf_clients(
     async with signal_handlers.manage():
         signal_handlers.setup_async_signal_handler(handler=stop)
 
-        yield vdf_task_1, vdf_task_2, vdf_task_3
-
-        await kill_processes(lock)
+        try:
+            yield vdf_task_1, vdf_task_2, vdf_task_3
+        finally:
+            await kill_processes(lock)
 
 
 @asynccontextmanager
@@ -512,7 +520,8 @@ async def setup_timelord(
 
     await service.start()
 
-    yield service
-
-    service.stop()
-    await service.wait_closed()
+    try:
+        yield service
+    finally:
+        service.stop()
+        await service.wait_closed()
