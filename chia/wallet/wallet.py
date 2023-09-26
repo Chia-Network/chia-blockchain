@@ -13,6 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
@@ -50,9 +51,6 @@ from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
     from chia.wallet.wallet_state_manager import WalletStateManager
-
-# https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
-CHIP_0002_SIGN_MESSAGE_PREFIX = "Chia Signed Message"
 
 
 class Wallet:
@@ -404,19 +402,21 @@ class Wallet:
         self.log.debug(f"Spends is {spends}")
         return spends
 
-    async def sign_message(
-        self, message: str, puzzle_hash: bytes32, is_hex: bool = False
-    ) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         private = await self.wallet_state_manager.get_private_key(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        if is_hex:
-            puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+        if mode == SigningMode.CHIP_0002_HEX_INPUT:
+            hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
+        elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
+            hex_message = bytes(message, "utf-8")
+        elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
+            hex_message = bytes.fromhex(message)
         else:
-            puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
-        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
+            hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
+        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
 
     async def generate_signed_transaction(
         self,
