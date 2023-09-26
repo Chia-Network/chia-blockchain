@@ -315,14 +315,14 @@ def get_root_history(
     help="Specify if already existing files need to be overwritten by this command",
 )
 @click.option(
-    "-f", "--foldername", type=str, help="If specified, use a non-default folder to write the files", required=False
+    "-d", "--directory", type=str, help="If specified, use a non-default directory to write the files", required=False
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
     ids: Optional[str],
     overwrite: bool,
-    foldername: Optional[str],
+    directory: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -333,7 +333,7 @@ def add_missing_files(
             rpc_port=data_rpc_port,
             ids=None if ids is None else json.loads(ids),
             overwrite=overwrite,
-            foldername=None if foldername is None else Path(foldername),
+            foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
         )
     )
