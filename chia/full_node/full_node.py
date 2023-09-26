@@ -446,9 +446,27 @@ class FullNode:
                 #     "FullNode.": len(self.),
                 # }
 
+                sql_data: Dict[str, int] = {}
+                if hasattr(sqlite3, "status"):
+                    metrics = {
+                        "memory_used": sqlite3.SQLITE_STATUS_MEMORY_USED,
+                        "pagecache_used": sqlite3.SQLITE_STATUS_PAGECACHE_USED,
+                        "pagecache_overflow": sqlite3.SQLITE_STATUS_PAGECACHE_OVERFLOW,
+                        "scratch_used": sqlite3.SQLITE_STATUS_SCRATCH_USED,
+                        "scratch_overflow": sqlite3.SQLITE_STATUS_SCRATCH_OVERFLOW,
+                        "malloc_size": sqlite3.SQLITE_STATUS_MALLOC_SIZE,
+                        "parser_stack": sqlite3.SQLITE_STATUS_PARSER_STACK,
+                        "pagecache_size": sqlite3.SQLITE_STATUS_PAGECACHE_SIZE,
+                        "scratch_size": sqlite3.SQLITE_STATUS_SCRATCH_SIZE,
+                        "malloc_count": sqlite3.SQLITE_STATUS_MALLOC_COUNT,
+                    }
+                    for name, value in metrics.items():
+                        sql_data[name] = sqlite3.status(value, False)
+
                 data_groups: Dict[str, Dict[str, float]] = {
                     "oc": oc_data,
                     "len": lengths,
+                    "sql": sql_data,
                 }
 
                 final_data: Dict[str, float] = {
