@@ -1125,14 +1125,16 @@ class TestWalletSync:
                 ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
             ]
         )
-        farm_sb = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
-        assert farm_sb
-
-        # ensure hints are generated
-        assert compute_memos(farm_sb)
+        txs = await farm_nft_wallet.generate_new_nft(metadata, DEFAULT_TX_CONFIG)
+        await farm_nft_wallet.wallet_state_manager.add_pending_transactions(txs)
+        for tx in txs:
+            if tx.spend_bundle is not None:
+                assert compute_memos(tx.spend_bundle)
+                await time_out_assert_not_none(
+                    20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
+                )
 
         # Farm a new block
-        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, farm_sb.name())
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
@@ -1159,7 +1161,7 @@ class TestWalletSync:
         )
         assert len(txs) == 1
         assert txs[0].spend_bundle is not None
-        await farm_wallet_node.wallet_state_manager.add_pending_transaction(txs[0])
+        await farm_wallet_node.wallet_state_manager.add_pending_transactions(txs)
         assert compute_memos(txs[0].spend_bundle)
 
         # Farm a new block.
@@ -1294,7 +1296,7 @@ class TestWalletSync:
             [tx] = await wallet.generate_signed_transaction(
                 1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
             )
-            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
 
             async def tx_in_mempool():
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None

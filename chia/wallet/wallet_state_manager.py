@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import multiprocessing.context
 import time
@@ -804,6 +805,7 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
+        all_txs: List[TransactionRecord] = []
         for coin in unspent_coins.records:
             try:
                 metadata: MetadataTypes = coin.parsed_metadata()
@@ -813,12 +815,22 @@ class WalletStateManager:
                     if current_timestamp - coin_timestamp >= metadata.time_lock:
                         clawback_coins[coin.coin] = metadata
                         if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+                            txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+                            all_txs.extend(txs)
+                            tx_config = dataclasses.replace(
+                                tx_config,
+                                excluded_coin_ids=[
+                                    *tx_config.excluded_coin_ids,
+                                    *(c.name() for tx in txs for c in tx.removals),
+                                ],
+                            )
                             clawback_coins = {}
             except Exception as e:
                 self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
-            await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
+            all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))
+
+        await self.add_pending_transactions(all_txs)
 
     async def spend_clawback_coins(
         self,
@@ -827,7 +839,7 @@ class WalletStateManager:
         tx_config: TXConfig,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[bytes32]:
+    ) -> List[TransactionRecord]:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
@@ -877,6 +889,7 @@ class WalletStateManager:
         if len(coin_spends) == 0:
             return []
         spend_bundle: SpendBundle = await self.sign_transaction(coin_spends)
+        tx_list: List[TransactionRecord] = []
         if fee > 0:
             chia_tx = await self.main_wallet.create_tandem_xch_tx(
                 fee,
@@ -887,6 +900,7 @@ class WalletStateManager:
             )
             assert chia_tx.spend_bundle is not None
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
         assert derivation_record is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -907,11 +921,11 @@ class WalletStateManager:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
-        await self.add_pending_transaction(tx_record)
+        tx_list.append(tx_record)
         # Update incoming tx to prevent double spend and mark it is pending
         for coin_spend in coin_spends:
             await self.tx_store.increment_sent(coin_spend.coin.name(), "", MempoolInclusionStatus.PENDING, None)
-        return [tx_record.name]
+        return tx_list
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
@@ -1987,20 +2001,34 @@ class WalletStateManager:
 
         await self.create_more_puzzle_hashes()
 
-    async def add_pending_transaction(self, tx_record: TransactionRecord) -> None:
+    async def add_pending_transactions(self, tx_records: List[TransactionRecord]) -> None:
         """
-        Called from wallet before new transaction is sent to the full_node
+        Add a list of transactions to be submitted to the full node.
+        Aggregates the `spend_bundle` property for each transaction onto the first transaction in the list.
         """
-        # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-        await self.tx_store.add_transaction_record(tx_record)
+        agg_spend: SpendBundle = SpendBundle.aggregate(
+            [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
+        )
+        actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
+        if actual_spend_involved:
+            tx_records = [
+                dataclasses.replace(tx, spend_bundle=agg_spend if i == 0 else None) for i, tx in enumerate(tx_records)
+            ]
         all_coins_names = []
-        all_coins_names.extend([coin.name() for coin in tx_record.additions])
-        all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        async with self.db_wrapper.writer_maybe_transaction():
+            for tx_record in tx_records:
+                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                await self.tx_store.add_transaction_record(tx_record)
+                all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
         await self.add_interested_coin_ids(all_coins_names)
-        if tx_record.spend_bundle is not None:
+
+        if actual_spend_involved:
             self.tx_pending_changed()
-        self.state_changed("pending_transaction", tx_record.wallet_id)
+        for wallet_id in set(tx.wallet_id for tx in tx_records):
+            self.state_changed("pending_transaction", wallet_id)
+        await self.wallet_node.update_ui()
 
     async def add_transaction(self, tx_record: TransactionRecord) -> None:
         """
