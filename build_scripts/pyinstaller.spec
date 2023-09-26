@@ -5,8 +5,6 @@ import pathlib
 import platform
 import sysconfig
 
-from pkg_resources import get_distribution
-
 from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
@@ -52,7 +50,7 @@ keyring_imports = collect_submodules("keyring.backends")
 keyring_datas = copy_metadata("keyring")[0]
 
 version_data = [
-    copy_metadata(get_distribution(name))[0]
+    copy_metadata(name)[0]
     for name in ["chia-blockchain", "chiapos"]
 ]
 

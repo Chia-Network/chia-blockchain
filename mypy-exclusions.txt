@@ -17,8 +17,6 @@ chia.rpc.util
 chia.rpc.wallet_rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring
-chia.simulator.setup_services
-chia.simulator.start_simulator
 chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
@@ -86,7 +84,6 @@ tests.core.custom_types.test_coin
 tests.core.custom_types.test_spend_bundle
 tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
-tests.core.full_node.stores.test_hint_store
 tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
 tests.core.full_node.test_conditions

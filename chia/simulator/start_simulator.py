@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 import sys
+from dataclasses import dataclass
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia.full_node.full_node import FullNode
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -32,11 +32,11 @@ PLOT_SIZE = 19  # anything under k19 is a bit buggy
 
 def create_full_node_simulator_service(
     root_path: Path,
-    config: Dict,
+    config: Dict[str, Any],
     bt: BlockTools,
     connect_to_daemon: bool = True,
-    override_capabilities: List[Tuple[uint16, str]] = None,
-) -> Service[FullNode, FullNodeAPI]:
+    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+) -> Service[FullNode, FullNodeSimulator]:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
 
@@ -64,7 +64,17 @@ def create_full_node_simulator_service(
     )
 
 
-async def async_main(test_mode: bool = False, automated_testing: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
+@dataclass
+class StartedSimulator:
+    service: Service[FullNode, FullNodeSimulator]
+    exit_code: int
+
+
+async def async_main(
+    test_mode: bool = False,
+    automated_testing: bool = False,
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> StartedSimulator:
     # Same as full node, but the root_path is defined above
     config = load_config(root_path, "config.yaml")
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
@@ -106,19 +116,17 @@ async def async_main(test_mode: bool = False, automated_testing: bool = False, r
         root_path=root_path,
     )
     service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
-    if test_mode:
-        return service
+    if not test_mode:
+        async with SignalHandlers.manage() as signal_handlers:
+            await service.setup_process_global_state(signal_handlers=signal_handlers)
+            await service.run()
 
-    async with SignalHandlers.manage() as signal_handlers:
-        await service.setup_process_global_state(signal_handlers=signal_handlers)
-        await service.run()
-
-    return 0
+    return StartedSimulator(service=service, exit_code=0)
 
 
 def main() -> int:
     freeze_support()
-    return async_run(async_main())
+    return async_run(async_main()).exit_code
 
 
 if __name__ == "__main__":
