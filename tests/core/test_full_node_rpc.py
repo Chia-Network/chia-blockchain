@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import List
+from chia.types.blockchain_format.program import Program
 
 import pytest
 from blspy import AugSchemeMPL
@@ -228,6 +229,14 @@ class TestRpc:
 
             assert len(block_spends) == 3
             assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+
+            block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
+
+            assert len(block_spends_with_conditions) == 3
+            assert sorted(block_spends_with_conditions, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+
+            for coin_spend in block_spends_with_conditions:
+                assert isinstance(coin_spend.conditions, Program) == True
 
             memo = 32 * b"\f"
 
