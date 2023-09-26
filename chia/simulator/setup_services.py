@@ -118,7 +118,7 @@ async def setup_full_node(
     disable_capabilities: Optional[List[Capability]] = None,
     *,
     reuse_db: bool = False,
-) -> AsyncGenerator[Service[FullNode, Union[FullNodeSimulator, FullNodeAPI]], None]:
+) -> AsyncGenerator[Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]], None]:
     db_path = local_bt.root_path / f"{db_name}"
     if not reuse_db and db_path.exists():
         # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
@@ -155,6 +155,7 @@ async def setup_full_node(
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     local_bt.change_config(config)
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
+    service: Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]]
     if simulator:
         service = create_full_node_simulator_service(
             local_bt.root_path,

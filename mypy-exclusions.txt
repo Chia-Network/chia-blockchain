@@ -17,8 +17,6 @@ chia.rpc.util
 chia.rpc.wallet_rpc_client
 chia.simulator.full_node_simulator
 chia.simulator.keyring
-chia.simulator.setup_services
-chia.simulator.start_simulator
 chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
