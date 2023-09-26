@@ -20,6 +20,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -31,7 +32,6 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
@@ -1658,13 +1658,35 @@ class TestWalletSimulator:
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true"}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"}
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
             puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test BLS sign string
+        message = "Hello World"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False}
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes(message, "utf-8"),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test BLS sign hex
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False}
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes.fromhex(message),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
 
