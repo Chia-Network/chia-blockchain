@@ -250,7 +250,6 @@ class Wallet:
         origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
         primaries_input: Optional[List[Payment]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
@@ -270,11 +269,6 @@ class Wallet:
 
         total_amount = amount + sum(primary.amount for primary in primaries) + fee
         total_balance = await self.get_spendable_balance()
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if total_amount > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction, got {total_amount}")
-            self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
             if total_amount > total_balance:
                 raise ValueError(
@@ -389,7 +383,6 @@ class Wallet:
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[bytes]] = None,
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -416,7 +409,6 @@ class Wallet:
             origin_id,
             coins,
             primaries,
-            ignore_max_send_amount,
             memos,
             negative_change_allowed,
             puzzle_decorator_override=puzzle_decorator_override,

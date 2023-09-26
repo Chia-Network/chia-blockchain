@@ -3314,7 +3314,6 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
                     extra_conditions=(
@@ -3352,7 +3351,6 @@ class WalletRpcApi:
                     tx_config,
                     fee,
                     coins=coins,
-                    ignore_max_send_amount=True,
                     memos=[memos_0] + [output.memos for output in additional_outputs],
                     extra_conditions=(
                         *extra_conditions,

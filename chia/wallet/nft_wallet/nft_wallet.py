@@ -396,7 +396,6 @@ class NFTWallet:
             fee,
             coins,
             None,
-            False,
             origin_id=origin.name(),
             extra_conditions=(
                 *extra_conditions,
@@ -620,7 +619,6 @@ class NFTWallet:
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
-        ignore_max_send_amount: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
