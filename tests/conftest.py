@@ -52,7 +52,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -61,6 +61,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
+from tests.util.misc import BenchmarkRunner
 
 multiprocessing.set_start_method("spawn")
 
@@ -77,6 +78,12 @@ def seeded_random_fixture() -> random.Random:
     seeded_random = random.Random()
     seeded_random.seed(a=0, version=2)
     return seeded_random
+
+
+@pytest.fixture(name="benchmark_runner")
+def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+    label = request.node.name
+    return BenchmarkRunner(label=label)
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -126,15 +133,15 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=uint32(3))
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
             test_constants,
-            HARD_FORK_HEIGHT=2,
-            HARD_FORK_FIX_HEIGHT=2,
-            PLOT_FILTER_128_HEIGHT=10,
-            PLOT_FILTER_64_HEIGHT=15,
-            PLOT_FILTER_32_HEIGHT=20,
+            HARD_FORK_HEIGHT=uint32(2),
+            HARD_FORK_FIX_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
         )
     raise AssertionError("Invalid Blockchain mode in simulation")
 
@@ -335,10 +342,15 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
+    all_error_lines: List[str] = []
     limit_consensus_modes_problems: List[str] = []
     for item in items:
         limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
@@ -364,8 +376,25 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         items[:] = kept
 
     if len(limit_consensus_modes_problems) > 0:
-        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
-        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
+        all_error_lines.append("@pytest.mark.limit_consensus_modes used without consensus_mode:")
+        all_error_lines.extend(f"    {line}" for line in limit_consensus_modes_problems)
+
+    benchmark_problems: List[str] = []
+    for item in items:
+        existing_benchmark_mark = item.get_closest_marker("benchmark")
+        if existing_benchmark_mark is not None:
+            benchmark_problems.append(item.name)
+
+        if "benchmark_runner" in getattr(item, "fixturenames", ()):
+            item.add_marker("benchmark")
+
+    if len(benchmark_problems) > 0:
+        all_error_lines.append("use the benchmark_runner fixture, not @pytest.mark.benchmark:")
+        all_error_lines.extend(f"    {line}" for line in benchmark_problems)
+
+    if len(all_error_lines) > 0:
+        all_error_lines.insert(0, "custom chia collection rules failed")
+        raise Exception("\n".join(all_error_lines))
 
 
 @pytest_asyncio.fixture(scope="function")

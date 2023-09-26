@@ -105,7 +105,7 @@ class NotificationManager:
             Program.to(None),
         )
         extra_spend_bundle = SpendBundle([notification_spend], G2Element())
-        chia_tx = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+        [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
             tx_config,

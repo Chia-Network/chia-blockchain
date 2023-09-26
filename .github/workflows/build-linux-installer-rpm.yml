@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Linux amd64 RPM Installer
+    name: Build amd64 RPM
     runs-on: ubuntu-latest
     container:
       image: chianetwork/rocky8-builder:latest
@@ -162,7 +162,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
-        skip-system-installs: true
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -288,3 +287,59 @@ jobs:
     - name: Remove working files to exclude from cache
       run: |
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  test:
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
+    runs-on: ${{ matrix.os }}
+    needs:
+    - build
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        distribution:
+        - name: amazonlinux:2023
+          type: amazon
+          url: "docker://amazonlinux:2023"
+        - name: fedora:37
+          type: fedora
+          # (37, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+37&start=0
+          url: "docker://fedora:37"
+        - name: fedora:38
+          type: fedora
+          # (38, 3.11) https://packages.fedoraproject.org/search?query=python3&releases=Fedora+38&start=0
+          url: "docker://fedora:38"
+        - name: rockylinux:8
+          type: rocky
+          url: "docker://rockylinux:8"
+        - name: rockylinux:9
+          type: rocky
+          url: "docker://rockylinux:9"
+        - name: build image
+          type: rocky
+          url: "docker://chianetwork/rocky8-builder:latest"
+        mode:
+        - name: GUI
+          file: chia-blockchain-[0,1,2,3,4,5,6,7,8,9]*.rpm
+        - name: CLI
+          file: chia-blockchain-cli-[0,1,2,3,4,5,6,7,8,9]*.rpm
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      id: download
+      with:
+        name: chia-installers-linux-rpm-intel
+        path: packages
+
+    - name: Install package
+      run: |
+        ls -l "${{ steps.download.outputs.download-path }}"
+        yum install -y "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+
+    - name: Run chia version
+      run: |
+        chia version

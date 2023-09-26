@@ -308,7 +308,9 @@ class NFTWallet:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
-                    did_bundle = await wallet.create_message_spend(tx_config, puzzle_announcements=nft_ids)
+                    did_bundle = (
+                        await wallet.create_message_spend(tx_config, puzzle_announcements=nft_ids)
+                    ).spend_bundle
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
@@ -380,7 +382,7 @@ class NFTWallet:
             "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_set
         )
         # store the launcher transaction in the wallet state
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
             tx_config,
@@ -400,7 +402,7 @@ class NFTWallet:
 
         eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
 
-        if tx_record is None or tx_record.spend_bundle is None:
+        if tx_record.spend_bundle is None:
             self.log.error("Couldn't produce a launcher spend")
             return None
 
@@ -806,6 +808,7 @@ class NFTWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         tx_config: TXConfig,
         fee: uint64,
+        extra_conditions: Tuple[Condition, ...],
     ) -> Offer:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
@@ -948,7 +951,7 @@ class NFTWallet:
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
                     payment_sum = sum(p.amount for _, p in payments)
-                    tx = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         abs(amount),
                         OFFER_MOD_HASH,
                         tx_config,
@@ -956,6 +959,7 @@ class NFTWallet:
                         fee=fee,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                     txs = [tx]
                 elif asset not in fungible_asset_dict:
@@ -972,6 +976,7 @@ class NFTWallet:
                             for price in trade_prices
                             if math.floor(price[0] * (offered_royalty_percentages[asset] / 10000)) != 0
                         ],
+                        extra_conditions=extra_conditions,
                     )
                 else:
                     payments = royalty_payments[asset] if asset in royalty_payments else []
@@ -982,9 +987,11 @@ class NFTWallet:
                         fee=fee_left_to_pay,
                         coins=offered_coins_by_asset[asset],
                         puzzle_announcements_to_consume=announcements_to_assert,
+                        extra_conditions=extra_conditions,
                     )
                 all_transactions.extend(txs)
                 fee_left_to_pay = uint64(0)
+                extra_conditions = tuple()
 
                 # Then, adding in the spends for the royalty offer mod
                 if asset in fungible_asset_dict:

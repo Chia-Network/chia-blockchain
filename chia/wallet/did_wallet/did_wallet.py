@@ -728,7 +728,7 @@ class DIDWallet:
         coin_announcements_to_assert: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_assert: Optional[Set[Announcement]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ):
+    ) -> TransactionRecord:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -783,7 +783,26 @@ class DIDWallet:
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
+        signed_spend_bundle: SpendBundle = await self.sign(unsigned_spend_bundle)
+        return TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=p2_ph,
+            amount=uint64(coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=signed_spend_bundle,
+            additions=signed_spend_bundle.additions(),
+            removals=[coin],
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=signed_spend_bundle.name(),
+            memos=list(compute_memos(signed_spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
 
     # This is used to cash out, or update the id_list
     async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig):
@@ -1219,7 +1238,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -1249,7 +1268,7 @@ class DIDWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
-        if tx_record is None or tx_record.spend_bundle is None:
+        if tx_record.spend_bundle is None:
             return None
 
         # Only want to save this information if the transaction is valid
