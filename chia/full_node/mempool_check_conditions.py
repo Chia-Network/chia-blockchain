@@ -157,7 +157,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
     return spends
 
-def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int, constants: ConsensusConstants):
+def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[CoinSpend]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -173,7 +173,7 @@ def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int,
         flags,
     )
 
-    spends: List[CoinSpend] = []
+    spends = []
 
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
