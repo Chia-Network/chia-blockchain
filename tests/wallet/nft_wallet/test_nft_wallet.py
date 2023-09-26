@@ -1001,6 +1001,7 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
     # transfer DID to the other wallet
     tx = await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG)
     assert tx
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
