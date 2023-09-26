@@ -359,30 +359,50 @@ async def setup_full_system_inner(
         b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
         b_tools_1 = await create_block_tools_async(constants=consensus_constants, keychain=keychain2)
+
+    # Make sure the first node, timelord and farmer can find the daemon
+    # config = b_tools.config
+    # config["daemon_port"] = shared_b_tools.config["daemon_port"]
+    # b_tools.change_config(new_config=config)
     async with AsyncExitStack() as async_exit_stack:
+        daemon_ws = await async_exit_stack.enter_async_context(setup_daemon(btools=b_tools))
+
         # Start the introducer first so we can find out the port, and use that for the nodes
         introducer_service = await async_exit_stack.enter_async_context(setup_introducer(shared_b_tools, uint16(0)))
         introducer = introducer_service._api
         introducer_server = introducer_service._node.server
 
         # Then start the full node so we can use the port for the farmer and timelord
-        nodes = [
-            await async_exit_stack.enter_async_context(
-                setup_full_node(
-                    consensus_constants,
-                    f"blockchain_test_{i}.db",
-                    shared_b_tools.config["self_hostname"],
-                    b_tools if i == 0 else b_tools_1,
-                    introducer_server._port,
-                    False,
-                    10,
-                    True,
-                    connect_to_daemon=connect_to_daemon,
-                    db_version=db_version,
-                )
+        node_1 = await async_exit_stack.enter_async_context(
+            setup_full_node(
+                consensus_constants,
+                "blockchain_test_1.db",
+                shared_b_tools.config["self_hostname"],
+                b_tools,
+                introducer_server._port,
+                False,
+                10,
+                True,
+                connect_to_daemon=connect_to_daemon,
+                db_version=db_version,
             )
-            for i in range(2)
-        ]
+        )
+        node_2 = await async_exit_stack.enter_async_context(
+            setup_full_node(
+                consensus_constants,
+                "blockchain_test_2.db",
+                shared_b_tools.config["self_hostname"],
+                b_tools_1,
+                introducer_server._port,
+                False,
+                10,
+                True,
+                connect_to_daemon=False,  # node 2 doesn't connect to the daemon
+                db_version=db_version,
+            )
+        )
+
+        nodes = [node_1, node_2]
         node_apis = [fni._api for fni in nodes]
         full_node_0_port = node_apis[0].full_node.server.get_port()
         farmer_service = await async_exit_stack.enter_async_context(
@@ -419,7 +439,7 @@ async def setup_full_system_inner(
         )
         timelord_bluebox_service = await async_exit_stack.enter_async_context(
             setup_timelord(
-                uint16(1000),
+                node_apis[1].full_node.server.get_port(),
                 True,
                 consensus_constants,
                 b_tools_1.config,
@@ -453,5 +473,4 @@ async def setup_full_system_inner(
             timelord_bluebox,
             timelord_bluebox_server,
         )
-        daemon_ws = await async_exit_stack.enter_async_context(setup_daemon(btools=b_tools))
         yield daemon_ws, ret

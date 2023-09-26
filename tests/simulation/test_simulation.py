@@ -456,6 +456,7 @@ class TestSimulation:
         with pytest.raises(Exception, match="Coins must have a positive value"):
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
 
+    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules.")
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, self_hostname, daemon_simulation):
         deamon_and_nodes, get_b_tools, bt = daemon_simulation
@@ -466,9 +467,49 @@ class TestSimulation:
 
         async def num_connections():
             count = len(node2.server.get_connections(NodeType.FULL_NODE))
+            print(f"node2 num_connections: {count}")
             return count
 
         await time_out_assert_custom_interval(60, 1, num_connections, 1)
+
+        def print_height() -> None:
+            if node2.full_node.blockchain.get_peak() is not None:
+                peak = node1.full_node.blockchain.get_peak()
+                if peak is not None:
+                    print(f"node1 peak height: {peak.height}")
+                else:
+                    print("node1 peak height: None")
+            else:
+                print("node1 peak height: None")
+
+            if node2.full_node.blockchain.get_peak() is not None:
+                peak = node2.full_node.blockchain.get_peak()
+                if peak is not None:
+                    print(f"node2 peak height: {peak.height}")
+                else:
+                    print("node2 peak height: None")
+            else:
+                print("node2 peak height: None")
+
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
+        await asyncio.sleep(10)
+        print_height()
 
         await time_out_assert(1500, node_height_at_least, True, node2, 1)
 

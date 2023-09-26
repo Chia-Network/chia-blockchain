@@ -39,7 +39,7 @@ class VDFClientProcessMgr:
         async with self.lock:
             self.active_processes.append(proc)
 
-    async def kill_processes(self):
+    async def kill_processes(self) -> None:
         async with self.lock:
             self.stopped = True
             for process in self.active_processes:
