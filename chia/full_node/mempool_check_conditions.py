@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia_rs import (
     AGG_SIG_ARGS,
@@ -157,7 +157,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
     return spends
 
-def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[CoinSpend]:
+def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[Dict[str, Any]]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"

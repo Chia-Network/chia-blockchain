@@ -209,7 +209,7 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
-    async def get_block_spends_with_conditions(self, header_hash: bytes32):
+    async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[List[Dict[str, Any]]]:
         try:
             response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
             block_spends = []

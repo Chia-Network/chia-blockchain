@@ -1,0 +1,14 @@
+# Crowdin credentials
+"project_id": "1"
+"api_token": "eb73909cf0d070e7fb5f5bb41f4836fbaef2f66e479a6d863f8e8c93cbeb20fd26de139478255cc9"
+"base_path": "."
+"base_url": "https://chia.crowdin.com"
+
+files:
+  - source: /packages/core/src/locales/en-US/*.po
+    translation: /packages/core/src/locales/%locale%/messages.po
+  - source: /packages/gui/src/locales/en-US/*.po
+    translation: /packages/gui/src/locales/%locale%/messages.po
+  - source: /packages/wallets/src/locales/en-US/*.po
+    translation: /packages/wallets/src/locales/%locale%/messages.po
+
