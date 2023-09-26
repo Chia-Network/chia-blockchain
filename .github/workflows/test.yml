@@ -17,10 +17,6 @@ on:
     - '**'
   workflow_dispatch: null
 
-concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
-  cancel-in-progress: false
-
 jobs:
   configure:
     name: Configure matrix
