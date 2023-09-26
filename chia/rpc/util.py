@@ -79,20 +79,16 @@ def tx_endpoint(
         ):
             raise ValueError("Relative timelocks are not currently supported in the RPC")
 
-        assert func.__defaults__ is not None
-        push: bool = request.get(
-            "push",
-            {
-                param: default
-                for param, default in zip(
-                    func.__code__.co_varnames[: func.__code__.co_argcount][-1 : -len(func.__defaults__) - 1 : -1],
-                    func.__defaults__[-1::-1],
-                )
-            }["push"],
-        )
+        push: Optional[bool] = request.get("push")
 
         return await func(
-            self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, push=push, **kwargs
+            self,
+            request,
+            *args,
+            tx_config=tx_config,
+            extra_conditions=extra_conditions,
+            **({"push": push} if push is not None else {}),
+            **kwargs,
         )
 
     return rpc_endpoint

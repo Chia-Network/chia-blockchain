@@ -56,7 +56,6 @@ from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from tests.conftest import ConsensusMode
@@ -143,7 +142,7 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             tx_size,
             ph,
             DEFAULT_TX_CONFIG,
@@ -182,7 +181,7 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             20000,
             ph,
             DEFAULT_TX_CONFIG,
@@ -225,7 +224,7 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             30000,
             ph,
             DEFAULT_TX_CONFIG,
@@ -237,7 +236,7 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             40000,
             ph,
             DEFAULT_TX_CONFIG,
@@ -250,7 +249,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             50000,
             ph,
             DEFAULT_TX_CONFIG,
@@ -263,7 +262,7 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             3000000000000,
             ph,
             DEFAULT_TX_CONFIG,
@@ -298,7 +297,7 @@ class TestFullNodeBlockCompression:
             assert num_blocks > 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
             DEFAULT_TX_CONFIG,
@@ -344,7 +343,7 @@ class TestFullNodeBlockCompression:
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a standard transaction and an anyone-can-spend transaction
-        tr: TransactionRecord = await wallet.generate_signed_transaction(
+        [tr] = await wallet.generate_signed_transaction(
             30000,
             Program.to(1).get_tree_hash(),
             DEFAULT_TX_CONFIG,

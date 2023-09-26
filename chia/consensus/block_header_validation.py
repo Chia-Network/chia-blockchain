@@ -184,6 +184,7 @@ def validate_unfinished_header_block(
                 if sub_slot.infused_challenge_chain is not None:
                     assert icc_vdf_input is not None
                     assert icc_iters_proof is not None
+                    assert icc_iters_committed is not None
                     assert icc_challenge_hash is not None
                     assert sub_slot.proofs.infused_challenge_chain_slot_proof is not None
                     # 2f. Check infused challenge chain sub-slot VDF

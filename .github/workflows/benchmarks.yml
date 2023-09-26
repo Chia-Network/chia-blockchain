@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [ 3.9 ]
+        python-version: [ "3.10" ]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       BLOCKS_AND_PLOTS_VERSION: 0.33.0
