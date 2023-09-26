@@ -208,6 +208,16 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
+    async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[List[CoinSpend]]:
+        try:
+            response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
+            block_spends = []
+            for block_spend in response["block_spends_with_conditions"]:
+                block_spends.append(CoinSpend.from_json_dict(block_spend))
+            return block_spends
+        except Exception:
+            return None
+
     async def push_tx(self, spend_bundle: SpendBundle) -> Dict[str, Any]:
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 

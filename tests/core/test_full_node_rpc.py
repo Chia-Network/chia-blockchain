@@ -229,6 +229,11 @@ class TestRpc:
             assert len(block_spends) == 3
             assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
 
+            block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
+
+            assert len(block_spends_with_conditions) == 3
+            assert sorted(block_spends_with_conditions, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+
             memo = 32 * b"\f"
 
             for i in range(2):
