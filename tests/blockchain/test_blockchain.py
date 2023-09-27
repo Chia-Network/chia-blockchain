@@ -16,7 +16,7 @@ from clvm.casts import int_to_bytes
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
-from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -56,6 +56,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_error,
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
+    check_block_store_invariant,
 )
 from tests.conftest import ConsensusMode
 from tests.util.blockchain import create_blockchain
@@ -3132,48 +3133,93 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
+    @pytest.mark.parametrize("light_blocks", [True, False])
+    async def test_long_reorg(
+        self,
+        light_blocks: bool,
+        empty_blockchain: Blockchain,
+        default_10000_blocks: List[FullBlock],
+        test_long_reorg_blocks: List[FullBlock],
+        test_long_reorg_blocks_light: List[FullBlock],
+    ):
+        if light_blocks:
+            reorg_blocks = test_long_reorg_blocks_light[:2000]
+        else:
+            reorg_blocks = test_long_reorg_blocks[:1500]
+
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
-        num_blocks_chain_1 = 3 * bt.constants.EPOCH_BLOCKS + bt.constants.MAX_SUB_SLOT_BLOCKS + 10
-        num_blocks_chain_2_start = bt.constants.EPOCH_BLOCKS - 20
+        num_blocks_chain_1 = 1600
+        num_blocks_chain_2_start = 500
 
         assert num_blocks_chain_1 < 10000
-        blocks = default_1500_blocks[:num_blocks_chain_1]
+        blocks = default_10000_blocks[:num_blocks_chain_1]
 
-        for block in blocks:
-            await _validate_and_add_block(b, block, skip_prevalidation=True)
-        chain_1_height = b.get_peak().height
-        chain_1_weight = b.get_peak().weight
+        print(f"pre-validating {len(blocks)} blocks")
+        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
+            blocks, {}, validate_signatures=False
+        )
+
+        for i, block in enumerate(blocks):
+            assert pre_validation_results[i].error is None
+            if (block.height % 100) == 0:
+                print(f"main chain: {block.height:4} weight: {block.weight}")
+            (result, err, _) = await b.add_block(block, pre_validation_results[i])
+            await check_block_store_invariant(b)
+            assert err is None
+            assert result == AddBlockResult.NEW_PEAK
+
+        peak = b.get_peak()
+        assert peak is not None
+        chain_1_height = peak.height
+        chain_1_weight = peak.weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
         # The reorg blocks will have less time between them (timestamp) and therefore will make difficulty go up
         # This means that the weight will grow faster, and we can get a heavier chain with lower height
 
-        # If these assert fail, you probably need to change the fixture in test_long_reorg_blocks to create the
+        # If these assert fail, you probably need to change the fixture in reorg_blocks to create the
         # right amount of blocks at the right time
-        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_1500_blocks[num_blocks_chain_2_start - 1]
-        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_1500_blocks[num_blocks_chain_2_start]
+        assert reorg_blocks[num_blocks_chain_2_start - 1] == default_10000_blocks[num_blocks_chain_2_start - 1]
+        assert reorg_blocks[num_blocks_chain_2_start] != default_10000_blocks[num_blocks_chain_2_start]
 
-        for reorg_block in test_long_reorg_blocks:
-            if reorg_block.height < num_blocks_chain_2_start:
-                await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
+        b.clean_block_records()
+
+        fork_info: Optional[ForkInfo] = None
+        for reorg_block in reorg_blocks:
+            if (reorg_block.height % 100) == 0:
+                peak = b.get_peak()
+                assert peak is not None
+                print(
+                    f"reorg chain: {reorg_block.height:4} "
+                    f"weight: {reorg_block.weight:7} "
+                    f"peak: {str(peak.header_hash)[:6]}"
                 )
+
+            if reorg_block.height < num_blocks_chain_2_start:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
             elif reorg_block.weight <= chain_1_weight:
+                if fork_info is None:
+                    fork_info = ForkInfo(reorg_block.height - 1, reorg_block.height - 1, reorg_block.prev_header_hash)
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
                     [AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
-                    skip_prevalidation=True,
+                    fork_info=fork_info,
                 )
             elif reorg_block.weight > chain_1_weight:
-                assert reorg_block.height < chain_1_height
-                await _validate_and_add_block(b, reorg_block, skip_prevalidation=True)
+                await _validate_and_add_block(b, reorg_block, fork_info=fork_info)
 
-        assert b.get_peak().weight > chain_1_weight
-        assert b.get_peak().height < chain_1_height
+        # if these asserts fires, there was no reorg
+        peak = b.get_peak()
+        assert peak is not None
+        assert peak.weight > chain_1_weight
+
+        if light_blocks:
+            assert peak.height > chain_1_height
+        else:
+            assert peak.height < chain_1_height
 
     @pytest.mark.asyncio
     async def test_long_compact_blockchain(self, empty_blockchain, default_2000_blocks_compact):
