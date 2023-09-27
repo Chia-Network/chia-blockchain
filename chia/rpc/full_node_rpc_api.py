@@ -487,7 +487,7 @@ class FullNodeRpcApi:
 
         return {"block_spends": spends}
 
-    async def get_block_spends_with_conditions(self, request: Dict[str, CoinSpendWithConditions]) -> EndpointResult:
+    async def get_block_spends_with_conditions(self, request: Dict[str, Any]) -> EndpointResult:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
