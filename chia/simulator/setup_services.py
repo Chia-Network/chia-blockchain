@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-import functools
+
+# import functools
 import gc
 import logging
+import signal
 import sqlite3
 import time
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
+from types import FrameType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
-
-import anyio
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
@@ -43,7 +44,7 @@ from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.ssl.create_ssl import create_all_ssl
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
-from chia.timelord.timelord_launcher import VDFClientProcessMgr, spawn_process
+from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client, spawn_process
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
@@ -51,8 +52,12 @@ from chia.util.config import config_path_for_filename, load_config, lock_and_loa
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
+from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+
+# import anyio
+
 
 log = logging.getLogger(__name__)
 
@@ -442,49 +447,99 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
 
 @asynccontextmanager
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
+    find_vdf_client()  # raises FileNotFoundError if not found
     process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
+    vdf_task_1 = asyncio.create_task(
+        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
 
-    try:
-        async with anyio.create_task_group() as tg:
-            await tg.start(
-                functools.partial(
-                    spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-                )
-            )
-
-            yield
-    finally:
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         await process_mgr.kill_processes()
+
+    async with SignalHandlers.manage() as signal_handlers:
+        signal_handlers.setup_async_signal_handler(handler=stop)
+        try:
+            yield
+        finally:
+            vdf_task_1.cancel()
+            await process_mgr.kill_processes()
+
+
+# try:
+#     async with anyio.create_task_group() as tg:
+#         await tg.start(
+#             functools.partial(
+#                 spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
+#             )
+#         )
+
+#         yield
+# finally:
+#     await process_mgr.kill_processes()
 
 
 @asynccontextmanager
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
+    find_vdf_client()  # raises FileNotFoundError if not found
+
     process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
+    vdf_task_1 = asyncio.create_task(
+        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
+    vdf_task_2 = asyncio.create_task(
+        spawn_process(self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
+    vdf_task_3 = asyncio.create_task(
+        spawn_process(self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+    )
 
-    try:
-        async with anyio.create_task_group() as tg:
-            await tg.start(
-                functools.partial(
-                    spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-                ),
-                name="vdf_client_1",
-            )
-            await tg.start(
-                functools.partial(
-                    spawn_process, self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-                ),
-                name="vdf_client_2",
-            )
-            await tg.start(
-                functools.partial(
-                    spawn_process, self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-                ),
-                name="vdf_client_3",
-            )
-
-            yield
-    finally:
+    async def stop(
+        signal_: signal.Signals,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         await process_mgr.kill_processes()
+
+    signal_handlers = SignalHandlers()
+    async with signal_handlers.manage():
+        signal_handlers.setup_async_signal_handler(handler=stop)
+        try:
+            yield
+        finally:
+            vdf_task_1.cancel()
+            vdf_task_2.cancel()
+            vdf_task_3.cancel()
+            await process_mgr.kill_processes()
+
+
+# try:
+#     async with anyio.create_task_group() as tg:
+#         await tg.start(
+#             functools.partial(
+#                 spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
+#             ),
+#             name="vdf_client_1",
+#         )
+#         await tg.start(
+#             functools.partial(
+#                 spawn_process, self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
+#             ),
+#             name="vdf_client_2",
+#         )
+#         await tg.start(
+#             functools.partial(
+#                 spawn_process, self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
+#             ),
+#             name="vdf_client_3",
+#         )
+
+#         yield
+# finally:
+#     await process_mgr.kill_processes()
 
 
 @asynccontextmanager

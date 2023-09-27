@@ -475,26 +475,7 @@ class TestSimulation:
 
         await time_out_assert_custom_interval(60, 1, num_connections, 1)
 
-        def print_height() -> None:
-            if node2.full_node.blockchain.get_peak() is not None:
-                peak = node1.full_node.blockchain.get_peak()
-                if peak is not None:
-                    print(f"node1 peak height: {peak.height}")
-                else:
-                    print("node1 peak height: None")
-            else:
-                print("node1 peak height: None")
-
-            if node2.full_node.blockchain.get_peak() is not None:
-                peak = node2.full_node.blockchain.get_peak()
-                if peak is not None:
-                    print(f"node2 peak height: {peak.height}")
-                else:
-                    print("node2 peak height: None")
-            else:
-                print("node2 peak height: None")
-
-        await time_out_assert(1500, node_height_at_least, True, node2, 1)
+        await time_out_assert(1500, node_height_at_least, True, node2, 3)
 
         session = aiohttp.ClientSession()
 
