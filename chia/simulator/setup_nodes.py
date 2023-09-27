@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Optional, Tuple
 
@@ -47,6 +48,18 @@ SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, Chi
 SimulatorsAndWalletsServices = Tuple[
     List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
 ]
+
+
+@dataclass(frozen=True)
+class FullSystem:
+    node_1: FullNodeSimulator | FullNodeAPI
+    node_2: FullNodeSimulator | FullNodeAPI
+    harvester: Harvester
+    farmer: Farmer
+    introducer: IntroducerAPI
+    timelord: Service[Timelord, TimelordAPI]
+    timelord_bluebox: Service[Timelord, TimelordAPI]
+    daemon: Optional[WebSocketServer]
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:
@@ -125,7 +138,7 @@ async def setup_simulators_and_wallets(
     *,
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
-    db_version: int = 1,
+    db_version: int = 2,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
@@ -165,7 +178,7 @@ async def setup_simulators_and_wallets_service(
     *,
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
-    db_version: int = 1,
+    db_version: int = 2,
     config_overrides: Optional[Dict[str, int]] = None,
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncIterator[
@@ -300,22 +313,12 @@ async def setup_full_system(
     shared_b_tools: BlockTools,
     b_tools: Optional[BlockTools] = None,
     b_tools_1: Optional[BlockTools] = None,
-    db_version: int = 1,
-) -> AsyncIterator[
-    Tuple[
-        FullNodeSimulator | FullNodeAPI,
-        FullNodeSimulator | FullNodeAPI,
-        Harvester,
-        Farmer,
-        IntroducerAPI,
-        Service[Timelord, TimelordAPI],
-        Service[Timelord, TimelordAPI],
-    ]
-]:
+    db_version: int = 2,
+) -> AsyncIterator[FullSystem]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
             b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        ) as (_, ret):
+        ) as ret:
             yield ret
 
 
@@ -325,24 +328,13 @@ async def setup_full_system_connect_to_deamon(
     shared_b_tools: BlockTools,
     b_tools: Optional[BlockTools] = None,
     b_tools_1: Optional[BlockTools] = None,
-    db_version: int = 1,
-) -> AsyncIterator[
-    Tuple[
-        FullNodeSimulator | FullNodeAPI,
-        FullNodeSimulator | FullNodeAPI,
-        Harvester,
-        Farmer,
-        IntroducerAPI,
-        Service[Timelord, TimelordAPI],
-        Service[Timelord, TimelordAPI],
-        Optional[WebSocketServer],
-    ],
-]:
+    db_version: int = 2,
+) -> AsyncIterator[FullSystem]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
             b_tools, b_tools_1, True, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        ) as (daemon_ws, ret):
-            yield ret + (daemon_ws,)
+        ) as ret:
+            yield ret
 
 
 @asynccontextmanager
@@ -355,20 +347,7 @@ async def setup_full_system_inner(
     keychain1: Keychain,
     keychain2: Keychain,
     shared_b_tools: BlockTools,
-) -> AsyncIterator[
-    Tuple[
-        Optional[WebSocketServer],
-        Tuple[
-            FullNodeSimulator | FullNodeAPI,
-            FullNodeSimulator | FullNodeAPI,
-            Harvester,
-            Farmer,
-            IntroducerAPI,
-            Service[Timelord, TimelordAPI],
-            Service[Timelord, TimelordAPI],
-        ],
-    ]
-]:
+) -> AsyncIterator[FullSystem]:
     if b_tools is None:
         b_tools = await create_block_tools_async(constants=consensus_constants, keychain=keychain1)
     if b_tools_1 is None:
@@ -473,7 +452,7 @@ async def setup_full_system_inner(
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
-        ret = (
+        ret = FullSystem(
             node_apis[0],
             node_apis[1],
             harvester,
@@ -481,5 +460,6 @@ async def setup_full_system_inner(
             introducer,
             timelord,
             timelord_bluebox_service,
+            daemon_ws,
         )
-        yield daemon_ws, ret
+        yield ret

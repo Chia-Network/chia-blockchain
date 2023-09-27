@@ -711,9 +711,9 @@ async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
         bt,
         b_tools=get_b_tools,
         b_tools_1=get_b_tools_1,
-        db_version=1,
-    ) as _:
-        yield _, get_b_tools, get_b_tools_1
+        db_version=2,
+    ) as ret:
+        yield ret, get_b_tools, get_b_tools_1
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -981,8 +981,8 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt):
-    async with setup_full_system(test_constants_modified, bt, db_version=1) as _:
-        yield _
+    async with setup_full_system(test_constants_modified, bt, db_version=2) as ret:
+        yield ret
 
 
 HarvesterFarmerEnvironment = Tuple[

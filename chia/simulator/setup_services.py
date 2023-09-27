@@ -450,7 +450,8 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
     find_vdf_client()  # raises FileNotFoundError if not found
     process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
     vdf_task_1 = asyncio.create_task(
-        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
+        name="vdf_client_1",
     )
 
     async def stop(
@@ -465,8 +466,8 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         try:
             yield
         finally:
-            vdf_task_1.cancel()
             await process_mgr.kill_processes()
+            await vdf_task_1
 
 
 # try:
@@ -488,13 +489,16 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
 
     process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
     vdf_task_1 = asyncio.create_task(
-        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
+        name="vdf_client_1",
     )
     vdf_task_2 = asyncio.create_task(
-        spawn_process(self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+        spawn_process(self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
+        name="vdf_client_2",
     )
     vdf_task_3 = asyncio.create_task(
-        spawn_process(self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False))
+        spawn_process(self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
+        name="vdf_client_3",
     )
 
     async def stop(
@@ -510,10 +514,10 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
         try:
             yield
         finally:
-            vdf_task_1.cancel()
-            vdf_task_2.cancel()
-            vdf_task_3.cancel()
             await process_mgr.kill_processes()
+            await vdf_task_1
+            await vdf_task_2
+            await vdf_task_3
 
 
 # try:

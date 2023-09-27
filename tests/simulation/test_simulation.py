@@ -21,10 +21,10 @@ from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.setup_nodes import SimulatorsAndWallets
+from chia.simulator.setup_nodes import FullSystem, SimulatorsAndWallets
 from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint8, uint16, uint32, uint64
@@ -72,11 +72,11 @@ class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
-        server1: ChiaServer = node1.full_node.server
+        full_system: FullSystem = simulation
+        server1: ChiaServer = full_system.node_1.full_node.server
 
         node1_port: uint16 = server1.get_port()
-        node2_port: uint16 = node2.full_node.server.get_port()
+        node2_port: uint16 = full_system.node_2.full_node.server.get_port()
 
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
@@ -93,10 +93,7 @@ class TestSimulation:
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
-
-        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
-        assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
+        await time_out_assert(600, full_system.node_2.full_node.blockchain.get_peak_height, 7)
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
@@ -136,11 +133,12 @@ class TestSimulation:
             # )
             return has_compact == [True, True]
 
-        await time_out_assert(600, has_compact, True, node1, node2)
+        await time_out_assert(600, has_compact, True, full_system.node_1, full_system.node_2)
 
         # check node3 has synced to the proper height
         peak_height: uint32 = max(
-            node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
+            full_system.node_1.full_node.blockchain.get_peak_height(),
+            full_system.node_2.full_node.blockchain.get_peak_height(),
         )
         # wait up to 10 mins for node3 to sync
         await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
@@ -461,28 +459,22 @@ class TestSimulation:
     @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules.")
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, self_hostname, daemon_simulation):
-        deamon_and_nodes, get_b_tools, bt = daemon_simulation
-        node1, node2, _, _, _, _, _, daemon1 = deamon_and_nodes
-        server1 = node1.full_node.server
-        node2_port = node2.full_node.server.get_port()
+        full_system, get_b_tools, _ = daemon_simulation
+        server1 = full_system.node_1.full_node.server
+        node2_port = full_system.node_2.full_node.server.get_port()
 
-        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        connected = await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
+        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
-        async def num_connections():
-            count = len(node2.server.get_connections(NodeType.FULL_NODE))
-            print(f"node2 num_connections: {count}")
-            return count
-
-        await time_out_assert_custom_interval(60, 1, num_connections, 1)
-
-        await time_out_assert(1500, node_height_at_least, True, node2, 3)
+        await time_out_assert(600, node_height_at_least, True, full_system.node_2, 3)
 
         session = aiohttp.ClientSession()
 
         log = logging.getLogger()
-        log.warning(f"Connecting to daemon on port {daemon1.daemon_port}")
+        log.warning(f"Connecting to daemon on port {full_system.daemon.daemon_port}")
         ws = await session.ws_connect(
-            f"wss://127.0.0.1:{daemon1.daemon_port}",
+            f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
             autoclose=True,
             autoping=True,
             ssl_context=get_b_tools.get_daemon_ssl_context(),
