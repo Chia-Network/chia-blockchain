@@ -42,7 +42,7 @@ jobs:
     name: Build amd64 RPM
     runs-on: ubuntu-latest
     container:
-      image: chianetwork/rocky8-builder:latest
+      image: ghcr.io/chia-network/build-images:sha-d5a93c8efa8f58656ac3fc89cfe6e5f1d7a76073
     timeout-minutes: 40
     strategy:
       fail-fast: false
