@@ -232,6 +232,8 @@ class Blockchain(BlockchainInterface):
         """
 
         genesis: bool = block.height == 0
+        header_hash: bytes32 = block.header_hash
+
         if self.contains_block(block.header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -274,7 +276,6 @@ class Blockchain(BlockchainInterface):
         # Always add the block to the database
         async with self.block_store.db_wrapper.writer():
             try:
-                header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(
@@ -295,7 +296,7 @@ class Blockchain(BlockchainInterface):
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 log.error(
-                    f"Error while adding block {block.header_hash} height {block.height},"
+                    f"Error while adding block {header_hash} height {block.height},"
                     f" rolling back: {traceback.format_exc()} {e}"
                 )
                 raise
@@ -835,8 +836,9 @@ class Blockchain(BlockchainInterface):
         return records
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if header_hash in self.__block_records:
-            return self.__block_records[header_hash]
+        ret = self.__block_records.get(header_hash)
+        if ret is not None:
+            return ret
         return await self.block_store.get_block_record(header_hash)
 
     def remove_block_record(self, header_hash: bytes32) -> None:
