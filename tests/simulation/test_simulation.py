@@ -69,6 +69,69 @@ async def extra_node(self_hostname):
 
 
 class TestSimulation:
+    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules.")
+    @pytest.mark.asyncio
+    async def test_daemon_simulation(self, self_hostname, daemon_simulation):
+        full_system, get_b_tools, _ = daemon_simulation
+        server1 = full_system.node_1.full_node.server
+        node2_port = full_system.node_2.full_node.server.get_port()
+
+        connected = await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
+        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
+
+        await time_out_assert(600, node_height_at_least, True, full_system.node_1, 3)
+        await time_out_assert(600, node_height_at_least, True, full_system.node_2, 3)
+
+        session = aiohttp.ClientSession()
+
+        log = logging.getLogger()
+        log.warning(f"Connecting to daemon on port {full_system.daemon.daemon_port}")
+        ws = await session.ws_connect(
+            f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
+            autoclose=True,
+            autoping=True,
+            ssl_context=get_b_tools.get_daemon_ssl_context(),
+            max_msg_size=100 * 1024 * 1024,
+        )
+        service_name = "test_service_name"
+        data = {"service": service_name}
+        payload = create_payload("register_service", data, service_name, "daemon")
+        await ws.send_str(payload)
+        message_queue = asyncio.Queue()
+
+        async def reader(ws, queue):
+            while True:
+                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
+                msg = await ws.receive()
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    message = msg.data.strip()
+                    message = json.loads(message)
+                    await queue.put(message)
+                else:
+                    if msg.type == aiohttp.WSMsgType.ERROR:
+                        await ws.close()
+                    elif msg.type == aiohttp.WSMsgType.CLOSED:
+                        pass
+
+                    break
+
+        read_handler = asyncio.create_task(reader(ws, message_queue))
+        data = {}
+        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
+        await ws.send_str(payload)
+
+        await asyncio.sleep(5)
+        blockchain_state_found = False
+        while not message_queue.empty():
+            message = await message_queue.get()
+            if message["command"] == "get_blockchain_state":
+                blockchain_state_found = True
+
+        await ws.close()
+        read_handler.cancel()
+        assert blockchain_state_found
+
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
@@ -455,65 +518,3 @@ class TestSimulation:
 
         with pytest.raises(Exception, match="Coins must have a positive value"):
             await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
-
-    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules.")
-    @pytest.mark.asyncio
-    async def test_daemon_simulation(self, self_hostname, daemon_simulation):
-        full_system, get_b_tools, _ = daemon_simulation
-        server1 = full_system.node_1.full_node.server
-        node2_port = full_system.node_2.full_node.server.get_port()
-
-        connected = await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
-
-        await time_out_assert(600, node_height_at_least, True, full_system.node_2, 3)
-
-        session = aiohttp.ClientSession()
-
-        log = logging.getLogger()
-        log.warning(f"Connecting to daemon on port {full_system.daemon.daemon_port}")
-        ws = await session.ws_connect(
-            f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
-            autoclose=True,
-            autoping=True,
-            ssl_context=get_b_tools.get_daemon_ssl_context(),
-            max_msg_size=100 * 1024 * 1024,
-        )
-        service_name = "test_service_name"
-        data = {"service": service_name}
-        payload = create_payload("register_service", data, service_name, "daemon")
-        await ws.send_str(payload)
-        message_queue = asyncio.Queue()
-
-        async def reader(ws, queue):
-            while True:
-                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
-                msg = await ws.receive()
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    message = msg.data.strip()
-                    message = json.loads(message)
-                    await queue.put(message)
-                else:
-                    if msg.type == aiohttp.WSMsgType.ERROR:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.CLOSED:
-                        pass
-
-                    break
-
-        read_handler = asyncio.create_task(reader(ws, message_queue))
-        data = {}
-        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
-        await ws.send_str(payload)
-
-        await asyncio.sleep(5)
-        blockchain_state_found = False
-        while not message_queue.empty():
-            message = await message_queue.get()
-            if message["command"] == "get_blockchain_state":
-                blockchain_state_found = True
-
-        await ws.close()
-        read_handler.cancel()
-        assert blockchain_state_found
