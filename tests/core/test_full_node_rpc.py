@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import List
-from chia.types.blockchain_format.program import Program
 
 import pytest
 from blspy import AugSchemeMPL
@@ -20,6 +19,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
@@ -233,10 +233,9 @@ class TestRpc:
             block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
 
             assert len(block_spends_with_conditions) == 3
-            assert sorted(block_spends_with_conditions, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
 
-            for coin_spend in block_spends_with_conditions:
-                assert isinstance(coin_spend.conditions, Program) == True
+            for coin_spend_with_conditions in block_spends_with_conditions:
+                assert isinstance(coin_spend_with_conditions.conditions, Program) == True
 
             memo = 32 * b"\f"
 

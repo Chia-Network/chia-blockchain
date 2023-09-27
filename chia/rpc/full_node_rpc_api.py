@@ -11,13 +11,17 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin, get_spends_for_block, get_spends_for_block_with_conditions
+from chia.full_node.mempool_check_conditions import (
+    get_puzzle_and_solution_for_coin,
+    get_spends_for_block,
+    get_spends_for_block_with_conditions,
+)
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -483,7 +487,7 @@ class FullNodeRpcApi:
 
         return {"block_spends": spends}
 
-    async def get_block_spends_with_conditions(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_block_spends_with_conditions(self, request: Dict[str, CoinSpendWithConditions]) -> EndpointResult:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
@@ -491,12 +495,13 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        spends: List[CoinSpend] = []
         block_generator = await self.service.blockchain.get_block_generator(full_block)
         if block_generator is None:  # if block is not a transaction block.
-            return {"block_spends_with_conditions": spends}
+            return {"block_spends_with_conditions": []}
 
-        spends_with_conditions = get_spends_for_block_with_conditions(block_generator, full_block.height, self.service.constants)
+        spends_with_conditions = get_spends_for_block_with_conditions(
+            block_generator, full_block.height, self.service.constants
+        )
 
         return {"block_spends_with_conditions": spends_with_conditions}
 

@@ -29,7 +29,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, SpendInfo
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.errors import Err
@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
     flags = ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
-    
+
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
@@ -81,8 +81,9 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
             | AGG_SIG_ARGS
             | ALLOW_BACKREFS
         )
-    
+
     return flags
+
 
 def get_name_puzzle_conditions(
     generator: BlockGenerator,
@@ -161,7 +162,10 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
     return spends
 
-def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[Dict[str, Any]]:
+
+def get_spends_for_block_with_conditions(
+    generator: BlockGenerator, height: int, constants: ConsensusConstants
+) -> List[CoinSpendWithConditions]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -177,7 +181,7 @@ def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int,
         flags,
     )
 
-    spends = []
+    spends: List[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
@@ -188,18 +192,13 @@ def get_spends_for_block_with_conditions(generator: BlockGenerator, height: int,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             flags,
         )
-        spends.append({
-            "coin": {
-                "amount": int_from_bytes(amount.atom),
-                "parent_coin_info": parent.atom,
-                "puzzle_hash": puzzle_hash,
-            },
-            "puzzle": puzzle,
-            "solution": solution,
-            "conditions": Program.to(r),
-        })
+        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        coin_spend = CoinSpend(coin, puzzle, solution)
+        conditions = Program.to(r)
+        spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends
+
 
 def mempool_check_time_locks(
     removal_coin_records: Dict[bytes32, CoinRecord],

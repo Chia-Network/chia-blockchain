@@ -81,3 +81,9 @@ def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BL
 class SpendInfo(Streamable):
     puzzle: SerializedProgram
     solution: SerializedProgram
+
+@streamable
+@dataclass(frozen=True)
+class CoinSpendWithConditions(Streamable):
+    coin_spend: CoinSpend
+    conditions: Program
