@@ -1189,7 +1189,7 @@ class FullNode:
 
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
-            if not self.blockchain.contains_block(block.header_hash):
+            if not await self.blockchain.contains_block_from_db(block.header_hash):
                 blocks_to_validate = all_blocks[i:]
                 break
         if len(blocks_to_validate) == 0:
@@ -1243,7 +1243,8 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
-            block_record = self.blockchain.block_record(block.header_hash)
+            block_record = await self.blockchain.get_block_record_from_db(block.header_hash)
+            assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
@@ -1412,7 +1413,7 @@ class FullNode:
             # This is a reorg
             fork_hash: Optional[bytes32] = self.blockchain.height_to_hash(state_change_summary.fork_height)
             assert fork_hash is not None
-            fork_block = self.blockchain.block_record(fork_hash)
+            fork_block = await self.blockchain.get_block_record_from_db(fork_hash)
 
         fns_peak_result: FullNodeStorePeakResult = self.full_node_store.new_peak(
             record,
