@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from chia.full_node.sync_store import SyncStore
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
 
@@ -55,3 +58,76 @@ class TestStore:
         store.peer_has_block(std_hash(b"block30"), peer_ids[0], 700, 30, True)
         assert store.get_peak_of_each_peer()[peer_ids[0]].weight == 700
         assert store.get_heaviest_peak().weight == 700
+
+    @pytest.mark.asyncio
+    async def test_is_backtrack_syncing_works_when_not_present(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        assert node_id not in store._backtrack_syncing
+
+        assert not store.is_backtrack_syncing(node_id=node_id)
+        assert node_id not in store._backtrack_syncing
+
+    @pytest.mark.asyncio
+    async def test_increment_backtrack_syncing_adds(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        assert node_id not in store._backtrack_syncing
+
+        store.increment_backtrack_syncing(node_id=node_id)
+        assert node_id in store._backtrack_syncing
+
+    @pytest.mark.asyncio
+    async def test_increment_backtrack_syncing_increments(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        store.increment_backtrack_syncing(node_id=node_id)
+        store.increment_backtrack_syncing(node_id=node_id)
+        assert store._backtrack_syncing[node_id] == 2
+
+    @pytest.mark.asyncio
+    async def test_decrement_backtrack_syncing_does_nothing_when_not_present(
+        self,
+        seeded_random: random.Random,
+    ) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        assert node_id not in store._backtrack_syncing
+
+        store.decrement_backtrack_syncing(node_id=node_id)
+        assert node_id not in store._backtrack_syncing
+
+    @pytest.mark.asyncio
+    async def test_decrement_backtrack_syncing_decrements(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        store._backtrack_syncing[node_id] = 2
+        store.decrement_backtrack_syncing(node_id=node_id)
+        assert store._backtrack_syncing[node_id] == 1
+
+    @pytest.mark.asyncio
+    async def test_decrement_backtrack_syncing_removes_at_0(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        store._backtrack_syncing[node_id] = 1
+        store.decrement_backtrack_syncing(node_id=node_id)
+        assert node_id not in store._backtrack_syncing
+
+    @pytest.mark.asyncio
+    async def test_backtrack_syncing_removes_on_disconnect(self, seeded_random: random.Random) -> None:
+        store = SyncStore()
+        node_id = bytes32.random(r=seeded_random)
+
+        assert node_id not in store._backtrack_syncing
+
+        store.increment_backtrack_syncing(node_id=node_id)
+        assert node_id in store._backtrack_syncing
+
+        store.peer_disconnected(node_id=node_id)
+        assert node_id not in store._backtrack_syncing
