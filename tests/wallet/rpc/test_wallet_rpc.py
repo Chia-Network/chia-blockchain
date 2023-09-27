@@ -12,6 +12,9 @@ import aiosqlite
 import pytest
 import pytest_asyncio
 from blspy import G2Element
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -2406,6 +2409,55 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     async with dbw.writer() as conn:
         await conn.execute("DROP TABLE testing_schema")
     assert await wallet_node.reset_sync_db(db_path, fingerprint)
+
+
+@pytest.mark.asyncio
+async def test_sign_message_by_secp(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
+    rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
+    await generate_funds(full_node_api, env.wallet_1)
+    assert rpc_server is not None
+    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
+    private_key = ec.derive_private_key(
+        int("5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d", 16), ec.SECP256R1(), default_backend()
+    )
+    public_key = private_key.public_key()
+    res = await api.sign_message_by_secp({})
+    assert not res["success"]
+    res = await api.sign_message_by_secp(
+        {"private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d"}
+    )
+    assert not res["success"]
+    res = await api.sign_message_by_secp(
+        {
+            "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
+            "message": "aaa",
+            "is_hex": False,
+        }
+    )
+    assert res["success"]
+    assert (
+        res["public_key"] == "045b23cdabc7d95cc7868f8889dfdaa41bc0e2ca8f98f27d16366c2dcd"
+        "b877db73165f7e4e723d16535b598af50a31ee86047a96a171ebc1bbc3eeb59e8339f0ac"
+    )
+    # Invalid signature will raise exception
+    assert public_key.verify(bytes.fromhex(res["signature"]), "aaa".encode("utf-8"), ec.ECDSA(hashes.SHA256())) is None
+    res = await api.sign_message_by_secp(
+        {
+            "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
+            "message": "1234abcd",
+            "is_hex": True,
+        }
+    )
+    assert res["success"]
+    assert (
+        res["public_key"] == "045b23cdabc7d95cc7868f8889dfdaa41bc0e2ca8f98f27d16366c2dcdb"
+        "877db73165f7e4e723d16535b598af50a31ee86047a96a171ebc1bbc3eeb59e8339f0ac"
+    )
+    assert (
+        public_key.verify(bytes.fromhex(res["signature"]), bytes.fromhex("1234abcd"), ec.ECDSA(hashes.SHA256())) is None
+    )
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
