@@ -856,6 +856,9 @@ class Blockchain(BlockchainInterface):
             self.__heights_in_cache[block_record.height] = set()
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
+        if len(self.__block_records) > self.constants.BLOCKS_CACHE_SIZE * 1.5:
+            self.clean_block_records()
+
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
