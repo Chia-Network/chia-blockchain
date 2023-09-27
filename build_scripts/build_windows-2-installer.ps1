@@ -17,7 +17,7 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (py -c 'import sys; from pathlib import Path; path = Path(sys.argv[1]); print(path.absolute().as_posix())' "pyinstaller.spec")
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
@@ -35,7 +35,6 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$Env:Path = $(npm bin) + ";" + $Env:Path
 
 Set-Location -Path "..\..\" -PassThru
 
@@ -69,7 +68,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
-electron-builder build --win --x64 --config.productName="Chia" --dir
+npx electron-builder build --win --x64 --config.productName="Chia" --dir
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
@@ -89,7 +88,7 @@ If ($env:HAS_SIGNING_SECRET) {
 
 Write-Output "   ---"
 Write-Output "electron-builder create installer"
-electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
+npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
 Write-Output "   ---"
 
 If ($env:HAS_SIGNING_SECRET) {

@@ -28,7 +28,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
-from chia.types.signing_mode import SigningMode
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -81,14 +81,14 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
@@ -655,6 +655,7 @@ class WalletRpcApi:
                             {"identifier": "genesis_by_id"},
                             uint64(request["amount"]),
                             tx_config,
+                            fee,
                             name,
                         )
                         asset_id = cat_wallet.get_asset_id()
@@ -1041,7 +1042,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
+            [tx] = await wallet.generate_signed_transaction(
                 amount,
                 puzzle_hash,
                 tx_config,
@@ -1154,13 +1155,25 @@ class WalletRpcApi:
                 wallet.target_state = None
             return {}
 
-    @tx_endpoint
     async def select_coins(
         self,
         request: Dict[str, Any],
-        tx_config: TXConfig = DEFAULT_TX_CONFIG,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
+        assert self.service.logged_in_fingerprint is not None
+        cs_config_loader: CoinSelectionConfigLoader = CoinSelectionConfigLoader.from_json_dict(request)
+
+        # Some backwards compat fill-ins
+        if cs_config_loader.excluded_coin_ids is None:
+            excluded_coins: Optional[List[Coin]] = request.get("excluded_coins", request.get("exclude_coins"))
+            if excluded_coins is not None:
+                cs_config_loader = cs_config_loader.override(
+                    excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
+                )
+
+        cs_config: CoinSelectionConfig = cs_config_loader.autofill(
+            constants=self.service.wallet_state_manager.constants,
+        )
+
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before selecting coins")
 
@@ -1169,7 +1182,7 @@ class WalletRpcApi:
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount, tx_config.coin_selection_config)
+            selected_coins = await wallet.select_coins(amount, cs_config)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
@@ -1446,17 +1459,27 @@ class WalletRpcApi:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        is_hex = request.get("is_hex", False)
+        is_hex: bool = request.get("is_hex", False)
         if isinstance(is_hex, str):
-            is_hex = bool(is_hex)
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash, is_hex
+            request["message"], puzzle_hash, mode
         )
         return {
             "success": True,
             "pubkey": str(pubkey),
             "signature": str(signature),
-            "signing_mode": SigningMode.CHIP_0002.value,
+            "signing_mode": mode.value,
         }
 
     async def sign_message_by_id(self, request: Dict[str, Any]) -> EndpointResult:
@@ -1467,9 +1490,19 @@ class WalletRpcApi:
         """
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
         selected_wallet: Optional[WalletProtocol[Any]] = None
-        is_hex = request.get("is_hex", False)
+        is_hex: bool = request.get("is_hex", False)
         if isinstance(is_hex, str):
-            is_hex = bool(is_hex)
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID.value:
@@ -1481,7 +1514,7 @@ class WalletRpcApi:
             if selected_wallet is None:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], is_hex)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], mode)
             latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
@@ -1497,7 +1530,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, is_hex)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, mode)
             latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
@@ -1507,7 +1540,7 @@ class WalletRpcApi:
             "pubkey": str(pubkey),
             "signature": str(signature),
             "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
-            "signing_mode": SigningMode.CHIP_0002.value,
+            "signing_mode": mode.value,
         }
 
     ##########################################################################################
@@ -1729,11 +1762,27 @@ class WalletRpcApi:
         ###
 
         offer = Offer.from_bech32(offer_hex)
-        offered, requested, infos = offer.summary()
+        offered, requested, infos, valid_times = offer.summary()
 
         if request.get("advanced", False):
             response = {
-                "summary": {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos},
+                "summary": {
+                    "offered": offered,
+                    "requested": requested,
+                    "fees": offer.fees(),
+                    "infos": infos,
+                    "valid_times": {
+                        k: v
+                        for k, v in valid_times.to_json_dict().items()
+                        if k
+                        not in (
+                            "max_secs_after_created",
+                            "min_secs_since_created",
+                            "max_blocks_after_created",
+                            "min_blocks_since_created",
+                        )
+                    },
+                },
                 "id": offer.name(),
             }
         else:
@@ -2029,9 +2078,11 @@ class WalletRpcApi:
         for pa in request.get("puzzle_announcements", []):
             puzzle_announcements.add(bytes.fromhex(pa))
 
-        spend_bundle = await wallet.create_message_spend(
-            tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
-        )
+        spend_bundle = (
+            await wallet.create_message_spend(
+                tx_config, coin_announcements, puzzle_announcements, extra_conditions=extra_conditions
+            )
+        ).spend_bundle
         return {"success": True, "spend_bundle": spend_bundle}
 
     async def did_get_info(self, request: Dict[str, Any]) -> EndpointResult:
@@ -3306,7 +3357,7 @@ class WalletRpcApi:
 
         async def _generate_signed_transaction() -> EndpointResult:
             if isinstance(wallet, Wallet):
-                tx = await wallet.generate_signed_transaction(
+                [tx] = await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),
                     tx_config,
@@ -3928,6 +3979,7 @@ class WalletRpcApi:
             parsed_request.min_amount_to_claim,
             tx_config,
             fee=parsed_request.fee,
+            extra_conditions=extra_conditions,
         )
         for tx in txs:
             await self.service.wallet_state_manager.add_pending_transaction(tx)

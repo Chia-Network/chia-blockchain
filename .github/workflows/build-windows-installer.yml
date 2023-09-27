@@ -39,13 +39,13 @@ permissions:
 
 jobs:
   build:
-    name: Windows 10 Installer
+    name: Build EXE
     runs-on: [windows-2019]
     timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
     - name: Checkout Code
@@ -108,10 +108,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Setup Node 16.x
+    - name: Setup Node 18.x
       uses: actions/setup-node@v3
       with:
-        node-version: '16.x'
+        node-version: '18.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -364,3 +364,47 @@ jobs:
         Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
         Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
+
+  test:
+    name: Test ${{ matrix.os.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: 2019
+            matrix: 2019
+            runs-on:
+              intel: windows-2019
+          - name: 2022
+            matrix: 2022
+            runs-on:
+              intel: windows-2022
+        arch:
+          - name: Intel
+            matrix: intel
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-windows-exe-intel
+        path: packages
+
+    - name: Install package
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        dir ./packages/
+        $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
+        Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
+
+    - name: Run chia version
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version

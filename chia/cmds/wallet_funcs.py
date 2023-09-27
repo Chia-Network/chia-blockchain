@@ -264,7 +264,7 @@ async def send(
     address: str,
     override: bool,
     min_coin_amount: str,
-    max_coin_amount: str,
+    max_coin_amount: Optional[str],
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
@@ -613,7 +613,7 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested, _ = offer.summary()
+        offered, requested, _, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -701,7 +701,7 @@ async def take_offer(
             print("Please enter a valid offer file or hex blob")
             return
 
-        offered, requested, _ = offer.summary()
+        offered, requested, _, _ = offer.summary()
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         network_xch = AddressType.XCH.hrp(config).upper()
         print("Summary:")

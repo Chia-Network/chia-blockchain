@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from typing import List
@@ -416,15 +417,19 @@ class TestFullSync:
         assert duration > 5
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
-        bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        bt.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=1000000)
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
-        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        full_node_2.full_node.blockchain.constants = dataclasses.replace(
+            blockchain_constants,
+            SOFT_FORK4_HEIGHT=1000000,
+        )
+        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
         for block in blocks:
             await full_node_2.full_node.add_block(block)
         server_1 = full_node_1.full_node.server
@@ -439,14 +444,18 @@ class TestFullSync:
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
-        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        full_node_2.full_node.blockchain.constants = dataclasses.replace(
+            blockchain_constants,
+            SOFT_FORK4_HEIGHT=1000000,
+        )
+        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
         for block in blocks:
             await full_node_2.full_node.add_block(block)
 

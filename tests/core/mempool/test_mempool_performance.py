@@ -14,7 +14,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner
 
 
 async def wallet_height_at_least(wallet_node, h):
@@ -37,9 +37,8 @@ log = logging.getLogger(__name__)
 class TestMempoolPerformance:
     @pytest.mark.limit_consensus_modes(reason="benchmark")
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+        self, wallet_nodes_mempool_perf, default_400_blocks, self_hostname, benchmark_runner: BenchmarkRunner
     ):
         blocks = default_400_blocks
         full_nodes, wallets, bt = wallet_nodes_mempool_perf
@@ -61,9 +60,7 @@ class TestMempoolPerformance:
         fee_amount = 2213
         await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
-        big_transaction: TransactionRecord = await wallet.generate_signed_transaction(
-            send_amount, ph, DEFAULT_TX_CONFIG, fee_amount
-        )
+        [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         assert big_transaction.spend_bundle
@@ -79,9 +76,9 @@ class TestMempoolPerformance:
 
         for idx, block in enumerate(blocks):
             if idx >= len(blocks) - 3:
-                duration = 0.1
+                duration = 0.15
             else:
                 duration = 0.001
 
-            with assert_runtime(seconds=duration, label=request.node.name):
+            with benchmark_runner.assert_runtime(seconds=duration):
                 await full_node_api_1.full_node.add_block(block)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from secrets import token_bytes
+import random
 from typing import Any, Dict
 
 import pytest
@@ -35,7 +35,9 @@ async def nft_count(wallet: NFTWallet) -> int:
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_did(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -45,7 +47,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -100,7 +102,7 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.random(seeded_random).hex())]
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -148,7 +150,10 @@ async def test_nft_mint_from_did(self_hostname: str, two_wallet_nodes: Any, trus
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did_rpc(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api: FullNodeSimulator = full_node_service._api
@@ -162,7 +167,7 @@ async def test_nft_mint_from_did_rpc(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -240,11 +245,11 @@ async def test_nft_mint_from_did_rpc(
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -252,7 +257,7 @@ async def test_nft_mint_from_did_rpc(
             for i in range(n)
         ]
         target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
-        royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
+        royalty_address = encode_puzzle_hash(bytes32.random(seeded_random), "xch")
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
@@ -339,7 +344,10 @@ async def test_nft_mint_from_did_rpc(
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did_rpc_no_royalties(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api: FullNodeSimulator = full_node_service._api
@@ -353,7 +361,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -430,11 +438,11 @@ async def test_nft_mint_from_did_rpc_no_royalties(
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -509,7 +517,9 @@ async def test_nft_mint_from_did_rpc_no_royalties(
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_did_multiple_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -520,7 +530,7 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -621,7 +631,9 @@ async def test_nft_mint_from_did_multiple_xch(self_hostname: str, two_wallet_nod
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -631,7 +643,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -686,7 +698,7 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
     metadata_list = [
         {
             "program": Program.to(
-                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", token_bytes(32).hex())]
+                [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", bytes32.random(seeded_random).hex())]
             ),
             "royalty_pc": royalty_pc,
             "royalty_ph": royalty_addr,
@@ -733,7 +745,10 @@ async def test_nft_mint_from_xch(self_hostname: str, two_wallet_nodes: Any, trus
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_xch_rpc(
-    two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: Any, self_hostname: str
+    two_wallet_nodes_services: SimulatorsAndWalletsServices,
+    trusted: Any,
+    self_hostname: str,
+    seeded_random: random.Random,
 ) -> None:
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     full_node_api: FullNodeSimulator = full_node_service._api
@@ -747,7 +762,7 @@ async def test_nft_mint_from_xch_rpc(
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
@@ -825,11 +840,11 @@ async def test_nft_mint_from_xch_rpc(
         n = 10
         metadata_list = [
             {
-                "hash": bytes32(token_bytes(32)).hex(),
+                "hash": bytes32.random(seeded_random).hex(),
                 "uris": ["https://data.com/{}".format(i)],
-                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_hash": bytes32.random(seeded_random).hex(),
                 "meta_uris": ["https://meatadata.com/{}".format(i)],
-                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_hash": bytes32.random(seeded_random).hex(),
                 "license_uris": ["https://license.com/{}".format(i)],
                 "edition_number": i + 1,
                 "edition_total": n,
@@ -837,7 +852,7 @@ async def test_nft_mint_from_xch_rpc(
             for i in range(n)
         ]
         target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
-        royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
+        royalty_address = encode_puzzle_hash(bytes32.random(seeded_random), "xch")
         royalty_percentage = 300
         fee = 100
         required_amount = n + (fee * n)
@@ -914,7 +929,9 @@ async def test_nft_mint_from_xch_rpc(
     [True, False],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_xch_multiple_xch(
+    self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
+) -> None:
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -925,7 +942,7 @@ async def test_nft_mint_from_xch_multiple_xch(self_hostname: str, two_wallet_nod
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_maker.get_new_puzzlehash()
     ph_taker = await wallet_taker.get_new_puzzlehash()
-    ph_token = bytes32(token_bytes())
+    ph_token = bytes32.random(seeded_random)
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {

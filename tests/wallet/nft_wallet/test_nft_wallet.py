@@ -16,6 +16,7 @@ from chia.simulator.time_out_assert import adjusted_timeout, time_out_assert, ti
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -26,9 +27,9 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.conftest import ConsensusMode
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
@@ -176,10 +177,8 @@ async def test_nft_wallet_creation_automatically(self_hostname: str, two_wallet_
     assert await nft_wallet_1.get_nft_count() == 1
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_and_transfer(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
@@ -1519,10 +1518,8 @@ async def test_nft_bulk_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert coins[2].owner_did is None
 
 
-@pytest.mark.parametrize(
-    "trusted",
-    [True, False],
-)
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+@pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.asyncio
 async def test_nft_set_did(self_hostname: str, two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
@@ -1866,5 +1863,37 @@ async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: Any, trust
     assert AugSchemeMPL.verify(
         G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
         puzzle.get_tree_hash(),
+        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+    )
+    # Test BLS sign string
+    message = "Hello World"
+    response = await api_0.sign_message_by_id(
+        {
+            "id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value),
+            "message": message,
+            "is_hex": "False",
+            "safe_mode": "False",
+        }
+    )
+
+    assert AugSchemeMPL.verify(
+        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        bytes(message, "utf-8"),
+        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+    )
+    # Test BLS sign hex
+    message = "0123456789ABCDEF"
+    response = await api_0.sign_message_by_id(
+        {
+            "id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value),
+            "message": message,
+            "is_hex": True,
+            "safe_mode": False,
+        }
+    )
+
+    assert AugSchemeMPL.verify(
+        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        bytes.fromhex(message),
         G2Element.from_bytes(bytes.fromhex(response["signature"])),
     )

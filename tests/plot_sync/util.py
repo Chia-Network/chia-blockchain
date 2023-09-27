@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from secrets import token_bytes
 from typing import Optional
 
 from chia.farmer.farmer import Farmer
@@ -30,8 +29,8 @@ class WSChiaConnectionDummy:
         self.last_sent_message = message
 
 
-def get_dummy_connection(node_type: NodeType, peer_id: Optional[bytes32] = None) -> WSChiaConnectionDummy:
-    return WSChiaConnectionDummy(node_type, bytes32(token_bytes(32)) if peer_id is None else peer_id)
+def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnectionDummy:
+    return WSChiaConnectionDummy(node_type, peer_id)
 
 
 def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyncIdentifier:

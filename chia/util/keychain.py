@@ -5,7 +5,6 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
 import pkg_resources
@@ -13,6 +12,7 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainException,
     KeychainFingerprintExists,
@@ -57,7 +57,7 @@ def bip39_word_list() -> str:
 
 
 def generate_mnemonic() -> str:
-    mnemonic_bytes = token_bytes(32)
+    mnemonic_bytes = bytes32.secret()
     mnemonic = bytes_to_mnemonic(mnemonic_bytes)
     return mnemonic
 
