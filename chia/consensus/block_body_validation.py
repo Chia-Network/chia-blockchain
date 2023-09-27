@@ -72,9 +72,11 @@ async def validate_block_body(
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
-        prev_tb: BlockRecord = blocks.block_record(block.prev_header_hash)
+        prev_tb: Optional[BlockRecord] = await blocks.get_block_record_from_db(block.prev_header_hash)
+        assert prev_tb is not None
         while not prev_tb.is_transaction_block:
-            prev_tb = blocks.block_record(prev_tb.prev_hash)
+            prev_tb = await blocks.get_block_record_from_db(prev_tb.prev_hash)
+            assert prev_tb is not None
         assert prev_tb.timestamp is not None
         if len(block.transactions_generator_ref_list) > 0:
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
@@ -102,7 +104,10 @@ async def validate_block_body(
     # If height == 0, expected_reward_coins will be left empty
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
-        prev_transaction_block = blocks.block_record(block.foliage_transaction_block.prev_transaction_block_hash)
+        prev_transaction_block = await blocks.get_block_record_from_db(
+            block.foliage_transaction_block.prev_transaction_block_hash
+        )
+        assert prev_transaction_block is not None
         prev_transaction_block_height = prev_transaction_block.height
         assert prev_transaction_block.timestamp
         prev_transaction_block_timestamp = prev_transaction_block.timestamp
@@ -125,7 +130,8 @@ async def validate_block_body(
 
         # For the second block in the chain, don't go back further
         if prev_transaction_block.height > 0:
-            curr_b = blocks.block_record(prev_transaction_block.prev_hash)
+            curr_b = await blocks.get_block_record_from_db(prev_transaction_block.prev_hash)
+            assert curr_b is not None
             while not curr_b.is_transaction_block:
                 expected_reward_coins.add(
                     create_pool_coin(
@@ -143,7 +149,8 @@ async def validate_block_body(
                         constants.GENESIS_CHALLENGE,
                     )
                 )
-                curr_b = blocks.block_record(curr_b.prev_hash)
+                curr_b = await blocks.get_block_record_from_db(curr_b.prev_hash)
+                assert curr_b is not None
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS, None
@@ -284,7 +291,9 @@ async def validate_block_body(
     elif fork_point_with_peak is not None:
         fork_h = fork_point_with_peak
     else:
-        fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
+        prev_br = await blocks.get_block_record_from_db(block.prev_header_hash)
+        assert prev_br is not None
+        fork_h = find_fork_point_in_chain(blocks, peak, prev_br)
 
     # Get additions and removals since (after) fork_h but not including this block
     # The values include: the coin that was added, the height of the block in which it was confirmed, and the

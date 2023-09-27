@@ -234,14 +234,16 @@ class Blockchain(BlockchainInterface):
         genesis: bool = block.height == 0
         header_hash: bytes32 = block.header_hash
 
-        if self.contains_block(block.header_hash):
+        if await self.contains_block_from_db(header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
-        if not self.contains_block(block.prev_header_hash) and not genesis:
-            return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+        prev_block = await self.get_block_record_from_db(block.prev_header_hash)
+        if not genesis:
+            if prev_block is None:
+                return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
-        if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
-            return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+            if prev_block.height + 1 != block.height:
+                return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
@@ -265,6 +267,11 @@ class Blockchain(BlockchainInterface):
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
+
+        # block_to_block_record() require the previous block in the cache
+        if not genesis:
+            assert prev_block is not None
+            self.add_block_record(prev_block)
 
         block_record = block_to_block_record(
             self.constants,
@@ -844,6 +851,13 @@ class Blockchain(BlockchainInterface):
             return ret
         return await self.block_store.get_block_record(header_hash)
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        ret = header_hash in self.__block_records
+        if ret:
+            return True
+
+        return (await self.block_store.get_block_record(header_hash)) is not None
+
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)
         del self.__block_records[header_hash]
@@ -923,10 +937,10 @@ class Blockchain(BlockchainInterface):
                 curr = prev
 
             peak: Optional[BlockRecord] = self.get_peak()
-            if self.contains_block(curr.prev_header_hash) and peak is not None:
+            previous_block_hash = curr.prev_header_hash
+            prev_block_record = await self.get_block_record_from_db(previous_block_hash)
+            if prev_block_record is not None and peak is not None:
                 # Then we look up blocks up to fork point one at a time, backtracking
-                previous_block_hash = curr.prev_header_hash
-                prev_block_record = await self.block_store.get_block_record(previous_block_hash)
                 prev_block = await self.block_store.get_full_block(previous_block_hash)
                 assert prev_block is not None
                 assert prev_block_record is not None
