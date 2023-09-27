@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
-import logging
-from typing import List, Tuple
+from typing import AsyncIterator, List, Tuple
 
 import aiohttp
 import pkg_resources
@@ -15,9 +13,9 @@ from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node import FullNode
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
-from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
@@ -31,7 +29,6 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
-from tests.core.node_height import node_height_at_least
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
 
@@ -55,7 +52,7 @@ test_constants_modified = dataclasses.replace(
 # because of a hack in shutting down the full node, which means you cannot run
 # more than one simulations per process.
 @pytest_asyncio.fixture(scope="function")
-async def extra_node(self_hostname):
+async def extra_node(self_hostname) -> AsyncIterator[FullNodeAPI | FullNodeSimulator]:
     with TempKeyring() as keychain:
         b_tools = await create_block_tools_async(constants=test_constants_modified, keychain=keychain)
         async with setup_full_node(
@@ -63,83 +60,22 @@ async def extra_node(self_hostname):
             "blockchain_test_3.db",
             self_hostname,
             b_tools,
-            db_version=1,
+            db_version=2,
         ) as service:
             yield service._api
 
 
 class TestSimulation:
-    @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules.")
-    @pytest.mark.asyncio
-    async def test_daemon_simulation(self, self_hostname, daemon_simulation):
-        full_system, get_b_tools, _ = daemon_simulation
-        server1 = full_system.node_1.full_node.server
-        node2_port = full_system.node_2.full_node.server.get_port()
-
-        connected = await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
-
-        await time_out_assert(600, node_height_at_least, True, full_system.node_1, 3)
-        await time_out_assert(600, node_height_at_least, True, full_system.node_2, 3)
-
-        session = aiohttp.ClientSession()
-
-        log = logging.getLogger()
-        log.warning(f"Connecting to daemon on port {full_system.daemon.daemon_port}")
-        ws = await session.ws_connect(
-            f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
-            autoclose=True,
-            autoping=True,
-            ssl_context=get_b_tools.get_daemon_ssl_context(),
-            max_msg_size=100 * 1024 * 1024,
-        )
-        service_name = "test_service_name"
-        data = {"service": service_name}
-        payload = create_payload("register_service", data, service_name, "daemon")
-        await ws.send_str(payload)
-        message_queue = asyncio.Queue()
-
-        async def reader(ws, queue):
-            while True:
-                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
-                msg = await ws.receive()
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    message = msg.data.strip()
-                    message = json.loads(message)
-                    await queue.put(message)
-                else:
-                    if msg.type == aiohttp.WSMsgType.ERROR:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.CLOSED:
-                        pass
-
-                    break
-
-        read_handler = asyncio.create_task(reader(ws, message_queue))
-        data = {}
-        payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
-        await ws.send_str(payload)
-
-        await asyncio.sleep(5)
-        blockchain_state_found = False
-        while not message_queue.empty():
-            message = await message_queue.get()
-            if message["command"] == "get_blockchain_state":
-                blockchain_state_found = True
-
-        await ws.close()
-        read_handler.cancel()
-        assert blockchain_state_found
-
     @pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
     @pytest.mark.asyncio
-    async def test_simulation_1(self, simulation, extra_node, self_hostname):
-        full_system: FullSystem = simulation
-        server1: ChiaServer = full_system.node_1.full_node.server
+    async def test_full_system(self, simulation, extra_node, self_hostname):
+        full_system: FullSystem
+        bt: BlockTools
+        full_system, bt = simulation
+        server1: ChiaServer = full_system.node_1._server
 
         node1_port: uint16 = server1.get_port()
-        node2_port: uint16 = full_system.node_2.full_node.server.get_port()
+        node2_port: uint16 = full_system.node_2._server.get_port()
 
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
@@ -147,7 +83,7 @@ class TestSimulation:
         assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
         # Connect node3 to node1 and node2 - checks come later
-        node3: Service[FullNode] = extra_node
+        node3: FullNodeAPI = extra_node
         server3: ChiaServer = node3.full_node.server
         connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
         assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
@@ -156,13 +92,17 @@ class TestSimulation:
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(600, full_system.node_2.full_node.blockchain.get_peak_height, 7)
+        await time_out_assert(600, full_system.node_2._node.blockchain.get_peak_height, 7)
 
-        async def has_compact(node1, node2):
-            peak_height_1 = node1.full_node.blockchain.get_peak_height()
-            headers_1 = await node1.full_node.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
-            peak_height_2 = node2.full_node.blockchain.get_peak_height()
-            headers_2 = await node2.full_node.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
+        async def has_compact(node1: FullNode, node2: FullNode) -> bool:
+            peak_height_1 = node1.blockchain.get_peak_height()
+            if peak_height_1 is None:
+                return False
+            headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
+            peak_height_2 = node2.blockchain.get_peak_height()
+            if peak_height_2 is None:
+                return False
+            headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
             # Commented to speed up.
             # cc_eos = [False, False]
             # icc_eos = [False, False]
@@ -196,15 +136,49 @@ class TestSimulation:
             # )
             return has_compact == [True, True]
 
-        await time_out_assert(600, has_compact, True, full_system.node_1, full_system.node_2)
+        await time_out_assert(600, has_compact, True, full_system.node_1._node, full_system.node_2._node)
 
         # check node3 has synced to the proper height
         peak_height: uint32 = max(
-            full_system.node_1.full_node.blockchain.get_peak_height(),
-            full_system.node_2.full_node.blockchain.get_peak_height(),
+            full_system.node_1._node.blockchain.get_peak_height(),
+            full_system.node_2._node.blockchain.get_peak_height(),
         )
         # wait up to 10 mins for node3 to sync
         await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
+
+        # Connect node_1 up to the daemon
+        full_system.node_1.rpc_server.connect_to_daemon(
+            self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
+        )
+
+        async with aiohttp.ClientSession() as session:
+            ws = await session.ws_connect(
+                f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
+                autoclose=True,
+                autoping=True,
+                ssl_context=bt.get_daemon_ssl_context(),
+                max_msg_size=100 * 1024 * 1024,
+            )
+            service_name = "test_service_name"
+            payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
+            await ws.send_str(payload)
+            await ws.receive()
+            assert len(full_system.daemon.connections.get(service_name, set())) == 1
+            assert len(full_system.daemon.connections.get("chia_full_node", set())) == 1
+
+            blockchain_state_found = False
+            payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
+            await ws.send_str(payload)
+            msg = await ws.receive()
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                message = msg.data.strip()
+                message = json.loads(message)
+                if message["command"] == "get_blockchain_state":
+                    blockchain_state_found = True
+
+            await ws.close()
+
+        assert blockchain_state_found
 
     @pytest.mark.asyncio
     async def test_simulator_auto_farm_and_get_coins(

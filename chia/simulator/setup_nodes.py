@@ -52,8 +52,8 @@ SimulatorsAndWalletsServices = Tuple[
 
 @dataclass(frozen=True)
 class FullSystem:
-    node_1: FullNodeSimulator | FullNodeAPI
-    node_2: FullNodeSimulator | FullNodeAPI
+    node_1: Service[FullNode, FullNodeAPI] | Service[FullNode, FullNodeSimulator]
+    node_2: Service[FullNode, FullNodeAPI] | Service[FullNode, FullNodeSimulator]
     harvester: Harvester
     farmer: Farmer
     introducer: IntroducerAPI
@@ -323,21 +323,6 @@ async def setup_full_system(
 
 
 @asynccontextmanager
-async def setup_full_system_connect_to_deamon(
-    consensus_constants: ConsensusConstants,
-    shared_b_tools: BlockTools,
-    b_tools: Optional[BlockTools] = None,
-    b_tools_1: Optional[BlockTools] = None,
-    db_version: int = 2,
-) -> AsyncIterator[FullSystem]:
-    with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        async with setup_full_system_inner(
-            b_tools, b_tools_1, True, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        ) as ret:
-            yield ret
-
-
-@asynccontextmanager
 async def setup_full_system_inner(
     b_tools: Optional[BlockTools],
     b_tools_1: Optional[BlockTools],
@@ -403,16 +388,13 @@ async def setup_full_system_inner(
             )
         )
 
-        nodes = [node_1, node_2]
-        node_apis = [fni._api for fni in nodes]
-        full_node_0_port = node_apis[0].full_node.server.get_port()
         farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(
                 shared_b_tools,
                 shared_b_tools.root_path / "harvester",
                 self_hostname=self_hostname,
                 consensus_constants=consensus_constants,
-                full_node_port=full_node_0_port,
+                full_node_port=node_1._api.full_node.server.get_port(),
             )
         )
         harvester_service = await async_exit_stack.enter_async_context(
@@ -427,7 +409,7 @@ async def setup_full_system_inner(
 
         timelord = await async_exit_stack.enter_async_context(
             setup_timelord(
-                full_node_port=full_node_0_port,
+                full_node_port=node_1._api.full_node.server.get_port(),
                 sanitizer=False,
                 consensus_constants=consensus_constants,
                 config=b_tools.config,
@@ -437,7 +419,7 @@ async def setup_full_system_inner(
         )
         timelord_bluebox_service = await async_exit_stack.enter_async_context(
             setup_timelord(
-                node_apis[1].full_node.server.get_port(),
+                node_2._api.full_node.server.get_port(),
                 True,
                 consensus_constants,
                 b_tools_1.config,
@@ -453,8 +435,8 @@ async def setup_full_system_inner(
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         ret = FullSystem(
-            node_apis[0],
-            node_apis[1],
+            node_1,
+            node_2,
             harvester,
             farmer_service._node,
             introducer,
