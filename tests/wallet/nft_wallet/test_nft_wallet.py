@@ -998,12 +998,17 @@ async def test_nft_transfer_nft_with_did(self_hostname: str, two_wallet_nodes: A
 
     assert len(wallet_1.wallet_state_manager.wallets) == 1, "NFT wallet shouldn't exist yet"
     assert len(wallet_0.wallet_state_manager.wallets) == 3
+    await full_node_api.wait_for_wallet_synced(wallet_node_0, 20)
+    await full_node_api.wait_for_wallet_synced(wallet_node_1, 20)
     # transfer DID to the other wallet
     tx = await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG)
     assert tx
+    assert tx.spend_bundle is not None
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
+    await full_node_api.wait_for_wallet_synced(wallet_node_0, 20)
+    await full_node_api.wait_for_wallet_synced(wallet_node_1, 20)
     await time_out_assert(15, len, 2, wallet_0.wallet_state_manager.wallets)
     # Transfer NFT, wallet will be deleted
     resp = await api_0.nft_transfer_nft(
