@@ -132,7 +132,7 @@ class WalletBlockchain(BlockchainInterface):
             if block_record.prev_hash == self._peak.header_hash:
                 fork_height: int = self._peak.height
             else:
-                fork_height = find_fork_point_in_chain(self, block_record, self._peak)
+                fork_height = await find_fork_point_in_chain(self, block_record, self._peak)
             await self._rollback_to_height(fork_height)
             curr_record: BlockRecord = block_record
             latest_timestamp = self._latest_timestamp

@@ -293,7 +293,7 @@ async def validate_block_body(
     else:
         prev_br = await blocks.get_block_record_from_db(block.prev_header_hash)
         assert prev_br is not None
-        fork_h = find_fork_point_in_chain(blocks, peak, prev_br)
+        fork_h = await find_fork_point_in_chain(blocks, peak, prev_br)
 
     # Get additions and removals since (after) fork_h but not including this block
     # The values include: the coin that was added, the height of the block in which it was confirmed, and the
