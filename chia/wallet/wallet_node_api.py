@@ -8,7 +8,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
-from chia.wallet.wallet_node import PeerPeak, WalletNode
+from chia.wallet.wallet_node import WalletNode
 
 
 class WalletNodeAPI:
@@ -44,7 +44,6 @@ class WalletNodeAPI:
         """
         The full node sent as a new peak
         """
-        self.wallet_node.node_peaks[peer.peer_node_id] = PeerPeak(peak.height, peak.header_hash)
         # For trusted peers check if there are untrusted peers, if so make sure to disconnect them if the trusted node
         # is synced.
         if self.wallet_node.is_trusted(peer):
@@ -53,8 +52,12 @@ class WalletNodeAPI:
                 peer for peer in full_node_connections if not self.wallet_node.is_trusted(peer) and not peer.closed
             ]
 
-            # Check for untrusted peers first to avoid calling is_peer_synced if not required
-            if len(untrusted_peers) > 0 and await self.wallet_node.is_peer_synced(peer, peak.height):
+            # Check for untrusted peers to avoid fetching the timestamp if not required
+            if len(untrusted_peers) > 0:
+                timestamp = await self.wallet_node.get_timestamp_for_height_from_peer(peak.height, peer)
+            else:
+                timestamp = None
+            if timestamp is not None and self.wallet_node.is_timestamp_in_sync(timestamp):
                 self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
                 # Stop peer discovery/connect tasks first
                 if self.wallet_node.wallet_peers is not None:

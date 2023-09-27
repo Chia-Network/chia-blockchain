@@ -17,7 +17,7 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "Use pyinstaller to create chia .exe's"
 Write-Output "   ---"
-$SPEC_FILE = (python -c 'import chia; print(chia.PYINSTALLER_SPEC_PATH)') -join "`n"
+$SPEC_FILE = (py -c 'import sys; from pathlib import Path; path = Path(sys.argv[1]); print(path.absolute().as_posix())' "pyinstaller.spec")
 pyinstaller --log-level INFO $SPEC_FILE
 
 Write-Output "   ---"
@@ -35,12 +35,8 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$Env:Path = $(npm bin) + ";" + $Env:Path
 
 Set-Location -Path "..\..\" -PassThru
-If ($env:HAS_SECRET) {
-    $env:CSC_LINK = Join-Path "." "win_code_sign_cert.p12" -Resolve
-}
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
@@ -71,17 +67,39 @@ mv temp.json package.json
 Write-Output "   ---"
 
 Write-Output "   ---"
-Write-Output "electron-builder"
-electron-builder build --win --x64 --config.productName="Chia"
+Write-Output "electron-builder create package directory"
+npx electron-builder build --win --x64 --config.productName="Chia" --dir
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 
-If ($env:HAS_SECRET) {
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign all EXEs"
+   Get-ChildItem ".\dist\win-unpacked" -Recurse | Where-Object { $_.Extension -eq ".exe" } | ForEach-Object {
+      $exePath = $_.FullName
+      Write-Output "Signing $exePath"
+      signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 $exePath
+      Write-Output "Verify signature"
+      signtool.exe verify /v /pa $exePath
+  }
+}    Else    {
+   Write-Output "Skipping verify signatures - no authorization to install certificates"
+}
+
+Write-Output "   ---"
+Write-Output "electron-builder create installer"
+npx electron-builder build --win --x64 --config.productName="Chia" --pd ".\dist\win-unpacked"
+Write-Output "   ---"
+
+If ($env:HAS_SIGNING_SECRET) {
+   Write-Output "   ---"
+   Write-Output "Sign Final Installer App"
+   signtool.exe sign /sha1 $env:SM_CODE_SIGNING_CERT_SHA1_HASH /tr http://timestamp.digicert.com /td SHA256 /fd SHA256 .\dist\ChiaSetup-$packageVersion.exe
    Write-Output "   ---"
    Write-Output "Verify signature"
    Write-Output "   ---"
    signtool.exe verify /v /pa .\dist\ChiaSetup-$packageVersion.exe
-   }   Else    {
+}   Else    {
    Write-Output "Skipping verify signatures - no authorization to install certificates"
 }
 

@@ -35,17 +35,17 @@ concurrency:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Windows 10 Installer
+    name: Build EXE
     runs-on: [windows-2019]
     timeout-minutes: 65
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]
+        python-version: ["3.10"]
 
     steps:
     - name: Checkout Code
@@ -108,10 +108,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Setup Node 16.x
+    - name: Setup Node 18.x
       uses: actions/setup-node@v3
       with:
-        node-version: '16.x'
+        node-version: '18.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -130,16 +130,39 @@ jobs:
         if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
         echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
       env:
-        SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
+        SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
         AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
         GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
-    - name: Decode code signing cert into an encrypted file
+    - name: Setup Certificate
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-      uses: kitek/decode-base64-into-file-action@1.0
-      with:
-        encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\win_code_sign_cert.p12
+      shell: bash
+      run: |
+        echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+
+    - name: Set signing variables
+      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+      shell: bash
+      run: |
+        echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
+        echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
+        echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
+        echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+        echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}" >> "$GITHUB_ENV"
+        echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
+        echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
+        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
+
+    - name: Setup SSM KSP on windows latest
+      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+      shell: cmd
+      run: |
+        curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
+        msiexec /i smtools-windows-x64.msi /quiet /qn
+        smksp_registrar.exe list
+        smctl.exe keypair ls
+        C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
+        smksp_cert_sync.exe
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -234,8 +257,7 @@ jobs:
     - name: Build Windows installer
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-        HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
-        CSC_KEY_PASSWORD: ${{ secrets.WIN_CODE_SIGN_PASS }}
+        HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
@@ -299,9 +321,6 @@ jobs:
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
       run: |
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/install/
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
@@ -315,17 +334,29 @@ jobs:
       run: |
         gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
-    - name: Mark installer complete
+    - name: Mark pre-release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
+      run: |
+        $headers = @{
+            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
+        }
+        $data = @{
+            chia_ref='${{ env.RELEASE_TAG }}'
+        }
+        $json = $data | ConvertTo-Json
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+
+    - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         $headers = @{
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
         }
         $data = @{
-            chia_ref='$RELEASE_TAG'
+            chia_ref='${{ env.RELEASE_TAG }}'
         }
         $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/$RFC_REPO/$RELEASE_TAG/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
 
     - name: Remove Windows exe and installer to exclude from cache
       run: |
@@ -333,3 +364,47 @@ jobs:
         Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
         Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
+
+  test:
+    name: Test ${{ matrix.os.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: 2019
+            matrix: 2019
+            runs-on:
+              intel: windows-2019
+          - name: 2022
+            matrix: 2022
+            runs-on:
+              intel: windows-2022
+        arch:
+          - name: Intel
+            matrix: intel
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-windows-exe-intel
+        path: packages
+
+    - name: Install package
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        dir ./packages/
+        $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
+        Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
+
+    - name: Run chia version
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version

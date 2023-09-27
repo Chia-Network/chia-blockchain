@@ -3,141 +3,37 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.classgroup import ClassgroupElement
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import (
-    GeneratorBlockInfo,
-    PlotFilterInfo,
-    block_info_from_block,
-    generator_from_block,
-    plot_filter_info_from_block,
-)
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
+from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
 
-@streamable
-@dataclass(frozen=True)
-class BlockRecordDB(Streamable):
-    """
-    This class contains the fields from `BlockRecord` that get stored in the DB.
-    Unlike `BlockRecord`, this should never extend with more fields, in order to avoid DB corruption.
-    """
-
-    header_hash: bytes32
-    prev_hash: bytes32
-    height: uint32
-    weight: uint128
-    total_iters: uint128
-    signage_point_index: uint8
-    challenge_vdf_output: ClassgroupElement
-    infused_challenge_vdf_output: Optional[ClassgroupElement]
-    reward_infusion_new_challenge: bytes32
-    challenge_block_info_hash: bytes32
-    sub_slot_iters: uint64
-    pool_puzzle_hash: bytes32
-    farmer_puzzle_hash: bytes32
-    required_iters: uint64
-    deficit: uint8
-    overflow: bool
-    prev_transaction_block_height: uint32
-    timestamp: Optional[uint64]
-    prev_transaction_block_hash: Optional[bytes32]
-    fees: Optional[uint64]
-    reward_claims_incorporated: Optional[List[Coin]]
-    finished_challenge_slot_hashes: Optional[List[bytes32]]
-    finished_infused_challenge_slot_hashes: Optional[List[bytes32]]
-    finished_reward_slot_hashes: Optional[List[bytes32]]
-    sub_epoch_summary_included: Optional[SubEpochSummary]
-
-    def to_block_record(self, pos_ss_cc_challenge_hash: bytes32, cc_sp_hash: bytes32) -> BlockRecord:
-        return BlockRecord(
-            header_hash=self.header_hash,
-            prev_hash=self.prev_hash,
-            height=self.height,
-            weight=self.weight,
-            total_iters=self.total_iters,
-            signage_point_index=self.signage_point_index,
-            challenge_vdf_output=self.challenge_vdf_output,
-            infused_challenge_vdf_output=self.infused_challenge_vdf_output,
-            reward_infusion_new_challenge=self.reward_infusion_new_challenge,
-            challenge_block_info_hash=self.challenge_block_info_hash,
-            sub_slot_iters=self.sub_slot_iters,
-            pool_puzzle_hash=self.pool_puzzle_hash,
-            farmer_puzzle_hash=self.farmer_puzzle_hash,
-            required_iters=self.required_iters,
-            deficit=self.deficit,
-            overflow=self.overflow,
-            prev_transaction_block_height=self.prev_transaction_block_height,
-            pos_ss_cc_challenge_hash=pos_ss_cc_challenge_hash,
-            cc_sp_hash=cc_sp_hash,
-            timestamp=self.timestamp,
-            prev_transaction_block_hash=self.prev_transaction_block_hash,
-            fees=self.fees,
-            reward_claims_incorporated=self.reward_claims_incorporated,
-            finished_challenge_slot_hashes=self.finished_challenge_slot_hashes,
-            finished_infused_challenge_slot_hashes=self.finished_infused_challenge_slot_hashes,
-            finished_reward_slot_hashes=self.finished_reward_slot_hashes,
-            sub_epoch_summary_included=self.sub_epoch_summary_included,
-        )
-
-    @classmethod
-    def from_block_record(cls, block_record: BlockRecord) -> BlockRecordDB:
-        return cls(
-            header_hash=block_record.header_hash,
-            prev_hash=block_record.prev_hash,
-            height=block_record.height,
-            weight=block_record.weight,
-            total_iters=block_record.total_iters,
-            signage_point_index=block_record.signage_point_index,
-            challenge_vdf_output=block_record.challenge_vdf_output,
-            infused_challenge_vdf_output=block_record.infused_challenge_vdf_output,
-            reward_infusion_new_challenge=block_record.reward_infusion_new_challenge,
-            challenge_block_info_hash=block_record.challenge_block_info_hash,
-            sub_slot_iters=block_record.sub_slot_iters,
-            pool_puzzle_hash=block_record.pool_puzzle_hash,
-            farmer_puzzle_hash=block_record.farmer_puzzle_hash,
-            required_iters=block_record.required_iters,
-            deficit=block_record.deficit,
-            overflow=block_record.overflow,
-            prev_transaction_block_height=block_record.prev_transaction_block_height,
-            timestamp=block_record.timestamp,
-            prev_transaction_block_hash=block_record.prev_transaction_block_hash,
-            fees=block_record.fees,
-            reward_claims_incorporated=block_record.reward_claims_incorporated,
-            finished_challenge_slot_hashes=block_record.finished_challenge_slot_hashes,
-            finished_infused_challenge_slot_hashes=block_record.finished_infused_challenge_slot_hashes,
-            finished_reward_slot_hashes=block_record.finished_reward_slot_hashes,
-            sub_epoch_summary_included=block_record.sub_epoch_summary_included,
-        )
+def decompress(block_bytes: bytes) -> FullBlock:
+    return FullBlock.from_bytes(zstd.decompress(block_bytes))
 
 
-def plot_filter_from_block(block: FullBlock) -> PlotFilterInfo:
-    pos_cc_ss = block.reward_chain_block.pos_ss_cc_challenge_hash
-    cc_sp_hash: bytes32
-    if block.reward_chain_block.challenge_chain_sp_vdf is None:
-        cc_sp_hash = pos_cc_ss
-    else:
-        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+def compress(block: FullBlock) -> bytes:
+    ret: bytes = zstd.compress(bytes(block))
+    return ret
 
-    return PlotFilterInfo(pos_cc_ss, cc_sp_hash)
+
+def decompress_blob(block_bytes: bytes) -> bytes:
+    ret: bytes = zstd.decompress(block_bytes)
+    return ret
 
 
 @typing_extensions.final
@@ -176,11 +72,6 @@ class BlockStore:
                 "block_record blob)"
             )
 
-            # for CHIP-13, we need cheap access to these fields
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS plot_info (" "header_hash blob PRIMARY KEY," "plot_filter_info blob)"
-            )
-
             # This is a single-row table containing the hash of the current
             # peak. The "key" field is there to make update statements simple
             await conn.execute("CREATE TABLE IF NOT EXISTS current_peak(key int PRIMARY KEY, hash blob)")
@@ -211,25 +102,6 @@ class BlockStore:
 
         return self
 
-    def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:
-        assert isinstance(field, bytes)
-        return bytes32(field)
-
-    def maybe_to_hex(self, field: bytes) -> Any:
-        return field
-
-    def compress(self, block: FullBlock) -> bytes:
-        ret: bytes = zstd.compress(bytes(block))
-        return ret
-
-    def maybe_decompress(self, block_bytes: bytes) -> FullBlock:
-        ret: FullBlock = FullBlock.from_bytes(zstd.decompress(block_bytes))
-        return ret
-
-    def maybe_decompress_blob(self, block_bytes: bytes) -> bytes:
-        ret: bytes = zstd.decompress(block_bytes)
-        return ret
-
     async def rollback(self, height: int) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,))
@@ -245,7 +117,7 @@ class BlockStore:
     async def replace_proof(self, header_hash: bytes32, block: FullBlock) -> None:
         assert header_hash == block.header_hash
 
-        block_bytes: bytes = self.compress(block)
+        block_bytes: bytes = compress(block)
 
         self.block_cache.put(header_hash, block)
 
@@ -255,18 +127,16 @@ class BlockStore:
                 (
                     block_bytes,
                     int(block.is_fully_compactified()),
-                    self.maybe_to_hex(header_hash),
+                    header_hash,
                 ),
             )
 
     async def add_full_block(self, header_hash: bytes32, block: FullBlock, block_record: BlockRecord) -> None:
         self.block_cache.put(header_hash, block)
-        block_record_db: BlockRecordDB = BlockRecordDB.from_block_record(block_record)
 
         ses: Optional[bytes] = (
             None if block_record.sub_epoch_summary_included is None else bytes(block_record.sub_epoch_summary_included)
         )
-        plot_filter_info = plot_filter_from_block(block)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -287,16 +157,8 @@ class BlockStore:
                     ses,
                     int(block.is_fully_compactified()),
                     False,  # in_main_chain
-                    self.compress(block),
-                    bytes(block_record_db),
-                ),
-            )
-
-            await conn.execute(
-                "INSERT OR IGNORE INTO plot_info (header_hash, plot_filter_info) VALUES(?, ?)",
-                (
-                    header_hash,
-                    bytes(plot_filter_info),
+                    compress(block),
+                    bytes(block_record),
                 ),
             )
 
@@ -306,7 +168,7 @@ class BlockStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "INSERT OR REPLACE INTO sub_epoch_segments_v3 VALUES(?, ?)",
-                (self.maybe_to_hex(ses_block_hash), bytes(SubEpochSegments(segments))),
+                (ses_block_hash, bytes(SubEpochSegments(segments))),
             )
 
     async def get_sub_epoch_challenge_segments(
@@ -320,7 +182,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?",
-                (self.maybe_to_hex(ses_block_hash),),
+                (ses_block_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
 
@@ -343,12 +205,10 @@ class BlockStore:
         if cached is not None:
             return cached
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
-            ) as cursor:
+            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
-            block = self.maybe_decompress(row[0])
+            block = decompress(row[0])
             self.block_cache.put(header_hash, block)
             return block
         return None
@@ -358,9 +218,7 @@ class BlockStore:
         if cached is not None:
             return bytes(cached)
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(
-                "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
-            ) as cursor:
+            async with conn.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
                 row = await cursor.fetchone()
         if row is not None:
             ret: bytes = zstd.decompress(row[0])
@@ -377,7 +235,7 @@ class BlockStore:
             async with conn.execute(formatted_str, heights) as cursor:
                 ret: List[FullBlock] = []
                 for row in await cursor.fetchall():
-                    ret.append(self.maybe_decompress(row[0]))
+                    ret.append(decompress(row[0]))
                 return ret
 
     async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
@@ -389,7 +247,7 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
             block_bytes = zstd.decompress(row[0])
@@ -413,7 +271,7 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            row = await execute_fetchone(conn, formatted_str, (header_hash,))
             if row is None:
                 return None
             block_bytes = zstd.decompress(row[0])
@@ -468,24 +326,14 @@ class BlockStore:
         all_blocks: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
+                "SELECT header_hash,block_record "
+                "FROM full_blocks "
                 f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
                 header_hashes,
             ) as cursor:
                 for row in await cursor.fetchall():
-                    block_rec_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(block_rec_db.header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
-
-                    all_blocks[block_rec_db.header_hash] = block_rec_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
+                    block_rec = BlockRecord.from_bytes(row[1])
+                    all_blocks[block_rec.header_hash] = block_rec
 
         ret: List[BlockRecord] = []
         for hh in header_hashes:
@@ -511,8 +359,8 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = self.maybe_from_hex(row[0])
-                    all_blocks[header_hash] = self.maybe_decompress_blob(row[1])
+                    header_hash = bytes32(row[0])
+                    all_blocks[header_hash] = decompress_blob(row[1])
 
         ret: List[bytes] = []
         for hh in header_hashes:
@@ -539,8 +387,8 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = self.maybe_from_hex(row[0])
-                    full_block: FullBlock = self.maybe_decompress(row[1])
+                    header_hash = bytes32(row[0])
+                    full_block: FullBlock = decompress(row[1])
                     all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
         ret: List[FullBlock] = []
@@ -553,40 +401,15 @@ class BlockStore:
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE header_hash=?",
+                "SELECT block_record " "FROM full_blocks " "WHERE header_hash=?",
                 (header_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:
             return None
-        block_record_db = BlockRecordDB.from_bytes(row[0])
-        if row[1] is None:
-            # since we're adding this field lazily, it may not be
-            # set. If so, fall back to the slow path
-            plot_filter_info = await self.get_plot_filter_info(block_record_db.header_hash)
-        else:
-            plot_filter_info = PlotFilterInfo.from_bytes(row[1])
+        block_record = BlockRecord.from_bytes(row[0])
 
-        block_record = block_record_db.to_block_record(
-            plot_filter_info.pos_ss_cc_challenge_hash,
-            plot_filter_info.cc_sp_hash,
-        )
         return block_record
-
-    # this is the slow-path
-    async def get_plot_filter_info(self, header_hash: bytes32) -> PlotFilterInfo:
-        block = self.block_cache.get(header_hash)
-        if block is not None:
-            return plot_filter_from_block(block)
-
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute("SELECT block FROM full_blocks WHERE header_hash=?", (header_hash,)) as cursor:
-                row = await cursor.fetchone()
-        assert row is not None
-        block_bytes = zstd.decompress(row[0])
-        return plot_filter_info_from_block(block_bytes)
 
     async def get_block_records_in_range(
         self,
@@ -601,25 +424,12 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE height >= ? AND height <= ?",
+                "SELECT header_hash,block_record " "FROM full_blocks " "WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
-
-                    block_record = block_record_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
+                    block_record = BlockRecord.from_bytes(row[1])
                     ret[header_hash] = block_record
 
         return ret
@@ -634,7 +444,6 @@ class BlockStore:
         if present.
         """
 
-        maybe_decompress_blob = self.maybe_decompress_blob
         assert self.db_wrapper.db_version == 2
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
@@ -644,28 +453,20 @@ class BlockStore:
                 rows: List[sqlite3.Row] = list(await cursor.fetchall())
                 if len(rows) != (stop - start) + 1:
                     raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
-                return [maybe_decompress_blob(row[0]) for row in rows]
+                return [decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
-        if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
-                    peak_row = await cursor.fetchone()
-            if peak_row is None:
-                return None
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],)) as cursor:
-                    peak_height = await cursor.fetchone()
-            if peak_height is None:
-                return None
-            return bytes32(peak_row[0]), uint32(peak_height[0])
-        else:
-            async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute("SELECT header_hash, height from block_records WHERE is_peak = 1") as cursor:
-                    peak_row = await cursor.fetchone()
-            if peak_row is None:
-                return None
-            return bytes32(bytes.fromhex(peak_row[0])), uint32(peak_row[1])
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
+                peak_row = await cursor.fetchone()
+        if peak_row is None:
+            return None
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],)) as cursor:
+                peak_height = await cursor.fetchone()
+        if peak_height is None:
+            return None
+        return bytes32(peak_row[0]), uint32(peak_height[0])
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
@@ -682,26 +483,12 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record,plot_info.plot_filter_info "
-                "FROM full_blocks LEFT JOIN plot_info USING(header_hash) "
-                "WHERE height >= ?",
+                "SELECT header_hash, block_record " "FROM full_blocks " "WHERE height >= ?",
                 (peak[1] - blocks_n,),
             ) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
-                    block_record_db: BlockRecordDB = BlockRecordDB.from_bytes(row[1])
-                    if row[2] is None:
-                        # since we're adding this field lazily, it may not be
-                        # set. If so, fall back to the slow path
-                        plot_filter_info = await self.get_plot_filter_info(header_hash)
-                    else:
-                        plot_filter_info = PlotFilterInfo.from_bytes(row[2])
-
-                    block_record = block_record_db.to_block_record(
-                        plot_filter_info.pos_ss_cc_challenge_hash,
-                        plot_filter_info.cc_sp_hash,
-                    )
-                    ret[header_hash] = block_record
+                    ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret, peak[0]
 
@@ -716,7 +503,7 @@ class BlockStore:
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
-                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
+                "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (header_hash,)
             ) as cursor:
                 row = await cursor.fetchone()
         if row is None:

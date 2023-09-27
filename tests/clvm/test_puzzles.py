@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Iterable, List, Tuple
 from unittest import TestCase
 
-from blspy import AugSchemeMPL, BasicSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
@@ -11,7 +11,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,
@@ -26,15 +26,15 @@ from tests.util.key_tool import KeyTool
 from ..core.make_block_generator import int_to_public_key
 from .coin_store import CoinStore, CoinTimestamp
 
-T1 = CoinTimestamp(1, 10000000)
-T2 = CoinTimestamp(5, 10003000)
+T1 = CoinTimestamp(1, uint32(10000000))
+T2 = CoinTimestamp(5, uint32(10003000))
 
 MAX_BLOCK_COST_CLVM = int(1e18)
 
 
 def secret_exponent_for_index(index: int) -> int:
     blob = index.to_bytes(32, "big")
-    hashed_blob = BasicSchemeMPL.key_gen(std_hash(b"foo" + blob))
+    hashed_blob = AugSchemeMPL.key_gen(std_hash(b"foo" + blob))
     r = int.from_bytes(hashed_blob, "big")
     return r
 
@@ -87,7 +87,7 @@ def do_test_spend(
             assert 0
 
     # make sure we can actually sign the solution
-    signatures = []
+    signatures: List[G2Element] = []
     for coin_spend in spend_bundle.coin_spends:
         signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
-from secrets import token_bytes
+import random
 from typing import AsyncIterator, List, Optional
 
 import pytest
@@ -26,7 +27,6 @@ from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
-from tests.conftest import Mode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
@@ -35,16 +35,20 @@ log = logging.getLogger(__name__)
 @pytest_asyncio.fixture(scope="function")
 async def custom_block_tools(blockchain_constants: ConsensusConstants) -> AsyncIterator[BlockTools]:
     with TempKeyring() as keychain:
-        patched_constants = blockchain_constants.replace(
-            **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
+        patched_constants = dataclasses.replace(
+            blockchain_constants,
+            DISCRIMINANT_SIZE_BITS=32,
+            SUB_SLOT_ITERS_STARTING=uint64(2**12),
         )
         yield await create_block_tools_async(constants=patched_constants, keychain=keychain)
 
 
 @pytest_asyncio.fixture(scope="function")
 async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConstants) -> AsyncIterator[Blockchain]:
-    patched_constants = blockchain_constants.replace(
-        **{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12}
+    patched_constants = dataclasses.replace(
+        blockchain_constants,
+        DISCRIMINANT_SIZE_BITS=32,
+        SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
     bc1, db_wrapper, db_path = await create_blockchain(patched_constants, db_version)
     yield bc1
@@ -65,17 +69,16 @@ async def empty_blockchain_with_original_constants(
 
 
 class TestFullNodeStore:
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     @pytest.mark.parametrize("normalized_to_identity", [False, True])
     async def test_basic_store(
         self,
         empty_blockchain: Blockchain,
         custom_block_tools: BlockTools,
-        consensus_mode: Mode,
         normalized_to_identity: bool,
+        seeded_random: random.Random,
     ) -> None:
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain
         blocks = custom_block_tools.get_consecutive_blocks(
             10,
@@ -117,7 +120,7 @@ class TestFullNodeStore:
         assert store.get_candidate_block(unfinished_blocks[8].get_hash()) is not None
 
         # Test seen unfinished blocks
-        h_hash_1 = bytes32(token_bytes(32))
+        h_hash_1 = bytes32.random(seeded_random)
         assert not store.seen_unfinished_block(h_hash_1)
         assert store.seen_unfinished_block(h_hash_1)
         store.clear_seen_unfinished_blocks()
@@ -939,15 +942,13 @@ class TestFullNodeStore:
                 for block in blocks[-2:]:
                     await _validate_and_add_block_no_error(blockchain, block)
 
+    @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
     async def test_long_chain_slots(
         self,
         empty_blockchain_with_original_constants: Blockchain,
         default_1000_blocks: List[FullBlock],
-        consensus_mode: Mode,
     ) -> None:
-        if consensus_mode != Mode.PLAIN:
-            pytest.skip("only run in PLAIN mode to save time")
         blockchain = empty_blockchain_with_original_constants
         store = FullNodeStore(blockchain.constants)
         peak = None
