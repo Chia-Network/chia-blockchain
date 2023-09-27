@@ -113,7 +113,7 @@ class Program(SExp):
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
+    def run_with_cost(self, max_cost: int, args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, args)
 
     def run(self, args) -> Program:

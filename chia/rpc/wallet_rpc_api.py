@@ -1127,10 +1127,8 @@ class WalletRpcApi:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
         if len(coins) > 0:
             tx_id_list.extend(
-                (
-                    await self.service.wallet_state_manager.spend_clawback_coins(
-                        coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
-                    )
+                await self.service.wallet_state_manager.spend_clawback_coins(
+                    coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
                 )
             )
         return {
