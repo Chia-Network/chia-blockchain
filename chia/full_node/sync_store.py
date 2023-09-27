@@ -37,6 +37,7 @@ class SyncStore:
     # Set of nodes which we are batch syncing from
     batch_syncing: Set[bytes32] = field(default_factory=set)
     # Set of nodes which we are backtrack syncing from, and how many threads
+    # TODO: default dict with eviction of 0 values?  or maybe otherwise limited?
     backtrack_syncing: Dict[bytes32, int] = field(default_factory=dict)
 
     def set_sync_mode(self, sync_mode: bool) -> None:

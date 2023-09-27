@@ -876,6 +876,7 @@ class Blockchain(BlockchainInterface):
         if pot_tuple in self._seen_compact_proofs:
             return True
         # Periodically cleanup to keep size small. TODO: make this smarter, like FIFO.
+        # TODO: yeah, what that ^ todo says
         if len(self._seen_compact_proofs) > 10000:
             self._seen_compact_proofs.clear()
         self._seen_compact_proofs.add(pot_tuple)

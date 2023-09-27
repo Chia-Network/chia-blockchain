@@ -446,6 +446,7 @@ class CoinStore:
                         coin_changes[record.name] = record
 
             await conn.execute("UPDATE coin_record SET spent_index=0 WHERE spent_index>?", (block_index,))
+        # TODO: can we clear the invalidated instead of everything?
         self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 

@@ -1703,6 +1703,7 @@ class FullNode:
         # TODO: maybe add and broadcast new IPs as well
 
         if record.height % 1000 == 0:
+            # TODO: stop aligning complete clearing
             # Occasionally clear data in full node store to keep memory usage small
             self.full_node_store.clear_seen_unfinished_blocks()
             self.full_node_store.clear_old_cache_entries()
@@ -1919,6 +1920,7 @@ class FullNode:
         clear_height = uint32(max(0, peak.height - 50))
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
+        # TODO: stop aligning complete clearing
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
             await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
 
