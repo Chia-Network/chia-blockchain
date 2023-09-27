@@ -16,6 +16,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.ints import uint32, uint64, uint128
@@ -45,7 +46,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -1169,7 +1170,7 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: str, is_hex: bool = False) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, mode: SigningMode) -> Tuple[G1Element, G2Element]:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
@@ -1179,11 +1180,15 @@ class DIDWallet:
             private = await self.wallet_state_manager.get_private_key(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            if is_hex:
-                puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+            if mode == SigningMode.CHIP_0002_HEX_INPUT:
+                hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
+            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
+                hex_message = bytes(message, "utf-8")
+            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
+                hex_message = bytes.fromhex(message)
             else:
-                puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
+                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
         else:
             raise ValueError("Invalid inner DID puzzle.")
 

@@ -108,7 +108,8 @@ def create_config(
 
 async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    service = started_simulator.service
     await service.start()
 
     yield service._api

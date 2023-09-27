@@ -28,7 +28,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
-from chia.types.signing_mode import SigningMode
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -88,7 +88,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
@@ -1459,17 +1459,27 @@ class WalletRpcApi:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        is_hex = request.get("is_hex", False)
+        is_hex: bool = request.get("is_hex", False)
         if isinstance(is_hex, str):
-            is_hex = bool(is_hex)
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
-            request["message"], puzzle_hash, is_hex
+            request["message"], puzzle_hash, mode
         )
         return {
             "success": True,
             "pubkey": str(pubkey),
             "signature": str(signature),
-            "signing_mode": SigningMode.CHIP_0002.value,
+            "signing_mode": mode.value,
         }
 
     async def sign_message_by_id(self, request: Dict[str, Any]) -> EndpointResult:
@@ -1480,9 +1490,19 @@ class WalletRpcApi:
         """
         entity_id: bytes32 = decode_puzzle_hash(request["id"])
         selected_wallet: Optional[WalletProtocol[Any]] = None
-        is_hex = request.get("is_hex", False)
+        is_hex: bool = request.get("is_hex", False)
         if isinstance(is_hex, str):
-            is_hex = bool(is_hex)
+            is_hex = True if is_hex.lower() == "true" else False
+        safe_mode: bool = request.get("safe_mode", True)
+        if isinstance(safe_mode, str):
+            safe_mode = True if safe_mode.lower() == "true" else False
+        mode: SigningMode = SigningMode.CHIP_0002
+        if is_hex and safe_mode:
+            mode = SigningMode.CHIP_0002_HEX_INPUT
+        elif not is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
+        elif is_hex and not safe_mode:
+            mode = SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT
         if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID.value:
@@ -1494,7 +1514,7 @@ class WalletRpcApi:
             if selected_wallet is None:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], is_hex)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], mode)
             latest_coin_id = (await selected_wallet.get_coin()).name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
@@ -1510,7 +1530,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
             assert isinstance(selected_wallet, NFTWallet)
-            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, is_hex)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft, mode)
             latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
@@ -1520,7 +1540,7 @@ class WalletRpcApi:
             "pubkey": str(pubkey),
             "signature": str(signature),
             "latest_coin_id": latest_coin_id.hex() if latest_coin_id is not None else None,
-            "signing_mode": SigningMode.CHIP_0002.value,
+            "signing_mode": mode.value,
         }
 
     ##########################################################################################
