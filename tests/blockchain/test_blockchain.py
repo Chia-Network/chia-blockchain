@@ -3131,18 +3131,20 @@ class TestReorgs:
         assert b.get_peak().height == 16
 
     @pytest.mark.asyncio
-    async def test_long_reorg(self, empty_blockchain, default_1500_blocks, test_long_reorg_blocks, bt):
+    async def test_long_reorg(self, empty_blockchain, default_10000_blocks, test_long_reorg_blocks, bt):
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
-        num_blocks_chain_1 = 3 * bt.constants.EPOCH_BLOCKS + bt.constants.MAX_SUB_SLOT_BLOCKS + 10
-        num_blocks_chain_2_start = bt.constants.EPOCH_BLOCKS - 20
+        num_blocks_chain_1 = 2000
+        num_blocks_chain_2_start = 500
 
         assert num_blocks_chain_1 < 10000
-        blocks = default_1500_blocks[:num_blocks_chain_1]
+        blocks = default_10000_blocks[:num_blocks_chain_1]
 
         for block in blocks:
-            await _validate_and_add_block(b, block, skip_prevalidation=True)
+            if (block.height % 100) == 0:
+                print(f"main chain: {block.height:4} weight: {block.weight}")
+            await _validate_and_add_block(b, block)
         chain_1_height = b.get_peak().height
         chain_1_weight = b.get_peak().weight
         assert chain_1_height == (num_blocks_chain_1 - 1)
@@ -3152,25 +3154,31 @@ class TestReorgs:
 
         # If these assert fail, you probably need to change the fixture in test_long_reorg_blocks to create the
         # right amount of blocks at the right time
-        assert test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_1500_blocks[num_blocks_chain_2_start - 1]
-        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_1500_blocks[num_blocks_chain_2_start]
+        assert (
+            test_long_reorg_blocks[num_blocks_chain_2_start - 1] == default_10000_blocks[num_blocks_chain_2_start - 1]
+        )
+        assert test_long_reorg_blocks[num_blocks_chain_2_start] != default_10000_blocks[num_blocks_chain_2_start]
 
-        for reorg_block in test_long_reorg_blocks:
-            if reorg_block.height < num_blocks_chain_2_start:
-                await _validate_and_add_block(
-                    b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK, skip_prevalidation=True
+        for reorg_block in test_long_reorg_blocks[:1500]:
+            if (reorg_block.height % 100) == 0:
+                print(
+                    f"reorg chain: {reorg_block.height:4} "
+                    f"weight: {reorg_block.weight:7} "
+                    f"peak: {str(b.get_peak().header_hash)[:6]}"
                 )
+            if reorg_block.height < num_blocks_chain_2_start:
+                await _validate_and_add_block(b, reorg_block, expected_result=AddBlockResult.ALREADY_HAVE_BLOCK)
             elif reorg_block.weight <= chain_1_weight:
                 await _validate_and_add_block_multi_result(
                     b,
                     reorg_block,
                     [AddBlockResult.ADDED_AS_ORPHAN, AddBlockResult.ALREADY_HAVE_BLOCK],
-                    skip_prevalidation=True,
                 )
             elif reorg_block.weight > chain_1_weight:
                 assert reorg_block.height < chain_1_height
-                await _validate_and_add_block(b, reorg_block, skip_prevalidation=True)
+                await _validate_and_add_block(b, reorg_block)
 
+        # if these asserts fires, there was no reorg
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height
 
