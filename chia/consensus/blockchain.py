@@ -372,7 +372,7 @@ class Blockchain(BlockchainInterface):
         elif fork_point_with_peak is not None:
             fork_height = fork_point_with_peak
         else:
-            fork_height = find_fork_point_in_chain(self, block_record, peak)
+            fork_height = await find_fork_point_in_chain(self, block_record, peak)
 
         if block_record.prev_hash != peak.header_hash:
             for coin_record in await self.coin_store.rollback_to_block(fork_height):
@@ -938,7 +938,7 @@ class Blockchain(BlockchainInterface):
                 prev_block = await self.block_store.get_full_block(previous_block_hash)
                 assert prev_block is not None
                 assert prev_block_record is not None
-                fork = find_fork_point_in_chain(self, peak, prev_block_record)
+                fork = await find_fork_point_in_chain(self, peak, prev_block_record)
                 curr_2: Optional[FullBlock] = prev_block
                 assert curr_2 is not None and isinstance(curr_2, FullBlock)
                 reorg_chain[curr_2.height] = curr_2
