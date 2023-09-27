@@ -41,6 +41,9 @@ class BlockchainInterface:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        return  # type: ignore[return-value]
+
     def remove_block_record(self, header_hash: bytes32) -> None:
         pass
 
