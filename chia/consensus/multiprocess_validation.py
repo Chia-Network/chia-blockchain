@@ -197,9 +197,9 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
     if blocks[0].height > 0:
-        if not block_records.contains_block(blocks[0].prev_header_hash):
+        curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
-        curr = block_records.block_record(blocks[0].prev_header_hash)
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         while (
             curr.sub_epoch_summary_included is None
@@ -212,7 +212,8 @@ async def pre_validate_blocks_multiprocessing(
             recent_blocks[curr.header_hash] = curr
             if curr.is_transaction_block:
                 num_blocks_seen += 1
-            curr = block_records.block_record(curr.prev_hash)
+            curr = await block_records.get_block_record_from_db(curr.prev_hash)
+            assert curr is not None
         recent_blocks[curr.header_hash] = curr
     block_record_was_present = []
     for block in blocks:
@@ -221,10 +222,13 @@ async def pre_validate_blocks_multiprocessing(
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
         if block.height != 0:
-            assert block_records.contains_block(block.prev_header_hash)
             if prev_b is None:
-                prev_b = block_records.block_record(block.prev_header_hash)
+                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
 
+        # get_next_sub_slot_iters_and_difficulty() requires prev_b.prev_hash to
+        # be in the block record cache.
+        if prev_b is not None and prev_b.height != 0 and not block_records.contains_block(prev_b.prev_hash):
+            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False)]
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
@@ -240,7 +244,7 @@ async def pre_validate_blocks_multiprocessing(
         )
         if q_str is None:
             for i, block_i in enumerate(blocks):
-                if not block_record_was_present[i] and block_records.contains_block(block_i.header_hash):
+                if not block_record_was_present[i] and await block_records.contains_block_from_db(block_i.header_hash):
                     block_records.remove_block_record(block_i.header_hash)
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False)]
 
@@ -253,6 +257,10 @@ async def pre_validate_blocks_multiprocessing(
         )
 
         try:
+            if prev_b is not None and not block_records.contains_block(block.prev_header_hash):
+                # the call to block_to_block_record() requires the previous
+                # block is in the cache
+                block_records.add_block_record(prev_b)
             block_rec = block_to_block_record(
                 constants,
                 block_records,

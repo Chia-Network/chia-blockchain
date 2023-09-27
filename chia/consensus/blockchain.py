@@ -234,10 +234,11 @@ class Blockchain(BlockchainInterface):
         genesis: bool = block.height == 0
         header_hash: bytes32 = block.header_hash
 
-        if self.contains_block(block.header_hash):
+        if await self.contains_block_from_db(header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
-        if not self.contains_block(block.prev_header_hash) and not genesis:
+        prev_block = await self.get_block_record_from_db(block.prev_header_hash)
+        if prev_block is None and not genesis:
             return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
         if not genesis and (self.block_record(block.prev_header_hash).height + 1) != block.height:
@@ -840,6 +841,13 @@ class Blockchain(BlockchainInterface):
         if ret is not None:
             return ret
         return await self.block_store.get_block_record(header_hash)
+
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        ret = header_hash in self.__block_records
+        if ret:
+            return True
+
+        return (await self.block_store.get_block_record(header_hash)) is not None
 
     def remove_block_record(self, header_hash: bytes32) -> None:
         sbr = self.block_record(header_hash)

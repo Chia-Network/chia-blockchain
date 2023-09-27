@@ -193,6 +193,9 @@ class WalletBlockchain(BlockchainInterface):
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        return header_hash in self._block_records
+
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
@@ -200,12 +203,13 @@ class WalletBlockchain(BlockchainInterface):
         return self._height_to_hash[height]
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
-            return self.block_record(header_hash)
-        return None
+        return self._block_records.get(header_hash)
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
+
+    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        return self._block_records.get(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._block_records[block_record.header_hash] = block_record
