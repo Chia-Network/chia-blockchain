@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional, Union
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.types.header_block import HeaderBlock
 
 
-def find_fork_point_in_chain(
+def unwrap(block: Optional[BlockRecord]) -> BlockRecord:
+    if block is None:
+        raise KeyError("missing block in chain")
+    return block
+
+
+async def find_fork_point_in_chain(
     blocks: BlockchainInterface,
     block_1: Union[BlockRecord, HeaderBlock],
     block_2: Union[BlockRecord, HeaderBlock],
@@ -19,14 +25,15 @@ def find_fork_point_in_chain(
     """
     while block_2.height > 0 or block_1.height > 0:
         if block_2.height > block_1.height:
-            block_2 = blocks.block_record(block_2.prev_hash)
+            block_2 = unwrap(await blocks.get_block_record_from_db(block_2.prev_hash))
         elif block_1.height > block_2.height:
-            block_1 = blocks.block_record(block_1.prev_hash)
+            block_1 = unwrap(await blocks.get_block_record_from_db(block_1.prev_hash))
         else:
             if block_2.header_hash == block_1.header_hash:
                 return block_2.height
-            block_2 = blocks.block_record(block_2.prev_hash)
-            block_1 = blocks.block_record(block_1.prev_hash)
+            block_2 = unwrap(await blocks.get_block_record_from_db(block_2.prev_hash))
+            block_1 = unwrap(await blocks.get_block_record_from_db(block_1.prev_hash))
+
     if block_2 != block_1:
         # All blocks are different
         return -1
