@@ -1,6 +1,6 @@
 from __future__ import annotations
 
 job_timeout = 60
-parallel = False
+parallel = True
 install_timelord = True
 checkout_blocks_and_plots = True
