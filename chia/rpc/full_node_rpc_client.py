@@ -211,10 +211,11 @@ class FullNodeRpcClient(RpcClient):
     async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[List[CoinSpendWithConditions]]:
         try:
             response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
-            block_spends = []
+            block_spends: List[CoinSpendWithConditions] = []
             for block_spend in response["block_spends_with_conditions"]:
                 block_spends.append(CoinSpendWithConditions.from_json_dict(block_spend))
             return block_spends
+
         except Exception:
             return None
 

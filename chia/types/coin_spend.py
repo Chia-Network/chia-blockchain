@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from clvm.casts import int_from_bytes
 
@@ -87,3 +87,9 @@ class SpendInfo(Streamable):
 class CoinSpendWithConditions:
     coin_spend: CoinSpend
     conditions: List[ConditionWithArgs]
+
+    def from_json_dict(dict: Dict[str, Any]):
+        return CoinSpendWithConditions(
+            CoinSpend.from_json_dict(dict["coin_spend"]),
+            [ConditionWithArgs(bytes.fromhex(condition["opcode"][2:]), [[bytes.fromhex(v)for v in var] for var in condition["vars"]]) for condition in dict["conditions"]]
+        )
