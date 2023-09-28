@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pkg_resources import DistributionNotFound, get_distribution
+import importlib.metadata
 
+__version__: str
 try:
-    __version__ = get_distribution("chia-blockchain").version
-except DistributionNotFound:
+    __version__ = importlib.metadata.version("chia-blockchain")
+except importlib.metadata.PackageNotFoundError:
     # package is not installed
     __version__ = "unknown"
