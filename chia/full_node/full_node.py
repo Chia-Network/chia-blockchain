@@ -329,7 +329,7 @@ class FullNode:
                     ["sync_store", "peak_to_peer", "<values>"],
                     ["sync_store", "peer_to_peak"],
                     ["sync_store", "batch_syncing"],
-                    ["sync_store", "backtrack_syncing"],
+                    ["sync_store", "_backtrack_syncing"],
                     ["signage_point_times"],
                     ["full_node_store", "candidate_blocks"],
                     ["full_node_store", "candidate_backup_blocks"],
