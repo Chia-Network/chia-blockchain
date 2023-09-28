@@ -88,8 +88,12 @@ class CoinSpendWithConditions:
     coin_spend: CoinSpend
     conditions: List[ConditionWithArgs]
 
-    def from_json_dict(dict: Dict[str, Any]):
+    @staticmethod
+    def from_json_dict(dict: Dict[str, Any]) -> CoinSpendWithConditions:
         return CoinSpendWithConditions(
             CoinSpend.from_json_dict(dict["coin_spend"]),
-            [ConditionWithArgs(bytes.fromhex(condition["opcode"][2:]), [[bytes.fromhex(v)for v in var] for var in condition["vars"]]) for condition in dict["conditions"]]
+            [ConditionWithArgs(
+                ConditionOpcode(bytes.fromhex(condition["opcode"][2:])),
+                [bytes.fromhex(var) for var in condition["vars"]]
+            ) for condition in dict["conditions"]]
         )

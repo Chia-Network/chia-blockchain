@@ -503,7 +503,16 @@ class FullNodeRpcApi:
             block_generator, full_block.height, self.service.constants
         )
 
-        return {"block_spends_with_conditions": spends_with_conditions}
+        return {
+            "block_spends_with_conditions": [
+                {
+                    "coin_spend": spend_with_conditions.coin_spend,
+                    "conditions": [
+                        {
+                            'opcode': condition.opcode,
+                            'vars': [var.hex() for var in condition.vars]
+                        } for condition in spend_with_conditions.conditions]
+                    } for spend_with_conditions in spends_with_conditions]}
 
     async def get_block_record_by_height(self, request: Dict[str, Any]) -> EndpointResult:
         if "height" not in request:

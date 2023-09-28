@@ -190,10 +190,7 @@ def get_spends_for_block_with_conditions(
         coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
         coin_spend = CoinSpend(coin, puzzle, solution)
         conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
-        spends.append({
-            "coin_spend": coin_spend,
-            "conditions": [{'opcode': condition.opcode, 'vars': [[var.hex() for var in condition.vars]]} for condition in conditions]
-        })
+        spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends
 

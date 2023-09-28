@@ -243,21 +243,15 @@ class TestRpc:
             assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex("ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080")
             assert coin_spend_with_conditions.conditions == [
                 ConditionWithArgs(b"2", [
-                    [
-                        bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
-                        bytes.fromhex("49b6f533000b967f049bb6e7b29d0b6f465ebccd5733bc75340f98dae782aa08")
-                    ]
+                    bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
+                    bytes.fromhex("49b6f533000b967f049bb6e7b29d0b6f465ebccd5733bc75340f98dae782aa08")
                 ]),
                 ConditionWithArgs(b"3", [
-                    [
-                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
-                        bytes.fromhex("01977420dc00")
-                    ]
+                    bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                    bytes.fromhex("01977420dc00")
                 ]),
                 ConditionWithArgs(b"<", [
-                    [
-                        bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479"),
-                    ]
+                    bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479"),
                 ])
             ]
 
@@ -268,21 +262,15 @@ class TestRpc:
             assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex("ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa04f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f8080ff8080")
             assert coin_spend_with_conditions.conditions == [
                 ConditionWithArgs(b"2", [
-                    [
-                        bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
-                        bytes.fromhex("95df50b31bb746a37df6ab448f10436fb98bb659990c61ee6933a196f6a06465")
-                    ]
+                    bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
+                    bytes.fromhex("95df50b31bb746a37df6ab448f10436fb98bb659990c61ee6933a196f6a06465")
                 ]),
                 ConditionWithArgs(b"3", [
-                    [
-                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
-                        bytes.fromhex("01977420dc00")
-                    ]
+                    bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                    bytes.fromhex("01977420dc00")
                 ]),
                 ConditionWithArgs(b"<", [
-                    [
-                        bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f"),
-                    ]
+                    bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f"),
                 ])
             ]
 
@@ -293,21 +281,15 @@ class TestRpc:
             assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex("ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff853a3529440080ffff3cffa0617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f8080ff8080")
             assert coin_spend_with_conditions.conditions == [
                 ConditionWithArgs(b"2", [
-                    [
-                        bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
-                        bytes.fromhex("f3dd65f1ca4b030a726182e0194174fe95ff7a66f54381cad3aab168b8e75ee7")
-                    ]
+                    bytes.fromhex("a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"),
+                    bytes.fromhex("f3dd65f1ca4b030a726182e0194174fe95ff7a66f54381cad3aab168b8e75ee7")
                 ]),
                 ConditionWithArgs(b"3", [
-                    [
-                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
-                        bytes.fromhex("3a35294400")
-                    ]
+                    bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                    bytes.fromhex("3a35294400")
                 ]),
                 ConditionWithArgs(b"<", [
-                    [
-                        bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f"),
-                    ]
+                    bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f"),
                 ])
             ]
 
