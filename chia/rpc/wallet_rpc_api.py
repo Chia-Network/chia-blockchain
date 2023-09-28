@@ -168,7 +168,7 @@ class WalletRpcApi:
             "/send_notification": self.send_notification,
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
-            "/beta_sign_message_by_secp": self.beta_sign_message_by_secp(),
+            "/beta_sign_message_by_secp": self.beta_sign_message_by_secp,
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
@@ -1537,6 +1537,8 @@ class WalletRpcApi:
             return {"success": False, "error": "Private key is required"}
         if "message" not in request:
             return {"success": False, "error": "Message is required"}
+        if "beta" not in request or not request["beta"]:
+            return {"success": False, "error": "This is an experimental API, please set beta=true."}
         is_hex: bool = request.get("is_hex", False)
         if is_hex:
             data: bytes = bytes.fromhex(request["message"])
