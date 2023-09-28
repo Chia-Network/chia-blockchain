@@ -29,6 +29,7 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
+from tests.core.node_height import node_height_at_least
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
 
@@ -91,8 +92,8 @@ class TestSimulation:
         assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
-        # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(750, full_system.node_2._node.blockchain.get_peak_height, 7)
+        # wait up to 25 mins for node2 to sync the chain to height 7
+        await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, 7)
 
         async def has_compact(node1: FullNode, node2: FullNode) -> bool:
             peak_height_1 = node1.blockchain.get_peak_height()
@@ -144,7 +145,7 @@ class TestSimulation:
             full_system.node_2._node.blockchain.get_peak_height(),
         )
         # wait up to 10 mins for node3 to sync
-        await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
+        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
         # Connect node_1 up to the daemon
         full_system.node_1.rpc_server.connect_to_daemon(
