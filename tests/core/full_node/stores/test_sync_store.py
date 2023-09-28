@@ -93,7 +93,6 @@ async def test_increment_backtrack_syncing_increments(seeded_random: random.Rand
 
 @pytest.mark.asyncio
 async def test_decrement_backtrack_syncing_does_nothing_when_not_present(
-    self,
     seeded_random: random.Random,
 ) -> None:
     store = SyncStore()
