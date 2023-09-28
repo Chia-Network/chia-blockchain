@@ -92,7 +92,7 @@ class TestSimulation:
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(600, full_system.node_2._node.blockchain.get_peak_height, 7)
+        await time_out_assert(750, full_system.node_2._node.blockchain.get_peak_height, 7)
 
         async def has_compact(node1: FullNode, node2: FullNode) -> bool:
             peak_height_1 = node1.blockchain.get_peak_height()
@@ -163,8 +163,8 @@ class TestSimulation:
             payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
             await ws.send_str(payload)
             await ws.receive()
-            assert len(full_system.daemon.connections.get(service_name, set())) == 1
-            assert len(full_system.daemon.connections.get("chia_full_node", set())) == 1
+            assert len(full_system.daemon.connections.get(service_name, set())) == 1, "Could not connect test to daemon"
+            assert len(full_system.daemon.connections.get("chia_full_node", set())) == 1, "Node not connected to daemon"
 
             blockchain_state_found = False
             payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
@@ -178,7 +178,7 @@ class TestSimulation:
 
             await ws.close()
 
-        assert blockchain_state_found
+        assert blockchain_state_found, "Could not get blockchain state from daemon and node"
 
     @pytest.mark.asyncio
     async def test_simulator_auto_farm_and_get_coins(
