@@ -168,7 +168,7 @@ class WalletRpcApi:
             "/send_notification": self.send_notification,
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
-            "/sign_message_by_secp": self.sign_message_by_secp,
+            "/beta_sign_message_by_secp": self.beta_sign_message_by_secp(),
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
             # CATs and trading
@@ -1527,7 +1527,7 @@ class WalletRpcApi:
             "signing_mode": SigningMode.CHIP_0002.value,
         }
 
-    async def sign_message_by_secp(self, request: Dict[str, Any]) -> EndpointResult:
+    async def beta_sign_message_by_secp(self, request: Dict[str, Any]) -> EndpointResult:
         """
         Sign messages by SECP256R1 key
         :param request:

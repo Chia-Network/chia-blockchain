@@ -2423,13 +2423,13 @@ async def test_sign_message_by_secp(wallet_rpc_environment: WalletRpcTestEnviron
         int("5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d", 16), ec.SECP256R1(), default_backend()
     )
     public_key = private_key.public_key()
-    res = await api.sign_message_by_secp({})
+    res = await api.beta_sign_message_by_secp({})
     assert not res["success"]
-    res = await api.sign_message_by_secp(
+    res = await api.beta_sign_message_by_secp(
         {"private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d"}
     )
     assert not res["success"]
-    res = await api.sign_message_by_secp(
+    res = await api.beta_sign_message_by_secp(
         {
             "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
             "message": "aaa",
@@ -2443,7 +2443,7 @@ async def test_sign_message_by_secp(wallet_rpc_environment: WalletRpcTestEnviron
     )
     # Invalid signature will raise exception
     assert public_key.verify(bytes.fromhex(res["signature"]), "aaa".encode("utf-8"), ec.ECDSA(hashes.SHA256())) is None
-    res = await api.sign_message_by_secp(
+    res = await api.beta_sign_message_by_secp(
         {
             "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
             "message": "1234abcd",
