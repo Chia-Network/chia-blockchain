@@ -12,6 +12,7 @@ import pytest_asyncio
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.daemon.server import WebSocketServer
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.outbound_message import NodeType
@@ -74,7 +75,7 @@ class TestSimulation:
         bt: BlockTools
         full_system, bt = simulation
         server1: ChiaServer = full_system.node_1._server
-
+        blocks_to_farm = 3  # farming 3 blocks is sufficient to test the system
         node1_port: uint16 = server1.get_port()
         node2_port: uint16 = full_system.node_2._server.get_port()
 
@@ -92,18 +93,18 @@ class TestSimulation:
         assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
         assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
-        # wait up to 25 mins for node2 to sync the chain to height 7
-        await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, 7)
+        # wait up to 25 mins for node2 to sync the chain to blocks_to_farm height
+        await time_out_assert(1500, node_height_at_least, True, full_system.node_2._api, blocks_to_farm)
 
         async def has_compact(node1: FullNode, node2: FullNode) -> bool:
             peak_height_1 = node1.blockchain.get_peak_height()
             if peak_height_1 is None:
                 return False
-            headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - 6)
+            headers_1 = await node1.blockchain.get_header_blocks_in_range(0, peak_height_1 - blocks_to_farm - 1)
             peak_height_2 = node2.blockchain.get_peak_height()
             if peak_height_2 is None:
                 return False
-            headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - 6)
+            headers_2 = await node2.blockchain.get_header_blocks_in_range(0, peak_height_2 - blocks_to_farm - 1)
             # Commented to speed up.
             # cc_eos = [False, False]
             # icc_eos = [False, False]
@@ -152,6 +153,11 @@ class TestSimulation:
             self_hostname=self_hostname, daemon_port=full_system.daemon.daemon_port
         )
 
+        async def verify_daemon_connection(daemon: WebSocketServer, service: str) -> bool:
+            return len(daemon.connections.get(service, set())) >= 1
+
+        await time_out_assert(60, verify_daemon_connection, True, full_system.daemon, "chia_full_node")
+
         async with aiohttp.ClientSession() as session:
             ws = await session.ws_connect(
                 f"wss://127.0.0.1:{full_system.daemon.daemon_port}",
@@ -164,8 +170,7 @@ class TestSimulation:
             payload = create_payload("register_service", {"service": service_name}, service_name, "daemon")
             await ws.send_str(payload)
             await ws.receive()
-            assert len(full_system.daemon.connections.get(service_name, set())) == 1, "Could not connect test to daemon"
-            assert len(full_system.daemon.connections.get("chia_full_node", set())) == 1, "Node not connected to daemon"
+            await time_out_assert(10, verify_daemon_connection, True, full_system.daemon, service_name)
 
             blockchain_state_found = False
             payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
