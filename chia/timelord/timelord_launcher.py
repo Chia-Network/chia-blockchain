@@ -46,7 +46,10 @@ class VDFClientProcessMgr:
             for process in self.active_processes:
                 try:
                     process.kill()
-                except ProcessLookupError:
+                    await process.wait()
+                    # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
+                    process._transport.close()  # type: ignore
+                except (ProcessLookupError, AttributeError):
                     pass
         self.active_processes.clear()
 

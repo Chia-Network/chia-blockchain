@@ -467,7 +467,8 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
             yield
         finally:
             await process_mgr.kill_processes()
-            await vdf_task_1
+            vdf_task_1.cancel()
+            await asyncio.gather(vdf_task_1, return_exceptions=True)
 
 
 # try:
@@ -515,9 +516,10 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
             yield
         finally:
             await process_mgr.kill_processes()
-            await vdf_task_1
-            await vdf_task_2
-            await vdf_task_3
+            vdf_task_1.cancel()
+            vdf_task_2.cancel()
+            vdf_task_3.cancel()
+            await asyncio.gather(vdf_task_1, vdf_task_2, vdf_task_3, return_exceptions=True)
 
 
 # try:
