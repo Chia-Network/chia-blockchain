@@ -20,6 +20,7 @@ from chia.full_node.bundle_tools import (
     simple_solution_generator_backrefs,
 )
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator, CompressorArg
@@ -161,18 +162,18 @@ class TestCompression:
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         removal = sb.coin_spends[0].coin
-        spend_info = get_puzzle_and_solution_for_coin(c, removal, 0)
+        spend_info = get_puzzle_and_solution_for_coin(c, removal, 0, test_constants)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
         # Test non compressed generator as well
         s = simple_solution_generator(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal, 0)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, 0, test_constants)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
 
         # test with backrefs (2.0 hard-fork)
         s = simple_solution_generator_backrefs(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal, ALLOW_BACKREFS)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, test_constants.HARD_FORK_HEIGHT + 1, test_constants)
         assert Program.from_bytes(bytes(spend_info.puzzle)) == Program.from_bytes(
             bytes(sb.coin_spends[0].puzzle_reveal)
         )
