@@ -11,6 +11,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
+from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
 from chia.util.streamable import Streamable, streamable
 
@@ -82,8 +83,7 @@ class SpendInfo(Streamable):
     puzzle: SerializedProgram
     solution: SerializedProgram
 
-@streamable
 @dataclass(frozen=True)
-class CoinSpendWithConditions(Streamable):
+class CoinSpendWithConditions:
     coin_spend: CoinSpend
-    conditions: Program
+    conditions: List[ConditionWithArgs]

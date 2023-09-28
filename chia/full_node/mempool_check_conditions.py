@@ -32,6 +32,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
@@ -186,16 +187,13 @@ def get_spends_for_block_with_conditions(
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
-        _, r = run_chia_program(
-            puzzle.as_bin(),
-            solution.as_bin(),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-            flags,
-        )
         coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
         coin_spend = CoinSpend(coin, puzzle, solution)
-        conditions = Program.to(r)
-        spends.append(CoinSpendWithConditions(coin_spend, conditions))
+        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+        spends.append({
+            "coin_spend": coin_spend,
+            "conditions": [{'opcode': condition.opcode, 'vars': [[var.hex() for var in condition.vars]]} for condition in conditions]
+        })
 
     return spends
 
