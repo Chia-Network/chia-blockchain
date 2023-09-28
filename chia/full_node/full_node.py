@@ -301,11 +301,11 @@ class FullNode:
     async def debug(self) -> None:
         while True:
             with log_exceptions(log=self.log, consume=True):
-                import json
-
                 import objgraph
 
-                oc_data: Dict[str, int] = {
+                DebugData = Dict[str, Union[int, float]]
+
+                oc_data: DebugData = {  # type: ignore[assignment]
                     # name: [peak, delta]
                     name: peak
                     for [name, peak, delta] in objgraph.growth(limit=10_000, shortnames=False)
@@ -313,7 +313,7 @@ class FullNode:
                 }.items()
                 oc_data = dict(
                     sorted(
-                        oc_data,
+                        oc_data.items(),
                         # key=lambda x: [x[1][1], x[0]],
                         key=lambda x: [x[1], x[0]],
                         reverse=True,
@@ -391,7 +391,7 @@ class FullNode:
                     # ["wallet_sync_queue"]
                     # and the coin records list and hints
                 ]
-                lengths: Dict[str, int] = {
+                lengths: DebugData = {
                     "all_tasks": len(asyncio.all_tasks()),
                 }
                 for path in length_attributes:
@@ -399,11 +399,11 @@ class FullNode:
 
                     value = 0
 
-                    o = self
+                    o: object = self
                     for element in path:
                         if element == "<values>":
                             try:
-                                value = sum(len(value) for value in o.values())
+                                value = sum(len(value) for value in o.values())  # type: ignore[attr-defined,misc]
                             except TypeError as e:
                                 raise Exception(f"Could not get length of {name}") from e
                             break
@@ -414,56 +414,30 @@ class FullNode:
                             break
                     else:
                         try:
-                            value = len(o)
+                            value = len(o)  # type: ignore[arg-type]
                         except TypeError as e:
                             raise Exception(f"Could not get length of {name}") from e
 
                     lengths[name] = value
 
-                # lengths: Dict[str, int] = {
-                #     "all_tasks": len(asyncio.all_tasks()),
-                #     "FullNode.pow_creation": len(self.pow_creation),
-                #     "FullNode.sync_store.peak_to_peer": len(self.sync_store.peak_to_peer),
-                #     "FullNode.sync_store.peak_to_peer-sets": sum(len(peers) for peers in self.sync_store.peak_to_peer.values()),
-                #     "FullNode.sync_store.peer_to_peak": len(self.sync_store.peer_to_peak),
-                #     "FullNode.sync_store.batch_syncing": len(self.sync_store.batch_syncing),
-                #     "FullNode.sync_store.backtrack_syncing": len(self.sync_store.backtrack_syncing),
-                #     "FullNode.signage_point_times": len(self.signage_point_times),
-                #     "FullNode.full_node_store": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                #     "FullNode.": len(self.),
-                # }
-
-                sql_data: Dict[str, int] = {}
+                sql_data: DebugData = {}
                 if hasattr(sqlite3, "status"):
                     metrics = {
-                        "memory_used": sqlite3.SQLITE_STATUS_MEMORY_USED,
-                        "pagecache_used": sqlite3.SQLITE_STATUS_PAGECACHE_USED,
-                        "pagecache_overflow": sqlite3.SQLITE_STATUS_PAGECACHE_OVERFLOW,
-                        "scratch_used": sqlite3.SQLITE_STATUS_SCRATCH_USED,
-                        "scratch_overflow": sqlite3.SQLITE_STATUS_SCRATCH_OVERFLOW,
-                        "malloc_size": sqlite3.SQLITE_STATUS_MALLOC_SIZE,
-                        "parser_stack": sqlite3.SQLITE_STATUS_PARSER_STACK,
-                        "pagecache_size": sqlite3.SQLITE_STATUS_PAGECACHE_SIZE,
-                        "scratch_size": sqlite3.SQLITE_STATUS_SCRATCH_SIZE,
-                        "malloc_count": sqlite3.SQLITE_STATUS_MALLOC_COUNT,
+                        "memory_used": sqlite3.SQLITE_STATUS_MEMORY_USED,  # type: ignore[attr-defined]
+                        "pagecache_used": sqlite3.SQLITE_STATUS_PAGECACHE_USED,  # type: ignore[attr-defined]
+                        "pagecache_overflow": sqlite3.SQLITE_STATUS_PAGECACHE_OVERFLOW,  # type: ignore[attr-defined]
+                        "scratch_used": sqlite3.SQLITE_STATUS_SCRATCH_USED,  # type: ignore[attr-defined]
+                        "scratch_overflow": sqlite3.SQLITE_STATUS_SCRATCH_OVERFLOW,  # type: ignore[attr-defined]
+                        "malloc_size": sqlite3.SQLITE_STATUS_MALLOC_SIZE,  # type: ignore[attr-defined]
+                        "parser_stack": sqlite3.SQLITE_STATUS_PARSER_STACK,  # type: ignore[attr-defined]
+                        "pagecache_size": sqlite3.SQLITE_STATUS_PAGECACHE_SIZE,  # type: ignore[attr-defined]
+                        "scratch_size": sqlite3.SQLITE_STATUS_SCRATCH_SIZE,  # type: ignore[attr-defined]
+                        "malloc_count": sqlite3.SQLITE_STATUS_MALLOC_COUNT,  # type: ignore[attr-defined]
                     }
                     for name, value in metrics.items():
                         sql_data[name] = sqlite3.status(value, False)
 
-                data_groups: Dict[str, Dict[str, float]] = {
+                data_groups: Dict[str, DebugData] = {
                     "oc": oc_data,
                     "len": lengths,
                     "sql": sql_data,
