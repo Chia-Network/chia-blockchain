@@ -530,10 +530,7 @@ class FullNode:
         """
         # Don't trigger multiple batch syncs to the same peer
 
-        if (
-            peer.peer_node_id in self.sync_store.backtrack_syncing
-            and self.sync_store.backtrack_syncing[peer.peer_node_id] > 0
-        ):
+        if self.sync_store.is_backtrack_syncing(node_id=peer.peer_node_id):
             return True  # Don't batch sync, we are already in progress of a backtrack sync
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
@@ -614,9 +611,7 @@ class FullNode:
             True iff we found the fork point, and we do not need to long sync.
         """
         try:
-            if peer.peer_node_id not in self.sync_store.backtrack_syncing:
-                self.sync_store.backtrack_syncing[peer.peer_node_id] = 0
-            self.sync_store.backtrack_syncing[peer.peer_node_id] += 1
+            self.sync_store.increment_backtrack_syncing(node_id=peer.peer_node_id)
 
             unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
             curr_height: int = target_height
@@ -645,10 +640,10 @@ class FullNode:
                 for block in reversed(blocks):
                     await self.add_block(block, peer)
         except (asyncio.CancelledError, Exception):
-            self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
+            self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
             raise
 
-        self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
+        self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
         return found_fork_point
 
     async def _refresh_ui_connections(self, sleep_before: float = 0) -> None:
