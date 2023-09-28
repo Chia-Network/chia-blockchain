@@ -305,12 +305,12 @@ class FullNode:
 
                 DebugData = Dict[str, Union[int, float]]
 
-                oc_data: DebugData = {  # type: ignore[assignment]
+                oc_data: DebugData = {
                     # name: [peak, delta]
                     name: peak
                     for [name, peak, delta] in objgraph.growth(limit=10_000, shortnames=False)
                     if name.startswith("chia.")
-                }.items()
+                }
                 oc_data = dict(
                     sorted(
                         oc_data.items(),
