@@ -390,6 +390,9 @@ class FullNode:
                     ["bad_peak_cache"],
                     # ["wallet_sync_queue"]
                     # and the coin records list and hints
+                    ["_server", "all_connections"],
+                    ["_server", "introducer_peers", "_peers"],
+                    ["_server", "banned_peers"],
                 ]
                 lengths: DebugData = {
                     "all_tasks": len(asyncio.all_tasks()),
