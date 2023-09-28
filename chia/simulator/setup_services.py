@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-
-# import functools
 import gc
 import logging
 import signal
@@ -55,9 +53,6 @@ from chia.util.lock import Lockfile
 from chia.util.misc import SignalHandlers
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-
-# import anyio
-
 
 log = logging.getLogger(__name__)
 
@@ -471,19 +466,6 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
             await asyncio.gather(vdf_task_1, return_exceptions=True)
 
 
-# try:
-#     async with anyio.create_task_group() as tg:
-#         await tg.start(
-#             functools.partial(
-#                 spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-#             )
-#         )
-
-#         yield
-# finally:
-#     await process_mgr.kill_processes()
-
-
 @asynccontextmanager
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
     find_vdf_client()  # raises FileNotFoundError if not found
@@ -520,32 +502,6 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
             vdf_task_2.cancel()
             vdf_task_3.cancel()
             await asyncio.gather(vdf_task_1, vdf_task_2, vdf_task_3, return_exceptions=True)
-
-
-# try:
-#     async with anyio.create_task_group() as tg:
-#         await tg.start(
-#             functools.partial(
-#                 spawn_process, self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-#             ),
-#             name="vdf_client_1",
-#         )
-#         await tg.start(
-#             functools.partial(
-#                 spawn_process, self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-#             ),
-#             name="vdf_client_2",
-#         )
-#         await tg.start(
-#             functools.partial(
-#                 spawn_process, self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)
-#             ),
-#             name="vdf_client_3",
-#         )
-
-#         yield
-# finally:
-#     await process_mgr.kill_processes()
 
 
 @asynccontextmanager
