@@ -318,8 +318,8 @@ async def setup_full_system(
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_full_system_inner(
             b_tools, b_tools_1, False, consensus_constants, db_version, keychain1, keychain2, shared_b_tools
-        ) as ret:
-            yield ret
+        ) as full_system:
+            yield full_system
 
 
 @asynccontextmanager
@@ -434,7 +434,7 @@ async def setup_full_system_inner(
 
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
-        ret = FullSystem(
+        full_system = FullSystem(
             node_1=node_1,
             node_2=node_2,
             harvester=harvester,
@@ -444,4 +444,4 @@ async def setup_full_system_inner(
             timelord_bluebox=timelord_bluebox_service,
             daemon=daemon_ws,
         )
-        yield ret
+        yield full_system

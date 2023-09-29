@@ -957,8 +957,8 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt, get_b_tools):
-    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as ret:
-        yield ret, get_b_tools
+    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as full_system:
+        yield full_system, get_b_tools
 
 
 HarvesterFarmerEnvironment = Tuple[
