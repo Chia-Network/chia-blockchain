@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from types import FrameType
 from typing import Any, Dict, List, Optional
 
-import anyio
 import pkg_resources
 
 from chia.util.chia_logging import initialize_logging
@@ -48,10 +47,11 @@ class VDFClientProcessMgr:
                     process.kill()
                     await process.wait()
                     # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
-                    process._transport.close()  # type: ignore
+                    # https://github.com/python/cpython/issues/88050
+                    process._transport.close()  # type: ignore [attr-defined]
                 except (ProcessLookupError, AttributeError):
                     pass
-        self.active_processes.clear()
+            self.active_processes.clear()
 
 
 def find_vdf_client() -> pathlib.Path:
@@ -68,13 +68,10 @@ async def spawn_process(
     process_mgr: VDFClientProcessMgr,
     *,
     prefer_ipv6: bool,
-    task_status: Optional[anyio.abc.TaskStatus[None]] = None,
 ):
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
     start_time = time.time()
-    if task_status is not None:
-        task_status.started()
     while not process_mgr.stopped:
         try:
             dirname = path_to_vdf_client.parent
@@ -127,7 +124,7 @@ async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFCl
 
 
 async def async_main(config: Dict[str, Any], net_config: Dict[str, Any]) -> None:
-    process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
+    process_mgr = VDFClientProcessMgr()
 
     async def stop(
         signal_: signal.Signals,

@@ -443,7 +443,7 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
 @asynccontextmanager
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
     find_vdf_client()  # raises FileNotFoundError if not found
-    process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
+    process_mgr = VDFClientProcessMgr()
     vdf_task_1 = asyncio.create_task(
         spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
         name="vdf_client_1",
@@ -470,7 +470,7 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> AsyncIterator[None]:
     find_vdf_client()  # raises FileNotFoundError if not found
 
-    process_mgr = VDFClientProcessMgr(asyncio.Lock(), False, [])
+    process_mgr = VDFClientProcessMgr()
     vdf_task_1 = asyncio.create_task(
         spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
         name="vdf_client_1",

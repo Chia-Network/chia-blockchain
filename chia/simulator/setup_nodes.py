@@ -4,7 +4,7 @@ import logging
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer
@@ -52,14 +52,14 @@ SimulatorsAndWalletsServices = Tuple[
 
 @dataclass(frozen=True)
 class FullSystem:
-    node_1: Service[FullNode, FullNodeAPI] | Service[FullNode, FullNodeSimulator]
-    node_2: Service[FullNode, FullNodeAPI] | Service[FullNode, FullNodeSimulator]
+    node_1: Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]]
+    node_2: Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]]
     harvester: Harvester
     farmer: Farmer
     introducer: IntroducerAPI
     timelord: Service[Timelord, TimelordAPI]
     timelord_bluebox: Service[Timelord, TimelordAPI]
-    daemon: Optional[WebSocketServer]
+    daemon: WebSocketServer
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:
@@ -435,13 +435,13 @@ async def setup_full_system_inner(
         await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
         ret = FullSystem(
-            node_1,
-            node_2,
-            harvester,
-            farmer_service._node,
-            introducer,
-            timelord,
-            timelord_bluebox_service,
-            daemon_ws,
+            node_1=node_1,
+            node_2=node_2,
+            harvester=harvester,
+            farmer=farmer_service._node,
+            introducer=introducer,
+            timelord=timelord,
+            timelord_bluebox=timelord_bluebox_service,
+            daemon=daemon_ws,
         )
         yield ret
