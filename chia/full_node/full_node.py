@@ -380,7 +380,6 @@ class FullNode:
                     ["_blockchain", "_heights_in_cache"],
                     ["_blockchain", "_heights_in_cache", "<values>"],
                     ["_blockchain", "_height_map", "_sub_epoch_summaries"],
-                    ["_blockchain", "coin_store", "coins_added_at_height_cache", "cache", "<values>"],
                     # ["_blockchain", "block_store", "block_cache", "cache"],
                     # ["_blockchain", "block_store", "ses_challenge_cache", "cache"],
                     # ["_blockchain", "block_store", "ses_challenge_cache", "cache", "<values>"],
