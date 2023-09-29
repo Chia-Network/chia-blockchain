@@ -2436,6 +2436,15 @@ async def test_sign_message_by_secp(wallet_rpc_environment: WalletRpcTestEnviron
             "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
             "message": "aaa",
             "is_hex": False,
+            "beta": False,
+        }
+    )
+    assert not res["success"]
+    res = await api.beta_sign_message_by_secp(
+        {
+            "private_key": "5ddd05fda5bd88b81cdf922d2550398f6cb027277ad14fd5ac8578c76b8b0d4d",
+            "message": "aaa",
+            "is_hex": False,
             "beta": True,
         }
     )
