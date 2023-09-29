@@ -19,7 +19,7 @@ dependencies = [
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.5",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
-    "bitstring==4.0.2",  # Binary data management library
+    "bitstring==4.1.2",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
