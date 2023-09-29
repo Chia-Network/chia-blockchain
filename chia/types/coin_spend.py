@@ -83,6 +83,7 @@ class SpendInfo(Streamable):
     puzzle: SerializedProgram
     solution: SerializedProgram
 
+
 @dataclass(frozen=True)
 class CoinSpendWithConditions:
     coin_spend: CoinSpend
@@ -92,8 +93,11 @@ class CoinSpendWithConditions:
     def from_json_dict(dict: Dict[str, Any]) -> CoinSpendWithConditions:
         return CoinSpendWithConditions(
             CoinSpend.from_json_dict(dict["coin_spend"]),
-            [ConditionWithArgs(
-                ConditionOpcode(bytes.fromhex(condition["opcode"][2:])),
-                [bytes.fromhex(var) for var in condition["vars"]]
-            ) for condition in dict["conditions"]]
+            [
+                ConditionWithArgs(
+                    ConditionOpcode(bytes.fromhex(condition["opcode"][2:])),
+                    [bytes.fromhex(var) for var in condition["vars"]],
+                )
+                for condition in dict["conditions"]
+            ],
         )
