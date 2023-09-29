@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import signal
+import sys
 import time
 from dataclasses import dataclass, field
 from types import FrameType
@@ -46,9 +47,10 @@ class VDFClientProcessMgr:
                 try:
                     process.kill()
                     await process.wait()
-                    # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
-                    # https://github.com/python/cpython/issues/88050
-                    process._transport.close()  # type: ignore [attr-defined]
+                    if sys.version_info < (3, 11, 1):
+                        # hack to avoid `Event loop is closed` errors (fixed in python 3.11.1)
+                        # https://github.com/python/cpython/issues/88050
+                        process._transport.close()  # type: ignore [attr-defined]
                 except (ProcessLookupError, AttributeError):
                     pass
             self.active_processes.clear()
@@ -58,7 +60,7 @@ def find_vdf_client() -> pathlib.Path:
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
     if p.is_file():
         return p
-    raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed?")
+    raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh")
 
 
 async def spawn_process(
