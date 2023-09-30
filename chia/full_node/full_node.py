@@ -442,7 +442,9 @@ class FullNode:
                     for name, value in metrics.items():
                         sql_data[name] = sqlite3.status(value, False)
 
-                task_data: DebugData = {name: value for name, value in self.task_dict.items()}
+                task_data: DebugData = {
+                    name: value for name, value in sorted(self.task_dict.items(), key=lambda x: x[0].split("_"))
+                }
 
                 data_groups: Dict[str, DebugData] = {
                     "oc": oc_data,
