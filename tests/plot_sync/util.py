@@ -28,6 +28,9 @@ class WSChiaConnectionDummy:
     async def send_message(self, message: Message) -> None:
         self.last_sent_message = message
 
+    def get_peer_logging(self) -> PeerInfo:
+        return self.peer_info
+
 
 def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnectionDummy:
     return WSChiaConnectionDummy(node_type, peer_id)
