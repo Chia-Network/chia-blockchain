@@ -16,7 +16,6 @@ from chia.pools.pool_puzzles import (
     create_travel_spend,
     create_waiting_room_inner_puzzle,
     get_delayed_puz_info_from_launcher_spend,
-    get_most_recent_singleton_coin_from_coin_spend,
     get_pubkey_from_member_inner_puzzle,
     get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle,
     is_pool_singleton_inner_puzzle,
@@ -39,6 +38,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.singleton import get_most_recent_singleton_coin_from_coin_spend
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 from tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from tests.util.key_tool import KeyTool
