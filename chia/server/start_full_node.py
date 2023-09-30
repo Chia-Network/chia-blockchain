@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import collections
+import inspect
 import logging
 import os
 import pathlib
 import sys
-import traceback
 from multiprocessing import freeze_support
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -91,7 +92,7 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
         overrides["PLOT_FILTER_32_HEIGHT"] = 13056556
 
 
-async def async_main(service_config: Dict[str, Any]) -> int:
+async def async_main(service_config: Dict[str, Any], task_dict: collections.defaultdict[str, int]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config[SERVICE_NAME] = service_config
@@ -101,6 +102,7 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
+    service._node.task_dict = task_dict
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
@@ -123,14 +125,38 @@ def main() -> int:
 
         original_create_task = asyncio.create_task
 
-        def create_task(*args: object, **kwargs: object) -> object:
-            s = "".join(traceback.format_stack())
-            log.debug(f"create_task debug:\n    {args}\n    {kwargs}\n{s}")
-            return original_create_task(*args, **kwargs)  # type: ignore[arg-type]
+        def create_task(coro: Any, *args: object, **kwargs: object) -> object:
+            # s = "".join(traceback.format_stack())
+            # log.debug(f"create_task debug:\n    {args}\n    {kwargs}\n{s}")
+            import chia
+
+            root = pathlib.Path(chia.__file__).parent.parent
+
+            stack = inspect.stack()
+            try:
+                f = stack[1]
+                try:
+                    path = pathlib.Path(f.filename).relative_to(root)
+                    name = f"{str(path).replace('/', '.').replace('.py', '')}_{f.lineno}_{f.function}"
+                finally:
+                    del f
+            finally:
+                del stack
+
+            async def wrapper() -> Any:
+                task_dict[name] += 1
+                try:
+                    return await coro
+                finally:
+                    task_dict[name] -= 1
+
+            return original_create_task(wrapper(), *args, **kwargs)  # type: ignore[arg-type]
 
         asyncio.create_task = create_task  # type: ignore[assignment]
 
-        return async_run(coro=async_main(service_config), connection_limit=target_peer_count)
+        task_dict: collections.defaultdict[str, int] = collections.defaultdict(lambda: 0)
+
+        return async_run(coro=async_main(service_config, task_dict=task_dict), connection_limit=target_peer_count)
 
 
 if __name__ == "__main__":

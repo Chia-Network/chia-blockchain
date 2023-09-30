@@ -138,6 +138,7 @@ class FullNode:
     bad_peak_cache: Dict[bytes32, uint32]  # hashes of peaks that failed long sync on chip13 Validation
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
     wallet_sync_task: Optional[asyncio.Task[None]]
+    task_dict: Dict[str, int]
 
     @property
     def server(self) -> ChiaServer:
@@ -203,6 +204,7 @@ class FullNode:
         self.bad_peak_cache = {}
         self.wallet_sync_queue = asyncio.Queue()
         self.wallet_sync_task = None
+        self.task_dict = {}
 
     @property
     def block_store(self) -> BlockStore:
@@ -440,10 +442,13 @@ class FullNode:
                     for name, value in metrics.items():
                         sql_data[name] = sqlite3.status(value, False)
 
+                task_data: DebugData = {name: value for name, value in self.task_dict.items()}
+
                 data_groups: Dict[str, DebugData] = {
                     "oc": oc_data,
                     "len": lengths,
                     "sql": sql_data,
+                    "tasks": task_data,
                 }
 
                 final_data: Dict[str, float] = {
