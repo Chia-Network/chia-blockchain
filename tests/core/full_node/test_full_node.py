@@ -12,6 +12,7 @@ import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node import WalletUpdate
@@ -55,6 +56,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.misc import to_batches
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.transaction_record import TransactionRecord
@@ -66,6 +68,7 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.plot_sync.util import get_dummy_connection
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -2106,3 +2109,56 @@ async def test_wallet_sync_task_failure(
     assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" not in caplog.text
     assert not full_node.wallet_sync_task.done()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("light_blocks", [True, False])
+async def test_long_reorg(
+    light_blocks: bool,
+    one_node_one_block,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+):
+    node, server, bt = one_node_one_block
+
+    fork_point = 499
+    blocks = default_10000_blocks[:1600]
+
+    if light_blocks:
+        reorg_blocks = test_long_reorg_blocks_light[:2000]
+    else:
+        reorg_blocks = test_long_reorg_blocks[:1500]
+
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await node.full_node.add_block_batch(block_batch.entries, get_dummy_connection(NodeType.FULL_NODE), None)
+
+    peak = node.full_node.blockchain.get_peak()
+    chain_1_height = peak.height
+    chain_1_weight = peak.weight
+
+    assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
+    assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
+
+    node.full_node.blockchain.clean_block_records()
+
+    fork_info: Optional[ForkInfo] = None
+    for b in reorg_blocks:
+        if (b.height % 128) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        if b.height > fork_point and fork_info is None:
+            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
+        await node.full_node.add_block(b, fork_info=fork_info)
+
+    # if these asserts fires, there was no reorg
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.weight > chain_1_weight
+
+    if light_blocks:
+        assert peak.height > chain_1_height
+    else:
+        assert peak.height < chain_1_height
