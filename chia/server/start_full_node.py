@@ -121,9 +121,12 @@ def main() -> int:
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
 
+        original_create_task = asyncio.create_task
+
         def create_task(*args: object, **kwargs: object) -> object:
-            log.debug(f"create_task debug:\n    {args}\n    {kwargs}\n{traceback.format_stack()}")
-            return asyncio.create_task(*args, **kwargs)  # type: ignore[arg-type]
+            s = "".join(traceback.format_stack())
+            log.debug(f"create_task debug:\n    {args}\n    {kwargs}\n{s}")
+            return original_create_task(*args, **kwargs)  # type: ignore[arg-type]
 
         asyncio.create_task = create_task  # type: ignore[assignment]
 
