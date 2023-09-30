@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import pathlib
 import sys
+import traceback
 from multiprocessing import freeze_support
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -118,6 +120,13 @@ def main() -> int:
             target_peer_count = None
         if not service_config.get("use_chia_loop_policy", True):
             target_peer_count = None
+
+        def create_task(*args: object, **kwargs: object) -> object:
+            log.debug(f"create_task debug:\n    {args}\n    {kwargs}\n{traceback.format_stack()}")
+            return asyncio.create_task(*args, **kwargs)  # type: ignore[arg-type]
+
+        asyncio.create_task = create_task  # type: ignore[assignment]
+
         return async_run(coro=async_main(service_config), connection_limit=target_peer_count)
 
 
