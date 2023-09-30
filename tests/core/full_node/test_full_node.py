@@ -2111,3 +2111,38 @@ async def test_wallet_sync_task_failure(
     assert "update_wallets - fork_height: 10, peak_height: 0" in caplog.text
     assert "Wallet sync task failure" not in caplog.text
     assert not full_node.wallet_sync_task.done()
+
+
+@pytest.mark.asyncio
+async def test_long_reorg(one_node_one_block, default_10000_blocks, test_long_reorg_blocks, consensus_mode):
+    node, server, bt = one_node_one_block
+
+    fork_point = 499
+    blocks = default_10000_blocks[:2000]
+
+    for block in blocks[:2000]:
+        if (block.height % 100) == 0:
+            print(f"main chain: {block.height:4} weight: {block.weight}")
+        await node.full_node.add_block(block)
+
+    peak = node.full_node.blockchain.get_peak()
+    chain_1_height = peak.height
+    chain_1_weight = peak.weight
+
+    assert test_long_reorg_blocks[fork_point] == default_10000_blocks[fork_point]
+    assert test_long_reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
+
+    for reorg_block in test_long_reorg_blocks[:1500]:
+        if (reorg_block.height % 100) == 0:
+            peak = node.full_node.blockchain.get_peak()
+            print(
+                f"reorg chain: {reorg_block.height:4} "
+                f"weight: {reorg_block.weight:7} "
+                f"peak: {str(peak.header_hash)[:6]}"
+            )
+        await node.full_node.add_block(reorg_block)
+
+    # if these asserts fires, there was no reorg
+    peak = node.full_node.blockchain.get_peak()
+    assert peak.weight > chain_1_weight
+    assert peak.height < chain_1_height
