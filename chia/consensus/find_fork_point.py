@@ -25,18 +25,38 @@ async def find_fork_point_in_chain(
     Returns -1 if chains have no common ancestor
     * assumes the fork point is loaded in blocks
     """
-    while block_2.height > 0 or block_1.height > 0:
-        if block_2.height > block_1.height:
-            block_2 = unwrap(await blocks.get_block_record_from_db(block_2.prev_hash))
-        elif block_1.height > block_2.height:
-            block_1 = unwrap(await blocks.get_block_record_from_db(block_1.prev_hash))
-        else:
-            if block_2.header_hash == block_1.header_hash:
-                return block_2.height
-            block_2 = unwrap(await blocks.get_block_record_from_db(block_2.prev_hash))
-            block_1 = unwrap(await blocks.get_block_record_from_db(block_1.prev_hash))
+    height_1 = int(block_1.height)
+    height_2 = int(block_2.height)
+    bh_1 = block_1.header_hash
+    bh_2 = block_2.header_hash
 
-    if block_2 != block_1:
+    # special case for first level, since we actually already know the previous
+    # hash
+    if height_1 > height_2:
+        bh_1 = block_1.prev_hash
+        height_1 -= 1
+    elif height_2 > height_1:
+        bh_2 = block_2.prev_hash
+        height_2 -= 1
+
+    while height_1 > height_2:
+        [bh_1] = await blocks.prev_block_hash([bh_1])
+        height_1 -= 1
+
+    while height_2 > height_1:
+        [bh_2] = await blocks.prev_block_hash([bh_2])
+        height_2 -= 1
+
+    assert height_1 == height_2
+
+    height = height_2
+    while height > 0:
+        if bh_1 == bh_2:
+            return height
+        [bh_1, bh_2] = await blocks.prev_block_hash([bh_1, bh_2])
+        height -= 1
+
+    if bh_2 != bh_1:
         # All blocks are different
         return -1
 
