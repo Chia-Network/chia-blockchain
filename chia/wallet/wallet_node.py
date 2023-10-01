@@ -283,7 +283,6 @@ class WalletNode:
             "trade_record_times",
             "tx_times",
             "pool_state_transitions",
-            "singletons",
             "singleton_records",
             "mirrors",
             "launchers",
