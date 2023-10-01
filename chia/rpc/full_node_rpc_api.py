@@ -11,7 +11,11 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin, get_spends_for_block
+from chia.full_node.mempool_check_conditions import (
+    get_puzzle_and_solution_for_coin,
+    get_spends_for_block,
+    get_spends_for_block_with_conditions,
+)
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits
@@ -93,6 +97,7 @@ class FullNodeRpcApi:
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
             "/get_block_spends": self.get_block_spends,
+            "/get_block_spends_with_conditions": self.get_block_spends_with_conditions,
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
@@ -478,9 +483,38 @@ class FullNodeRpcApi:
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
-        spends = get_spends_for_block(block_generator)
+        spends = get_spends_for_block(block_generator, full_block.height, self.service.constants)
 
         return {"block_spends": spends}
+
+    async def get_block_spends_with_conditions(self, request: Dict[str, Any]) -> EndpointResult:
+        if "header_hash" not in request:
+            raise ValueError("No header_hash in request")
+        header_hash = bytes32.from_hexstr(request["header_hash"])
+        full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+        if full_block is None:
+            raise ValueError(f"Block {header_hash.hex()} not found")
+
+        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        if block_generator is None:  # if block is not a transaction block.
+            return {"block_spends_with_conditions": []}
+
+        spends_with_conditions = get_spends_for_block_with_conditions(
+            block_generator, full_block.height, self.service.constants
+        )
+
+        return {
+            "block_spends_with_conditions": [
+                {
+                    "coin_spend": spend_with_conditions.coin_spend,
+                    "conditions": [
+                        {"opcode": condition.opcode, "vars": [var.hex() for var in condition.vars]}
+                        for condition in spend_with_conditions.conditions
+                    ],
+                }
+                for spend_with_conditions in spends_with_conditions
+            ]
+        }
 
     async def get_block_record_by_height(self, request: Dict[str, Any]) -> EndpointResult:
         if "height" not in request:

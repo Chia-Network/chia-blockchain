@@ -7,7 +7,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -205,6 +205,17 @@ class FullNodeRpcClient(RpcClient):
             for block_spend in response["block_spends"]:
                 block_spends.append(CoinSpend.from_json_dict(block_spend))
             return block_spends
+        except Exception:
+            return None
+
+    async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[List[CoinSpendWithConditions]]:
+        try:
+            response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
+            block_spends: List[CoinSpendWithConditions] = []
+            for block_spend in response["block_spends_with_conditions"]:
+                block_spends.append(CoinSpendWithConditions.from_json_dict(block_spend))
+            return block_spends
+
         except Exception:
             return None
 
