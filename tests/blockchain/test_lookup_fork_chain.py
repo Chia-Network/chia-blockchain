@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Dict, List
 
 import pytest
 
 from benchmarks.utils import rand_hash
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.find_fork_point import lookup_fork_chain
+from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 
@@ -62,11 +64,26 @@ test_chain: BlockchainInterface = dummy_chain  # type: ignore[assignment]
 #       G
 
 
+@dataclass
+class FakeBlockRecord:
+    height: uint32
+    header_hash: bytes32
+    prev_hash: bytes32
+
+
+def BR(height: int, header_hash: bytes32, prev_hash: bytes32) -> BlockRecord:
+    ret = FakeBlockRecord(uint32(height), header_hash, prev_hash)
+    return ret  # type: ignore[return-value]
+
+
 @pytest.mark.asyncio
 async def test_no_fork() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(42), A), (uint32(42), A))
     assert chain == {}
     assert fork_hash == A
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(42, A, B), BR(42, A, B))
+    assert fork_height == 42
 
 
 @pytest.mark.asyncio
@@ -75,12 +92,18 @@ async def test_fork_left() -> None:
     assert chain == {uint32(40): E, uint32(41): F}
     assert fork_hash == D
 
+    fork_height = await find_fork_point_in_chain(test_chain, BR(42, A, B), BR(41, F, E))
+    assert fork_height == 39
+
 
 @pytest.mark.asyncio
 async def test_fork_left_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(41), B), (uint32(41), F))
     assert chain == {uint32(40): E, uint32(41): F}
     assert fork_hash == D
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(41, B, C), BR(41, F, E))
+    assert fork_height == 39
 
 
 @pytest.mark.asyncio
@@ -89,12 +112,18 @@ async def test_fork_right() -> None:
     assert chain == {uint32(40): C, uint32(41): B, uint32(42): A}
     assert fork_hash == D
 
+    fork_height = await find_fork_point_in_chain(test_chain, BR(41, F, E), BR(42, A, B))
+    assert fork_height == 39
+
 
 @pytest.mark.asyncio
 async def test_fork_right_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(41), F), (uint32(41), B))
     assert chain == {uint32(40): C, uint32(41): B}
     assert fork_hash == D
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(41, F, E), BR(41, B, C))
+    assert fork_height == 39
 
 
 @pytest.mark.asyncio
@@ -103,12 +132,18 @@ async def test_linear_long() -> None:
     assert chain == {uint32(40): C, uint32(41): B, uint32(42): A}
     assert fork_hash == D
 
+    fork_height = await find_fork_point_in_chain(test_chain, BR(39, D, G), BR(42, A, B))
+    assert fork_height == 39
+
 
 @pytest.mark.asyncio
 async def test_linear_short() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(42), A), (uint32(39), D))
     assert chain == {}
     assert fork_hash == D
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(42, A, B), BR(39, D, G))
+    assert fork_height == 39
 
 
 @pytest.mark.asyncio
@@ -117,12 +152,18 @@ async def test_no_shared_left() -> None:
     assert chain == {uint32(0): C, uint32(1): B}
     assert fork_hash == bytes32([0] * 32)
 
+    fork_height = await find_fork_point_in_chain(test_chain, BR(1, F, E), BR(1, B, C))
+    assert fork_height == -1
+
 
 @pytest.mark.asyncio
 async def test_no_shared_right() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(1), B), (uint32(1), F))
     assert chain == {uint32(0): E, uint32(1): F}
     assert fork_hash == bytes32([0] * 32)
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(1, B, C), BR(1, F, E))
+    assert fork_height == -1
 
 
 @pytest.mark.asyncio
@@ -131,9 +172,15 @@ async def test_root_shared_left() -> None:
     assert chain == {uint32(1): C, uint32(2): B}
     assert fork_hash == D
 
+    fork_height = await find_fork_point_in_chain(test_chain, BR(2, F, E), BR(2, B, C))
+    assert fork_height == 0
+
 
 @pytest.mark.asyncio
 async def test_root_shared_right() -> None:
     chain, fork_hash = await lookup_fork_chain(test_chain, (uint32(2), B), (uint32(2), F))
     assert chain == {uint32(1): E, uint32(2): F}
     assert fork_hash == D
+
+    fork_height = await find_fork_point_in_chain(test_chain, BR(2, B, C), BR(2, F, E))
+    assert fork_height == 0
