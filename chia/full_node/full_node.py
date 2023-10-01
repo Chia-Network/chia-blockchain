@@ -365,7 +365,7 @@ class FullNode:
                     ["subscriptions", "_peer_sub_counter"],
                     ["_transaction_queue", "_index_to_peer_map"],
                     ["_transaction_queue", "_queue_dict"],
-                    ["_transaction_queue", "_queue_dict", "<values>"],
+                    # ["_transaction_queue", "_queue_dict", "<values>"],
                     # ["_transaction_queue", "_high_priority_queue"],
                     ["transaction_responses"],
                     ["_block_store", "block_cache", "cache"],
