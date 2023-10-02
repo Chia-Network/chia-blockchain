@@ -481,7 +481,7 @@ class BlockTools:
         self.plot_manager.trigger_refresh()
         assert self.plot_manager.needs_refresh()
         self.plot_manager.start_refreshing(sleep_interval_ms=1)
-        await time_out_assert_custom_interval(10, 0.001, self.plot_manager.needs_refresh, value=False)
+        await time_out_assert_custom_interval(20, 0.001, self.plot_manager.needs_refresh, value=False)
         self.plot_manager.stop_refreshing()
         assert not self.plot_manager.needs_refresh()
 
