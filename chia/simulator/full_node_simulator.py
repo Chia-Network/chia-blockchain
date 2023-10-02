@@ -32,7 +32,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
-# CI test 02
+# CI test 03
 
 
 class _Default:
