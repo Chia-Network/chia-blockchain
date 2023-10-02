@@ -61,6 +61,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
+from tests.util.misc import BenchmarkRunner
 
 multiprocessing.set_start_method("spawn")
 
@@ -77,6 +78,12 @@ def seeded_random_fixture() -> random.Random:
     seeded_random = random.Random()
     seeded_random.seed(a=0, version=2)
     return seeded_random
+
+
+@pytest.fixture(name="benchmark_runner")
+def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+    label = request.node.name
+    return BenchmarkRunner(label=label)
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -335,10 +342,15 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
+    all_error_lines: List[str] = []
     limit_consensus_modes_problems: List[str] = []
     for item in items:
         limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
@@ -364,8 +376,25 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         items[:] = kept
 
     if len(limit_consensus_modes_problems) > 0:
-        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
-        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
+        all_error_lines.append("@pytest.mark.limit_consensus_modes used without consensus_mode:")
+        all_error_lines.extend(f"    {line}" for line in limit_consensus_modes_problems)
+
+    benchmark_problems: List[str] = []
+    for item in items:
+        existing_benchmark_mark = item.get_closest_marker("benchmark")
+        if existing_benchmark_mark is not None:
+            benchmark_problems.append(item.name)
+
+        if "benchmark_runner" in getattr(item, "fixturenames", ()):
+            item.add_marker("benchmark")
+
+    if len(benchmark_problems) > 0:
+        all_error_lines.append("use the benchmark_runner fixture, not @pytest.mark.benchmark:")
+        all_error_lines.extend(f"    {line}" for line in benchmark_problems)
+
+    if len(all_error_lines) > 0:
+        all_error_lines.insert(0, "custom chia collection rules failed")
+        raise Exception("\n".join(all_error_lines))
 
 
 @pytest_asyncio.fixture(scope="function")

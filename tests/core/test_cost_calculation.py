@@ -20,7 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner
 
 from .make_block_generator import make_block_generator
 
@@ -201,13 +201,12 @@ class TestCostCalculation:
         assert npc_result.error is None
 
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_tx_generator_speed(self, request, softfork_height):
+    async def test_tx_generator_speed(self, softfork_height, benchmark_runner: BenchmarkRunner):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
-        with assert_runtime(seconds=0.5, label=request.node.name):
+        with benchmark_runner.assert_runtime(seconds=0.5):
             generator = BlockGenerator(program, [], [])
             npc_result = get_name_puzzle_conditions(
                 generator,
@@ -218,6 +217,7 @@ class TestCostCalculation:
             )
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
 
     @pytest.mark.asyncio
@@ -252,8 +252,7 @@ class TestCostCalculation:
         assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_standard_tx(self, request: pytest.FixtureRequest):
+    async def test_standard_tx(self, benchmark_runner: BenchmarkRunner):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
@@ -269,7 +268,7 @@ class TestCostCalculation:
             p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         )
 
-        with assert_runtime(seconds=0.1, label=request.node.name):
+        with benchmark_runner.assert_runtime(seconds=0.1):
             total_cost = 0
             for i in range(0, 1000):
                 cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
@@ -277,8 +276,7 @@ class TestCostCalculation:
 
 
 @pytest.mark.asyncio
-@pytest.mark.benchmark
-async def test_get_puzzle_and_solution_for_coin_performance():
+async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner):
     from clvm.casts import int_from_bytes
 
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
@@ -286,6 +284,7 @@ async def test_get_puzzle_and_solution_for_coin_performance():
 
     spends: List[Coin] = []
 
+    assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
@@ -301,7 +300,7 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
+    with benchmark_runner.assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0)

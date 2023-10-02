@@ -20,6 +20,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -31,7 +32,6 @@ from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.conftest import ConsensusMode
@@ -114,7 +114,7 @@ class TestWalletSimulator:
 
         tx_amount = 10
 
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,
@@ -166,7 +166,7 @@ class TestWalletSimulator:
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
         tx_amount = 10
 
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG.override(reuse_puzhash=True),
@@ -224,7 +224,7 @@ class TestWalletSimulator:
         await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx1 = await wallet.generate_signed_transaction(
+        [tx1] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -240,7 +240,7 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
-        tx2 = await wallet.generate_signed_transaction(
+        [tx2] = await wallet.generate_signed_transaction(
             uint64(500),
             await wallet_1.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,
@@ -256,7 +256,7 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 2, 1000, CoinType.CLAWBACK
         )
-        tx3 = await wallet.generate_signed_transaction(
+        [tx3] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -334,7 +334,7 @@ class TestWalletSimulator:
 
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -457,7 +457,7 @@ class TestWalletSimulator:
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -544,7 +544,7 @@ class TestWalletSimulator:
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -634,7 +634,7 @@ class TestWalletSimulator:
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_1)
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -732,7 +732,7 @@ class TestWalletSimulator:
 
         normal_puzhash = await wallet_1.get_new_puzzlehash()
         # Transfer to normal wallet
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(500),
             normal_puzhash,
             DEFAULT_TX_CONFIG,
@@ -790,7 +790,7 @@ class TestWalletSimulator:
         wallet_2_puzhash = await wallet_2.get_new_puzzlehash()
 
         # Transfer to normal wallet
-        tx1 = await wallet_1.generate_signed_transaction(
+        [tx1] = await wallet_1.generate_signed_transaction(
             uint64(500),
             wallet_2_puzhash,
             DEFAULT_TX_CONFIG,
@@ -810,7 +810,7 @@ class TestWalletSimulator:
         await time_out_assert(
             20, wallet_node_2.wallet_state_manager.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK
         )
-        tx2 = await wallet_1.generate_signed_transaction(
+        [tx2] = await wallet_1.generate_signed_transaction(
             uint64(700),
             wallet_1_puzhash,
             DEFAULT_TX_CONFIG,
@@ -1040,7 +1040,7 @@ class TestWalletSimulator:
             await full_node_1.add_block(block)
             await full_node_2.add_block(block)
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             uint64(10),
             bytes32(32 * b"0"),
             DEFAULT_TX_CONFIG,
@@ -1097,7 +1097,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_unconfirmed_balance() == expected_confirmed_balance
 
         tx_amount = 10
-        tx = await wallet_0.generate_signed_transaction(
+        [tx] = await wallet_0.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,
@@ -1119,7 +1119,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_1.get_confirmed_balance, 10)
 
         tx_amount = 5
-        tx = await wallet_1.generate_signed_transaction(
+        [tx] = await wallet_1.generate_signed_transaction(
             uint64(tx_amount), await wallet_0.get_new_puzzlehash(), DEFAULT_TX_CONFIG, uint64(0)
         )
         await wallet_1.push_transaction(tx)
@@ -1174,7 +1174,7 @@ class TestWalletSimulator:
 
         tx_amount = 3200000000000
         tx_fee = 10
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,
@@ -1243,7 +1243,7 @@ class TestWalletSimulator:
         tx_amount = 3200000000000
         tx_fee = 10
         ph_2 = await wallet_1.get_new_puzzlehash()
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount), ph_2, DEFAULT_TX_CONFIG, uint64(tx_fee), memos=[ph_2]
         )
         tx_id = tx.name.hex()
@@ -1309,7 +1309,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet.get_confirmed_balance, expected_confirmed_balance)
 
         primaries = [Payment(ph, uint64(1000000000 + i)) for i in range(60)]
-        tx_split_coins = await wallet.generate_signed_transaction(
+        [tx_split_coins] = await wallet.generate_signed_transaction(
             uint64(1), ph, DEFAULT_TX_CONFIG, uint64(0), primaries=primaries
         )
         assert tx_split_coins.spend_bundle is not None
@@ -1321,7 +1321,7 @@ class TestWalletSimulator:
         max_sent_amount = await wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        transaction_record = await wallet.generate_signed_transaction(
+        [transaction_record] = await wallet.generate_signed_transaction(
             uint64(max_sent_amount - 1),
             ph,
             DEFAULT_TX_CONFIG,
@@ -1331,7 +1331,7 @@ class TestWalletSimulator:
         assert transaction_record.amount == uint64(max_sent_amount - 1)
 
         # 2) Generate transaction that is equal to limit
-        transaction_record = await wallet.generate_signed_transaction(
+        [transaction_record] = await wallet.generate_signed_transaction(
             uint64(max_sent_amount),
             ph,
             DEFAULT_TX_CONFIG,
@@ -1389,7 +1389,7 @@ class TestWalletSimulator:
         assert await wallet.get_unconfirmed_balance() == expected_confirmed_balance
         tx_amount = 3200000000000
         tx_fee = 300000000000
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(tx_amount),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,
@@ -1484,7 +1484,7 @@ class TestWalletSimulator:
         assert reorg_height is not None
         reorg_funds = await full_node_api.farm_blocks_to_wallet(count=reorg_block_count, wallet=wallet)
 
-        tx = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, DEFAULT_TX_CONFIG, coins={coin})
+        [tx] = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, DEFAULT_TX_CONFIG, coins={coin})
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
@@ -1658,13 +1658,35 @@ class TestWalletSimulator:
         # Test informal input
         message = "0123456789ABCDEF"
         response = await api_0.sign_message_by_address(
-            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true"}
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": "true", "safe_mode": "true"}
         )
         puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
 
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
             puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test BLS sign string
+        message = "Hello World"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": False, "safe_mode": False}
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes(message, "utf-8"),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test BLS sign hex
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_address(
+            {"address": encode_puzzle_hash(ph, "xch"), "message": message, "is_hex": True, "safe_mode": False}
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes.fromhex(message),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
 
@@ -1706,7 +1728,7 @@ class TestWalletSimulator:
         coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), DEFAULT_TX_CONFIG.coin_selection_config)
         coin_list = list(coins)
 
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(AMOUNT_TO_SEND),
             await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
             DEFAULT_TX_CONFIG,

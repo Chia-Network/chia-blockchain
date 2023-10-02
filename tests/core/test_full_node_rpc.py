@@ -5,6 +5,7 @@ from typing import List
 
 import pytest
 from blspy import AugSchemeMPL
+from chia_rs import CoinSpend
 from clvm.casts import int_to_bytes
 
 from chia.consensus.block_record import BlockRecord
@@ -19,6 +20,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtoco
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
@@ -228,6 +230,126 @@ class TestRpc:
 
             assert len(block_spends) == 3
             assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+
+            block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
+
+            assert len(block_spends_with_conditions) == 3
+
+            block_spends_with_conditions = sorted(block_spends_with_conditions, key=lambda x: str(x.coin_spend))
+
+            coin_spend_with_conditions = block_spends_with_conditions[0]
+
+            assert coin_spend_with_conditions.coin_spend.coin == Coin(
+                bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000a"),
+                bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
+                1750000000000,
+            )
+            assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+                "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            )
+            assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+                "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa0a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee54798080ff8080"
+            )
+            assert coin_spend_with_conditions.conditions == [
+                ConditionWithArgs(
+                    b"2",
+                    [
+                        bytes.fromhex(
+                            "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        ),
+                        bytes.fromhex("49b6f533000b967f049bb6e7b29d0b6f465ebccd5733bc75340f98dae782aa08"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"3",
+                    [
+                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                        bytes.fromhex("01977420dc00"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"<",
+                    [
+                        bytes.fromhex("a2366d6d8e1ce7496175528f5618a13da8401b02f2bac1eaae8f28aea9ee5479"),
+                    ],
+                ),
+            ]
+
+            coin_spend_with_conditions = block_spends_with_conditions[1]
+
+            assert coin_spend_with_conditions.coin_spend.coin == Coin(
+                bytes.fromhex("e3b0c44298fc1c149afbf4c8996fb9240000000000000000000000000000000b"),
+                bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
+                1750000000000,
+            )
+            assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+                "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            )
+            assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+                "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff8601977420dc0080ffff3cffa04f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f8080ff8080"
+            )
+            assert coin_spend_with_conditions.conditions == [
+                ConditionWithArgs(
+                    b"2",
+                    [
+                        bytes.fromhex(
+                            "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        ),
+                        bytes.fromhex("95df50b31bb746a37df6ab448f10436fb98bb659990c61ee6933a196f6a06465"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"3",
+                    [
+                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                        bytes.fromhex("01977420dc00"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"<",
+                    [
+                        bytes.fromhex("4f6d4d12e97e83b2024fd0970e3b9e8a1c2e509625c15ff4145940c45b51974f"),
+                    ],
+                ),
+            ]
+
+            coin_spend_with_conditions = block_spends_with_conditions[2]
+
+            assert coin_spend_with_conditions.coin_spend.coin == Coin(
+                bytes.fromhex("27ae41e4649b934ca495991b7852b8550000000000000000000000000000000b"),
+                bytes.fromhex("8488947a2213b2c2551fe019bbb708db86eab3dd5133eb57e801515e9e4ad82a"),
+                250000000000,
+            )
+            assert coin_spend_with_conditions.coin_spend.puzzle_reveal.to_program() == Program.fromhex(
+                "ff02ffff01ff02ffff01ff02ffff03ff0bffff01ff02ffff03ffff09ff05ffff1dff0bffff1effff0bff0bffff02ff06ffff04ff02ffff04ff17ff8080808080808080ffff01ff02ff17ff2f80ffff01ff088080ff0180ffff01ff04ffff04ff04ffff04ff05ffff04ffff02ff06ffff04ff02ffff04ff17ff80808080ff80808080ffff02ff17ff2f808080ff0180ffff04ffff01ff32ff02ffff03ffff07ff0580ffff01ff0bffff0102ffff02ff06ffff04ff02ffff04ff09ff80808080ffff02ff06ffff04ff02ffff04ff0dff8080808080ffff01ff0bffff0101ff058080ff0180ff018080ffff04ffff01b0a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252aff018080"
+            )
+            assert coin_spend_with_conditions.coin_spend.solution.to_program() == Program.fromhex(
+                "ff80ffff01ffff33ffa063c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575cff853a3529440080ffff3cffa0617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f8080ff8080"
+            )
+            assert coin_spend_with_conditions.conditions == [
+                ConditionWithArgs(
+                    b"2",
+                    [
+                        bytes.fromhex(
+                            "a499b52c7eba3465c3d74070a25d5ac5f5df25ed07d1c9c0c0509b00140da3e3bb60b584eaa30a1204ec0e5839f1252a"
+                        ),
+                        bytes.fromhex("f3dd65f1ca4b030a726182e0194174fe95ff7a66f54381cad3aab168b8e75ee7"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"3",
+                    [
+                        bytes.fromhex("63c767818f8b7cc8f3760ce34a09b7f34cd9ddf09d345c679b6897e7620c575c"),
+                        bytes.fromhex("3a35294400"),
+                    ],
+                ),
+                ConditionWithArgs(
+                    b"<",
+                    [
+                        bytes.fromhex("617d9951551dc9e329fcab835f37fe4602c9ea57626cc2069228793f7007716f"),
+                    ],
+                ),
+            ]
 
             memo = 32 * b"\f"
 
