@@ -148,4 +148,4 @@ class GetUnresolvedPeerInfosCase(DataCase):
     ),
 )
 def test_get_unresolved_peer_infos(case: GetUnresolvedPeerInfosCase) -> None:
-    assert case.expected_peer_infos == get_unresolved_peer_infos(case.service_config, case.requested_node_type)
+    assert get_unresolved_peer_infos(case.service_config, case.requested_node_type) == case.expected_peer_infos
