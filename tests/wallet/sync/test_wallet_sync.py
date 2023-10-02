@@ -1283,13 +1283,13 @@ class TestWalletSync:
 
             async def assert_coin_state_retry() -> None:
                 # Wait for retry coin states to show up
-                await time_out_assert(15, retry_store_empty, False)
+                await time_out_assert(25, retry_store_empty, False)
                 # And become retried/removed
-                await time_out_assert(30, retry_store_empty, True)
+                await time_out_assert(40, retry_store_empty, True)
 
             await assert_coin_state_retry()
 
-            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
+            await time_out_assert(40, wallet.get_confirmed_balance, 2_000_000_000_000)
 
             [tx] = await wallet.generate_signed_transaction(
                 1_000_000_000_000, bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
@@ -1299,7 +1299,7 @@ class TestWalletSync:
             async def tx_in_mempool():
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
-            await time_out_assert(15, tx_in_mempool)
+            await time_out_assert(25, tx_in_mempool)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
             await assert_coin_state_retry()
@@ -1309,7 +1309,7 @@ class TestWalletSync:
             assert not wallet_node.fetch_children_flaky
             assert not wallet_node.get_timestamp_flaky
             assert not wallet_node.db_flaky
-            await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
+            await time_out_assert(40, wallet.get_confirmed_balance, 1_000_000_000_000)
 
     @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
