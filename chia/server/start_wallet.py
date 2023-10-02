@@ -63,7 +63,7 @@ def create_wallet_service(
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
-        connect_peers=set(get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)),
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         network_id=network_id,
         rpc_info=rpc_info,
         advertised_port=None,

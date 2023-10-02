@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, Set
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -27,7 +27,7 @@ def create_harvester_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
-    farmer_peers: List[UnresolvedPeerInfo],
+    farmer_peers: Set[UnresolvedPeerInfo],
     connect_to_daemon: bool = True,
 ) -> Service[Harvester, HarvesterAPI]:
     service_config = config[SERVICE_NAME]
@@ -49,7 +49,7 @@ def create_harvester_service(
         node_type=NodeType.HARVESTER,
         advertised_port=None,
         service_name=SERVICE_NAME,
-        connect_peers=set(farmer_peers),
+        connect_peers=farmer_peers,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

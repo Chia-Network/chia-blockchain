@@ -52,7 +52,7 @@ def create_timelord_service(
         node_type=NodeType.TIMELORD,
         advertised_port=None,
         service_name=SERVICE_NAME,
-        connect_peers=set(get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)),
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

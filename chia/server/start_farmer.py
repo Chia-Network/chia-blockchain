@@ -52,7 +52,7 @@ def create_farmer_service(
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        connect_peers=set(get_unresolved_peer_infos(service_config, NodeType.FULL_NODE)),
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         on_connect_callback=farmer.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,

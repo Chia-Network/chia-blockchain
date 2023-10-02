@@ -375,7 +375,7 @@ async def setup_harvester(
         root_path,
         config,
         consensus_constants,
-        farmer_peers=[farmer_peer] if farmer_peer is not None else [],
+        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
         connect_to_daemon=False,
     )
 

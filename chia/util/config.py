@@ -11,7 +11,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Set, Union
 
 import pkg_resources
 import yaml
@@ -335,9 +335,10 @@ PEER_INFO_MAPPING: Dict[NodeType, str] = {
 }
 
 
-def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeType) -> List[UnresolvedPeerInfo]:
+def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeType) -> Set[UnresolvedPeerInfo]:
     peer_info_key = PEER_INFO_MAPPING[peer_type]
-    single_peer_info = service_config.get(peer_info_key)
-    peer_infos_raw = [single_peer_info] if single_peer_info is not None else service_config.get(f"{peer_info_key}s", [])
+    peer_infos = service_config.get(f"{peer_info_key}s", [])
+    peer_info = service_config.get(peer_info_key)
+    all_peer_infos_raw = [peer_info, *peer_infos] if peer_info is not None else peer_infos
 
-    return list(map(lambda peer: UnresolvedPeerInfo(peer["host"], peer["port"]), peer_infos_raw))
+    return set(map(lambda peer: UnresolvedPeerInfo(peer["host"], peer["port"]), all_peer_infos_raw))
