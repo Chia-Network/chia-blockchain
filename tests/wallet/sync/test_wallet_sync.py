@@ -312,7 +312,7 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
-        reorg_blocks = bt.get_consecutive_blocks(num_blocks=400,block_list_input=default_400_blocks[:10])
+        reorg_blocks = bt.get_consecutive_blocks(num_blocks=400, block_list_input=default_400_blocks[:10])
         # Tests a long reorg
         for block in reorg_blocks:
             await full_node_api.full_node.add_block(block)
