@@ -117,7 +117,10 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
 
 
 def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
-    uncurried_inner_puzzle, args = inner_puzzle.uncurry()
+    r = inner_puzzle.uncurry()
+    if r is None:
+        return False
+    uncurried_inner_puzzle, args = r
     return uncurried_inner_puzzle
 
 
@@ -309,12 +312,19 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
 def uncurry_pool_member_inner_puzzle(
     inner_puzzle: Program,
 ) -> Tuple[Program, Program, Program, Program, Program, Program]:
+    """
+    Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
+    a triple of `mod_hash, relative_lock_height, pubkey` if it is.
+    """
     if not is_pool_member_inner_puzzle(inner_puzzle):
         raise ValueError("Attempting to unpack a non-waitingroom inner puzzle")
-    inner_f, args = inner_puzzle.uncurry()
+    r = inner_puzzle.uncurry()
+    if r is None:
+        raise ValueError("Failed to unpack inner puzzle")
+    inner_f, args = r
     # p2_singleton_hash is the tree hash of the unique, curried P2_SINGLETON_MOD. See `create_p2_singleton_puzzle`
     # escape_puzzlehash is of the unique, curried POOL_WAITING_ROOM_MOD. See `create_waiting_room_inner_puzzle`
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = args.as_iter()
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = tuple(args.as_iter())
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
@@ -336,8 +346,12 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Progra
 
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     p = Program.from_bytes(bytes(full_puzzle))
-    _, args = p.uncurry()
-    _, inner_puzzle = args.as_iter()
+    r = p.uncurry()
+    if r is None:
+        return None
+    _, args = r
+
+    _, inner_puzzle = list(args.as_iter())
     if not is_pool_singleton_inner_puzzle(inner_puzzle):
         return None
     # ignoring hint error here for:

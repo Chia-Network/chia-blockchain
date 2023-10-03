@@ -64,7 +64,9 @@ class PoolState(Streamable):
 
 
 def initial_pool_state_from_dict(
-    state_dict: Dict[str, Any], owner_pubkey: G1Element, owner_puzzle_hash: bytes32
+    state_dict: Dict[str, Any],
+    owner_pubkey: G1Element,
+    owner_puzzle_hash: bytes32,
 ) -> PoolState:
     state_str = state_dict["state"]
     singleton_state: PoolSingletonState = PoolSingletonState[state_str]

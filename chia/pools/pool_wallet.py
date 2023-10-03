@@ -494,6 +494,10 @@ class PoolWallet:
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
+            if owner_sk is None:
+                # TODO: this code is dead, per hinting at least.  as such, it isn't being checked and is bad
+                # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
+                return await self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
             return owner_sk
 
         return await sign_coin_spends(
