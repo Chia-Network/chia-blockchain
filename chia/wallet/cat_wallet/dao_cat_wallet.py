@@ -456,11 +456,9 @@ class DAOCATWallet:
         spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
 
         if fee > 0:  # pragma: no cover
-            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-            chia_tx = await dao_wallet.create_tandem_xch_tx(
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
-                extra_conditions=extra_conditions,
             )
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
@@ -501,7 +499,9 @@ class DAOCATWallet:
         await self.save_info(dao_cat_info)
         return record
 
-    async def remove_active_proposal(self, proposal_id_list: List[bytes32], fee: uint64 = uint64(0)) -> SpendBundle:
+    async def remove_active_proposal(
+        self, proposal_id_list: List[bytes32], tx_config: TXConfig, fee: uint64 = uint64(0)
+    ) -> SpendBundle:
         locked_coins: List[Tuple[LockedCoinInfo, List[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
             my_finished_proposals = []
@@ -513,7 +513,6 @@ class DAOCATWallet:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
-        dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
 
         for lci_proposals_tuple in locked_coins:
             proposal_innerpuzhashes = []
@@ -563,8 +562,7 @@ class DAOCATWallet:
         spend_bundle = await self.wallet_state_manager.sign_transaction(cat_spend_bundle.coin_spends)
 
         if fee > 0:  # pragma: no cover
-            dao_wallet = self.wallet_state_manager.wallets[self.dao_cat_info.dao_wallet_id]
-            chia_tx = await dao_wallet.create_tandem_xch_tx(fee)
+            chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config)
             assert chia_tx.spend_bundle is not None
             full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:

@@ -1614,7 +1614,7 @@ class DAOWallet:
                 prop_sb = SpendBundle([cs], AugSchemeMPL.aggregate([]))
                 spends.append(prop_sb)
 
-        sb = await dao_cat_wallet.remove_active_proposal(closed_list)
+        sb = await dao_cat_wallet.remove_active_proposal(closed_list, tx_config=tx_config)
         spends.append(sb)
 
         if not spends:  # pragma: no cover
