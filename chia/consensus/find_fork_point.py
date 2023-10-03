@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
@@ -12,10 +12,10 @@ def find_fork_point_in_chain(
     blocks: BlockchainInterface,
     block_1: Union[BlockRecord, HeaderBlock],
     block_2: Union[BlockRecord, HeaderBlock],
-) -> uint32:
+) -> Optional[int]:
     """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)
-    Returns -1 if chains have no common ancestor
+    Returns 0 if chains have no common ancestor
     * assumes the fork point is loaded in blocks
     """
     while block_2.height > 0 or block_1.height > 0:
@@ -30,6 +30,6 @@ def find_fork_point_in_chain(
             block_1 = blocks.block_record(block_1.prev_hash)
     if block_2 != block_1:
         # All blocks are different
-        raise Exception("bad chain")
+        return -1
     # First block is the same
-    return uint32(0)
+    return 0

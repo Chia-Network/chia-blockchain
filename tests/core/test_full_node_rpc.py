@@ -533,7 +533,7 @@ class TestRpc:
             assert not res["reverted"]
 
             # Perform a reorg
-            blocks = bt.get_consecutive_blocks(11, block_list_input=[blocks[0]], seed=b"1234")
+            blocks = bt.get_consecutive_blocks(12, seed=b"1234")
             for block in blocks:
                 await full_node_api_1.full_node.add_block(block)
 
