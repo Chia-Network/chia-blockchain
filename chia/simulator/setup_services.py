@@ -157,7 +157,7 @@ async def setup_full_node(
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
     service: Union[Service[FullNode, FullNodeAPI], Service[FullNode, FullNodeSimulator]]
     if simulator:
-        service = create_full_node_simulator_service(
+        service = await create_full_node_simulator_service(
             local_bt.root_path,
             config,
             local_bt,
@@ -165,7 +165,7 @@ async def setup_full_node(
             override_capabilities=override_capabilities,
         )
     else:
-        service = create_full_node_service(
+        service = await create_full_node_service(
             local_bt.root_path,
             config,
             updated_constants,
