@@ -463,7 +463,10 @@ async def setup_vdf_client(bt: BlockTools, self_hostname: str, port: int) -> Asy
         finally:
             await process_mgr.kill_processes()
             vdf_task_1.cancel()
-            await asyncio.gather(vdf_task_1, return_exceptions=True)
+            try:
+                await vdf_task_1
+            except (Exception, asyncio.CancelledError):
+                pass
 
 
 @asynccontextmanager
@@ -471,18 +474,17 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
     find_vdf_client()  # raises FileNotFoundError if not found
 
     process_mgr = VDFClientProcessMgr()
-    vdf_task_1 = asyncio.create_task(
-        spawn_process(self_hostname, port, 1, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
-        name="vdf_client_1",
-    )
-    vdf_task_2 = asyncio.create_task(
-        spawn_process(self_hostname, port, 2, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
-        name="vdf_client_2",
-    )
-    vdf_task_3 = asyncio.create_task(
-        spawn_process(self_hostname, port, 3, process_mgr, prefer_ipv6=bt.config.get("prefer_ipv6", False)),
-        name="vdf_client_3",
-    )
+    tasks = []
+    prefer_ipv6 = bt.config.get("prefer_ipv6", False)
+    for i in range(1, 4):
+        tasks.append(
+            asyncio.create_task(
+                spawn_process(
+                    host=self_hostname, port=port, counter=i, process_mgr=process_mgr, prefer_ipv6=prefer_ipv6
+                ),
+                name=f"vdf_client_{i}",
+            )
+        )
 
     async def stop(
         signal_: signal.Signals,
@@ -498,10 +500,12 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port: int) -> As
             yield
         finally:
             await process_mgr.kill_processes()
-            vdf_task_1.cancel()
-            vdf_task_2.cancel()
-            vdf_task_3.cancel()
-            await asyncio.gather(vdf_task_1, vdf_task_2, vdf_task_3, return_exceptions=True)
+            for task in tasks:
+                task.cancel()
+                try:
+                    await task
+                except (Exception, asyncio.CancelledError):
+                    pass
 
 
 @asynccontextmanager

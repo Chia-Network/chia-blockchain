@@ -7,9 +7,10 @@ import pathlib
 import signal
 import sys
 import time
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import pkg_resources
 
@@ -55,6 +56,14 @@ class VDFClientProcessMgr:
                     pass
             self.active_processes.clear()
 
+    @asynccontextmanager
+    async def manage_proc(self, proc: asyncio.subprocess.Process) -> AsyncIterator[None]:
+        await self.add_process(proc)
+        try:
+            yield
+        finally:
+            await self.remove_process(proc)
+
 
 def find_vdf_client() -> pathlib.Path:
     p = pathlib.Path(pkg_resources.get_distribution("chiavdf").location) / "vdf_client"
@@ -70,7 +79,7 @@ async def spawn_process(
     process_mgr: VDFClientProcessMgr,
     *,
     prefer_ipv6: bool,
-):
+) -> None:
     path_to_vdf_client = find_vdf_client()
     first_10_seconds = True
     start_time = time.time()
@@ -88,19 +97,18 @@ async def spawn_process(
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
-        await process_mgr.add_process(proc)
 
-        stdout, stderr = await proc.communicate()
-        if stdout:
-            log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
-        if stderr:
-            if first_10_seconds:
-                if time.time() - start_time > 10:
-                    first_10_seconds = False
-            else:
-                log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
+        async with process_mgr.manage_proc(proc):
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
+            if stderr:
+                if first_10_seconds:
+                    if time.time() - start_time > 10:
+                        first_10_seconds = False
+                else:
+                    log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
 
-        await process_mgr.remove_process(proc)
         await asyncio.sleep(0.1)
 
 
