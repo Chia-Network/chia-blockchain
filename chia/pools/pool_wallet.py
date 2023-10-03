@@ -488,16 +488,18 @@ class PoolWallet:
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
                 private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
                 if private_key is None:
-                    # TODO: what?
-                    raise ValueError("No private key for pubkey")  # pragma: no cover
+                    raise ValueError(f"No private key for pubkey: {pk}")
                 return private_key
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
-            if owner_sk is None:
-                # TODO: this code is dead, per hinting at least.  as such, it isn't being checked and is bad
+            if owner_sk is None:  # pragma: no cover
+                # TODO: this code is dead, per hinting at least
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
-                return await self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
+                private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
+                if private_key is None:
+                    raise ValueError(f"No private key for pubkey: {pk}")
+                return private_key
             return owner_sk
 
         return await sign_coin_spends(
