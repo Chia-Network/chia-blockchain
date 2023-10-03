@@ -256,7 +256,7 @@ class Blockchain(BlockchainInterface):
             block,
             block.height,
             npc_result,
-            fork_point_with_peak,
+            block.height - 1 if fork_point_with_peak is None else fork_point_with_peak,
             self.get_block_generator,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
@@ -366,7 +366,7 @@ class Blockchain(BlockchainInterface):
         # Finds the fork. if the block is just being appended, it will return the peak
         # If no blocks in common, returns -1, and reverts all blocks
         if block_record.prev_hash == peak.header_hash:
-            fork_height: uint32 = peak.height
+            fork_height: int = peak.height
         elif fork_point_with_peak is not None:
             fork_height = fork_point_with_peak
         else:
@@ -440,7 +440,7 @@ class Blockchain(BlockchainInterface):
         )
 
     async def get_tx_removals_and_additions(
-        self, block: FullBlock, fork_height: uint32, npc_result: Optional[NPCResult] = None
+        self, block: FullBlock, fork_height: int, npc_result: Optional[NPCResult] = None
     ) -> Tuple[List[bytes32], List[Coin], Optional[NPCResult]]:
         if not block.is_transaction_block():
             return [], [], None
@@ -631,7 +631,7 @@ class Blockchain(BlockchainInterface):
             block,
             uint32(prev_height + 1),
             npc_result,
-            None,
+            uint32(prev_height),
             self.get_block_generator,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
@@ -888,7 +888,7 @@ class Blockchain(BlockchainInterface):
     async def get_block_generator(
         self,
         block: BlockInfo,
-        fork: Optional[uint32] = None,
+        fork: Optional[int] = None,
         additional_blocks: Optional[Dict[bytes32, FullBlock]] = None,
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:

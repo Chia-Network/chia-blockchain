@@ -12,7 +12,7 @@ def find_fork_point_in_chain(
     blocks: BlockchainInterface,
     block_1: Union[BlockRecord, HeaderBlock],
     block_2: Union[BlockRecord, HeaderBlock],
-) -> Optional[int]:
+) -> int:
     """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)
     Returns 0 if chains have no common ancestor

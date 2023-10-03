@@ -13,7 +13,6 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
@@ -43,7 +42,7 @@ async def validate_block_body(
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],
-    fork_point_with_peak: Optional[uint32],
+    fork_point_with_peak: int,
     get_block_generator: Callable[[BlockInfo, uint32], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature: bool = True,
@@ -279,12 +278,6 @@ async def validate_block_body(
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     # The fork point is the last block in common between the peak chain and the chain of `block`
-    if peak is None or height == 0:
-        fork_h: uint32 = uint32(0)
-    elif fork_point_with_peak is not None:
-        fork_h = fork_point_with_peak
-    else:
-        fork_h = find_fork_point_in_chain(blocks, peak, blocks.block_record(block.prev_header_hash))
 
     # Get additions and removals since (after) fork_h but not including this block
     # The values include: the coin that was added, the height of the block in which it was confirmed, and the
@@ -299,24 +292,23 @@ async def validate_block_body(
         reorg_blocks: Dict[uint32, FullBlock] = {}
         curr: Optional[FullBlock] = prev_block
         assert curr is not None
-        while curr.height > fork_h:
+        while curr.height > fork_point_with_peak:
             if curr.height == 0:
                 break
             curr = await block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
             reorg_blocks[curr.height] = curr
-        log.info(f"reorg blocks {len(reorg_blocks)} height {height} fork {fork_h} {height - fork_h - 1}")
-        if fork_h != -1:
-            assert len(reorg_blocks) == height - fork_h - 1
+        if fork_point_with_peak != -1:
+            assert len(reorg_blocks) == height - fork_point_with_peak - 1
 
         curr = prev_block
         assert curr is not None
-        while curr.height > fork_h:
+        while curr.height > fork_point_with_peak:
             # Coin store doesn't contain coins from fork, we have to run generator for each block in fork
             if curr.transactions_generator is not None:
                 # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
                 curr_block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    curr, uint32(0) if fork_h is None else fork_h
+                    curr, uint32(0 if fork_point_with_peak is None else fork_point_with_peak)
                 )
                 assert curr_block_generator is not None and curr.transactions_info is not None
                 curr_npc_result = get_name_puzzle_conditions(
@@ -384,10 +376,10 @@ async def validate_block_body(
     # can't find in the DB, but also coins that were spent after the fork point
     look_in_fork: List[bytes32] = []
     for unspent in unspent_records:
-        if unspent.confirmed_block_index <= fork_h:
+        if unspent.confirmed_block_index <= fork_point_with_peak:
             # Spending something in the current chain, confirmed before fork
             # (We ignore all coins confirmed after fork)
-            if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
+            if unspent.spent == 1 and unspent.spent_block_index <= fork_point_with_peak:
                 # Check for coins spent in an ancestor block
                 return Err.DOUBLE_SPEND, None
             removal_coin_records[unspent.name] = unspent
