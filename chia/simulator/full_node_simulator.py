@@ -614,7 +614,7 @@ class FullNodeSimulator(FullNodeAPI):
 
                 if len(outputs_group) > 0:
                     async with wallet.wallet_state_manager.lock:
-                        tx = await wallet.generate_signed_transaction(
+                        [tx] = await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
                             tx_config=DEFAULT_TX_CONFIG,

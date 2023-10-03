@@ -32,6 +32,7 @@ from chia.wallet.conditions import (
     Timelock,
     UnknownCondition,
     conditions_from_json_dicts,
+    conditions_to_json_dicts,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -133,17 +134,12 @@ def test_completeness() -> None:
 def test_condition_serialization(serializations: ConditionSerializations, abstractions: bool) -> None:
     condition_driver: Condition = parse_conditions_non_consensus([serializations.program], abstractions=abstractions)[0]
     if not abstractions:
-        assert (
-            condition_driver
-            == conditions_from_json_dicts(
-                [
-                    {
-                        "opcode": int_from_bytes(serializations.opcode),
-                        "args": {key: args for key, args in zip(serializations.json_keys, serializations.json_args)},
-                    }
-                ]
-            )[0]
-        )
+        json = {
+            "opcode": int_from_bytes(serializations.opcode),
+            "args": {key: args for key, args in zip(serializations.json_keys, serializations.json_args)},
+        }
+        assert condition_driver == conditions_from_json_dicts([json])[0]
+        assert condition_driver == conditions_from_json_dicts(conditions_to_json_dicts([condition_driver]))[0]
     assert not isinstance(condition_driver, UnknownCondition)
     as_program: Program = condition_driver.to_program()
     assert as_program.at("f").atom == serializations.opcode

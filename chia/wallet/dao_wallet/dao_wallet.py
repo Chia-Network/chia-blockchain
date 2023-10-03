@@ -727,7 +727,7 @@ class DAOWallet:
         announcement_set: Set[Announcement] = set()
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(1),
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -737,6 +737,7 @@ class DAOWallet:
             coin_announcements_to_consume=announcement_set,
             memos=[new_cat_wallet.cat_info.limitations_program_hash],
         )
+        tx_record: TransactionRecord = tx_records[0]
 
         genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
 
@@ -890,7 +891,7 @@ class DAOWallet:
         ).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        tx_records: List[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
             uint64(dao_rules.proposal_minimum_amount),
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -899,6 +900,7 @@ class DAOWallet:
             coins=coins,
             coin_announcements_to_consume=announcement_set,
         )
+        tx_record: TransactionRecord = tx_records[0]
 
         genesis_launcher_solution = Program.to(
             [full_proposal_puzzle_hash, dao_rules.proposal_minimum_amount, bytes(0x80)]
@@ -1531,7 +1533,7 @@ class DAOWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
             wallet: Wallet = funding_wallet  # type: ignore[assignment]
@@ -1554,7 +1556,7 @@ class DAOWallet:
                 fee=fee,
                 extra_conditions=extra_conditions,
             )
-            return tx_records[0]
+            return tx_records
         else:  # pragma: no cover
             raise ValueError(f"Assets of type {funding_wallet.type()} are not currently supported.")
 
@@ -1571,7 +1573,7 @@ class DAOWallet:
         tx_record = await self._create_treasury_fund_transaction(
             funding_wallet, amount, tx_config, fee, extra_conditions=extra_conditions
         )
-        return tx_record
+        return tx_record[0]
 
     async def fetch_singleton_lineage_proof(self, coin: Coin) -> LineageProof:
         wallet_node: Any = self.wallet_state_manager.wallet_node

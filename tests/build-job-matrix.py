@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import types
@@ -9,7 +10,7 @@ from typing import Any, Dict, List
 
 import testconfig
 
-root_path = Path(__file__).parent.resolve()
+root_path = Path(__file__).parent.absolute()
 project_root_path = root_path.parent
 
 
@@ -44,7 +45,7 @@ def subdirs(per: str) -> List[Path]:
 
 
 def module_dict(module: types.ModuleType) -> Dict[str, Any]:
-    return {k: v for k, v in module.__dict__.items() if not k.startswith("_")}
+    return {k: v for k, v in module.__dict__.items() if not k.startswith("_") and k != "annotations"}
 
 
 def dir_config(dir: Path) -> Dict[str, Any]:
@@ -57,14 +58,30 @@ def dir_config(dir: Path) -> Dict[str, Any]:
         return {}
 
 
+@dataclasses.dataclass
+class SpecifiedDefaultsError(Exception):
+    overlap: Dict[str, Any]
+
+    def __post_init__(self) -> None:
+        super().__init__()
+
+
 # Overwrite with directory specific values
 def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, Any]:
     if child is None:
         return parent
     conf = child
+
+    # avoid manual configuration set to default values
+    common_keys = set(parent.keys()).intersection(child.keys())
+    specified_defaulted_values = {k: parent[k] for k in common_keys if parent[k] == child[k]}
+    if len(specified_defaulted_values) > 0:
+        raise SpecifiedDefaultsError(overlap=specified_defaulted_values)
+
     for k, v in parent.items():
         if k not in child:
             conf[k] = v
+
     return conf
 
 
@@ -90,15 +107,23 @@ test_paths = [path for path in test_paths for _ in range(args.duplicates)]
 
 configuration = []
 
+specified_defaults: Dict[Path, Dict[str, Any]] = {}
+
 for path in test_paths:
     if path.is_dir():
         test_files = sorted(path.glob("test_*.py"))
         test_file_paths = [file.relative_to(project_root_path) for file in test_files]
         paths_for_cli = " ".join(path.as_posix() for path in test_file_paths)
-        conf = update_config(module_dict(testconfig), dir_config(path))
+        config_path = path
     else:
         paths_for_cli = path.relative_to(project_root_path).as_posix()
-        conf = update_config(module_dict(testconfig), dir_config(path.parent))
+        config_path = path.parent
+
+    try:
+        conf = update_config(module_dict(testconfig), dir_config(config_path))
+    except SpecifiedDefaultsError as e:
+        specified_defaults[root_path.joinpath(config_path, "config.py")] = e.overlap
+        continue
 
     # TODO: design a configurable system for this
     process_count = {
@@ -122,6 +147,12 @@ for path in test_paths:
     for_matrix = dict(sorted(for_matrix.items()))
     configuration.append(for_matrix)
 
+if len(specified_defaults) > 0:
+    message = f"Found {len(specified_defaults)} directories with specified defaults"
+    logging.error(f"{message}:")
+    for path, overlap in sorted(specified_defaults.items()):
+        logging.info(f" {path} : {overlap}")
+    raise Exception(message)
 
 configuration_json = json.dumps(configuration)
 

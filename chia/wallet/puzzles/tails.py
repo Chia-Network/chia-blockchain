@@ -102,7 +102,7 @@ class GenesisById(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
+        [tx_record] = await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cat_puzzle_hash, tx_config, fee, coins, origin_id=origin_id
         )
         assert tx_record.spend_bundle is not None
@@ -263,9 +263,10 @@ class GenesisByIdOrSingleton(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
+        tx_records: List[TransactionRecord] = await wallet.standard_wallet.generate_signed_transaction(
             amount, minted_cat_puzzle_hash, tx_config, fee, coins=set(coins), origin_id=origin_id
         )
+        tx_record: TransactionRecord = tx_records[0]
         assert tx_record.spend_bundle is not None
         payment = Payment(cat_inner.get_tree_hash(), amount)
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
