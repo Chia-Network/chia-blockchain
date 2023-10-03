@@ -6,6 +6,345 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.0 Chia blockchain 2023-10-05
+
+### Added
+
+* Update the README to link to the Chia website by @TheLastCicada in https://github.com/Chia-Network/chia-blockchain/pull/14801
+* Added `chia completion` command by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/14782
+* added wallet_removed to allowed changes by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/14855
+* Add support to cat_spend RPC for running TAIL by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14730
+* expose NFT coin info's latest_height to RPCs requesting NFT info by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/14954
+* make `python -m chia` work by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14785
+* Add new coin_type & metadata to coin_records by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15013
+* Dl plugin service by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/14883
+* DL plugin Add missing files by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15062
+* Add DID CLI by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15065
+* wallet: Implement `WalletCoinRecord.to_json_dict_parsed_metadata` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15108
+* Implement get_items_by_coin_ids() for the mempool by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/15069
+* wallet: Implement `WalletNFTStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15128
+* Comment chialisp assert macro by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15189
+* wallet: Implement `WalletCoinStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15127
+* wallet: Implement `WalletPoolStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15126
+* wallet: Implement `WalletPuzzleStore.delete_wallet` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15125
+* Introduce Verifiable Credentials Primitive by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15059
+* Add type filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15196
+* Add notification for VC by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15353
+* wallet: Implement `/get_coin_records` RPC command by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15100
+* Add timelord_launcher to the pyinstaller.spec by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15094
+* get_wallet_balances  by @trepca in https://github.com/Chia-Network/chia-blockchain/pull/15367
+* Add confirmed filter for get_transactions by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15374
+* Clawback Integration by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/14348
+* Add -l to vcs revoke command by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15468
+* Add filters for get_transaction_count API by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15502
+* Add CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15483
+* Add config option to accept private network addresses from introducers by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15543
+* Generate a license directory that contains licenses missing from the installers by @pmaslana in https://github.com/Chia-Network/chia-blockchain/pull/15146
+* 2.0 updates by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15580
+* Add DataLayer clear pending roots interfaces by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15516
+* add get_wallet_addresses RPC for deriving wallet addresses by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15668
+* multi threaded `chia plots check` by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15693
+* Hard fork 2.0 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15581
+* Add fields to BlockRecord. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/15695
+* compressed plot support by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15702
+* protocols: Introduce `error` protocol message by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15493
+* Add RPC client and tests for cancel_offers endpoint by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15758
+* add sql logging config for DataLayer by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15690
+* New aggregate signature conditions by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/15769
+* Chip13 (#15688) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15825
+* Add uncurried args to debug_spend_bundle by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15813
+* Add force option for spend_clawback_coin by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15832
+* Add support for multi node farmers by @felixbrucker in https://github.com/Chia-Network/chia-blockchain/pull/15444
+* Credential Restricted CATs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15411
+* Added: Support CLI NFT Pagination by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15342
+* Add Wallet CLI Unit tests by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15886
+* Add ergonomic condition classes by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15883
+* Timeout for retrieving a decompressor. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16047
+* Add the option for arbitrary conditions to make_solution by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15888
+* Add flags to CR-CAT offer summary by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16131
+* Improve testnet connectivity. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16029
+* Add get_public_key and get_public_keys daemon RPCs by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/16156
+* Add `extra_conditions` as an option to transaction endpoints by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15911
+* DataLayer fingerprint control by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/16132
+* Add bad peak cache by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/16027
+* Add a full node RPC endpoint, get_mempool_items_by_coin_name by @kimsk in https://github.com/Chia-Network/chia-blockchain/pull/16019
+* add new `plugins:` config allowing for custom headers by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/16194
+* Add traceback to front-end error responses by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16280
+* Configure number of stored full files in DL. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16135
+* Add timelock information to Trades and Transactions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15915
+* Bladebit Hybrid disk mode by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/16208
+* Add ergonomic timelock parsing to RPCs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16054
+* Add valid_times to Offer object by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16255
+  
+### Changed
+
+* wallet: Don't just subscribe to all coin ids from the DB by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14813
+* wallet: Handle trade coins in the `try` block of `new_coin_state` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14833
+* add benchmark that tests the mempool over a long time by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14728
+* Add placeholders for DAO Wallet directories by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14858
+* enable soft-fork2 conditions (incl. ASSERT_BEFORE) by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14733
+* update condition codes constants in clvm include file by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14723
+* wallet: Improve coin state retry wait logic and retry store test by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14911
+* wallet: Improve balance caching by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14631
+* Update Wallet command line help for key fingerprints by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/14982
+* optimize Mempool.add_to_pool() by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14988
+* change self peer connection error to info, remove traceback by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14884
+* wallet: Reduce DB lookups in `handle_did` and `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14969
+* limit expiring transactions by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14993
+* Return fee estimates as integer mojos by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/15020
+* bump chia_rs dependency to 0.2.6 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15077
+* activate the soft-fork and soft-fork2 earlier on testnet10 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14921
+* bump chia_rs to 0.2.7 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15110
+* lower MAX_FUTURE_TIME to 2 minutes with the 1.8.0 soft-fork activation by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15035
+* wallet: List the columns for `INSERT` into `coin_record` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15159
+* add generator2 to the repository by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15152
+* Fix soft fork to 60 days by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15191
+* Hint to CAT change by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15179
+* Move to Discord in docs and install scripts by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/15193
+* Softfork2 testing by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15204
+* Fix chia wallet make_offer short-option collision on -r by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15182
+* Move to Discord in docs and install scripts (#15193) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15210
+* data_layer: Avoid redundant coin state fetching by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15212
+* Changed: output plotid when we find an invalid proof of space by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15257
+* Identical spend aggregation by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/13799
+* hardcode `num` param when listing NFTs from CLI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15293
+* Improve help text for deprecated 'chia show' commands. by @notpeter in https://github.com/Chia-Network/chia-blockchain/pull/15297
+* optimize compact proofs by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15304
+* Have simulator not rely on chia_root as originally implemented. & fix simulator tests by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15157
+* Fork infrastructure by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15299
+* Update --fee options to indicate units are in XCH by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15327
+* Wording change for fix ssl - Update ssl_check.py by @roybotbot in https://github.com/Chia-Network/chia-blockchain/pull/15358
+* bump SOFT_FORK3_HEIGHT to align with the next release cycle by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15428
+* Check all peers when subscribing/tracking to new DL singleton by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15427
+* Move CAT_MOD from cat_loader -> cat_utils by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15459
+* use a more aggresive activation schedule on testnet10 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15376
+* full_node: More set usage in subscription code by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15420
+* rename exclude_coin_* -> excluded_coin_* for consistency by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15460
+* Add **kwargs to all generate_signed_transaction definitions by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15240
+* full_node: Add `max_height` to `CoinStore.get_coin_states_by_ids` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15467
+* util: Some tweaks to `StructStream` and sized ints by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15090
+* Rephrase async contextmanager DBConnection to use asynccontextmanager by @aqk in https://github.com/Chia-Network/chia-blockchain/pull/15538
+* bump chia_rs to 0.2.8 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15575
+* bump blspy==2.0.0 (blst) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15481
+* blspy 2.0.1 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15595
+* Use PKCS#8 format for SSL private keys by @Rigidity in https://github.com/Chia-Network/chia-blockchain/pull/15594
+* Auto find setup.py packages by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15180
+* Update simulator SSL keys to PKCS#8 by @Rigidity in https://github.com/Chia-Network/chia-blockchain/pull/15630
+* cherry-pick #5423 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15626
+* bump version of chiavdf to 1.0.9 by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15647
+* support calling daemon commands from chia rpc CLI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15584
+* use latest blspy by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15632
+* Convert All CLI Commands to using async generators by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15628
+* server: Store `Handshake.software_version` in connections as `str` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15725
+* Cleanup CLI RPC connection error handling  by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15704
+* Plot filter hard fork by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15336
+* Add DIDWallet.get_coin() to simplify DID wallet by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15730
+* Update config.yml by @hoffmang9 in https://github.com/Chia-Network/chia-blockchain/pull/15515
+* Renaming instances of 'decompresser' to 'decompressor' by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15751
+* bump chia_rs dependency to 0.2.9 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15760
+* remove support for Python 3.7 by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14611
+* Added quality lookup time info to FarmingInfo by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15775
+* Updated `UI_ACTUAL_SPACE_CONSTANT_FACTOR` to 0.78 by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15771
+* solution_generator by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15768
+* Added `blocks_won` and `last_time_farmed` to `get_farmed_amount` Wall… by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15778
+* avoid DataLayer insert precheck by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15691
+* Report certificate errors directly for CLI connection errors by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15518
+* Remove references to old offer mod by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15694
+* avoid DataLayer insert ancestors precheck by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15728
+* Improved pool stats handling by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15764
+* Added `average_block_time` to `get_blockchain_state` FullNode RPC API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15777
+* Added `get_keys_for_plot` daemon server API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15772
+* Added cuda and plot compression support for bladebit 3 by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15774
+* Added `total_effective_plot_size` for `get_harvesters` RPC API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15770
+* Added compression level and harvesting mode to harvester protocol/mes… by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15776
+* Farmer now returns missing signage points by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15765
+* pass DataLayer root and generation instead of requerying by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15613
+* Update chiapos by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15816
+* Added defaults to `get_harvester_config` API by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15820
+* Remove CAT1 UX guards by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15812
+* Chip13 by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/15688
+* Dedup offer cancellation logic by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15804
+* Move some puzzles out of chia.wallet.puzzles by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15822
+* Update cuda plot log-progress mapping by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15839
+* Update install plotters scripts by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15838
+* [Snyk] Security upgrade electron-builder from 24.4.0 to 24.6.3 and Lerna to 7.1.3 by @ChiaAutomation in https://github.com/Chia-Network/chia-blockchain/pull/15851
+* Remove some old chialisp files by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15824
+* Update chiavdf to 1.0.10 by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15864
+* bump softfork3 activation by about 2 weeks by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15861
+* remove chip13 by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15871
+* Drop macos-10.14 support by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15862
+* Set minimum macOS version to macOS 11 for Chia.app by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15880
+* Remove hack_populate'ing secret keys by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15846
+* Fixed python3-venv into install.sh by @d1m1trus in https://github.com/Chia-Network/chia-blockchain/pull/15920
+* drop support for database schema v1 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15895
+* introduce SOFT_FORK4_HEIGHT and tie CHIP-13 to it by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15885
+* bump soft-fork3 activation height by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15938
+* Update chiapos to full release by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15939
+* Revert "Add fields to BlockRecord. (#15695)" by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15947
+* Simplify get_max_send_amount for XCH and CATs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15859
+* Update chia_rs to 0.2.10 by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/15973
+* Bladebit3 as the default plotter to install by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15943
+* Use ephemeral credentials from AWS OIDC provider by @Starttoaster in https://github.com/Chia-Network/chia-blockchain/pull/15991
+* optimize blockchain DB for Chip-13 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15948
+* Use 'Completed writing plot' as the magic final words for cudaplot by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/16011
+* Deprecate minting CATs via RPC by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16017
+* use unhashable interface before from_json_dict by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16064
+* Added wallet id showing when using the 'chia plotnft show'. by @d1m1trus in https://github.com/Chia-Network/chia-blockchain/pull/16078
+* Adjust harvester warning to 8 seconds from 5 by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/16100
+* Update to chiapos 2.0.2 by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/16104
+* Introduce TXConfig and CoinSelectionConfig by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15666
+* Print JSON for all DL commands. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16119
+* demote log level for TIMESTAMP_TOO_FAR_IN_FUTURE errors by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16101
+* Prevent redundant peer calls in coin_added by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15735
+* Timelord peak change by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15856
+* full_node: Stop updating wallets during long sync by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/16062
+* Optimize CAT coin_added by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/16226
+* Optimize NFT coin_added by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/16227
+* flush only the updated parts of the height-to-hash cache file by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15996
+* Rename USDS --> USDSC by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/16295
+* wallet: Drop `is_peer_synced` / More cache usage by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/16261
+* run_block_generator2() by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16241
+* full_node: Move wallet updates into a separate task by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/16238
+* send --fix-ssl-permissions to stderr by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15972
+* chiabip158==1.3 by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/16356
+* Update chiapos by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/16419
+* Update install-gui.sh to use check Node 18 and npm 9 by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/16424
+  
+### Fixed
+
+* wallet: Disconnect untrusted peers if we find a trusted synced one by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14640
+* Only compile CLVM if source newer than hex by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14840
+* Fixed windows issues with passphrase prompt on CLI by flushing prompt by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14904
+* daemon: Fix removal while iterating over connections set by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14887
+* Fix the mempool fee rate calculation by @AmineKhaldi in https://github.com/Chia-Network/chia-blockchain/pull/14926
+* assert_before_height, assert_before_seconds fields in MempoolItem by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14931
+* skip empty directories pre-commit by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14973
+* Correct SQLite logging when using db_wrapper.manage_connection() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14866
+* seeder: case-insensitive DNS label matching to support bit 0x20 use by @ctrlaltdel in https://github.com/Chia-Network/chia-blockchain/pull/14933
+* Check hint length in notficication manager to avoid raise by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14972
+* Mempool insertion order by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14971
+* wallet: Drop leaking weight proof validation cache by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14574
+* windows fix of memory profiler by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/14987
+* Fixed an issue where `label-conflict` action did not run when opening a PR by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/14070
+* Small improvements to trusted peer check to include IPv6 addresses and add tests by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/14626
+* close daemon client even for a BaseException in acquire_connection_to_daemon() by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/14867
+* server: Rework config peer resolving and connection handling by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14997
+* wallet: Fix, simplify and test `TransactionRecord.is_valid` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15048
+* Check for directory existence before creating offer by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14990
+* Fix manage_clvm.py hash building and std libraries by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15075
+* server: Resolve introducer right before the connection attempt by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14998
+* util: Async DNS lookups by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/14999
+* wallet: Move assignments of `WalletStateManager._sync_target` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15148
+* wallet: Lock `WalletStateManager.lock` while populating balances initially by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15149
+* Fix typo and duplicate options by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15177
+* fix GENEARATOR_MOD2 to have the same cost as GENERATOR_MOD by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15184
+* wallet: Avoid dict changes while iterating in `handle_nft` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15216
+* Subscribe to the change children of CATs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15176
+* add comment to reconsider_peak by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15164
+* Fix #13393 offer shows network's XCH like TXCH on testnet10 by @yyolk in https://github.com/Chia-Network/chia-blockchain/pull/15224
+* wallet: Move `WalletPeers` init to the end of `_start_with_fingerprint` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15150
+* wallet: Fix coin state sorting by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15124
+* Refactor mutiproc prevalidation by @almogdepaz in https://github.com/Chia-Network/chia-blockchain/pull/15166
+* don't add transactions to the mempool before it has a valid peak by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15264
+* Pass VC fee parameter all the way through and check balances in tests by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15286
+* Enable signing for PRs that have secret access by @cmmarslender in https://github.com/Chia-Network/chia-blockchain/pull/15331
+* Use spendable instead of confirmed balance for offers by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15352
+* Fix `.get_next_from_coin_spend` on VerifiedCredential and test new puzhashes by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15423
+* Fix vcs get command when no proofs exist yet by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15432
+* remove unnecessary filtering of state_changed messages for the UI by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15437
+* wallet: Fix missing hint in `GenesisById.generate_issuance_bundle` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15424
+* server: Fix versions for incoming connections by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15465
+* Repin clvm_tools_rs==0.1.34 by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15455
+* Clawback fixes by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15475
+* Add reorg rollback to retry store by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15303
+* Only subscribe to inner wallet puzzle hashes by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/14356
+* rpc: Fix and test `WalletRpcApi.get_coin_records_by_names` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15509
+* Fix vcs get command when no proofs exist yet (#15432) by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15534
+* Fix get transactions CLI for Clawback by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15541
+* full_node: `uint32.MAXIMUM_EXCLUSIVE` -> `uint32.MAXIMUM` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15544
+* full_node: Don't send duplicates in `register_interest_in_puzzle_hash` by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15560
+* wallet: Deduplicate coin states from peers by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/15598
+* Eos challenge optimization by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15642
+* build: include `puzzles` packages (#15508) by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15660
+* Handle VC syncing exceptions better by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15627
+* Fix hint parsing for CATs and DIDs by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15259
+* update build script for lerna 7 by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/15672
+* Fix fork height constant for simulator / block tools by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15629
+* Some NFT RPC mypy fixes by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15715
+* Clawback resync by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15496
+* Fix variable name typo by @xchdata1 in https://github.com/Chia-Network/chia-blockchain/pull/15680
+* Fixed add lock around plot info by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/15767
+* Fix Cli error when exiting on some builds of python. by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15762
+* Fix whitespace on legacy-support-policy.md by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15779
+* Cleanup & Fix Simulator Sub Epoch Logic by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15698
+* Fix flaky CAT test by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15759
+* Fix CLI indentation by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15811
+* Add check to ubuntu_cmake_install for distribution ID by @Starttoaster in https://github.com/Chia-Network/chia-blockchain/pull/15828
+* Fix default parallel decompressor count by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15845
+* Change include_standard_libraries for CLVM compilation default to True by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15852
+* Skip clawback incoming txs while deleting the unconfirmed txs by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15826
+* add dust warning message to chia coins commands & cleanup code by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/14301
+* Fixed `chia rpc status` output by @wallentx in https://github.com/Chia-Network/chia-blockchain/pull/15866
+* fix initial-config for testnet fork points heights by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15870
+* fix initial-config for testnet fork points heights by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15873
+* Fix a typo in code style documentation by @UncertainBadg3r in https://github.com/Chia-Network/chia-blockchain/pull/15877
+* cudaplot fix by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15892
+* Add condition opcodes for agg sigs to condition_codes.clib by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15889
+* Fixed `chia plotnft show` command by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15918
+* Fixed an issue where insufficient block interval was used to calculate average block time by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15921
+* correct netspace calculation by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15931
+* Skip problematic test by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15928
+* Fixed an issue where `-t` option was required in cudaplot by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/15963
+* Update nft_wallet.py by @YeungTing in https://github.com/Chia-Network/chia-blockchain/pull/15968
+* Add ALLOW_BACKREFS as a flag to get_puzzle_and_solution_for_coin in full_node_api.py by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/15937
+* Fix clawback sender resync issue by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/15853
+* fix bug in recent BlockStore optimization patch by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16007
+* Refactor Seeder & Crawler code + add tests  by @jack60612 in https://github.com/Chia-Network/chia-blockchain/pull/15781
+* correct --insecure flag to cancel_offer command line by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16012
+* Don't farm compressed plots if context count is 0 by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16004
+* fix testnet10 sync-from-scratch by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/15967
+* Fixed an issue where chiapos recognized `t2` as required option by @ChiaMineJP in https://github.com/Chia-Network/chia-blockchain/pull/16020
+* fix DataLayer deadlock by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15971
+* Remove pointless outgoing TX for CR-CAT claim by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16010
+* Fix timelord-install.sh for CentOS\RHEL by @LeroyINC in https://github.com/Chia-Network/chia-blockchain/pull/15992
+* Don't raise on duplicate VC proof insertion by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16077
+* Add self revocation path to VC wallet by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16051
+* Support calling get_routes via wss by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/16103
+* Fix VC mypy issues by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16117
+* Make sure reuse_puzhash works for nft1 offers by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16116
+* Fix comment typo by @xchdata1 in https://github.com/Chia-Network/chia-blockchain/pull/16175
+* type mismatch for last_time_farmed by @dkackman in https://github.com/Chia-Network/chia-blockchain/pull/16159
+* fix waiting for co-routines in plotters_util.py by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16184
+* Fix issue with GUI and `chia plotters` when making compressed plots by @emlowe in https://github.com/Chia-Network/chia-blockchain/pull/16232
+* wallet: Fix and improve untrusted race caching by @xdustinface in https://github.com/Chia-Network/chia-blockchain/pull/16239
+* Delete DL files on unsubscribe. by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16182
+* Add `--verbose` option to `data create_data_store` and limit default output to the store id by @fchirica in https://github.com/Chia-Network/chia-blockchain/pull/16110
+* chiavdf==1.0.11 for setuptools fix by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/16278
+* more ws message type awareness in the deamon by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/15797
+* add fee for cat creation by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/16285
+* max_coin_amount should default to None in walllet send command by @geoffwalmsley in https://github.com/Chia-Network/chia-blockchain/pull/16303
+* remove CHIP-13 and SOFT_FORK4 by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16320
+* Add extra_conditions to special offer making by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16340
+* bump chia_rs to include bugfix for new AGG_SIG_* conditions in mempool mode by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16409
+* Fix `chia farm summary` aborting early if no local full node present by @xchdata1 in https://github.com/Chia-Network/chia-blockchain/pull/16387
+* fix typo in PendingTxCache by @arvidn in https://github.com/Chia-Network/chia-blockchain/pull/16417
+* rename `chia data add_missing_files` `-f`/`--foldername` to `-d`/`--directory` by @altendky in https://github.com/Chia-Network/chia-blockchain/pull/16383
+* Wallet workaround for python issue 97641 and update anyio for issue 589 by @wjblanke in https://github.com/Chia-Network/chia-blockchain/pull/16408
+* Fix issue with trade failures by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/16415
+* Fix CAT --> CR-CAT wallet conversion by @paninaro in https://github.com/Chia-Network/chia-blockchain/pull/16423
+* Fix glitch NFT wallet test by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/16434
+
+## New Contributors
+* @ctrlaltdel made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/14933
+* @yyolk made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15182
+* @Rigidity made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15594
+* @ChiaAutomation made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15851
+* @UncertainBadg3r made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15877
+* @d1m1trus made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15920
+* @YeungTing made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15968
+* @LeroyINC made their first contribution in https://github.com/Chia-Network/chia-blockchain/pull/15992
+
+
 ## 2.0.1 Chia blockchain 2023-09-06
 
 ### Fixed
