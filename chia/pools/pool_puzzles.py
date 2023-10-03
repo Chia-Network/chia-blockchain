@@ -116,11 +116,8 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
 ######################################
 
 
-def get_template_singleton_inner_puzzle(inner_puzzle: Program):
-    r = inner_puzzle.uncurry()
-    if r is None:
-        return False
-    uncurried_inner_puzzle, args = r
+def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
+    uncurried_inner_puzzle, args = inner_puzzle.uncurry()
     return uncurried_inner_puzzle
 
 
@@ -309,20 +306,15 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     return pubkey
 
 
-def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tuple[Program, Program, Program]]:
-    """
-    Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
-    a triple of `mod_hash, relative_lock_height, pubkey` if it is.
-    """
+def uncurry_pool_member_inner_puzzle(
+    inner_puzzle: Program,
+) -> Tuple[Program, Program, Program, Program, Program, Program]:
     if not is_pool_member_inner_puzzle(inner_puzzle):
         raise ValueError("Attempting to unpack a non-waitingroom inner puzzle")
-    r = inner_puzzle.uncurry()
-    if r is None:
-        raise ValueError("Failed to unpack inner puzzle")
-    inner_f, args = r
+    inner_f, args = inner_puzzle.uncurry()
     # p2_singleton_hash is the tree hash of the unique, curried P2_SINGLETON_MOD. See `create_p2_singleton_puzzle`
     # escape_puzzlehash is of the unique, curried POOL_WAITING_ROOM_MOD. See `create_waiting_room_inner_puzzle`
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = tuple(args.as_iter())
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash = args.as_iter()
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
@@ -344,15 +336,14 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Progra
 
 def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     p = Program.from_bytes(bytes(full_puzzle))
-    r = p.uncurry()
-    if r is None:
-        return None
-    _, args = r
-
-    _, inner_puzzle = list(args.as_iter())
+    _, args = p.uncurry()
+    _, inner_puzzle = args.as_iter()
     if not is_pool_singleton_inner_puzzle(inner_puzzle):
         return None
-    return inner_puzzle
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return inner_puzzle  # type: ignore[no-any-return]
 
 
 def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
@@ -419,7 +410,7 @@ def pool_state_to_inner_puzzle(
         delay_time,
         delay_ph,
     )
-    if pool_state.state in [LEAVING_POOL, SELF_POOLING]:
+    if pool_state.state in [LEAVING_POOL.value, SELF_POOLING.value]:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(
