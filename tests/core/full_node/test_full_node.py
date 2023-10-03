@@ -2162,3 +2162,68 @@ async def test_long_reorg(
         assert peak.height > chain_1_height
     else:
         assert peak.height < chain_1_height
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("light_blocks", [True, False])
+@pytest.mark.parametrize(
+    "chain_length",
+    [
+        0,
+        # TODO: understand why this breaks
+        #    900
+    ],
+)
+async def test_long_reorg_nodes(
+    light_blocks: bool,
+    chain_length: int,
+    setup_two_nodes_and_wallet,
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    self_hostname: str,
+):
+    nodes, wallets, bt = setup_two_nodes_and_wallet
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+
+    blocks = default_10000_blocks[: 1600 - chain_length]
+
+    if light_blocks:
+        reorg_blocks = test_long_reorg_blocks_light[: 2000 - chain_length]
+    else:
+        reorg_blocks = test_long_reorg_blocks[: 1500 - chain_length]
+
+    # full node 1 has the original chain
+    for block_batch in to_batches(blocks, 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        await full_node_1.full_node.add_block_batch(block_batch.entries, get_dummy_connection(NodeType.FULL_NODE), None)
+
+    # full node 2 has the reorg-chain
+    for block_batch in to_batches(reorg_blocks[:-1], 64):
+        b = block_batch.entries[0]
+        if (b.height % 128) == 0:
+            print(f"reorg chain: {b.height:4} weight: {b.weight}")
+        await full_node_2.full_node.add_block_batch(block_batch.entries, get_dummy_connection(NodeType.FULL_NODE), None)
+
+    await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    await full_node_2.full_node.add_block(reorg_blocks[-1])
+
+    # node 1 will wait 30 seonds before it starts syncing. It would be nice to
+    # be able to configure this delay to be shorter
+
+    def check_nodes_in_sync():
+        try:
+            p1 = full_node_2.full_node.blockchain.get_peak()
+            p2 = full_node_1.full_node.blockchain.get_peak()
+            return p1 == p2
+        except Exception as e:
+            print(f"e: {e}")
+            return False
+
+    await time_out_assert(200, check_nodes_in_sync)
