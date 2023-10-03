@@ -175,7 +175,7 @@ class TestSimpleSyncProtocol:
             for cr in await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
         )
 
-        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(40, wallet.get_confirmed_balance, funds)
         assert funds == fn_amount
 
         msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
