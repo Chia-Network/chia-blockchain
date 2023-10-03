@@ -167,15 +167,19 @@ class CRCATWallet(CATWallet):
         replace_self = cls()
         replace_self.standard_wallet = cat_wallet.standard_wallet
         replace_self.log = logging.getLogger(cat_wallet.get_name())
+        replace_self.log.info(f"Converting CAT wallet {cat_wallet.id()} to CR-CAT wallet")
         replace_self.wallet_state_manager = cat_wallet.wallet_state_manager
         replace_self.info = CRCATInfo(
             cat_wallet.cat_info.limitations_program_hash, None, authorized_providers, proofs_checker
         )
-        replace_self.wallet_info = await cat_wallet.wallet_state_manager.user_store.update_wallet(
+        await cat_wallet.wallet_state_manager.user_store.update_wallet(
             WalletInfo(
                 cat_wallet.id(), cat_wallet.get_name(), uint8(WalletType.CRCAT.value), bytes(replace_self.info).hex()
             )
         )
+        updated_wallet_info = await cat_wallet.wallet_state_manager.user_store.get_wallet_by_id(cat_wallet.id())
+        assert updated_wallet_info is not None
+        replace_self.wallet_info = updated_wallet_info
 
         cat_wallet.wallet_state_manager.wallets[cat_wallet.id()] = replace_self
 

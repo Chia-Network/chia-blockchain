@@ -2023,7 +2023,7 @@ class WalletStateManager:
                 ):
                     coins_removed = tx.spend_bundle.removals()
                     trade_coins_removed = set([])
-                    trade = None
+                    trades = []
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)
                         if trade is not None and trade.status in (
@@ -2031,21 +2031,22 @@ class WalletStateManager:
                             TradeStatus.PENDING_ACCEPT.value,
                             TradeStatus.PENDING_CANCEL.value,
                         ):
+                            if trade not in trades:
+                                trades.append(trade)
                             # offer was tied to these coins, lets subscribe to them to get a confirmation to
                             # cancel it if it's confirmed
                             # we send transactions to multiple peers, and in cases when mempool gets
                             # fragmented, it's safest to wait for confirmation from blockchain before setting
                             # offer to failed
                             trade_coins_removed.add(removed_coin.name())
-                    if trade and trade_coins_removed:
+                    if trades != [] and trade_coins_removed != set():
                         if not tx.is_valid():
                             # we've tried to send this transaction to a full node multiple times
                             # but failed, it's safe to assume that it's not going to be accepted
                             # we can mark this offer as failed
                             self.log.info("This offer can't be posted, removing it from pending offers")
-                            assert trade is not None
-                            await self.trade_manager.fail_pending_offer(trade.trade_id)
-
+                            for trade in trades:
+                                await self.trade_manager.fail_pending_offer(trade.trade_id)
                         else:
                             self.log.info(
                                 "Subscribing to unspendable offer coins: %s",
