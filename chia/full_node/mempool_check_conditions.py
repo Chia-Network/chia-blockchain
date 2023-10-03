@@ -29,9 +29,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, SpendInfo
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
@@ -43,19 +44,8 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
 log = logging.getLogger(__name__)
 
 
-def get_name_puzzle_conditions(
-    generator: BlockGenerator,
-    max_cost: int,
-    *,
-    mempool_mode: bool,
-    height: uint32,
-    constants: ConsensusConstants,
-) -> NPCResult:
-    run_block = run_block_generator
-
-    flags = 0
-    if mempool_mode:
-        flags = flags | MEMPOOL_MODE
+def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
+    flags = ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
@@ -92,6 +82,23 @@ def get_name_puzzle_conditions(
             | AGG_SIG_ARGS
             | ALLOW_BACKREFS
         )
+
+    return flags
+
+
+def get_name_puzzle_conditions(
+    generator: BlockGenerator,
+    max_cost: int,
+    *,
+    mempool_mode: bool,
+    height: uint32,
+    constants: ConsensusConstants,
+) -> NPCResult:
+    run_block = run_block_generator
+    flags = get_flags_for_height_and_constants(height, constants)
+
+    if mempool_mode:
+        flags = flags | MEMPOOL_MODE
 
     if height >= constants.HARD_FORK_FIX_HEIGHT:
         run_block = run_block_generator2
@@ -132,7 +139,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flag
         raise ValueError(f"Failed to get puzzle and solution for coin {coin}, error: {e}") from e
 
 
-def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
+def get_spends_for_block(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[CoinSpend]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -143,7 +150,7 @@ def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
         bytes(generator.program),
         bytes(args),
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-        0,
+        get_flags_for_height_and_constants(height, constants),
     )
 
     spends: List[CoinSpend] = []
@@ -153,6 +160,37 @@ def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
         spends.append(CoinSpend(coin, puzzle, solution))
+
+    return spends
+
+
+def get_spends_for_block_with_conditions(
+    generator: BlockGenerator, height: int, constants: ConsensusConstants
+) -> List[CoinSpendWithConditions]:
+    args = bytearray(b"\xff")
+    args += bytes(DESERIALIZE_MOD)
+    args += b"\xff"
+    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += b"\x80\x80"
+
+    flags = get_flags_for_height_and_constants(height, constants)
+
+    _, ret = run_chia_program(
+        bytes(generator.program),
+        bytes(args),
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        flags,
+    )
+
+    spends: List[CoinSpendWithConditions] = []
+
+    for spend in Program.to(ret).first().as_iter():
+        parent, puzzle, amount, solution = spend.as_iter()
+        puzzle_hash = puzzle.get_tree_hash()
+        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+        coin_spend = CoinSpend(coin, puzzle, solution)
+        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+        spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends
 

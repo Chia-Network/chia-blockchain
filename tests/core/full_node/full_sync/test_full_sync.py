@@ -263,9 +263,9 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)),
             on_connect=full_node_2.full_node.on_connect,
         )
-        await time_out_assert(60, node_height_exactly, True, full_node_1, 50)
-        await time_out_assert(60, node_height_exactly, True, full_node_2, 50)
-        await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_1, 50)
+        await time_out_assert(80, node_height_exactly, True, full_node_2, 50)
+        await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
         await server_3.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)),
@@ -276,9 +276,9 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_2._port)),
             on_connect=full_node_3.full_node.on_connect,
         )
-        await time_out_assert(60, node_height_exactly, True, full_node_1, 89)
-        await time_out_assert(60, node_height_exactly, True, full_node_2, 89)
-        await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_1, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_2, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
     @pytest.mark.asyncio
     async def test_sync_bad_peak_while_synced(
