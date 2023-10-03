@@ -546,7 +546,8 @@ class FullNode:
             )
             if first is None or not isinstance(first, full_node_protocol.RespondBlock):
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
-                raise ValueError(f"Error short batch syncing, could not fetch block at height {start_height}")
+                self.log.error(f"Error short batch syncing, could not fetch block at height {start_height}")
+                return False
             if not self.blockchain.contains_block(first.block.prev_header_hash):
                 self.log.info("Batch syncing stopped, this is a deep chain")
                 self.sync_store.batch_syncing.remove(peer.peer_node_id)
@@ -725,6 +726,10 @@ class FullNode:
                 return None
 
             if request.height < curr_peak_height + self.config["sync_blocks_behind_threshold"]:
+                # TODO: We get here if we encountered a heavier peak with a
+                # lower height than ours. We don't seem to handle this case
+                # right now. This ends up requesting the block at *our* peak
+                # height.
                 # This case of being behind but not by so much
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None

@@ -304,6 +304,9 @@ class Blockchain(BlockchainInterface):
         # otherwise other tasks may go look for this block before it's available
         if state_change_summary is not None:
             self._peak_height = block_record.height
+        if self._peak_height is not None:
+            assert self.__height_map.contains_height(self._peak_height)
+            assert not self.__height_map.contains_height(uint32(self._peak_height + 1))
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()
