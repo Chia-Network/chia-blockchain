@@ -2234,19 +2234,27 @@ async def test_long_reorg(
 
 
 @pytest.mark.anyio
-@pytest.mark.limit_consensus_modes(reason="this test is too slow (for now)")
+@pytest.mark.parametrize("light_blocks", [True, False])
+@pytest.mark.parametrize("chain_length", [0, 100])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
 async def test_long_reorg_nodes(
+    light_blocks: bool,
+    chain_length: int,
     three_nodes,
     default_10000_blocks: List[FullBlock],
     test_long_reorg_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
     full_node_1, full_node_2, full_node_3 = three_nodes
 
-    blocks = default_10000_blocks[:1600]
+    blocks = default_10000_blocks[: 1600 - chain_length]
 
-    reorg_blocks = test_long_reorg_blocks[:1200]
+    if light_blocks:
+        reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+    else:
+        reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
 
     # full node 1 has the original chain
     for block_batch in to_batches(blocks, 64):
@@ -2274,7 +2282,7 @@ async def test_long_reorg_nodes(
         p2 = full_node_1.full_node.blockchain.get_peak()
         return p1 == p2
 
-    await time_out_assert(120, check_nodes_in_sync)
+    await time_out_assert(100, check_nodes_in_sync)
     peak = full_node_2.full_node.blockchain.get_peak()
     print(f"peak: {str(peak.header_hash)[:6]}")
 
@@ -2295,20 +2303,20 @@ async def test_long_reorg_nodes(
 
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
-    # await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
+    await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
 
     def check_nodes_in_sync2():
         p1 = full_node_1.full_node.blockchain.get_peak()
-        # p2 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_2.full_node.blockchain.get_peak()
         p3 = full_node_3.full_node.blockchain.get_peak()
-        return p1 == p3
+        return p1 == p3 and p1 == p2
 
-    await time_out_assert(2000, check_nodes_in_sync2)
+    await time_out_assert(900, check_nodes_in_sync2)
 
     p1 = full_node_1.full_node.blockchain.get_peak()
-    # p2 = full_node_2.full_node.blockchain.get_peak()
+    p2 = full_node_2.full_node.blockchain.get_peak()
     p3 = full_node_3.full_node.blockchain.get_peak()
 
     assert p1.header_hash == blocks[-1].header_hash
-    # assert p2.header_hash == blocks[-1].header_hash
+    assert p2.header_hash == blocks[-1].header_hash
     assert p3.header_hash == blocks[-1].header_hash
