@@ -38,7 +38,7 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
-async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 30) -> DaemonProxy:
+async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:
     timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()
@@ -61,11 +61,10 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]) as process:
-        client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
-
         try:
             return_code = process.poll()
             assert return_code is None
+            client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
 
             process.send_signal(signal_number)
             process.communicate(timeout=adjusted_timeout(timeout=5))
@@ -110,69 +109,55 @@ async def test_services_terminate(
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
     # TODO: make the wallet start up regardless so this isn't needed
-    retries = 0
-    while True:
-        try:
-            with closing_chia_root_popen(
-                chia_root=chia_root,
-                args=[sys.executable, "-m", "chia.daemon.server"],
-            ):
-                # Make sure the daemon is running and responsive before starting other services.
-                # This probably shouldn't be required.  For now, it helps at least with the
-                # farmer.
-                daemon_client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
-                await daemon_client.close()
+    with closing_chia_root_popen(
+        chia_root=chia_root,
+        args=[sys.executable, "-m", "chia.daemon.server"],
+    ):
+        # Make sure the daemon is running and responsive before starting other services.
+        # This probably shouldn't be required.  For now, it helps at least with the
+        # farmer.
+        daemon_client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
+        await daemon_client.close()
 
-                with closing_chia_root_popen(
-                    chia_root=chia_root,
-                    args=[sys.executable, "-m", module_path],
-                ) as process:
-                    client = await create_service(
-                        self_hostname=config["self_hostname"],
-                        port=uint16(rpc_port),
-                        root_path=chia_root.path,
-                        net_config=config,
-                    )
+        with closing_chia_root_popen(
+            chia_root=chia_root,
+            args=[sys.executable, "-m", module_path],
+        ) as process:
+            client = await create_service(
+                self_hostname=config["self_hostname"],
+                port=uint16(rpc_port),
+                root_path=chia_root.path,
+                net_config=config,
+            )
+            try:
+                start = time.monotonic()
+                while time.monotonic() - start < 50:
+                    return_code = process.poll()
+                    if return_code is not None:
+                        stdout, stderr = process.communicate()
+                        if "address already in use" in stderr.lower() or "address already in use" in stdout.lower():
+                            pytest.skip("Skipped temporarily.")
+
                     try:
-                        start = time.monotonic()
-                        while time.monotonic() - start < 180:
-                            return_code = process.poll()
-                            if return_code is not None:
-                                _, stderr = process.communicate()
-                                if b"address already in use" in stderr.lower():
-                                    if retries < 3:
-                                        retries += 1
-                                        raise OSError("Provided port was already binded")
-                                    else:
-                                        raise OSError("Can't find a free port in 3 retries.")
-                                else:
-                                    raise RuntimeError(f"Process returned with exit code 1: {stderr}")
+                        result = await client.healthz()
+                    except (
+                        aiohttp.client_exceptions.ClientConnectorError,
+                        aiohttp.client_exceptions.ClientResponseError,
+                    )
+                        pass
+                    else:
+                        if result.get("success", False):
+                            break
 
-                            try:
-                                result = await client.healthz()
-                            except (
-                                aiohttp.client_exceptions.ClientConnectorError,
-                                aiohttp.client_exceptions.ClientResponseError,
-                            ):
-                                pass
-                            else:
-                                if result.get("success", False):
-                                    break
+                    await asyncio.sleep(0.1)
+                else:
+                    raise Exception("unable to connect")
 
-                            await asyncio.sleep(0.1)
-                        else:
-                            raise Exception("unable to connect")
+                return_code = process.poll()
+                assert return_code is None
 
-                        return_code = process.poll()
-                        assert return_code is None
-
-                        process.send_signal(signal_number)
-                        process.communicate(timeout=adjusted_timeout(timeout=30))
-                        return
-                    finally:
-                        client.close()
-                        await client.await_closed()
-        except OSError as e:
-            # If the `rpc_port` is already binded, retry the test.
-            if str(e) != "Provided port was already binded":
-                raise
+                process.send_signal(signal_number)
+                process.communicate(timeout=adjusted_timeout(timeout=30))
+            finally:
+                client.close()
+                await client.await_closed()
