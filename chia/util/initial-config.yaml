@@ -463,10 +463,6 @@ full_node:
   use_chia_loop_policy: True
 
 ui:
-  # The ui node server (if run) will run on this port
-  # TODO: does the ui (gui?) actually listen?
-  port: 8222
-
   # Which port to use to communicate with the full node
   rpc_port: 8555
 
