@@ -39,7 +39,7 @@ class _Default:
 
 default = _Default()
 
-timeout_per_block = 10
+timeout_per_block = 15
 
 
 def backoff_times(
