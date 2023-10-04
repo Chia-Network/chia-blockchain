@@ -343,3 +343,23 @@ def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeTyp
         peer_infos.append(peer_info)
 
     return {UnresolvedPeerInfo(host=peer["host"], port=peer["port"]) for peer in peer_infos}
+
+
+def set_peer_info(
+    service_config: Dict[str, Any],
+    peer_type: NodeType,
+    peer_host: Optional[str] = None,
+    peer_port: Optional[int] = None,
+):
+    peer_info_key = PEER_INFO_MAPPING[peer_type]
+    assert peer_info_key is not None
+    if peer_info_key in service_config:
+        if peer_host is not None:
+            service_config[peer_info_key]["host"] = peer_host
+        if peer_port is not None:
+            service_config[peer_info_key]["port"] = peer_port
+    elif f"{peer_info_key}s" in service_config and len(service_config[f"{peer_info_key}s"]) > 0:
+        if peer_host is not None:
+            service_config[f"{peer_info_key}s"][0]["host"] = peer_host
+        if peer_port is not None:
+            service_config[f"{peer_info_key}s"][0]["port"] = peer_port

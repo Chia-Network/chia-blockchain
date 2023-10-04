@@ -309,11 +309,15 @@ async def setup_wallet_node(
             service_config["introducer_peer"] = None
 
         if full_node_port is not None:
-            service_config["full_node_peer"] = {}
-            service_config["full_node_peer"]["host"] = self_hostname
-            service_config["full_node_peer"]["port"] = full_node_port
+            service_config["full_node_peers"] = [
+                {
+                    "host": self_hostname,
+                    "port": full_node_port,
+                },
+            ]
         else:
-            del service_config["full_node_peer"]
+            service_config.pop("full_node_peer", None)
+            service_config.pop("full_node_peers", None)
 
         service = create_wallet_service(
             local_bt.root_path,
@@ -414,10 +418,15 @@ async def setup_farmer(
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
-        service_config["full_node_peer"]["host"] = self_hostname
-        service_config["full_node_peer"]["port"] = full_node_port
+        service_config["full_node_peers"] = [
+            {
+                "host": self_hostname,
+                "port": full_node_port,
+            },
+        ]
     else:
-        del service_config["full_node_peer"]
+        service_config.pop("full_node_peer", None)
+        service_config.pop("full_node_peers", None)
 
     service = create_farmer_service(
         root_path,
@@ -534,7 +543,7 @@ async def setup_timelord(
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
     service_config = config["timelord"]
-    service_config["full_node_peer"]["port"] = full_node_port
+    service_config["full_node_peers"][0]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
     service_config["vdf_server"]["port"] = vdf_port

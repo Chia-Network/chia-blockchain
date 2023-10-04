@@ -244,16 +244,19 @@ class TestConfig:
         root_path: Path = root_path_populated_with_config
         config: Dict = copy.deepcopy(default_config_dict)
         # When: modifying the config
-        config["harvester"]["farmer_peer"]["host"] = "oldmacdonald.eie.io"
+        config["harvester"]["farmer_peers"][0]["host"] = "oldmacdonald.eie.io"
         # Sanity check that we didn't modify the default config
-        assert config["harvester"]["farmer_peer"]["host"] != default_config_dict["harvester"]["farmer_peer"]["host"]
+        assert (
+            config["harvester"]["farmer_peers"][0]["host"]
+            != default_config_dict["harvester"]["farmer_peers"][0]["host"]
+        )
         # When: saving the modified config
         with lock_config(root_path, "config.yaml"):
             save_config(root_path=root_path, filename="config.yaml", config_data=config)
 
         # Expect: modifications should be preserved in the config read from disk
         loaded: Dict = load_config(root_path=root_path, filename="config.yaml")
-        assert loaded["harvester"]["farmer_peer"]["host"] == "oldmacdonald.eie.io"
+        assert loaded["harvester"]["farmer_peers"][0]["host"] == "oldmacdonald.eie.io"
 
     def test_multiple_writers(self, root_path_populated_with_config, default_config_dict):
         """

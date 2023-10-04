@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
-from chia.util.config import get_unresolved_peer_infos
+from chia.util.config import get_unresolved_peer_infos, set_peer_info
 from chia.util.ints import uint16
 from tests.util.misc import DataCase, datacases
 
@@ -144,3 +144,273 @@ class GetUnresolvedPeerInfosCase(DataCase):
 )
 def test_get_unresolved_peer_infos(case: GetUnresolvedPeerInfosCase) -> None:
     assert get_unresolved_peer_infos(case.service_config, case.requested_node_type) == case.expected_peer_infos
+
+
+@dataclass
+class SetPeerInfoCase(DataCase):
+    id: str
+    service_config: Dict[str, Any]
+    requested_node_type: NodeType
+    expected_service_config: Dict[str, Any]
+    peer_host: Optional[str] = None
+    peer_port: Optional[int] = None
+
+
+@datacases(
+    SetPeerInfoCase(
+        id="multiple peers, modify first entry, set host and port",
+        service_config={
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peers": [
+                {
+                    "host": "localhost",
+                    "port": 1337,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+    SetPeerInfoCase(
+        id="multiple peers, modify first entry, set host",
+        service_config={
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        expected_service_config={
+            "farmer_peers": [
+                {
+                    "host": "localhost",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+    SetPeerInfoCase(
+        id="multiple peers, modify first entry, set port",
+        service_config={
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 1337,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+    SetPeerInfoCase(
+        id="single peer, set host and port",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 8447,
+            },
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peer": {
+                "host": "localhost",
+                "port": 1337,
+            },
+        },
+    ),
+    SetPeerInfoCase(
+        id="single peer, set host",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 8447,
+            },
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        expected_service_config={
+            "farmer_peer": {
+                "host": "localhost",
+                "port": 8447,
+            },
+        },
+    ),
+    SetPeerInfoCase(
+        id="single peer, set port",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 8447,
+            },
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 1337,
+            },
+        },
+    ),
+    SetPeerInfoCase(
+        id="single and multiple peers, modify single peer, set host and port",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 28447,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peer": {
+                "host": "localhost",
+                "port": 1337,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+    SetPeerInfoCase(
+        id="single and multiple peers, modify single peer, set host",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 28447,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_host="localhost",
+        expected_service_config={
+            "farmer_peer": {
+                "host": "localhost",
+                "port": 28447,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+    SetPeerInfoCase(
+        id="single and multiple peers, modify single peer, set port",
+        service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 28447,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+        requested_node_type=NodeType.FARMER,
+        peer_port=1337,
+        expected_service_config={
+            "farmer_peer": {
+                "host": "127.0.0.1",
+                "port": 1337,
+            },
+            "farmer_peers": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 8447,
+                },
+                {
+                    "host": "my.farmer.tld",
+                    "port": 18447,
+                },
+            ],
+        },
+    ),
+)
+def test_set_peer_info(case: SetPeerInfoCase) -> None:
+    set_peer_info(case.service_config, case.requested_node_type, peer_host=case.peer_host, peer_port=case.peer_port)
+
+    assert case.service_config == case.expected_service_config
