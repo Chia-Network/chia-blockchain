@@ -50,6 +50,8 @@ from chia.simulator.setup_nodes import (
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint32, uint64
@@ -805,8 +807,8 @@ async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, tru
         wallet_service_1.config,
     )
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -859,9 +861,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -898,7 +900,7 @@ async def timelord(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def timelord_service(bt):
+async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
     async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
