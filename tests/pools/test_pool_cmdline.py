@@ -30,10 +30,10 @@ class TestPoolNFTCommands:
 
     def test_plotnft_show(self):
         runner = CliRunner()
-        result: Result = runner.invoke(show_cmd, [])
+        result = runner.invoke(show_cmd, [], catch_exceptions=False)
         assert result.exit_code == 0
 
     def test_validate_fee_cmdline(self):
         runner = CliRunner()
-        result: Result = runner.invoke(create_cmd, ["create", "-s", "local", "--fee", "0.005"])
+        result = runner.invoke(create_cmd, ["create", "-s", "local", "--fee", "0.005"], catch_exceptions=False)
         assert result.exit_code != 0
