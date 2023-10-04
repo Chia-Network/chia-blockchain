@@ -9,9 +9,6 @@ chia.plotters.plotters
 chia.plotters.plotters_util
 chia.plotting.manager
 chia.plotting.util
-chia.pools.pool_puzzles
-chia.pools.pool_wallet
-chia.pools.pool_wallet_info
 chia.rpc.rpc_client
 chia.rpc.util
 chia.rpc.wallet_rpc_client

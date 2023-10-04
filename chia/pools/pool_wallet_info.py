@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from blspy import G1Element
 
@@ -63,7 +63,11 @@ class PoolState(Streamable):
     relative_lock_height: uint32
 
 
-def initial_pool_state_from_dict(state_dict: Dict, owner_pubkey: G1Element, owner_puzzle_hash: bytes32) -> PoolState:
+def initial_pool_state_from_dict(
+    state_dict: Dict[str, Any],
+    owner_pubkey: G1Element,
+    owner_puzzle_hash: bytes32,
+) -> PoolState:
     state_str = state_dict["state"]
     singleton_state: PoolSingletonState = PoolSingletonState[state_str]
 

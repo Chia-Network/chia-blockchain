@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any, Optional
-from unittest import TestCase
 
 from clvm_tools_rs import start_clvm_program
 
@@ -15,25 +14,24 @@ factorial_function_hash = "de3687023fa0a095d65396f59415a859dd46fc84ed00504bf4c97
 factorial_sym = {factorial_function_hash: "factorial"}
 
 
-class TestRunProgram(TestCase):
-    def test_simple_program_run(self) -> None:
-        p = start_clvm_program(factorial, "ff0580", factorial_sym)
+def test_simple_program_run() -> None:
+    p = start_clvm_program(factorial, "ff0580", factorial_sym)
 
-        last: Optional[Any] = None
-        location: Optional[Any] = None
+    last: Optional[Any] = None
+    location: Optional[Any] = None
 
-        while not p.is_ended():
-            step_result = p.step()
-            if step_result is not None:
-                last = step_result
-                self.assertTrue("Failure" not in last)
+    while not p.is_ended():
+        step_result = p.step()
+        if step_result is not None:
+            last = step_result
+            assert "Failure" not in last
 
-                if "Operator-Location" in last:
-                    location = last["Operator-Location"]
+            if "Operator-Location" in last:
+                location = last["Operator-Location"]
 
-        self.assertTrue(last is not None)
-        self.assertTrue(location is not None)
-        if last is not None and location is not None:
-            self.assertTrue("Final" in last)
-            self.assertEqual(int(last["Final"]), 120)
-            self.assertTrue(location.startswith("factorial"))
+    assert last is not None
+    assert location is not None
+    if last is not None and location is not None:
+        assert "Final" in last
+        assert int(last["Final"]) == 120
+        assert location.startswith("factorial")
