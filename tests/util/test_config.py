@@ -7,25 +7,20 @@ from chia.server.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import get_unresolved_peer_infos
 from chia.util.ints import uint16
-from tests.util.misc import DataCase, Marks, datacases
+from tests.util.misc import DataCase, datacases
 
 
 @dataclass
 class GetUnresolvedPeerInfosCase(DataCase):
-    description: str
+    id: str
     service_config: Dict[str, Any]
     requested_node_type: NodeType
     expected_peer_infos: Set[UnresolvedPeerInfo]
-    marks: Marks = ()
-
-    @property
-    def id(self) -> str:
-        return self.description
 
 
 @datacases(
     GetUnresolvedPeerInfosCase(
-        description="multiple farmer peers",
+        id="multiple farmer peers",
         service_config={
             "farmer_peers": [
                 {
@@ -45,7 +40,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="single farmer peer",
+        id="single farmer peer",
         service_config={
             "farmer_peer": {
                 "host": "my.farmer.tld",
@@ -58,7 +53,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="single farmer peer and multiple farmer peers",
+        id="single farmer peer and multiple farmer peers",
         service_config={
             "farmer_peer": {
                 "host": "my.farmer.tld",
@@ -83,7 +78,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="multiple full node peers",
+        id="multiple full node peers",
         service_config={
             "full_node_peers": [
                 {
@@ -103,7 +98,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="single full node peer",
+        id="single full node peer",
         service_config={
             "full_node_peer": {
                 "host": "my.full-node.tld",
@@ -116,7 +111,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="single full node peer and multiple full node peers",
+        id="single full node peer and multiple full node peers",
         service_config={
             "full_node_peer": {
                 "host": "my.full-node.tld",
@@ -141,7 +136,7 @@ class GetUnresolvedPeerInfosCase(DataCase):
         },
     ),
     GetUnresolvedPeerInfosCase(
-        description="no peer info in config",
+        id="no peer info in config",
         service_config={},
         requested_node_type=NodeType.FULL_NODE,
         expected_peer_infos=set(),

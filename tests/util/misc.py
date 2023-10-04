@@ -328,11 +328,8 @@ Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytes
 
 
 class DataCase(Protocol):
-    marks: Marks
-
-    @property
-    def id(self) -> str:
-        ...
+    id: str
+    marks: Marks = ()
 
 
 def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
