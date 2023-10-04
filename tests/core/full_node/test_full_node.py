@@ -2214,9 +2214,6 @@ async def test_long_reorg_nodes(
 
     await full_node_2.full_node.add_block(reorg_blocks[-1])
 
-    # node 1 will wait 30 seonds before it starts syncing. It would be nice to
-    # be able to configure this delay to be shorter
-
     def check_nodes_in_sync():
         try:
             p1 = full_node_2.full_node.blockchain.get_peak()
