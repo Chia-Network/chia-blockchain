@@ -14,16 +14,16 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX
 
 
 async def get_wallet_num(wallet_manager):
@@ -74,8 +74,8 @@ class TestDIDWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
         await full_node_api.farm_blocks_to_wallet(1, wallet_1)
@@ -146,9 +146,9 @@ class TestDIDWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
         await full_node_api.farm_blocks_to_wallet(1, wallet_1)
@@ -291,8 +291,8 @@ class TestDIDWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
@@ -436,8 +436,8 @@ class TestDIDWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
@@ -492,8 +492,8 @@ class TestDIDWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -574,8 +574,8 @@ class TestDIDWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -739,8 +739,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -823,8 +823,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -874,8 +874,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
@@ -963,8 +963,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
@@ -1020,8 +1020,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
@@ -1094,8 +1094,8 @@ class TestDIDWallet:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
         async with wallet_node.wallet_state_manager.lock:
@@ -1147,6 +1147,39 @@ class TestDIDWallet:
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
 
+        # Test BLS sign string
+        message = "Hello World"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+                "is_hex": "False",
+                "safe_mode": "False",
+            }
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes(message, "utf-8"),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+        # Test BLS sign hex
+        message = "0123456789ABCDEF"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+                "is_hex": True,
+                "safe_mode": False,
+            }
+        )
+
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            bytes.fromhex(message),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
+
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
@@ -1188,8 +1221,8 @@ class TestDIDWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
-        await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet_0)
         await full_node_api.farm_blocks_to_wallet(1, wallet_1)

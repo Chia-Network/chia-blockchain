@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
+from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER,
     create_absorb_spend,
     create_full_puzzle,
     create_pooling_inner_puzzle,
@@ -42,7 +42,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
@@ -58,6 +57,9 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
+
 
 @final
 @dataclasses.dataclass
@@ -72,7 +74,7 @@ class PoolWallet:
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
     DEFAULT_MAX_CLAIM_SPENDS = 100
 
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     standard_wallet: Wallet
@@ -482,15 +484,22 @@ class PoolWallet:
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
             s = find_owner_sk([self.wallet_state_manager.private_key], pk)
-            if s is None:
+            if s is None:  # pragma: no cover
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
+                private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
+                if private_key is None:
+                    raise ValueError(f"No private key for pubkey: {pk}")
+                return private_key
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
-            if owner_sk is None:
+            if owner_sk is None:  # pragma: no cover
+                # TODO: this code is dead, per hinting at least
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
+                private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
+                if private_key is None:
+                    raise ValueError(f"No private key for pubkey: {pk}")
+                return private_key
             return owner_sk
 
         return await sign_coin_spends(
@@ -827,9 +836,7 @@ class PoolWallet:
             self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
             max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
-        unspent_coin_records: List[CoinRecord] = list(
-            await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
-        )
+        unspent_coin_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()

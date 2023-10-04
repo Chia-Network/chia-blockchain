@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Generic, List, Tuple, TypeVar
 
 from chia.simulator.ssl_certs_1 import SSL_TEST_NODE_CERTS_AND_KEYS_1, SSL_TEST_PRIVATE_CA_CERT_AND_KEY_1
@@ -28,7 +28,7 @@ _T_SSLTestCollateral = TypeVar("_T_SSLTestCollateral", bound="SSLTestCollateralT
 
 @dataclass
 class SSLTestCollateralTracker:
-    in_use = False
+    in_use: bool = field(default=False, init=False)
 
     def mark_in_use(self) -> None:
         self.in_use = True

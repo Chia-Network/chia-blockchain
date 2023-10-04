@@ -50,7 +50,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         node: _T_RpcServiceProtocol,
         peer_api: _T_ApiProtocol,
         node_type: NodeType,
-        advertised_port: int,
+        advertised_port: Optional[int],
         service_name: str,
         network_id: str,
         *,
@@ -62,7 +62,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-        listen: bool = True,
     ) -> None:
         self.root_path = root_path
         self.config = config
@@ -77,7 +76,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
-        self._listen = listen
         self.reconnect_retry_seconds: int = 3
 
         self._log = logging.getLogger(service_name)
@@ -189,11 +187,13 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self.upnp.remap(port)
 
         await self._server.start(
-            listen=self._listen,
             prefer_ipv6=self.config.get("prefer_ipv6", False),
             on_connect=self._on_connect_callback,
         )
-        self._advertised_port = self._server.get_port()
+        try:
+            self._advertised_port = self._server.get_port()
+        except ValueError:
+            pass
 
         self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
 

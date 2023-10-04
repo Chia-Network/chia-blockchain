@@ -274,7 +274,7 @@ async def setup_farmer_multi_harvester(
             )
         )
         if start_services:
-            farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], uint16(farmer_service._server._port))
+            farmer_peer = UnresolvedPeerInfo(block_tools.config["self_hostname"], farmer_service._server.get_port())
         else:
             farmer_peer = None
         harvester_services = [

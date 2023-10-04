@@ -7,23 +7,23 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
-    "anyio==3.7.1",
+    "anyio==4.0.0",
     "blspy==2.0.2",  # Signature library
     "boto3==1.28.25",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.11",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
-    "chiapos==2.0.2",  # proof of space
+    "chiapos==2.0.3rc1",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.10",
+    "chia_rs==0.2.11",
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.5",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
-    "bitstring==4.0.2",  # Binary data management library
+    "bitstring==4.1.2",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.24",  # Concurrently log and rotate logs
-    "cryptography==41.0.3",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==41.0.4",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.12.3",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.13.1",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
@@ -33,7 +33,7 @@ dependencies = [
     "dnspython==2.4.1",  # Query DNS seeds
     "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.23",  # dns lib
-    "typing-extensions==4.7.1",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.8.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==23.1",
     "psutil==5.9.4",
@@ -44,6 +44,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    # pinned for https://github.com/pylint-dev/pylint/issues/9069
+    "astroid==2.15.6",
     "build==0.10.0",
     "coverage==7.3.0",
     "diff-cover==7.7.0",

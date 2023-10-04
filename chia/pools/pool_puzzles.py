@@ -116,7 +116,7 @@ def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64
 ######################################
 
 
-def get_template_singleton_inner_puzzle(inner_puzzle: Program):
+def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
     r = inner_puzzle.uncurry()
     if r is None:
         return False
@@ -309,7 +309,9 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
     return pubkey
 
 
-def uncurry_pool_member_inner_puzzle(inner_puzzle: Program):  # -> Optional[Tuple[Program, Program, Program]]:
+def uncurry_pool_member_inner_puzzle(
+    inner_puzzle: Program,
+) -> Tuple[Program, Program, Program, Program, Program, Program]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
@@ -352,7 +354,10 @@ def get_inner_puzzle_from_puzzle(full_puzzle: Program) -> Optional[Program]:
     _, inner_puzzle = list(args.as_iter())
     if not is_pool_singleton_inner_puzzle(inner_puzzle):
         return None
-    return inner_puzzle
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return inner_puzzle  # type: ignore[no-any-return]
 
 
 def pool_state_from_extra_data(extra_data: Program) -> Optional[PoolState]:
@@ -419,7 +424,7 @@ def pool_state_to_inner_puzzle(
         delay_time,
         delay_ph,
     )
-    if pool_state.state in [LEAVING_POOL, SELF_POOLING]:
+    if pool_state.state in [LEAVING_POOL.value, SELF_POOLING.value]:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(

@@ -14,7 +14,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import setup_simulators_and_wallets_service
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -340,7 +340,7 @@ async def wallet_environments(
                 }
                 service._node.wallet_state_manager.config = service._node.config
                 await service._node.server.start_client(
-                    PeerInfo(bt.config["self_hostname"], uint16(full_node[0]._api.full_node.server._port)), None
+                    PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
                 )
                 rpc_clients.append(
                     await astack.enter_async_context(
