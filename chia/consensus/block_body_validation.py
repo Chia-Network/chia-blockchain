@@ -42,7 +42,7 @@ async def validate_block_body(
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_point_with_peak: int,
-    get_block_generator: Callable[[BlockInfo, uint32], Awaitable[Optional[BlockGenerator]]],
+    get_block_generator: Callable[[BlockInfo, int, Dict[uint32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     *,
     validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
@@ -307,7 +307,7 @@ async def validate_block_body(
             if curr.transactions_generator is not None:
                 # These blocks are in the past and therefore assumed to be valid, so get_block_generator won't raise
                 curr_block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    curr, uint32(0 if fork_point_with_peak is None else fork_point_with_peak)
+                    curr, 0 if fork_point_with_peak is None else fork_point_with_peak, reorg_blocks
                 )
                 assert curr_block_generator is not None and curr.transactions_info is not None
                 curr_npc_result = get_name_puzzle_conditions(
