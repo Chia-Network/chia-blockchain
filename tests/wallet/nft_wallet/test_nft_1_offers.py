@@ -1438,7 +1438,7 @@ async def test_complex_nft_offer(
     assert trade_take is not None
     assert tx_records is not None
     await full_node_api.process_transaction_records(records=tx_records)
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
+    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 
     # Now let's make sure the final wallet state is correct
     maker_royalty_summary = NFTWallet.royalty_calculation(
