@@ -62,6 +62,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]) as process:
         try:
+            await asyncio.sleep(60)
             return_code = process.poll()
             if return_code is not None:
                 stdout, stderr = process.communicate()
@@ -69,6 +70,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
                     pytest.skip("Skipped temporarily.")
                 if stdout is not None and "address already in use" in stdout.lower():
                     pytest.skip("Skipped temporarily.")
+                raise RuntimeError("Non zero process poll")
             client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
 
             process.send_signal(signal_number)
@@ -144,6 +146,7 @@ async def test_services_terminate(
                             pytest.skip("Skipped temporarily.")
                         if stdout is not None and "address already in use" in stdout.lower():
                             pytest.skip("Skipped temporarily.")
+                        raise RuntimeError("Non zero process poll")
 
                     try:
                         result = await client.healthz()
