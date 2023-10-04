@@ -32,7 +32,7 @@ for setuptools_scm/PEP 440 reasons.
 - Configure number of stored full files in Datalayer
 - Add timelock information to Trades and Transactions
 - Bladebit Hybrid disk mode
-  
+
 ### Changed
 - Remove CAT1 UX guards
 - Dedup offer cancellation logic
@@ -56,7 +56,7 @@ for setuptools_scm/PEP 440 reasons.
 - update chiabip158 to 1.3
 - Update chiapos to 2.0.3
 - Update install-gui.sh to check Node 18 and npm 9
-  
+
 ### Fixed
 - Fixed python3-venv in install.sh (thanks @d1m1trus)
 - Change include_standard_libraries for CLVM compilation default to True
