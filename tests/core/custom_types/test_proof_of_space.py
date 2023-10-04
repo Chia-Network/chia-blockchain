@@ -124,21 +124,20 @@ def test_verify_and_get_quality_string(caplog: pytest.LogCaptureFixture, case: P
     assert len(caplog.text) == 0 if case.expected_error is None else case.expected_error in caplog.text
 
 
-class TestProofOfSpace:
-    @pytest.mark.parametrize("prefix_bits", [DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER, 8, 7, 6, 5, 1, 0])
-    def test_can_create_proof(self, prefix_bits: int, seeded_random: random.Random) -> None:
-        """
-        Tests that the change of getting a correct proof is exactly 1/target_filter.
-        """
-        num_trials = 100000
-        success_count = 0
-        target_filter = 2**prefix_bits
-        for _ in range(num_trials):
-            challenge_hash = bytes32.random(seeded_random)
-            plot_id = bytes32.random(seeded_random)
-            sp_output = bytes32.random(seeded_random)
+@pytest.mark.parametrize("prefix_bits", [DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER, 8, 7, 6, 5, 1, 0])
+def test_can_create_proof(prefix_bits: int, seeded_random: random.Random) -> None:
+    """
+    Tests that the change of getting a correct proof is exactly 1/target_filter.
+    """
+    num_trials = 100000
+    success_count = 0
+    target_filter = 2**prefix_bits
+    for _ in range(num_trials):
+        challenge_hash = bytes32.random(seeded_random)
+        plot_id = bytes32.random(seeded_random)
+        sp_output = bytes32.random(seeded_random)
 
-            if passes_plot_filter(prefix_bits, plot_id, challenge_hash, sp_output):
-                success_count += 1
+        if passes_plot_filter(prefix_bits, plot_id, challenge_hash, sp_output):
+            success_count += 1
 
-        assert abs((success_count * target_filter / num_trials) - 1) < 0.35
+    assert abs((success_count * target_filter / num_trials) - 1) < 0.35

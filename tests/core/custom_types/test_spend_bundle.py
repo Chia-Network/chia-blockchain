@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import random
-import unittest
 from typing import List, Tuple
 
 import pytest
@@ -20,47 +19,49 @@ BLANK_SPEND_BUNDLE = SpendBundle(coin_spends=[], aggregated_signature=G2Element(
 NULL_SIGNATURE = "0xc" + "0" * 191
 
 
-class TestStructStream(unittest.TestCase):
-    def test_from_json_legacy(self):
-        JSON = (
-            """
-        {
-          "coin_solutions": [],
-          "aggregated_signature": "%s"
-        }
+def test_from_json_legacy():
+    JSON = (
         """
-            % NULL_SIGNATURE
-        )
-        spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
-        json_1 = json.loads(JSON)
-        json_2 = spend_bundle.to_json_dict(include_legacy_keys=True, exclude_modern_keys=True)
-        assert json_1 == json_2
+    {
+      "coin_solutions": [],
+      "aggregated_signature": "%s"
+    }
+    """
+        % NULL_SIGNATURE
+    )
+    spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
+    json_1 = json.loads(JSON)
+    json_2 = spend_bundle.to_json_dict(include_legacy_keys=True, exclude_modern_keys=True)
+    assert json_1 == json_2
 
-    def test_from_json_new(self):
-        JSON = (
-            """
-        {
-          "coin_spends": [],
-          "aggregated_signature": "%s"
-        }
+
+def test_from_json_new():
+    JSON = (
         """
-            % NULL_SIGNATURE
-        )
-        spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
-        json_1 = json.loads(JSON)
-        json_2 = spend_bundle.to_json_dict(include_legacy_keys=False, exclude_modern_keys=False)
-        assert json_1 == json_2
+    {
+      "coin_spends": [],
+      "aggregated_signature": "%s"
+    }
+    """
+        % NULL_SIGNATURE
+    )
+    spend_bundle = SpendBundle.from_json_dict(json.loads(JSON))
+    json_1 = json.loads(JSON)
+    json_2 = spend_bundle.to_json_dict(include_legacy_keys=False, exclude_modern_keys=False)
+    assert json_1 == json_2
 
-    def test_round_trip(self):
-        spend_bundle = BLANK_SPEND_BUNDLE
-        round_trip(spend_bundle, include_legacy_keys=True, exclude_modern_keys=True)
-        round_trip(spend_bundle, include_legacy_keys=True, exclude_modern_keys=False)
-        round_trip(spend_bundle, include_legacy_keys=False, exclude_modern_keys=False)
 
-    def test_dont_use_both_legacy_and_modern(self):
-        json_1 = BLANK_SPEND_BUNDLE.to_json_dict(include_legacy_keys=True, exclude_modern_keys=False)
-        with self.assertRaises(ValueError):
-            SpendBundle.from_json_dict(json_1)
+def test_round_trip():
+    spend_bundle = BLANK_SPEND_BUNDLE
+    round_trip(spend_bundle, include_legacy_keys=True, exclude_modern_keys=True)
+    round_trip(spend_bundle, include_legacy_keys=True, exclude_modern_keys=False)
+    round_trip(spend_bundle, include_legacy_keys=False, exclude_modern_keys=False)
+
+
+def test_dont_use_both_legacy_and_modern():
+    json_1 = BLANK_SPEND_BUNDLE.to_json_dict(include_legacy_keys=True, exclude_modern_keys=False)
+    with pytest.raises(ValueError):
+        SpendBundle.from_json_dict(json_1)
 
 
 def round_trip(spend_bundle: SpendBundle, **kwargs):

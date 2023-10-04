@@ -58,47 +58,44 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
         assert found_passphrase == passphrase
 
 
-class TestFileKeyringSynchronization:
-    # When: using a new empty keyring
-    def test_multiple_writers(self, empty_temp_file_keyring: TempKeyring):
-        num_workers = 10
-        keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        passphrase_list = [
-            ("test-service", f"test-user-{index}", f"passphrase {index}", keyring_path, index)
-            for index in range(num_workers)
-        ]
+# When: using a new empty keyring
+def test_multiple_writers(empty_temp_file_keyring: TempKeyring):
+    num_workers = 10
+    keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+    passphrase_list = [
+        ("test-service", f"test-user-{index}", f"passphrase {index}", keyring_path, index)
+        for index in range(num_workers)
+    ]
 
-        # Create a directory for each process to indicate readiness
-        ready_dir: Path = Path(keyring_path).parent / "ready"
-        ready_dir.mkdir(parents=True, exist_ok=True)
+    # Create a directory for each process to indicate readiness
+    ready_dir: Path = Path(keyring_path).parent / "ready"
+    ready_dir.mkdir(parents=True, exist_ok=True)
 
-        finished_dir: Path = Path(keyring_path).parent / "finished"
-        finished_dir.mkdir(parents=True, exist_ok=True)
+    finished_dir: Path = Path(keyring_path).parent / "finished"
+    finished_dir.mkdir(parents=True, exist_ok=True)
 
-        # When: spinning off children to each set a passphrase concurrently
-        with Pool(processes=num_workers) as pool:
-            res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
+    # When: spinning off children to each set a passphrase concurrently
+    with Pool(processes=num_workers) as pool:
+        res = pool.starmap_async(dummy_set_passphrase, passphrase_list)
 
-            assert wait_for_enough_files_in_directory(ready_dir, num_workers)
+        assert wait_for_enough_files_in_directory(ready_dir, num_workers)
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+        log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+        # Signal that testing should begin
+        start_file_path: Path = ready_dir / "start"
+        with open(start_file_path, "w") as f:
+            f.write(f"{os.getpid()}\n")
 
-            assert wait_for_enough_files_in_directory(finished_dir, num_workers)
+        assert wait_for_enough_files_in_directory(finished_dir, num_workers)
 
-            log.warning(f"Finished: {num_workers} workers finished")
+        log.warning(f"Finished: {num_workers} workers finished")
 
-            # Collect results
-            res.get(
-                timeout=adjusted_timeout(timeout=10)
-            )  # 10 second timeout to prevent a bad test from spoiling the fun
+        # Collect results
+        res.get(timeout=adjusted_timeout(timeout=10))  # 10 second timeout to prevent a bad test from spoiling the fun
 
-        # Expect: parent process should be able to find all passphrases that were set by the child processes
-        for item in passphrase_list:
-            expected_passphrase = item[2]
-            actual_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
-            assert expected_passphrase == actual_passphrase
+    # Expect: parent process should be able to find all passphrases that were set by the child processes
+    for item in passphrase_list:
+        expected_passphrase = item[2]
+        actual_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
+        assert expected_passphrase == actual_passphrase

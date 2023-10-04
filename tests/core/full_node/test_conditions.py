@@ -121,285 +121,290 @@ async def check_conditions(
 co = ConditionOpcode
 
 
-class TestConditions:
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "opcode, expected_cost",
-        [
-            (0x100, 100),
-            (0x101, 106),
-            (0x102, 112),
-            (0x103, 119),
-            (0x107, 152),
-            (0x1F0, 208000000),
-            # the pattern repeats for every leading byte
-            (0x400, 100),
-            (0x401, 106),
-            (0x4F0, 208000000),
-            (0x4000, 100),
-            (0x4001, 106),
-            (0x40F0, 208000000),
-        ],
-    )
-    async def test_unknown_conditions_with_cost(
-        self, opcode: int, expected_cost: int, bt, consensus_mode: ConsensusMode
-    ):
-        conditions = Program.to(assemble(f"(({opcode} 1337))"))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "opcode, expected_cost",
+    [
+        (0x100, 100),
+        (0x101, 106),
+        (0x102, 112),
+        (0x103, 119),
+        (0x107, 152),
+        (0x1F0, 208000000),
+        # the pattern repeats for every leading byte
+        (0x400, 100),
+        (0x401, 106),
+        (0x4F0, 208000000),
+        (0x4000, 100),
+        (0x4001, 106),
+        (0x40F0, 208000000),
+    ],
+)
+async def test_unknown_conditions_with_cost(opcode: int, expected_cost: int, bt, consensus_mode: ConsensusMode):
+    conditions = Program.to(assemble(f"(({opcode} 1337))"))
+    additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
-            # before the hard fork, all unknown conditions have 0 cost
-            expected_cost = 0
+    if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+        # before the hard fork, all unknown conditions have 0 cost
+        expected_cost = 0
 
+    # once the hard fork activates, blocks no longer pay the cost of the ROM
+    # generator (which includes hashing all puzzles).
+    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        block_base_cost = 756064
+    else:
+        block_base_cost = 761056
+    assert new_block.transactions_info is not None
+    assert new_block.transactions_info.cost - block_base_cost == expected_cost
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "condition, expected_cost",
+    [
+        ("((90 1337))", 13370000),
+        ("((90 30000))", 300000000),
+    ],
+)
+async def test_softfork_condition(condition: str, expected_cost: int, bt, consensus_mode: ConsensusMode):
+    conditions = Program.to(assemble(condition))
+    additions, removals, new_block = await check_conditions(bt, conditions)
+
+    if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+        # the SOFTFORK condition is not recognized before the hard fork
+        expected_cost = 0
+        block_base_cost = 737056
+    else:
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            block_base_cost = 756064
-        else:
-            block_base_cost = 761056
-        assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
+        block_base_cost = 732064
 
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "condition, expected_cost",
-        [
-            ("((90 1337))", 13370000),
-            ("((90 30000))", 300000000),
-        ],
+    # the block_base_cost includes the cost of the bytes for the condition
+    # with 2 bytes argument. This test works as long as the conditions it's
+    # parameterized on has the same size
+    assert new_block.transactions_info is not None
+    assert new_block.transactions_info.cost - block_base_cost == expected_cost
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "opcode,value,expected",
+    [
+        # the chain has 4 blocks, the spend is happening in the 5th block
+        # the coin being spent was created in the 3rd block (i.e. block 2)
+        # ensure invalid heights fail and pass correctly, depending on
+        # which end of the range they exceed
+        # genesis timestamp is 10000 and each block is 10 seconds
+        # MY BIRTH HEIGHT
+        (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+        (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+        (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
+        (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
+        # MY BIRTH SECONDS
+        (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        (co.ASSERT_MY_BIRTH_SECONDS, 10020, None),
+        (co.ASSERT_MY_BIRTH_SECONDS, 10021, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+        # HEIGHT RELATIVE
+        (co.ASSERT_HEIGHT_RELATIVE, -1, None),
+        (co.ASSERT_HEIGHT_RELATIVE, 0, None),
+        (co.ASSERT_HEIGHT_RELATIVE, 1, None),
+        (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
+        # BEFORE HEIGHT RELATIVE
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 2, None),
+        (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, None),
+        # HEIGHT ABSOLUTE
+        (co.ASSERT_HEIGHT_ABSOLUTE, -1, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 0, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+        # BEFORE HEIGHT ABSOLUTE
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, -1, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 0, Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, None),
+        (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 0x100000000, None),
+        # SECONDS RELATIVE
+        (co.ASSERT_SECONDS_RELATIVE, -1, None),
+        (co.ASSERT_SECONDS_RELATIVE, 0, None),
+        (co.ASSERT_SECONDS_RELATIVE, 10, None),
+        (co.ASSERT_SECONDS_RELATIVE, 11, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 20, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 21, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
+        # BEFORE SECONDS RELATIVE
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 11, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 20, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 21, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 30, None),
+        (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x100000000000000, None),
+        # SECONDS ABSOLUTE
+        (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10030, None),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10031, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10039, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10040, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 10041, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+        # BEFORE SECONDS ABSOLUTE
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, -1, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 0, Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10000, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10039, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10040, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10041, None),
+        (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 0x100000000, None),
+    ],
+)
+async def test_condition(opcode, value, expected, bt):
+    conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
+    await check_conditions(bt, conditions, expected_err=expected)
+
+
+@pytest.mark.asyncio
+async def test_invalid_my_id(bt):
+    blocks = await initial_blocks(bt)
+    coin = list(blocks[-2].get_included_reward_coins())[0]
+    wrong_name = bytearray(coin.name())
+    wrong_name[-1] ^= 1
+    conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{wrong_name.hex()}))"))
+    await check_conditions(bt, conditions, expected_err=Err.ASSERT_MY_COIN_ID_FAILED)
+
+
+@pytest.mark.asyncio
+async def test_valid_my_id(bt):
+    blocks = await initial_blocks(bt)
+    coin = list(blocks[-2].get_included_reward_coins())[0]
+    conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
+    await check_conditions(bt, conditions)
+
+
+@pytest.mark.asyncio
+async def test_invalid_coin_announcement(bt):
+    blocks = await initial_blocks(bt)
+    coin = list(blocks[-2].get_included_reward_coins())[0]
+    announce = Announcement(coin.name(), b"test_bad")
+    conditions = Program.to(
+        assemble(
+            f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
+            f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
+        )
     )
-    async def test_softfork_condition(self, condition: str, expected_cost: int, bt, consensus_mode: ConsensusMode):
-        conditions = Program.to(assemble(condition))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+    await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
-            # the SOFTFORK condition is not recognized before the hard fork
-            expected_cost = 0
-            block_base_cost = 737056
-        else:
-            # once the hard fork activates, blocks no longer pay the cost of the ROM
-            # generator (which includes hashing all puzzles).
-            block_base_cost = 732064
 
-        # the block_base_cost includes the cost of the bytes for the condition
-        # with 2 bytes argument. This test works as long as the conditions it's
-        # parameterized on has the same size
-        assert new_block.transactions_info is not None
-        assert new_block.transactions_info.cost - block_base_cost == expected_cost
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "opcode,value,expected",
-        [
-            # the chain has 4 blocks, the spend is happening in the 5th block
-            # the coin being spent was created in the 3rd block (i.e. block 2)
-            # ensure invalid heights fail and pass correctly, depending on
-            # which end of the range they exceed
-            # genesis timestamp is 10000 and each block is 10 seconds
-            # MY BIRTH HEIGHT
-            (co.ASSERT_MY_BIRTH_HEIGHT, -1, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 0x100000000, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 3, Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
-            (co.ASSERT_MY_BIRTH_HEIGHT, 2, None),
-            # MY BIRTH SECONDS
-            (co.ASSERT_MY_BIRTH_SECONDS, -1, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (co.ASSERT_MY_BIRTH_SECONDS, 0x10000000000000000, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10019, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10020, None),
-            (co.ASSERT_MY_BIRTH_SECONDS, 10021, Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            # HEIGHT RELATIVE
-            (co.ASSERT_HEIGHT_RELATIVE, -1, None),
-            (co.ASSERT_HEIGHT_RELATIVE, 0, None),
-            (co.ASSERT_HEIGHT_RELATIVE, 1, None),
-            (co.ASSERT_HEIGHT_RELATIVE, 2, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            (co.ASSERT_HEIGHT_RELATIVE, 0x100000000, Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            # BEFORE HEIGHT RELATIVE
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, -1, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 1, Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 2, None),
-            (co.ASSERT_BEFORE_HEIGHT_RELATIVE, 0x100000000, None),
-            # HEIGHT ABSOLUTE
-            (co.ASSERT_HEIGHT_ABSOLUTE, -1, None),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 0, None),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 3, None),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 4, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-            (co.ASSERT_HEIGHT_ABSOLUTE, 0x100000000, Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
-            # BEFORE HEIGHT ABSOLUTE
-            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, -1, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
-            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 0, Err.IMPOSSIBLE_HEIGHT_ABSOLUTE_CONSTRAINTS),
-            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 3, Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
-            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 4, None),
-            (co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, 0x100000000, None),
-            # SECONDS RELATIVE
-            (co.ASSERT_SECONDS_RELATIVE, -1, None),
-            (co.ASSERT_SECONDS_RELATIVE, 0, None),
-            (co.ASSERT_SECONDS_RELATIVE, 10, None),
-            (co.ASSERT_SECONDS_RELATIVE, 11, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, 20, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, 21, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, 30, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_SECONDS_RELATIVE, 0x10000000000000000, Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            # BEFORE SECONDS RELATIVE
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, -1, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 10, Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 11, None),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 20, None),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 21, None),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 30, None),
-            (co.ASSERT_BEFORE_SECONDS_RELATIVE, 0x100000000000000, None),
-            # SECONDS ABSOLUTE
-            (co.ASSERT_SECONDS_ABSOLUTE, -1, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 0, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10000, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10030, None),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10031, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10039, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10040, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_SECONDS_ABSOLUTE, 10041, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_SECONDS_ABSOLUTE, 0x10000000000000000, Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
-            # BEFORE SECONDS ABSOLUTE
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, -1, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 0, Err.IMPOSSIBLE_SECONDS_ABSOLUTE_CONSTRAINTS),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10000, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10030, Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10031, None),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10039, None),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10040, None),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 10041, None),
-            (co.ASSERT_BEFORE_SECONDS_ABSOLUTE, 0x100000000, None),
-        ],
+@pytest.mark.asyncio
+async def test_valid_coin_announcement(bt):
+    blocks = await initial_blocks(bt)
+    coin = list(blocks[-2].get_included_reward_coins())[0]
+    announce = Announcement(coin.name(), b"test")
+    conditions = Program.to(
+        assemble(
+            f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
+            f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
+        )
     )
-    async def test_condition(self, opcode, value, expected, bt):
-        conditions = Program.to(assemble(f"(({opcode[0]} {value}))"))
-        await check_conditions(bt, conditions, expected_err=expected)
+    await check_conditions(bt, conditions)
 
-    @pytest.mark.asyncio
-    async def test_invalid_my_id(self, bt):
-        blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        wrong_name = bytearray(coin.name())
-        wrong_name[-1] ^= 1
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{wrong_name.hex()}))"))
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_MY_COIN_ID_FAILED)
 
-    @pytest.mark.asyncio
-    async def test_valid_my_id(self, bt):
-        blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        conditions = Program.to(assemble(f"(({ConditionOpcode.ASSERT_MY_COIN_ID[0]} 0x{coin.name().hex()}))"))
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    async def test_invalid_coin_announcement(self, bt):
-        blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        announce = Announcement(coin.name(), b"test_bad")
-        conditions = Program.to(
-            assemble(
-                f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )
+@pytest.mark.asyncio
+async def test_invalid_puzzle_announcement(bt):
+    announce = Announcement(EASY_PUZZLE_HASH, b"test_bad")
+    conditions = Program.to(
+        assemble(
+            f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
+            f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
         )
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_coin_announcement(self, bt):
-        blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        announce = Announcement(coin.name(), b"test")
-        conditions = Program.to(
-            assemble(
-                f"(({ConditionOpcode.CREATE_COIN_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )
-        )
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    async def test_invalid_puzzle_announcement(self, bt):
-        announce = Announcement(EASY_PUZZLE_HASH, b"test_bad")
-        conditions = Program.to(
-            assemble(
-                f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )
-        )
-        await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
-
-    @pytest.mark.asyncio
-    async def test_valid_puzzle_announcement(self, bt):
-        announce = Announcement(EASY_PUZZLE_HASH, b"test")
-        conditions = Program.to(
-            assemble(
-                f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
-                f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
-            )
-        )
-        await check_conditions(bt, conditions)
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "prefix, condition, num, expect_err",
-        [
-            # CREATE_COIN_ANNOUNCEMENT
-            ("", "(60 'test')", 1024, None),
-            ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
-            # CREATE_PUZZLE_ANNOUNCEMENT
-            ("", "(62 'test')", 1024, None),
-            ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
-            # ASSERT_PUZZLE_ANNOUNCEMENT
-            ("(62 'test')", "(63 {pann})", 1023, None),
-            ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
-            # ASSERT_COIN_ANNOUNCEMENT
-            ("(60 'test')", "(61 {cann})", 1023, None),
-            ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
-            # ASSERT_CONCURRENT_SPEND
-            ("", "(64 {coin})", 1024, None),
-            ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
-            # ASSERT_CONCURRENT_PUZZLE
-            ("", "(65 {ph})", 1024, None),
-            ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
-        ],
     )
-    async def test_announce_conditions_limit(
-        self,
-        consensus_mode: ConsensusMode,
-        prefix: str,
-        condition: str,
-        num: int,
-        expect_err: Optional[Err],
-        bt: BlockTools,
-    ):
-        """
-        Test that the condition checker accepts more announcements than the new per puzzle limit
-        pre-v2-softfork, and rejects more than the announcement limit afterward.
-        """
+    await check_conditions(bt, conditions, expected_err=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
-        if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
-            # before softfork 3, there was no limit on the number of
-            # announcements
-            expect_err = None
 
-        blocks = await initial_blocks(bt)
-        coin = list(blocks[-2].get_included_reward_coins())[0]
-        coin_announcement = Announcement(coin.name(), b"test")
-        puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
-
-        conditions = b""
-        if prefix != "":
-            conditions += b"\xff" + assemble(prefix).as_bin()
-
-        cond = condition.format(
-            coin="0x" + coin.name().hex(),
-            ph="0x" + EASY_PUZZLE_HASH.hex(),
-            cann="0x" + coin_announcement.name().hex(),
-            pann="0x" + puzzle_announcement.name().hex(),
+@pytest.mark.asyncio
+async def test_valid_puzzle_announcement(bt):
+    announce = Announcement(EASY_PUZZLE_HASH, b"test")
+    conditions = Program.to(
+        assemble(
+            f"(({ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT[0]} 'test')"
+            f"({ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT[0]} 0x{announce.name().hex()}))"
         )
+    )
+    await check_conditions(bt, conditions)
 
-        conditions += (b"\xff" + assemble(cond).as_bin()) * num
-        conditions += b"\x80"
-        conditions_program = Program.from_bytes(conditions)
 
-        await check_conditions(bt, conditions_program, expected_err=expect_err)
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "prefix, condition, num, expect_err",
+    [
+        # CREATE_COIN_ANNOUNCEMENT
+        ("", "(60 'test')", 1024, None),
+        ("", "(60 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        # CREATE_PUZZLE_ANNOUNCEMENT
+        ("", "(62 'test')", 1024, None),
+        ("", "(62 'test')", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        # ASSERT_PUZZLE_ANNOUNCEMENT
+        ("(62 'test')", "(63 {pann})", 1023, None),
+        ("(62 'test')", "(63 {pann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+        # ASSERT_COIN_ANNOUNCEMENT
+        ("(60 'test')", "(61 {cann})", 1023, None),
+        ("(60 'test')", "(61 {cann})", 1024, Err.TOO_MANY_ANNOUNCEMENTS),
+        # ASSERT_CONCURRENT_SPEND
+        ("", "(64 {coin})", 1024, None),
+        ("", "(64 {coin})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+        # ASSERT_CONCURRENT_PUZZLE
+        ("", "(65 {ph})", 1024, None),
+        ("", "(65 {ph})", 1025, Err.TOO_MANY_ANNOUNCEMENTS),
+    ],
+)
+async def test_announce_conditions_limit(
+    consensus_mode: ConsensusMode,
+    prefix: str,
+    condition: str,
+    num: int,
+    expect_err: Optional[Err],
+    bt: BlockTools,
+):
+    """
+    Test that the condition checker accepts more announcements than the new per puzzle limit
+    pre-v2-softfork, and rejects more than the announcement limit afterward.
+    """
+
+    if consensus_mode.value < ConsensusMode.SOFT_FORK3.value:
+        # before softfork 3, there was no limit on the number of
+        # announcements
+        expect_err = None
+
+    blocks = await initial_blocks(bt)
+    coin = list(blocks[-2].get_included_reward_coins())[0]
+    coin_announcement = Announcement(coin.name(), b"test")
+    puzzle_announcement = Announcement(EASY_PUZZLE_HASH, b"test")
+
+    conditions = b""
+    if prefix != "":
+        conditions += b"\xff" + assemble(prefix).as_bin()
+
+    cond = condition.format(
+        coin="0x" + coin.name().hex(),
+        ph="0x" + EASY_PUZZLE_HASH.hex(),
+        cann="0x" + coin_announcement.name().hex(),
+        pann="0x" + puzzle_announcement.name().hex(),
+    )
+
+    conditions += (b"\xff" + assemble(cond).as_bin()) * num
+    conditions += b"\x80"
+    conditions_program = Program.from_bytes(conditions)
+
+    await check_conditions(bt, conditions_program, expected_err=expect_err)
