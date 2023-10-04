@@ -168,6 +168,7 @@ async def test_services_terminate(
 
                         process.send_signal(signal_number)
                         process.communicate(timeout=adjusted_timeout(timeout=30))
+                        return
                     finally:
                         client.close()
                         await client.await_closed()
