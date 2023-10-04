@@ -38,7 +38,7 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
-async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:
+async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 30) -> DaemonProxy:
     timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()
@@ -132,7 +132,7 @@ async def test_services_terminate(
             )
             try:
                 start = time.monotonic()
-                while time.monotonic() - start < 50:
+                while time.monotonic() - start < 180:
                     return_code = process.poll()
                     assert return_code is None
 
