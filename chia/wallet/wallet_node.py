@@ -640,7 +640,7 @@ class WalletNode:
         network_name = self.config["selected_network"]
         try:
             default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
-        except Exception:
+        except KeyError:
             self.log.info("Default port field not found in config.")
             default_port = None
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
