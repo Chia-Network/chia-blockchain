@@ -41,7 +41,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system,
-    setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
@@ -695,29 +694,6 @@ async def farmer_three_harvester_not_started(
         yield _
 
 
-# TODO: Ideally, the db_version should be the (parameterized) db_version
-# fixture, to test all versions of the database schema. This doesn't work
-# because of a hack in shutting down the full node, which means you cannot run
-# more than one simulations per process.
-@pytest_asyncio.fixture(
-    scope="function",
-    params=[
-        pytest.param(
-            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
-        )
-    ],
-)
-async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    async with setup_full_system_connect_to_deamon(
-        test_constants_modified,
-        bt,
-        b_tools=get_b_tools,
-        b_tools_1=get_b_tools_1,
-        db_version=1,
-    ) as _:
-        yield _, get_b_tools, get_b_tools_1
-
-
 @pytest_asyncio.fixture(scope="function")
 async def get_daemon(bt):
     async with setup_daemon(btools=bt) as _:
@@ -982,9 +958,9 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async with setup_full_system(test_constants_modified, bt, db_version=1) as _:
-        yield _
+async def simulation(bt, get_b_tools):
+    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as full_system:
+        yield full_system, get_b_tools
 
 
 HarvesterFarmerEnvironment = Tuple[
