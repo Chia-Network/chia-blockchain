@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import List, Optional, Tuple
 
 import pytest
@@ -395,6 +396,46 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("num_proofs", range(1, 6))
+async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
+    async with sim_and_client() as (sim, client):
+        flags: List[str] = [str(i) for i in range(0, num_proofs)]
+        proofs_checker: ProofsChecker = ProofsChecker(flags)
+
+        # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))
+        proofs_checker_runner: Program = Program.fromhex(
+            "ff02ffff03ffff02ff02ffff04ff05ff808080ff80ffff01ff088080ff0180"
+        ).curry(proofs_checker.as_program())
+        await sim.farm_block(proofs_checker_runner.get_tree_hash())
+        proof_checker_coin: Coin = (
+            await client.get_coin_records_by_puzzle_hashes(
+                [proofs_checker_runner.get_tree_hash()], include_spent_coins=False
+            )
+        )[0].coin
+
+        block_height: uint32 = sim.block_height
+        for i, proof_list in enumerate(itertools.permutations(flags, num_proofs)):
+            result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+                cost_logger.add_cost(
+                    f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
+                    SpendBundle(
+                        [
+                            CoinSpend(
+                                proof_checker_coin,
+                                proofs_checker_runner,
+                                Program.to([[Program.to((flag, "1")) for flag in proof_list]]),
+                            )
+                        ],
+                        G2Element(),
+                    ),
+                )
+            )
+            assert result == (MempoolInclusionStatus.SUCCESS, None)
+            await sim.farm_block()
+            await sim.rewind(block_height)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("test_syncing", [True, False])
 async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
@@ -490,8 +531,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
         # Update the proofs with a proper announcement
-        NEW_PROOFS: Program = Program.to((("test", True), ("test2", True)))
-        MALICIOUS_PROOFS: Program = Program.to(("malicious", True))
+        NEW_PROOFS: Program = Program.to((("test", "1"), ("test2", "1")))
+        MALICIOUS_PROOFS: Program = Program.to(("malicious", "1"))
         NEW_PROOF_HASH: bytes32 = NEW_PROOFS.get_tree_hash()
         expected_announcement, update_spend, vc = vc.do_spend(
             ACS,
@@ -629,6 +670,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 [
                     (
                         cr_1 if error != "use_malicious_cats" else malicious_cr_1,
+                        0,
                         ACS,
                         Program.to(
                             [
@@ -643,6 +685,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                     ),
                     (
                         cr_2 if error != "use_malicious_cats" else malicious_cr_2,
+                        0,
                         ACS,
                         Program.to(
                             [
@@ -680,7 +723,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
                             else malicious_cr_2.expected_announcement(),
                         ],
-                        *([61, a] for a in expected_announcements),
+                        *([61, a.name()] for a in expected_announcements),
                         vc.standard_magic_condition(),
                     ]
                 ),
@@ -702,7 +745,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 if test_syncing:
                     assert all(
-                        CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program())) for spend in cr_cat_spends
+                        CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program()))[0] for spend in cr_cat_spends
                     )
                     new_crcats = [crcat for spend in cr_cat_spends for crcat in CRCAT.get_next_from_coin_spend(spend)]
                     vc = VerifiedCredential.get_next_from_coin_spend(auth_spend)
@@ -796,15 +839,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             Program.to(
                 [
                     [51, ACS_PH, vc.coin.amount],
-                    [
-                        -10,
-                        vc.eml_lineage_proof.to_program(),
-                        [
-                            Program.to(vc.eml_lineage_proof.parent_proof_hash),
-                            vc.launcher_id,
-                        ],
-                        ACS_TRANSFER_PROGRAM.get_tree_hash(),
-                    ],
+                    vc.magic_condition_for_self_revoke(),
                 ]
             ),
         )

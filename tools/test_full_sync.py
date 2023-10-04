@@ -7,7 +7,6 @@ import cProfile
 import logging
 import os
 import shutil
-import sys
 import tempfile
 import time
 from contextlib import contextmanager
@@ -49,9 +48,6 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
     if not profile:
         yield
         return
-
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
 
     with cProfile.Profile() as pr:
         receive_start_time = time.monotonic()
@@ -142,7 +138,7 @@ async def run_sync_test(
             config["full_node"]["single_threaded"] = True
         config["full_node"]["db_sync"] = db_sync
         config["full_node"]["enable_profiler"] = node_profiler
-        full_node = FullNode(
+        full_node = await FullNode.create(
             config["full_node"],
             root_path=root_path,
             consensus_constants=constants,
@@ -197,7 +193,7 @@ async def run_sync_test(
                                 await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
                                 await full_node.add_block(b)
                         else:
-                            success, summary = await full_node.add_block_batch(block_batch, peer, None)
+                            success, summary, _ = await full_node.add_block_batch(block_batch, peer, None)
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -343,7 +339,7 @@ async def run_sync_checkpoint(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     config["full_node"]["db_sync"] = "off"
-    full_node = FullNode(
+    full_node = await FullNode.create(
         config["full_node"],
         root_path=root_path,
         consensus_constants=constants,
@@ -372,7 +368,7 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _ = await full_node.add_block_batch(block_batch, peer, None)
+                success, _, _ = await full_node.add_block_batch(block_batch, peer, None)
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -384,7 +380,7 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _ = await full_node.add_block_batch(block_batch, peer, None)
+                success, _, _ = await full_node.add_block_batch(block_batch, peer, None)
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 

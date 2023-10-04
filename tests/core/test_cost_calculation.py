@@ -20,7 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-from tests.util.misc import assert_runtime
+from tests.util.misc import BenchmarkRunner
 
 from .make_block_generator import make_block_generator
 
@@ -77,7 +77,11 @@ class TestCostCalculation:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
 
         npc_result: NPCResult = get_name_puzzle_conditions(
-            program, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            program,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
 
         assert npc_result.error is None
@@ -85,11 +89,14 @@ class TestCostCalculation:
 
         coin_spend = spend_bundle.coin_spends[0]
         assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
-        spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
+        spend_info = get_puzzle_and_solution_for_coin(program, coin_spend.coin, 0)
         assert spend_info.puzzle == coin_spend.puzzle_reveal
         assert spend_info.solution == coin_spend.solution
 
-        clvm_cost = 404560
+        if softfork_height >= bt.constants.HARD_FORK_FIX_HEIGHT:
+            clvm_cost = 27360
+        else:
+            clvm_cost = 404560
         byte_cost = len(bytes(program.program)) * bt.constants.COST_PER_BYTE
         assert (
             npc_result.conds.cost
@@ -142,11 +149,19 @@ class TestCostCalculation:
         )
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
+            generator,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=True,
+            height=softfork_height,
+            constants=bt.constants,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator, bt.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            generator,
+            bt.constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
         assert npc_result.error is None
 
@@ -155,7 +170,7 @@ class TestCostCalculation:
             bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
             300,
         )
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin)
+        spend_info = get_puzzle_and_solution_for_coin(generator, coin, 0)
         assert spend_info.puzzle.to_program() == puzzle
 
     @pytest.mark.asyncio
@@ -169,28 +184,40 @@ class TestCostCalculation:
         program = SerializedProgram.from_bytes(binutils.assemble(f"(i (0xfe (q . 0)) (q . ()) {disassembly})").as_bin())
         generator = BlockGenerator(program, [], [])
         npc_result: NPCResult = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=softfork_height
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=True,
+            height=softfork_height,
+            constants=test_constants,
         )
         assert npc_result.error is not None
         npc_result = get_name_puzzle_conditions(
-            generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+            generator,
+            test_constants.MAX_BLOCK_COST_CLVM,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=test_constants,
         )
         assert npc_result.error is None
 
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_tx_generator_speed(self, request, softfork_height):
+    async def test_tx_generator_speed(self, softfork_height, benchmark_runner: BenchmarkRunner):
         LARGE_BLOCK_COIN_CONSUMED_COUNT = 687
         generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
         program = SerializedProgram.from_bytes(generator_bytes)
 
-        with assert_runtime(seconds=0.5, label=request.node.name):
+        with benchmark_runner.assert_runtime(seconds=0.5):
             generator = BlockGenerator(program, [], [])
             npc_result = get_name_puzzle_conditions(
-                generator, test_constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height
+                generator,
+                test_constants.MAX_BLOCK_COST_CLVM,
+                mempool_mode=False,
+                height=softfork_height,
+                constants=test_constants,
             )
 
         assert npc_result.error is None
+        assert npc_result.conds is not None
         assert len(npc_result.conds.spends) == LARGE_BLOCK_COIN_CONSUMED_COUNT
 
     @pytest.mark.asyncio
@@ -208,21 +235,24 @@ class TestCostCalculation:
 
         # ensure we fail if the program exceeds the cost
         generator = BlockGenerator(program, [], [])
-        npc_result = get_name_puzzle_conditions(generator, 10000000, mempool_mode=False, height=softfork_height)
+        npc_result = get_name_puzzle_conditions(
+            generator, 10000000, mempool_mode=False, height=softfork_height, constants=test_constants
+        )
 
         assert npc_result.error is not None
         assert npc_result.cost == 0
 
         # raise the max cost to make sure this passes
         # ensure we pass if the program does not exceeds the cost
-        npc_result = get_name_puzzle_conditions(generator, 23000000, mempool_mode=False, height=softfork_height)
+        npc_result = get_name_puzzle_conditions(
+            generator, 23000000, mempool_mode=False, height=softfork_height, constants=test_constants
+        )
 
         assert npc_result.error is None
         assert npc_result.cost > 10000000
 
     @pytest.mark.asyncio
-    @pytest.mark.benchmark
-    async def test_standard_tx(self, request: pytest.FixtureRequest):
+    async def test_standard_tx(self, benchmark_runner: BenchmarkRunner):
         # this isn't a real public key, but we don't care
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
@@ -238,7 +268,7 @@ class TestCostCalculation:
             p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
         )
 
-        with assert_runtime(seconds=0.1, label=request.node.name):
+        with benchmark_runner.assert_runtime(seconds=0.1):
             total_cost = 0
             for i in range(0, 1000):
                 cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
@@ -246,8 +276,7 @@ class TestCostCalculation:
 
 
 @pytest.mark.asyncio
-@pytest.mark.benchmark
-async def test_get_puzzle_and_solution_for_coin_performance():
+async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: BenchmarkRunner):
     from clvm.casts import int_from_bytes
 
     from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
@@ -255,6 +284,7 @@ async def test_get_puzzle_and_solution_for_coin_performance():
 
     spends: List[Coin] = []
 
+    assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
@@ -270,8 +300,8 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
+    with benchmark_runner.assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
-                spend_info = get_puzzle_and_solution_for_coin(generator, c)
+                spend_info = get_puzzle_and_solution_for_coin(generator, c, 0)
                 assert spend_info.puzzle.get_tree_hash() == c.puzzle_hash

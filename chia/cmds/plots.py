@@ -12,7 +12,7 @@ from chia.plotting.util import add_plot_directory, validate_plot_size
 log = logging.getLogger(__name__)
 
 
-def show_plots(root_path: Path):
+def show_plots(root_path: Path) -> None:
     from chia.plotting.util import get_plot_directories
 
     print("Directories where plots are being searched for:")
@@ -29,7 +29,7 @@ def show_plots(root_path: Path):
 
 @click.group("plots", help="Manage your plots")
 @click.pass_context
-def plots_cmd(ctx: click.Context):
+def plots_cmd(ctx: click.Context) -> None:
     """Create, add, remove and check your plots"""
     from chia.util.chia_logging import initialize_logging
 
@@ -114,7 +114,7 @@ def create_cmd(
     nobitfield: bool,
     exclude_final_dir: bool,
     connect_to_daemon: bool,
-):
+) -> None:
     from chia.plotting.create_plots import create_plots, resolve_plot_keys
     from chia.plotting.util import Params
 
@@ -174,7 +174,7 @@ def create_cmd(
 @click.pass_context
 def check_cmd(
     ctx: click.Context, num: int, grep_string: str, list_duplicates: bool, debug_show_memo: bool, challenge_start: int
-):
+) -> None:
     from chia.plotting.check_plots import check_plots
 
     check_plots(ctx.obj["root_path"], num, challenge_start, grep_string, list_duplicates, debug_show_memo)
@@ -190,7 +190,7 @@ def check_cmd(
     show_default=True,
 )
 @click.pass_context
-def add_cmd(ctx: click.Context, final_dir: str):
+def add_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import add_plot_directory
 
     try:
@@ -210,7 +210,7 @@ def add_cmd(ctx: click.Context, final_dir: str):
     show_default=True,
 )
 @click.pass_context
-def remove_cmd(ctx: click.Context, final_dir: str):
+def remove_cmd(ctx: click.Context, final_dir: str) -> None:
     from chia.plotting.util import remove_plot_directory
 
     remove_plot_directory(ctx.obj["root_path"], final_dir)
@@ -218,5 +218,5 @@ def remove_cmd(ctx: click.Context, final_dir: str):
 
 @plots_cmd.command("show", help="Shows the directory of current plots")
 @click.pass_context
-def show_cmd(ctx: click.Context):
+def show_cmd(ctx: click.Context) -> None:
     show_plots(ctx.obj["root_path"])

@@ -244,7 +244,7 @@ def get_full_blocks() -> Iterator[FullBlock]:
 
 
 @pytest.mark.asyncio
-# @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
+@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
 async def test_parser():
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure

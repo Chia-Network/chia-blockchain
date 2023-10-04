@@ -76,9 +76,7 @@ class TestClawbackLifecycle:
         conditions_dict = conditions_dict_for_solution(coin_spend.puzzle_reveal, coin_spend.solution, INFINITE_COST)
         signatures = []
         for pk_bytes, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict,
-            coin_spend.coin.name(),
-            DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA,
+            conditions_dict, coin_spend.coin, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
         ):
             pk = G1Element.from_bytes(pk_bytes)
             signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
@@ -91,11 +89,11 @@ class TestClawbackLifecycle:
         async with sim_and_client() as (sim, sim_client):
             key_lookup = KeyTool()  # type: ignore[no-untyped-call]
             sender_index = 1
-            sender_pk = G1Element(public_key_for_index(sender_index, key_lookup))
+            sender_pk = G1Element.from_bytes(public_key_for_index(sender_index, key_lookup))
             sender_puz = puzzle_for_pk(sender_pk)
             sender_ph = sender_puz.get_tree_hash()
             recipient_index = 2
-            recipient_pk = G1Element(public_key_for_index(recipient_index, key_lookup))
+            recipient_pk = G1Element.from_bytes(public_key_for_index(recipient_index, key_lookup))
             recipient_puz = puzzle_for_pk(recipient_pk)
             recipient_ph = recipient_puz.get_tree_hash()
 

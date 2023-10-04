@@ -450,7 +450,11 @@ class Blockchain(BlockchainInterface):
             block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
             assert block_generator is not None
             npc_result = get_name_puzzle_conditions(
-                block_generator, self.constants.MAX_BLOCK_COST_CLVM, mempool_mode=False, height=block.height
+                block_generator,
+                self.constants.MAX_BLOCK_COST_CLVM,
+                mempool_mode=False,
+                height=block.height,
+                constants=self.constants,
             )
         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         return tx_removals, tx_additions, npc_result
@@ -814,7 +818,7 @@ class Blockchain(BlockchainInterface):
         """
         records: List[BlockRecord] = []
         hashes: List[bytes32] = []
-        assert batch_size < 999  # sqlite in python 3.7 has a limit on 999 variables in queries
+        assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
             if header_hash is None:
@@ -897,22 +901,9 @@ class Blockchain(BlockchainInterface):
         ):
             # We are not in a reorg, no need to look up alternate header hashes
             # (we can get them from height_to_hash)
-            if self.block_store.db_wrapper.db_version == 2:
-                # in the v2 database, we can look up blocks by height directly
-                # (as long as we're in the main chain)
-                result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
-            else:
-                for ref_height in block.transactions_generator_ref_list:
-                    header_hash = self.height_to_hash(ref_height)
-
-                    # if ref_height is invalid, this block should have failed with
-                    # FUTURE_GENERATOR_REFS before getting here
-                    assert header_hash is not None
-
-                    ref_gen = await self.block_store.get_generator(header_hash)
-                    if ref_gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_gen)
+            # in the v2 database, we can look up blocks by height directly
+            # (as long as we're in the main chain)
+            result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
         else:
             # First tries to find the blocks in additional_blocks
             reorg_chain: Dict[uint32, FullBlock] = {}

@@ -27,9 +27,6 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
         yield
         return
 
-    if sys.version_info < (3, 8):
-        raise Exception(f"Python 3.8 or higher required when profiling is requested, running with: {sys.version}")
-
     with cProfile.Profile() as pr:
         yield
 
@@ -108,7 +105,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 pool_reward_puzzle_hash=pool_puzzlehash,
                 keep_going_until_tx_block=True,
                 genesis_timestamp=uint64(1234567890),
-                use_timestamp_residual=True,
             )
 
             unspent_coins: List[Coin] = []
@@ -167,7 +163,6 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         keep_going_until_tx_block=True,
                         transaction_data=SpendBundle.aggregate(spend_bundles),
                         previous_generator=block_references,
-                        use_timestamp_residual=True,
                     )
                     prev_tx_block = b
                     prev_block = blocks[-2]

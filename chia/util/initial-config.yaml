@@ -71,17 +71,19 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
-      SOFT_FORK2_HEIGHT: 0
-      SOFT_FORK3_HEIGHT: 0
+      SOFT_FORK2_HEIGHT: 3000000
+      SOFT_FORK3_HEIGHT: 2997292
       # planned 2.0 release is July 26, height 2965036 on testnet
       # 1 week later
-      HARD_FORK_HEIGHT": 2997292
+      HARD_FORK_HEIGHT: 2997292
+      # November 2023
+      HARD_FORK_FIX_HEIGHT: 3426000
       # another 2 weeks later
-      PLOT_FILTER_128_HEIGHT": 3061804
+      PLOT_FILTER_128_HEIGHT: 3061804
       # 3 years later
-      PLOT_FILTER_64_HEIGHT": 8010796
+      PLOT_FILTER_64_HEIGHT: 8010796
       # 3 years later
-      PLOT_FILTER_32_HEIGHT": 13056556
+      PLOT_FILTER_32_HEIGHT: 13056556
   config:
     mainnet:
       address_prefix: "xch"
@@ -139,6 +141,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
+  dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
@@ -154,7 +158,7 @@ seeder:
   nameserver: "example.com."
   ttl: 300
   soa:
-    rname: "hostmaster.example.com."
+    rname: "hostmaster.example.com" # all @ symbols need to be replaced with . in dns records.
     serial_number: 1619105223
     refresh: 10800
     retry: 10800
@@ -208,6 +212,20 @@ harvester:
   chia_ssl_ca:
     crt: "config/ssl/ca/chia_ca.crt"
     key: "config/ssl/ca/chia_ca.key"
+
+  # Compressed harvesting.
+  parallel_decompressor_count: 0
+  # If set to 0, `decompressor_thread_count` will default to half of nproc available on the machine.
+  # A non-zero number overrides this default.
+  decompressor_thread_count: 0
+  disable_cpu_affinity: False
+  # Ignore compressed plots with compression level greater than this.
+  max_compression_level_allowed: 7
+  use_gpu_harvesting: False
+  gpu_index: 0
+  enforce_gpu_index: False
+  # If no decompressor is available after `decompressor_timeout` seconds, abort the current operation.
+  decompressor_timeout: 20
 
 pool:
   # Replace this with a real receive address
@@ -351,6 +369,8 @@ full_node:
 
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
+
+  bad_peak_cache_size: 100
 
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
@@ -621,6 +641,11 @@ data_layer:
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
   fee: 1000000000
+
+  # this is a debug and profiling facility that logs all SQLite commands to a
+  # separate log file (under logging/data_sql.log).
+  log_sqlite_cmds: False
+
   logging: *logging
 
   # TODO: which of these are really appropriate?
@@ -631,8 +656,11 @@ data_layer:
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
 
-  uploaders: []
-  downloaders: []
+  plugins:
+    uploaders: []
+    downloaders: []
+  maximum_full_file_count: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True

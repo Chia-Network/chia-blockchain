@@ -1,9 +1,5 @@
 # File created by: python manage-mypy.py build-exclusions
-chia.cmds.plots
-chia.cmds.plotters
 chia.cmds.start_funcs
-chia.cmds.wallet
-chia.cmds.wallet_funcs
 chia.daemon.server
 chia.introducer.introducer
 chia.introducer.introducer_api
@@ -13,29 +9,17 @@ chia.plotters.plotters
 chia.plotters.plotters_util
 chia.plotting.manager
 chia.plotting.util
-chia.pools.pool_puzzles
-chia.pools.pool_wallet
-chia.pools.pool_wallet_info
 chia.rpc.rpc_client
 chia.rpc.util
-chia.rpc.wallet_rpc_api
 chia.rpc.wallet_rpc_client
-chia.seeder.crawl_store
-chia.seeder.crawler
-chia.seeder.dns_server
-chia.seeder.peer_record
-chia.seeder.start_crawler
 chia.simulator.full_node_simulator
 chia.simulator.keyring
-chia.simulator.setup_services
-chia.simulator.start_simulator
 chia.simulator.time_out_assert
 chia.simulator.wallet_tools
 chia.ssl.create_ssl
 chia.timelord.timelord_api
 chia.timelord.timelord_launcher
 chia.types.blockchain_format.program
-chia.util.block_cache
 chia.util.chia_logging
 chia.util.config
 chia.util.db_wrapper
@@ -43,7 +27,6 @@ chia.util.hash
 chia.util.json_util
 chia.util.keychain
 chia.util.keyring_wrapper
-chia.util.make_test_constants
 chia.util.merkle_set
 chia.util.partial_func
 chia.util.profiler
@@ -87,7 +70,6 @@ tests.clvm.test_chialisp_deserialization
 tests.clvm.test_program
 tests.clvm.test_puzzle_compression
 tests.clvm.test_puzzles
-tests.clvm.test_serialized_program
 tests.clvm.test_singletons
 tests.clvm.test_spend_sim
 tests.conftest
@@ -98,10 +80,8 @@ tests.core.custom_types.test_coin
 tests.core.custom_types.test_spend_bundle
 tests.core.daemon.test_daemon
 tests.core.full_node.full_sync.test_full_sync
-tests.core.full_node.stores.test_hint_store
 tests.core.full_node.stores.test_sync_store
 tests.core.full_node.test_address_manager
-tests.core.full_node.test_block_height_map
 tests.core.full_node.test_conditions
 tests.core.full_node.test_full_node
 tests.core.full_node.test_node_load
@@ -164,7 +144,6 @@ tests.wallet.test_wallet_blockchain
 tests.wallet.test_wallet_interested_store
 tests.wallet.test_wallet_key_val_store
 tests.wallet.test_wallet_user_store
-tests.weight_proof.test_weight_proof
 tools.analyze-chain
 tools.run_block
 tools.test_full_sync

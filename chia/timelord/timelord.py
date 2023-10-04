@@ -227,6 +227,12 @@ class Timelord:
         except Exception as e:
             log.error(f"Exception in stop chain: {type(e)} {e}")
 
+    def get_height(self) -> uint32:
+        if self.last_state.state_type == StateType.FIRST_SUB_SLOT:
+            return uint32(0)
+        else:
+            return uint32(self.last_state.get_height() + 1)
+
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedBlockTimelord) -> Optional[uint64]:
         assert self.last_state is not None
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -239,6 +245,7 @@ class Timelord:
                 rc_block,
                 sub_slot_iters,
                 difficulty,
+                self.get_height(),
             )
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
@@ -476,7 +483,7 @@ class Timelord:
                     log.warning(f"SP: Do not have correct challenge {rc_challenge.hex()} has {rc_info.challenge}")
                     # This proof is on an outdated challenge, so don't use it
                     continue
-                iters_from_sub_slot_start = cc_info.number_of_iterations + self.last_state.get_last_ip()
+                iters_from_sub_slot_start = uint64(cc_info.number_of_iterations + self.last_state.get_last_ip())
                 response = timelord_protocol.NewSignagePointVDF(
                     signage_point_index,
                     dataclasses.replace(cc_info, number_of_iterations=iters_from_sub_slot_start),
@@ -535,6 +542,7 @@ class Timelord:
                             unfinished_block.reward_chain_block,
                             self.last_state.get_sub_slot_iters(),
                             self.last_state.get_difficulty(),
+                            self.get_height(),
                         )
                     except Exception as e:
                         log.error(f"Error {e}")
@@ -748,7 +756,7 @@ class Timelord:
             log.debug("Collected end of subslot vdfs.")
             self.iters_finished.add(iter_to_look_for)
             self.last_active_time = time.time()
-            iters_from_sub_slot_start = cc_vdf.number_of_iterations + self.last_state.get_last_ip()
+            iters_from_sub_slot_start = uint64(cc_vdf.number_of_iterations + self.last_state.get_last_ip())
             cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
             if icc_ip_vdf is not None:
                 if self.last_state.peak is not None:

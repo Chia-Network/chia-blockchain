@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -74,6 +74,7 @@ class DataLayerRpcApi:
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
+            "/wallet_log_in": self.wallet_log_in,
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
@@ -108,12 +109,23 @@ class DataLayerRpcApi:
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         return []
 
+    async def wallet_log_in(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        fingerprint = cast(int, request["fingerprint"])
+        await self.service.wallet_log_in(fingerprint=fingerprint)
+        return {}
+
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
+        verbose = request.get("verbose", False)
         txs, value = await self.service.create_store(uint64(fee))
-        return {"txs": txs, "id": value.hex()}
+        if verbose:
+            return {"txs": txs, "id": value.hex()}
+        else:
+            return {"id": value.hex()}
 
     async def get_owned_stores(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -274,12 +286,13 @@ class DataLayerRpcApi:
         unsubscribe from singleton
         """
         store_id = request.get("id")
+        retain_files = request.get("retain", False)
         if store_id is None:
             raise Exception("missing store id in request")
         if self.service is None:
             raise Exception("Data layer not created")
         store_id_bytes = bytes32.from_hexstr(store_id)
-        await self.service.unsubscribe(store_id_bytes)
+        await self.service.unsubscribe(store_id_bytes, retain_files)
         return {}
 
     async def subscriptions(self, request: Dict[str, Any]) -> EndpointResult:

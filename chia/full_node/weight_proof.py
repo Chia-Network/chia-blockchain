@@ -580,7 +580,7 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
-        if _validate_sub_epoch_segments(self.constants, rng, wp_segment_bytes, summary_bytes) is None:
+        if _validate_sub_epoch_segments(self.constants, rng, wp_segment_bytes, summary_bytes, peak_height) is None:
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
         success, _ = validate_recent_blocks(self.constants, wp_recent_chain_bytes, summary_bytes)
@@ -588,20 +588,6 @@ class WeightProofHandler:
             return False, uint32(0)
         fork_point, _ = self.get_fork_point(summaries)
         return True, fork_point
-
-    def get_fork_point_no_validations(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
-        log.debug("get fork point skip validations")
-        assert self.blockchain is not None
-        assert len(weight_proof.sub_epochs) > 0
-        if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0)
-        summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
-        if summaries is None:
-            log.warning("weight proof failed to validate sub epoch summaries")
-            return False, uint32(0)
-        assert sub_epoch_weight_list is not None
-        fork_height, _ = self.get_fork_point(summaries)
-        return True, fork_height
 
     async def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32, List[SubEpochSummary]]:
         assert self.blockchain is not None
@@ -933,6 +919,7 @@ def _validate_sub_epoch_segments(
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
+    height: uint32,
     validate_from: int = 0,
 ) -> Optional[List[Tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     summaries = summaries_from_bytes(summaries_bytes)
@@ -965,7 +952,15 @@ def _validate_sub_epoch_segments(
 
         for idx, segment in enumerate(segments):
             valid_segment, ip_iters, slot_iters, slots, vdf_list = _validate_segment(
-                constants, segment, curr_ssi, prev_ssi, curr_difficulty, prev_ses, idx == 0, sampled_seg_index == idx
+                constants,
+                segment,
+                curr_ssi,
+                prev_ssi,
+                curr_difficulty,
+                prev_ses,
+                idx == 0,
+                sampled_seg_index == idx,
+                height,
             )
             vdfs_to_validate.extend(vdf_list)
             if not valid_segment:
@@ -988,6 +983,7 @@ def _validate_segment(
     ses: Optional[SubEpochSummary],
     first_segment_in_se: bool,
     sampled: bool,
+    height: uint32,
 ) -> Tuple[bool, int, int, int, List[Tuple[VDFProof, ClassgroupElement, VDFInfo]]]:
     ip_iters, slot_iters, slots = 0, 0, 0
     after_challenge = False
@@ -995,7 +991,9 @@ def _validate_segment(
     for idx, sub_slot_data in enumerate(segment.sub_slots):
         if sampled and sub_slot_data.is_challenge():
             after_challenge = True
-            required_iters = __validate_pospace(constants, segment, idx, curr_difficulty, ses, first_segment_in_se)
+            required_iters = __validate_pospace(
+                constants, segment, idx, curr_difficulty, ses, first_segment_in_se, height
+            )
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
             assert sub_slot_data.signage_point_index is not None
@@ -1243,7 +1241,7 @@ def validate_recent_blocks(
             if not adjusted:
                 assert prev_block_record is not None
                 prev_block_record = dataclasses.replace(
-                    prev_block_record, deficit=deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                    prev_block_record, deficit=uint8(deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                 )
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
@@ -1305,6 +1303,7 @@ def _validate_pospace_recent_chain(
         constants,
         challenge if not overflow else prev_challenge,
         cc_sp_hash,
+        height=block.height,
     )
     if q_str is None:
         log.error(f"could not verify proof of space block {block.height} {overflow}")
@@ -1326,6 +1325,7 @@ def __validate_pospace(
     curr_diff: uint64,
     ses: Optional[SubEpochSummary],
     first_in_sub_epoch: bool,
+    height: uint32,
 ) -> Optional[uint64]:
     if first_in_sub_epoch and segment.sub_epoch_n == 0 and idx == 0:
         cc_sub_slot_hash = constants.GENESIS_CHALLENGE
@@ -1353,6 +1353,7 @@ def __validate_pospace(
         constants,
         challenge,
         cc_sp_hash,
+        height=height,
     )
     if q_str is None:
         log.error("could not verify proof of space")
@@ -1664,7 +1665,9 @@ async def validate_weight_proof_inner(
     )
 
     if not skip_segment_validation:
-        vdfs_to_validate = _validate_sub_epoch_segments(constants, rng, wp_segment_bytes, summary_bytes, validate_from)
+        vdfs_to_validate = _validate_sub_epoch_segments(
+            constants, rng, wp_segment_bytes, summary_bytes, peak_height, validate_from
+        )
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
         if vdfs_to_validate is None:

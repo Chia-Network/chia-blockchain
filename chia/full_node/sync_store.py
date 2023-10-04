@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import logging
 from collections import OrderedDict as orderedDict
 from dataclasses import dataclass, field
@@ -37,7 +38,9 @@ class SyncStore:
     # Set of nodes which we are batch syncing from
     batch_syncing: Set[bytes32] = field(default_factory=set)
     # Set of nodes which we are backtrack syncing from, and how many threads
-    backtrack_syncing: Dict[bytes32, int] = field(default_factory=dict)
+    _backtrack_syncing: collections.defaultdict[bytes32, int] = field(
+        default_factory=lambda: collections.defaultdict(lambda: 0),
+    )
 
     def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
@@ -131,4 +134,18 @@ class SyncStore:
             if node_id in peers:
                 self.peak_to_peer[peak].remove(node_id)
             assert node_id not in self.peak_to_peer[peak]
+
+        self._backtrack_syncing.pop(node_id, None)
+
         self.peers_changed.set()
+
+    def is_backtrack_syncing(self, node_id: bytes32) -> bool:
+        return self._backtrack_syncing.get(node_id, 0) > 0
+
+    def increment_backtrack_syncing(self, node_id: bytes32) -> None:
+        self._backtrack_syncing[node_id] += 1
+
+    def decrement_backtrack_syncing(self, node_id: bytes32) -> None:
+        self._backtrack_syncing[node_id] -= 1
+        if self._backtrack_syncing[node_id] < 1:
+            del self._backtrack_syncing[node_id]

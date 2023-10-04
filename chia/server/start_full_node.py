@@ -18,6 +18,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.misc import SignalHandlers
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
@@ -27,7 +28,7 @@ SERVICE_NAME = "full_node"
 log = logging.getLogger(__name__)
 
 
-def create_full_node_service(
+async def create_full_node_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
@@ -36,7 +37,7 @@ def create_full_node_service(
 ) -> Service[FullNode, FullNodeAPI]:
     service_config = config[SERVICE_NAME]
 
-    full_node = FullNode(
+    full_node = await FullNode.create(
         service_config,
         root_path=root_path,
         consensus_constants=consensus_constants,
@@ -73,11 +74,13 @@ def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None
     # activate softforks immediately on testnet
     # these numbers are supposed to match initial-config.yaml
     if "SOFT_FORK2_HEIGHT" not in overrides:
-        overrides["SOFT_FORK2_HEIGHT"] = 0
+        overrides["SOFT_FORK2_HEIGHT"] = 3000000
     if "SOFT_FORK3_HEIGHT" not in overrides:
-        overrides["SOFT_FORK3_HEIGHT"] = 0
+        overrides["SOFT_FORK3_HEIGHT"] = 2997292
     if "HARD_FORK_HEIGHT" not in overrides:
         overrides["HARD_FORK_HEIGHT"] = 2997292
+    if "HARD_FORK_FIX_HEIGHT" not in overrides:
+        overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
     if "PLOT_FILTER_128_HEIGHT" not in overrides:
         overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
     if "PLOT_FILTER_64_HEIGHT" not in overrides:
@@ -95,9 +98,10 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     update_testnet_overrides(network_id, overrides)
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
-    await service.setup_process_global_state()
-    await service.run()
+    service = await create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

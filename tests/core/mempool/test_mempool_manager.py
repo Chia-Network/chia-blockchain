@@ -42,8 +42,9 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
@@ -159,12 +160,20 @@ def make_test_conds(
             Spend(
                 spend_id,
                 IDENTITY_PUZZLE_HASH,
+                IDENTITY_PUZZLE_HASH,
+                TEST_COIN_AMOUNT,
                 None if height_relative is None else uint32(height_relative),
                 None if seconds_relative is None else uint64(seconds_relative),
                 None if before_height_relative is None else uint32(before_height_relative),
                 None if before_seconds_relative is None else uint64(before_seconds_relative),
                 None if birth_height is None else uint32(birth_height),
                 None if birth_seconds is None else uint64(birth_seconds),
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
                 [],
                 [],
                 0,
@@ -366,7 +375,7 @@ def make_bundle_spends_map_and_fee(
 def mempool_item_from_spendbundle(spend_bundle: SpendBundle) -> MempoolItem:
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(
-        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0)
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
     )
     bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
     return MempoolItem(
@@ -550,7 +559,6 @@ mis = MempoolInclusionStatus
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("softfork2", [False, True])
 @pytest.mark.parametrize(
     "opcode,lock_value,expected_status,expected_error",
     [
@@ -609,28 +617,13 @@ async def test_ephemeral_timelock(
     lock_value: int,
     expected_status: MempoolInclusionStatus,
     expected_error: Optional[Err],
-    softfork2: bool,
 ) -> None:
-    if softfork2:
-        constants = DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0)
-    else:
-        constants = DEFAULT_CONSTANTS
-
     mempool_manager = await instantiate_mempool_manager(
         get_coin_record=get_coin_record_for_test_coins,
         block_height=uint32(5),
         block_timestamp=uint64(10050),
-        constants=constants,
+        constants=DEFAULT_CONSTANTS,
     )
-
-    if not softfork2 and opcode in [
-        co.ASSERT_BEFORE_HEIGHT_ABSOLUTE,
-        co.ASSERT_BEFORE_HEIGHT_RELATIVE,
-        co.ASSERT_BEFORE_SECONDS_ABSOLUTE,
-        co.ASSERT_BEFORE_SECONDS_RELATIVE,
-    ]:
-        expected_error = Err.INVALID_CONDITION
-        expected_status = MempoolInclusionStatus.FAILED
 
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     created_coin = Coin(TEST_COIN_ID, IDENTITY_PUZZLE_HASH, 1)
@@ -1009,7 +1002,7 @@ async def test_assert_before_expiration(
         get_coin_record,
         block_height=uint32(10),
         block_timestamp=uint64(10000),
-        constants=DEFAULT_CONSTANTS.replace(SOFT_FORK2_HEIGHT=0),
+        constants=DEFAULT_CONSTANTS,
     )
 
     bundle = spend_bundle_from_conditions(
@@ -1443,7 +1436,9 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
-        tx = await wallet.generate_signed_transaction(uint64(200), phs[0], primaries=other_recipients)
+        [tx] = await wallet.generate_signed_transaction(
+            uint64(200), phs[0], DEFAULT_TX_CONFIG, primaries=other_recipients
+        )
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
@@ -1454,14 +1449,13 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
 
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     server = full_node_api.full_node.server
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, server.get_port()), None)
     wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
 
     # Make sure spending AB then BC would generate a conflict for the latter
-
-    tx_a = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[0].coin})
-    tx_b = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[1].coin})
-    tx_c = await wallet.generate_signed_transaction(uint64(30), ph, coins={coins[2].coin})
+    [tx_a] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[0].coin})
+    [tx_b] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[1].coin})
+    [tx_c] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[2].coin})
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
@@ -1475,7 +1469,9 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     # Make sure DE and EF would aggregate on E when E is eligible for deduplication
 
     # Create a coin with the identity puzzle hash
-    tx = await wallet.generate_signed_transaction(uint64(200), IDENTITY_PUZZLE_HASH, coins={coins[3].coin})
+    [tx] = await wallet.generate_signed_transaction(
+        uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, coins={coins[3].coin}
+    )
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
@@ -1497,11 +1493,21 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     message = b"Identical spend aggregation test"
     e_announcement = Announcement(e_coin_id, message)
     # Create transactions D and F that consume an announcement created by E
-    tx_d = await wallet.generate_signed_transaction(
-        uint64(100), ph, fee=uint64(0), coins={coins[4].coin}, coin_announcements_to_consume={e_announcement}
+    [tx_d] = await wallet.generate_signed_transaction(
+        uint64(100),
+        ph,
+        DEFAULT_TX_CONFIG,
+        fee=uint64(0),
+        coins={coins[4].coin},
+        coin_announcements_to_consume={e_announcement},
     )
-    tx_f = await wallet.generate_signed_transaction(
-        uint64(150), ph, fee=uint64(0), coins={coins[5].coin}, coin_announcements_to_consume={e_announcement}
+    [tx_f] = await wallet.generate_signed_transaction(
+        uint64(150),
+        ph,
+        DEFAULT_TX_CONFIG,
+        fee=uint64(0),
+        coins={coins[5].coin},
+        coin_announcements_to_consume={e_announcement},
     )
     assert tx_d.spend_bundle is not None
     assert tx_f.spend_bundle is not None
@@ -1528,8 +1534,8 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
     g_coin = coins[6].coin
     g_coin_id = g_coin.name()
-    tx_g = await wallet.generate_signed_transaction(
-        uint64(13), ph, coins={g_coin}, coin_announcements_to_consume={e_announcement}
+    [tx_g] = await wallet.generate_signed_transaction(
+        uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, coin_announcements_to_consume={e_announcement}
     )
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
