@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Union, Optional
+from typing import Union
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
 
 
 def find_fork_point_in_chain(
