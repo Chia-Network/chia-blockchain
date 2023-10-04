@@ -38,7 +38,7 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
-async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:
+async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 30) -> DaemonProxy:
     timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()
@@ -61,17 +61,11 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]) as process:
+        client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
+
         try:
-            await asyncio.sleep(60)
             return_code = process.poll()
-            if return_code is not None:
-                stdout, stderr = process.communicate()
-                if stderr is not None and "address already in use" in stderr.lower():
-                    pytest.skip("Skipped temporarily.")
-                if stdout is not None and "address already in use" in stdout.lower():
-                    pytest.skip("Skipped temporarily.")
-                raise RuntimeError("Non zero process poll")
-            client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
+            assert return_code is None
 
             process.send_signal(signal_number)
             process.communicate(timeout=adjusted_timeout(timeout=5))
@@ -138,15 +132,9 @@ async def test_services_terminate(
             )
             try:
                 start = time.monotonic()
-                while time.monotonic() - start < 50:
+                while time.monotonic() - start < 180:
                     return_code = process.poll()
-                    if return_code is not None:
-                        stdout, stderr = process.communicate()
-                        if stderr is not None and "address already in use" in stderr.lower():
-                            pytest.skip("Skipped temporarily.")
-                        if stdout is not None and "address already in use" in stdout.lower():
-                            pytest.skip("Skipped temporarily.")
-                        raise RuntimeError("Non zero process poll")
+                    assert return_code is None
 
                     try:
                         result = await client.healthz()
