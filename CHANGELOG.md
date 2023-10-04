@@ -24,10 +24,10 @@ for setuptools_scm/PEP 440 reasons.
 - Add `extra_conditions` as an option to transaction endpoints
 - DataLayer fingerprint control
 - Delete Datalayer DAT files on unsubscribe
-- add Datalayer new `plugins:` config allowing for custom headers
+- add new Datalayer `plugins:` config allowing for custom headers
 - Add support for multi node farmers (thanks @felixbrucker)
-- Add a full node RPC endpoint, get_mempool_items_by_coin_name (thanks @kimsk)
-- Added: Support CLI NFT Pagination (thanks @yyolk)
+- Add a full node RPC endpoint, `get_mempool_items_by_coin_name` (thanks @kimsk)
+- Add CLI NFT Pagination (thanks @yyolk)
 - Add traceback to front-end error responses
 - Configure number of stored full files in Datalayer
 - Add timelock information to Trades and Transactions
