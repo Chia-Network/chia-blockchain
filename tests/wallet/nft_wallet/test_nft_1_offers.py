@@ -1226,27 +1226,12 @@ async def test_complex_nft_offer(
     await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
     # Need money for fees and offering
-    for i in range(0, 2):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
-    blocks_needed = 3
-    for i in range(blocks_needed):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=30)
-
     funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
-    funds_taker = sum(
-        [
-            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-            for i in range(1, 3 + blocks_needed)
-        ]
-    )
+    funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 6)])
 
-    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
+    await full_node_api.farm_rewards_to_wallet(amount=funds_maker, wallet=wsm_maker.main_wallet, timeout=60)
+    await full_node_api.farm_rewards_to_wallet(amount=funds_taker, wallet=wsm_taker.main_wallet, timeout=60)
+
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
