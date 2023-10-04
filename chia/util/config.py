@@ -29,7 +29,7 @@ def initial_config_file(filename: Union[str, Path]) -> str:
     return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
 
 
-def create_default_chia_config(root_path: Path, filenames: List[str]= ["config.yaml"]) -> None:
+def create_default_chia_config(root_path: Path, filenames: List[str] = ["config.yaml"]) -> None:
     for filename in filenames:
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
