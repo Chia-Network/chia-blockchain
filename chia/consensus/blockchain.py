@@ -631,7 +631,7 @@ class Blockchain(BlockchainInterface):
             block,
             uint32(prev_height + 1),
             npc_result,
-            uint32(prev_height),
+            prev_height,
             self.get_block_generator,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
