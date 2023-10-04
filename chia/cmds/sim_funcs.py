@@ -91,7 +91,6 @@ def create_chia_directory(
             config["full_node"]["rpc_port"] += port_offset
             # connect wallet to full node
             config["wallet"]["full_node_peer"]["port"] = config["full_node"]["port"]
-            config["full_node"]["wallet_peer"]["port"] = config["wallet"]["port"]
             # ui
             config["ui"]["daemon_port"] = config["daemon_port"]
         else:
