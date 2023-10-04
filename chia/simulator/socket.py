@@ -25,3 +25,11 @@ def find_available_listen_port(name: str = "free") -> int:
         recent_ports.add(port)
         print(f"{name} port: {port}")
         return port
+
+
+def find_available_listen_port_2(name: str = "free") -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))  # Let OS find a free port
+        port = s.getsockname()[1]
+        print(f"{name} port: {port}")
+        return port

@@ -18,7 +18,7 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.socket import find_available_listen_port
+from chia.simulator.socket import find_available_listen_port_2
 from chia.simulator.time_out_assert import adjusted_timeout
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
@@ -55,7 +55,7 @@ async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], ti
 @pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
 @pytest.mark.asyncio
 async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
-    port = find_available_listen_port()
+    port = find_available_listen_port_2()
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
         config["daemon_port"] = port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
@@ -100,12 +100,12 @@ async def test_services_terminate(
     service_config_name: str,
 ) -> None:
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
-        config["daemon_port"] = find_available_listen_port(name="daemon")
+        config["daemon_port"] = find_available_listen_port_2(name="daemon")
         service_config = config[service_config_name]
         if "port" in service_config:
-            port = find_available_listen_port(name="service")
+            port = find_available_listen_port_2(name="service")
             service_config["port"] = port
-        rpc_port = find_available_listen_port(name="rpc")
+        rpc_port = find_available_listen_port_2(name="rpc")
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
