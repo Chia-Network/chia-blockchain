@@ -171,7 +171,7 @@ async def pre_validate_blocks_multiprocessing(
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
     get_block_generator: Callable[
-        [BlockInfo, Optional[uint32], Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]
+        [BlockInfo, Optional[uint32], Dict[uint32, FullBlock]], Awaitable[Optional[BlockGenerator]]
     ],
     batch_size: int,
     fork_height: Optional[uint32],
@@ -303,12 +303,12 @@ async def pre_validate_blocks_multiprocessing(
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
             # generator references
-            prev_blocks_dict: Dict[bytes32, FullBlock] = {}
+            prev_blocks_dict: Dict[uint32, FullBlock] = {}
             curr_b: FullBlock = block
 
             while curr_b.prev_header_hash in block_dict:
                 curr_b = block_dict[curr_b.prev_header_hash]
-                prev_blocks_dict[curr_b.header_hash] = curr_b
+                prev_blocks_dict[curr_b.height] = curr_b
 
             if isinstance(block, FullBlock):
                 assert get_block_generator is not None

@@ -38,7 +38,6 @@ async def validate_block_body(
     blocks: BlockchainInterface,
     block_store: BlockStore,
     coin_store: CoinStore,
-    peak: Optional[BlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],

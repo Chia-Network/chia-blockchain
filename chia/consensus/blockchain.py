@@ -252,7 +252,6 @@ class Blockchain(BlockchainInterface):
             self,
             self.block_store,
             self.coin_store,
-            self.get_peak(),
             block,
             block.height,
             npc_result,
@@ -627,7 +626,6 @@ class Blockchain(BlockchainInterface):
             self,
             self.block_store,
             self.coin_store,
-            self.get_peak(),
             block,
             uint32(prev_height + 1),
             npc_result,
@@ -889,7 +887,7 @@ class Blockchain(BlockchainInterface):
         self,
         block: BlockInfo,
         fork: Optional[int] = None,
-        additional_blocks: Optional[Dict[bytes32, FullBlock]] = None,
+        additional_blocks: Optional[Dict[uint32, FullBlock]] = None,
     ) -> Optional[BlockGenerator]:
         if additional_blocks is None:
             additional_blocks = {}
@@ -923,6 +921,12 @@ class Blockchain(BlockchainInterface):
 
             # todo aggregate heights and hashes to one query
             for ref_height in block.transactions_generator_ref_list:
+                if ref_height in additional_blocks:
+                    ref_block = additional_blocks[ref_height]
+                    assert ref_block is not None
+                    if ref_block.transactions_generator is None:
+                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                    result.append(ref_block.transactions_generator)
                 if ref_height > fork:
                     gen = await self.block_store.get_generator(reorg_chain_height_to_hash[ref_height])
                     if gen is None:
