@@ -570,6 +570,24 @@ class FullNodeSimulator(FullNodeAPI):
                 # at least one wallet has unconfirmed transactions
                 await asyncio.sleep(backoff)
 
+    async def check_transactions_confirmed(
+        self,
+        wallet_state_manager: WalletStateManager,
+        transactions: List[TransactionRecord],
+        timeout: Optional[float] = 5,
+    ) -> None:
+        transactions_left: Set[bytes32] = {tx.name for tx in transactions}
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            for backoff in backoff_times():
+                transactions_left = transactions_left & {
+                    tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()
+                }
+                if len(transactions_left) == 0:
+                    break
+
+                # at least one wallet has unconfirmed transactions
+                await asyncio.sleep(backoff)  # pragma: no cover
+
     async def create_coins_with_amounts(
         self,
         amounts: List[uint64],
