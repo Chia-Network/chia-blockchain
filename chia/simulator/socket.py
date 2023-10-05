@@ -13,7 +13,7 @@ def find_available_listen_port(name: str = "free") -> int:
 
     while True:
         random.seed(42)
-        port = random.randint(0xFFFF - 1024) + 1024
+        port = random.randint(49152, 65535)
         if port in recent_ports:
             continue
 
