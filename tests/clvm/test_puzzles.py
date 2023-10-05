@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Iterable, List, Tuple
-from unittest import TestCase
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -107,137 +106,142 @@ def default_payments_and_conditions(
     return payments, conditions
 
 
-class TestPuzzles(TestCase):
-    def test_p2_conditions(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+def test_p2_conditions():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        puzzle = p2_conditions.puzzle_for_conditions(conditions)
-        solution = p2_conditions.solution_for_conditions(conditions)
+    puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    solution = p2_conditions.solution_for_conditions(conditions)
 
-        do_test_spend(puzzle, solution, payments, key_lookup)
+    do_test_spend(puzzle, solution, payments, key_lookup)
 
-    def test_p2_delegated_conditions(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        pk = public_key_for_index(1, key_lookup)
+def test_p2_delegated_conditions():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        puzzle = p2_delegated_conditions.puzzle_for_pk(pk)
-        solution = p2_delegated_conditions.solution_for_conditions(conditions)
+    pk = public_key_for_index(1, key_lookup)
 
-        do_test_spend(puzzle, solution, payments, key_lookup)
+    puzzle = p2_delegated_conditions.puzzle_for_pk(pk)
+    solution = p2_delegated_conditions.solution_for_conditions(conditions)
 
-    def test_p2_delegated_puzzle_simple(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+    do_test_spend(puzzle, solution, payments, key_lookup)
 
-        pk = public_key_for_index(1, key_lookup)
 
-        puzzle = p2_delegated_puzzle.puzzle_for_pk(pk)
-        solution = p2_delegated_puzzle.solution_for_conditions(conditions)
+def test_p2_delegated_puzzle_simple():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        do_test_spend(puzzle, solution, payments, key_lookup)
+    pk = public_key_for_index(1, key_lookup)
 
-    def test_p2_delegated_puzzle_graftroot(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+    puzzle = p2_delegated_puzzle.puzzle_for_pk(pk)
+    solution = p2_delegated_puzzle.solution_for_conditions(conditions)
 
-        delegated_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(8, key_lookup))
-        delegated_solution = p2_delegated_conditions.solution_for_conditions(conditions)
+    do_test_spend(puzzle, solution, payments, key_lookup)
 
-        puzzle_program = p2_delegated_puzzle.puzzle_for_pk(public_key_for_index(1, key_lookup))
-        solution = p2_delegated_puzzle.solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
-        do_test_spend(puzzle_program, solution, payments, key_lookup)
+def test_p2_delegated_puzzle_graftroot():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-    def test_p2_puzzle_hash(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+    delegated_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(8, key_lookup))
+    delegated_solution = p2_delegated_conditions.solution_for_conditions(conditions)
 
-        inner_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(4, key_lookup))
-        inner_solution = p2_delegated_conditions.solution_for_conditions(conditions)
-        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+    puzzle_program = p2_delegated_puzzle.puzzle_for_pk(public_key_for_index(1, key_lookup))
+    solution = p2_delegated_puzzle.solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
-        puzzle_program = p2_puzzle_hash.puzzle_for_inner_puzzle_hash(inner_puzzle_hash)
-        assert puzzle_program == p2_puzzle_hash.puzzle_for_inner_puzzle(inner_puzzle)
-        solution = p2_puzzle_hash.solution_for_inner_puzzle_and_inner_solution(inner_puzzle, inner_solution)
+    do_test_spend(puzzle_program, solution, payments, key_lookup)
 
-        do_test_spend(puzzle_program, solution, payments, key_lookup)
 
-    def test_p2_m_of_n_delegated_puzzle(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+def test_p2_puzzle_hash():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        pks = [public_key_for_index(_, key_lookup) for _ in range(1, 6)]
-        M = 3
+    inner_puzzle = p2_delegated_conditions.puzzle_for_pk(public_key_for_index(4, key_lookup))
+    inner_solution = p2_delegated_conditions.solution_for_conditions(conditions)
+    inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
-        delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
-        delegated_solution = []
+    puzzle_program = p2_puzzle_hash.puzzle_for_inner_puzzle_hash(inner_puzzle_hash)
+    assert puzzle_program == p2_puzzle_hash.puzzle_for_inner_puzzle(inner_puzzle)
+    solution = p2_puzzle_hash.solution_for_inner_puzzle_and_inner_solution(inner_puzzle, inner_solution)
 
-        puzzle_program = p2_m_of_n_delegate_direct.puzzle_for_m_of_public_key_list(M, pks)
-        selectors = [1, [], [], 1, 1]
-        solution = p2_m_of_n_delegate_direct.solution_for_delegated_puzzle(
-            M, selectors, delegated_puzzle, delegated_solution
-        )
+    do_test_spend(puzzle_program, solution, payments, key_lookup)
 
-        do_test_spend(puzzle_program, solution, payments, key_lookup)
 
-    def test_p2_delegated_puzzle_or_hidden_puzzle_with_hidden_puzzle(self):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+def test_p2_m_of_n_delegated_puzzle():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
-        hidden_public_key = public_key_for_index(10, key_lookup)
+    pks = [public_key_for_index(_, key_lookup) for _ in range(1, 6)]
+    M = 3
 
-        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
-        )
-        solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
-            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
-        )
+    delegated_puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    delegated_solution = []
 
-        do_test_spend(puzzle, solution, payments, key_lookup)
+    puzzle_program = p2_m_of_n_delegate_direct.puzzle_for_m_of_public_key_list(M, pks)
+    selectors = [1, [], [], 1, 1]
+    solution = p2_m_of_n_delegate_direct.solution_for_delegated_puzzle(
+        M, selectors, delegated_puzzle, delegated_solution
+    )
 
-    def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(self, hidden_pub_key_index):
-        key_lookup = KeyTool()
-        payments, conditions = default_payments_and_conditions(1, key_lookup)
+    do_test_spend(puzzle_program, solution, payments, key_lookup)
 
-        hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
-        hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)
-        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
 
-        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_pub_key_point, hidden_puzzle
-        )
-        payable_payments, payable_conditions = default_payments_and_conditions(5, key_lookup)
+def test_p2_delegated_puzzle_or_hidden_puzzle_with_hidden_puzzle():
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        delegated_puzzle = p2_conditions.puzzle_for_conditions(payable_conditions)
-        delegated_solution = []
+    hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    hidden_public_key = public_key_for_index(10, key_lookup)
 
-        synthetic_public_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_public_key(
-            G1Element.from_bytes(hidden_public_key), hidden_puzzle.get_tree_hash()
-        )
+    puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
+        G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
+    )
+    solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
+        G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
+    )
 
-        solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_delegated_puzzle(
-            delegated_puzzle, delegated_solution
-        )
+    do_test_spend(puzzle, solution, payments, key_lookup)
 
-        hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
-        synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
-            hidden_pub_key_point, hidden_puzzle_hash
-        )
 
-        assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
+def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index):
+    key_lookup = KeyTool()
+    payments, conditions = default_payments_and_conditions(1, key_lookup)
 
-        secret_exponent = key_lookup.get(hidden_public_key)
-        assert int_to_public_key(secret_exponent) == hidden_pub_key_point
+    hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
+    hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)
+    hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
 
-        synthetic_secret_exponent = secret_exponent + synthetic_offset
-        key_lookup.add_secret_exponents([synthetic_secret_exponent])
+    puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
+        hidden_pub_key_point, hidden_puzzle
+    )
+    payable_payments, payable_conditions = default_payments_and_conditions(5, key_lookup)
 
-        do_test_spend(puzzle, solution, payable_payments, key_lookup)
+    delegated_puzzle = p2_conditions.puzzle_for_conditions(payable_conditions)
+    delegated_solution = []
 
-    def test_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(self):
-        for hidden_pub_key_index in range(1, 10):
-            self.do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index)
+    synthetic_public_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_public_key(
+        G1Element.from_bytes(hidden_public_key), hidden_puzzle.get_tree_hash()
+    )
+
+    solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
+
+    hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
+    synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
+        hidden_pub_key_point, hidden_puzzle_hash
+    )
+
+    assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
+
+    secret_exponent = key_lookup.get(hidden_public_key)
+    assert int_to_public_key(secret_exponent) == hidden_pub_key_point
+
+    synthetic_secret_exponent = secret_exponent + synthetic_offset
+    key_lookup.add_secret_exponents([synthetic_secret_exponent])
+
+    do_test_spend(puzzle, solution, payable_payments, key_lookup)
+
+
+def test_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle():
+    for hidden_pub_key_index in range(1, 10):
+        do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index)

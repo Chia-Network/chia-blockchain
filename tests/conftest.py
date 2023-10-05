@@ -41,7 +41,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system,
-    setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
@@ -50,6 +49,8 @@ from chia.simulator.setup_nodes import (
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16, uint32, uint64
@@ -693,29 +694,6 @@ async def farmer_three_harvester_not_started(
         yield _
 
 
-# TODO: Ideally, the db_version should be the (parameterized) db_version
-# fixture, to test all versions of the database schema. This doesn't work
-# because of a hack in shutting down the full node, which means you cannot run
-# more than one simulations per process.
-@pytest_asyncio.fixture(
-    scope="function",
-    params=[
-        pytest.param(
-            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
-        )
-    ],
-)
-async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    async with setup_full_system_connect_to_deamon(
-        test_constants_modified,
-        bt,
-        b_tools=get_b_tools,
-        b_tools_1=get_b_tools_1,
-        db_version=1,
-    ) as _:
-        yield _, get_b_tools, get_b_tools_1
-
-
 @pytest_asyncio.fixture(scope="function")
 async def get_daemon(bt):
     async with setup_daemon(btools=bt) as _:
@@ -805,8 +783,8 @@ async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, tru
         wallet_service_1.config,
     )
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -859,9 +837,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -898,7 +876,7 @@ async def timelord(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def timelord_service(bt):
+async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
     async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
@@ -980,9 +958,9 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async with setup_full_system(test_constants_modified, bt, db_version=1) as _:
-        yield _
+async def simulation(bt, get_b_tools):
+    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as full_system:
+        yield full_system, get_b_tools
 
 
 HarvesterFarmerEnvironment = Tuple[

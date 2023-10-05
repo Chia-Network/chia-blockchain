@@ -19,7 +19,7 @@ from chia.simulator.setup_nodes import SimulatorsAndWalletsServices
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 
 
 @pytest.mark.asyncio
@@ -33,7 +33,7 @@ async def test_unknown_messages(
     crawler = crawler_service._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     connection = full_node.server.all_connections[crawler.server.node_id]
 
@@ -57,7 +57,7 @@ async def test_valid_message(
     crawler = crawler_service._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
-        PeerInfo(self_hostname, uint16(cast(FullNodeAPI, full_node_service._api).server._port)), None
+        PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
     )
     connection = full_node.server.all_connections[crawler.server.node_id]
 

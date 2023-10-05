@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import json
-import logging
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
@@ -25,19 +23,16 @@ from chia.daemon.keychain_server import (
 )
 from chia.daemon.server import WebSocketServer, plotter_log_path, service_plotter
 from chia.plotters.plotters import call_plotters
-from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
-from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
-from chia.types.peer_info import PeerInfo
+from chia.simulator.setup_services import setup_full_node
+from chia.simulator.time_out_assert import time_out_assert_not_none
 from chia.util.config import load_config
-from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
-from tests.core.node_height import node_height_at_least
 from tests.util.misc import Marks, datacases
 
 chiapos_version = pkg_resources.get_distribution("chiapos").version
@@ -313,7 +308,9 @@ def assert_response(
     assert message["data"] == expected_response_data
 
 
-def assert_response_success_only(response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None) -> None:
+def assert_response_success_only(
+    response: aiohttp.http_websocket.WSMessage, request_id: Optional[str] = None
+) -> Dict[str, Any]:
     # Expect: JSON response
     assert response.type == aiohttp.WSMsgType.TEXT
     message = json.loads(response.data.strip())
@@ -321,6 +318,7 @@ def assert_response_success_only(response: aiohttp.http_websocket.WSMessage, req
     if request_id is not None:
         assert message["request_id"] == request_id
     assert message["data"]["success"] is True
+    return message
 
 
 def assert_running_services_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
@@ -412,69 +410,44 @@ async def daemon_client_with_config_and_keys(get_keychain_for_function, get_daem
 
 
 @pytest.mark.asyncio
-async def test_daemon_simulation(self_hostname, daemon_simulation):
-    deamon_and_nodes, get_b_tools, bt = daemon_simulation
-    node1, node2, _, _, _, _, _, _, _, _, daemon1 = deamon_and_nodes
-    server1 = node1.full_node.server
-    node2_port = node2.full_node.server.get_port()
-    await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+async def test_daemon_passthru(get_daemon, bt):
+    ws_server = get_daemon
+    config = bt.config
+    daemon_port = config["daemon_port"]
 
-    async def num_connections():
-        count = len(node2.server.get_connections(NodeType.FULL_NODE))
-        return count
+    async with aiohttp.ClientSession() as client:
+        async with client.ws_connect(
+            f"wss://127.0.0.1:{daemon_port}",
+            autoclose=True,
+            autoping=True,
+            ssl_context=bt.get_daemon_ssl_context(),
+            max_msg_size=100 * 1024 * 1024,
+        ) as ws:
+            service_name = "test_service_name"
+            data = {"service": service_name}
+            payload = create_payload("register_service", data, service_name, "daemon")
+            await ws.send_str(payload)
+            assert_response_success_only(await ws.receive())
 
-    await time_out_assert_custom_interval(60, 1, num_connections, 1)
+            async with setup_full_node(
+                consensus_constants=bt.constants,
+                db_name="sim-test.db",
+                self_hostname="localhost",
+                local_bt=bt,
+                simulator=False,
+                db_version=2,
+                connect_to_daemon=True,
+            ) as _:
+                await time_out_assert_not_none(30, ws_server.connections.get, "chia_full_node")
 
-    await time_out_assert(1500, node_height_at_least, True, node2, 1)
+                payload = create_payload("get_blockchain_state", {}, service_name, "chia_full_node")
+                await ws.send_str(payload)
 
-    session = aiohttp.ClientSession()
-
-    log = logging.getLogger()
-    log.warning(f"Connecting to daemon on port {daemon1.daemon_port}")
-    ws = await session.ws_connect(
-        f"wss://127.0.0.1:{daemon1.daemon_port}",
-        autoclose=True,
-        autoping=True,
-        ssl_context=get_b_tools.get_daemon_ssl_context(),
-        max_msg_size=100 * 1024 * 1024,
-    )
-    service_name = "test_service_name"
-    data = {"service": service_name}
-    payload = create_payload("register_service", data, service_name, "daemon")
-    await ws.send_str(payload)
-    message_queue: asyncio.Queue = asyncio.Queue()
-
-    async def reader(ws, queue):
-        while True:
-            # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
-            msg = await ws.receive()
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                message = msg.data.strip()
-                message = json.loads(message)
-                await queue.put(message)
-            else:
-                if msg.type == aiohttp.WSMsgType.ERROR:
-                    await ws.close()
-                elif msg.type == aiohttp.WSMsgType.CLOSED:
-                    pass
-
-                break
-
-    read_handler = asyncio.create_task(reader(ws, message_queue))
-    data = {}
-    payload = create_payload("get_blockchain_state", data, service_name, "chia_full_node")
-    await ws.send_str(payload)
-
-    await asyncio.sleep(5)
-    blockchain_state_found = False
-    while not message_queue.empty():
-        message = await message_queue.get()
-        if message["command"] == "get_blockchain_state":
-            blockchain_state_found = True
-
-    await ws.close()
-    read_handler.cancel()
-    assert blockchain_state_found
+                response = await ws.receive()
+                message = assert_response_success_only(response)
+                assert message["command"] == "get_blockchain_state"
+                assert message["origin"] == "chia_full_node"
+                assert message["data"]["blockchain_state"]["genesis_challenge_initialized"] is True
 
 
 @pytest.mark.parametrize(

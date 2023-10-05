@@ -31,7 +31,7 @@ SERVICE_NAME = "full_node"
 log = logging.getLogger(__name__)
 
 
-def create_full_node_service(
+async def create_full_node_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
@@ -40,7 +40,7 @@ def create_full_node_service(
 ) -> Service[FullNode, FullNodeAPI]:
     service_config = config[SERVICE_NAME]
 
-    full_node = FullNode(
+    full_node = await FullNode.create(
         service_config,
         root_path=root_path,
         consensus_constants=consensus_constants,
@@ -101,7 +101,7 @@ async def async_main(service_config: Dict[str, Any], task_dict: collections.defa
     update_testnet_overrides(network_id, overrides)
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
-    service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
+    service = await create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
     service._node.task_dict = task_dict
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
