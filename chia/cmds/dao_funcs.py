@@ -13,6 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 
 
@@ -71,6 +72,11 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
     final_fee_for_cat: uint64 = uint64(int(fee_for_cat * units["chia"]))
 
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+        conf_coins, _, _ = await wallet_client.get_spendable_coins(
+            wallet_id=1, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG
+        )
+        if len(conf_coins) < 2:  # pragma: no cover
+            raise ValueError("DAO creation requires at least 2 xch coins in your wallet.")
         res = await wallet_client.create_new_dao_wallet(
             mode="new",
             dao_rules=dao_rules,
