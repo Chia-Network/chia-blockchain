@@ -21,6 +21,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   mypy:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
@@ -180,16 +184,6 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo HAS_SECRET=${HAS_SECRET} >> $GITHUB_OUTPUT
-      env:
-        SECRET: "${{ secrets.test_pypi_password }}"
-
     - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python.major_dot_minor }}
@@ -208,9 +202,8 @@ jobs:
         path: ./dist
 
     - name: Publish distribution to PyPI
-      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags')
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_NON_INTERACTIVE: 1
-        TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
+        skip-existing: true

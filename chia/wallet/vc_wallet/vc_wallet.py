@@ -4,9 +4,10 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from blspy import G1Element, G2Element
+from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
@@ -17,18 +18,25 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.streamable import Streamable
+from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
-from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
-from chia.wallet.vc_wallet.vc_store import VCRecord, VCStore
+from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -87,11 +95,14 @@ class VCWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
+    ) -> None:
         """
         An unspent coin has arrived to our wallet. Get the parent spend to construct the current VerifiedCredential
         representation of the coin and add it to the DB if it's the newest version of the singleton.
         """
+        # TODO Use coin_data instead of calling peer API
         wallet_node = self.wallet_state_manager.wallet_node
         coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
@@ -145,8 +156,10 @@ class VCWallet:
     async def launch_new_vc(
         self,
         provider_did: bytes32,
+        tx_config: TXConfig,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[VCRecord, List[TransactionRecord]]:
         """
         Given the DID ID of a proof provider, mint a brand new VC with an empty slot for proofs.
@@ -164,11 +177,11 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = await self.standard_wallet.select_coins(uint64(1 + fee), min_coin_amount=uint64(1 + fee))
+        coins = await self.standard_wallet.select_coins(uint64(1 + fee), tx_config.coin_selection_config)
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
-        if inner_puzzle_hash is None:
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=False)  # pragma: no cover
+        if inner_puzzle_hash is None:  # pragma: no cover
+            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
         original_coin = coins.pop()
         dpuz, coin_spends, vc = VerifiedCredential.launch(
             original_coin,
@@ -176,16 +189,12 @@ class VCWallet:
             inner_puzzle_hash,
             [inner_puzzle_hash],
             fee=fee,
+            extra_conditions=extra_conditions,
         )
         solution = solution_for_conditions(dpuz.rest())
         original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
         coin_spends.append(CoinSpend(original_coin, original_puzzle, solution))
-        spend_bundle = await sign_coin_spends(
-            coin_spends,
-            self.standard_wallet.secret_key_store.secret_key_for_public_key,
-            self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-            self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-        )
+        spend_bundle = await self.wallet_state_manager.sign_transaction(coin_spends)
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -207,6 +216,7 @@ class VCWallet:
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
             memos=list(compute_memos(spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
         )
 
         return vc_record, [tx]
@@ -214,19 +224,21 @@ class VCWallet:
     async def generate_signed_transaction(
         self,
         vc_id: bytes32,
+        tx_config: TXConfig,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        reuse_puzhash: Optional[bool] = None,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]:
         new_proof_hash: Optional[bytes32] = kwargs.get(
             "new_proof_hash", None
         )  # Requires that this key posesses the DID to update the specified VC
         provider_inner_puzhash: Optional[bytes32] = kwargs.get("provider_inner_puzhash", None)
+        self_revoke: Optional[bool] = kwargs.get("self_revoke", False)
         """
         Entry point for two standard actions:
          - Cycle the singleton and make an announcement authorizing something
@@ -264,7 +276,7 @@ class VCWallet:
         if fee > 0:
             announcement_to_make = vc_record.vc.coin.name()
             chia_tx = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, Announcement(vc_record.vc.coin.name(), announcement_to_make), reuse_puzhash=reuse_puzhash
+                fee, tx_config, Announcement(vc_record.vc.coin.name(), announcement_to_make)
             )
             if coin_announcements is None:
                 coin_announcements = set((announcement_to_make,))
@@ -273,6 +285,8 @@ class VCWallet:
         else:
             chia_tx = None
         if new_proof_hash is not None:
+            if self_revoke:
+                raise ValueError("Cannot add new proofs and revoke at the same time")
             if provider_inner_puzhash is None:
                 for _, wallet in self.wallet_state_manager.wallets.items():
                     if wallet.type() == WalletType.DECENTRALIZED_ID:
@@ -286,25 +300,22 @@ class VCWallet:
                 else:
                     raise ValueError("VC could not be updated with specified DID info")  # pragma: no cover
             magic_condition = vc_record.vc.magic_condition_for_new_proofs(new_proof_hash, provider_inner_puzhash)
+        elif self_revoke:
+            magic_condition = vc_record.vc.magic_condition_for_self_revoke()
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
+        extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
         innersol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             coin_announcements=coin_announcements,
             puzzle_announcements=puzzle_announcements,
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
-            magic_conditions=[magic_condition],
+            conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundles = [
-            await sign_coin_spends(
-                [coin_spend],
-                self.standard_wallet.secret_key_store.secret_key_for_public_key,
-                self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            )
-        ]
+        spend_bundles = [await self.wallet_state_manager.sign_transaction([coin_spend])]
+        tx_list: List[TransactionRecord] = []
         if did_announcement is not None:
             # Need to spend DID
             for _, wallet in self.wallet_state_manager.wallets.items():
@@ -312,14 +323,17 @@ class VCWallet:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        did_bundle = await wallet.create_message_spend(puzzle_announcements={bytes(did_announcement)})
-                        spend_bundles.append(did_bundle)
+                        did_tx = await wallet.create_message_spend(
+                            tx_config, puzzle_announcements={bytes(did_announcement)}
+                        )
+                        assert did_tx.spend_bundle is not None
+                        spend_bundles.append(did_tx.spend_bundle)
+                        tx_list.append(dataclasses.replace(did_tx, spend_bundle=None))
                         break
             else:
                 raise ValueError(
                     f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
                 )  # pragma: no cover
-        tx_list: List[TransactionRecord] = []
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundles.append(chia_tx.spend_bundle)
             tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
@@ -345,12 +359,18 @@ class VCWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         )
         return tx_list
 
     async def revoke_vc(
-        self, parent_id: bytes32, peer: WSChiaConnection, fee: uint64 = uint64(0), reuse_puzhash: Optional[bool] = None
+        self,
+        parent_id: bytes32,
+        peer: WSChiaConnection,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         vc_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [parent_id], peer=peer
@@ -370,7 +390,12 @@ class VCWallet:
                     did_wallet = wallet
                     break
         else:
-            raise ValueError(f"You don't own the DID {vc.proof_provider.hex()}")  # pragma: no cover
+            return await self.generate_signed_transaction(
+                vc.launcher_id,
+                tx_config,
+                fee,
+                self_revoke=True,
+            )
 
         recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
         if recovery_info is None:
@@ -381,7 +406,7 @@ class VCWallet:
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
-            coins.update(await self.standard_wallet.select_coins(fee))
+            coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
@@ -389,48 +414,214 @@ class VCWallet:
 
         # Assemble final bundle
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
-        did_spend: SpendBundle = await did_wallet.create_message_spend(
+        did_tx: TransactionRecord = await did_wallet.create_message_spend(
+            tx_config,
             puzzle_announcements={expected_did_announcement},
             coin_announcements_to_assert={vc_announcement},
+            extra_conditions=extra_conditions,
         )
-        final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_spend])
-        tx: TransactionRecord = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=vc.inner_puzzle_hash,
-            amount=uint64(1),
-            fee_amount=uint64(fee),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=final_bundle,
-            additions=list(final_bundle.additions()),
-            removals=list(final_bundle.removals()),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=final_bundle.name(),
-            memos=list(compute_memos(final_bundle).items()),
-        )
+        assert did_tx.spend_bundle is not None
+        final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
+        did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle)
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, vc_announcement, reuse_puzhash
+                fee, tx_config, vc_announcement
             )
-            assert tx.spend_bundle is not None
+            assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
-            tx = dataclasses.replace(tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, tx.spend_bundle]))
+            did_tx = dataclasses.replace(
+                did_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
+            )
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            return [tx, chia_tx]
+            return [did_tx, chia_tx]
         else:
-            return [tx]  # pragma: no cover
+            return [did_tx]  # pragma: no cover
+
+    async def add_vc_authorization(self, offer: Offer, solver: Solver, tx_config: TXConfig) -> Tuple[Offer, Solver]:
+        """
+        This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
+        The only coins types that it looks for to approve are CR-CATs at the moment.
+        It will approve a CR-CAT spend if it meets one of the following conditions:
+          - It is coming to this wallet (we know we have a valid VC)
+          - It is going back to the same puzzle hash it came from (it is change)
+          - It is going to the "pending approval" state (we can defer authorization to another user's VC)
+          - It is going to the OFFER_MOD (known puzzlehash, intermediate custody-less state, no VC needed)
+
+        Note that the second requirement above means that to make a valid offer of CR-CATs for something else, you must
+        send the change back to it's original puzzle hash or else a taker wallet will not approve it.
+        """
+        # Gather all of the CRCATs being spent and the CRCATs that each creates
+        crcat_spends: List[CRCATSpend] = []
+        other_spends: List[CoinSpend] = []
+        spends_to_fix: Dict[bytes32, CoinSpend] = {}
+        for spend in offer.to_valid_spend().coin_spends:
+            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program()))[0]:
+                crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
+                if crcat_spend.incomplete:
+                    crcat_spends.append(crcat_spend)
+                    if spend in offer._bundle.coin_spends:
+                        spends_to_fix[spend.coin.name()] = spend
+                else:
+                    if spend in offer._bundle.coin_spends:  # pragma: no cover
+                        other_spends.append(spend)
+            else:
+                if spend in offer._bundle.coin_spends:
+                    other_spends.append(spend)
+
+        # Figure out what VC announcements are needed
+        announcements_to_make: Dict[bytes32, List[bytes32]] = {}
+        announcements_to_assert: Dict[bytes32, List[Announcement]] = {}
+        vcs: Dict[bytes32, VerifiedCredential] = {}
+        coin_args: Dict[str, List[str]] = {}
+        for crcat_spend in crcat_spends:
+            # Check first whether we can approve...
+            available_vcs: List[VCRecord] = [
+                vc_rec
+                for vc_rec in await self.store.get_vc_records_by_providers(crcat_spend.crcat.authorized_providers)
+                if vc_rec.confirmed_at_height != 0
+            ]
+            if len(available_vcs) == 0:  # pragma: no cover
+                raise ValueError(f"No VC available with provider in {crcat_spend.crcat.authorized_providers}")
+            vc: VerifiedCredential = available_vcs[0].vc
+            vc_to_use: bytes32 = vc.launcher_id
+            vcs[vc_to_use] = vc
+            # ...then whether or not we should
+            our_crcat: bool = (
+                await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
+                    crcat_spend.crcat.inner_puzzle_hash
+                )
+                is not None
+            )
+            outputs_ok: bool = True
+            for cc in [c for c in crcat_spend.inner_conditions if c.at("f").as_int() == 51]:
+                if not (
+                    (  # it's coming to us
+                        await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(bytes32(cc.at("rf").atom))
+                        is not None
+                    )
+                    or (  # it's going back where it came from
+                        bytes32(cc.at("rf").atom) == crcat_spend.crcat.inner_puzzle_hash
+                    )
+                    or (  # it's going to the pending state
+                        cc.at("rrr") != Program.to(None)
+                        and cc.at("rrrf").atom is None
+                        and bytes32(cc.at("rf").atom)
+                        == construct_pending_approval_state(
+                            bytes32(cc.at("rrrff").atom), uint64(cc.at("rrf").as_int())
+                        ).get_tree_hash()
+                    )
+                    or bytes32(cc.at("rf").atom) == Offer.ph()  # it's going to the offer mod
+                ):
+                    outputs_ok = False  # pragma: no cover
+            if our_crcat or outputs_ok:
+                announcements_to_make.setdefault(vc_to_use, [])
+                announcements_to_assert.setdefault(vc_to_use, [])
+                announcements_to_make[vc_to_use].append(crcat_spend.crcat.expected_announcement())
+                announcements_to_assert[vc_to_use].extend(
+                    [
+                        Announcement(
+                            crcat_spend.crcat.coin.name(),
+                            b"\xcd" + std_hash(crc.inner_puzzle_hash + int_to_bytes(crc.coin.amount)),
+                        )
+                        for crc in crcat_spend.children
+                    ]
+                )
+
+                coin_name: str = crcat_spend.crcat.coin.name().hex()
+                coin_args[coin_name] = [
+                    await self.proof_of_inclusions_for_root_and_keys(
+                        # It's on my TODO list to fix the below line -Quex
+                        vc.proof_hash,  # type: ignore
+                        ProofsChecker.from_program(uncurry_puzzle(crcat_spend.crcat.proofs_checker)).flags,
+                    ),
+                    "()",  # not general
+                    "0x" + vc.proof_provider.hex(),
+                    "0x" + vc.launcher_id.hex(),
+                    "0x" + vc.wrap_inner_with_backdoor().get_tree_hash().hex(),
+                ]
+                if crcat_spend.crcat.coin.name() in spends_to_fix:
+                    spend_to_fix: CoinSpend = spends_to_fix[crcat_spend.crcat.coin.name()]
+                    other_spends.append(
+                        dataclasses.replace(
+                            spend_to_fix,
+                            solution=spend_to_fix.solution.to_program().replace(
+                                ff=coin_args[coin_name][0],
+                                frf=Program.to(None),  # not general
+                                frrf=bytes32.from_hexstr(coin_args[coin_name][2]),
+                                frrrf=bytes32.from_hexstr(coin_args[coin_name][3]),
+                                frrrrf=bytes32.from_hexstr(coin_args[coin_name][4]),
+                            ),
+                        )
+                    )
+            else:
+                raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
+
+        vc_spends: List[SpendBundle] = []
+        for launcher_id, vc in vcs.items():
+            vc_spends.append(
+                SpendBundle.aggregate(
+                    [
+                        tx.spend_bundle
+                        for tx in (
+                            await self.generate_signed_transaction(
+                                launcher_id,
+                                tx_config,
+                                puzzle_announcements=set(announcements_to_make[launcher_id]),
+                                coin_announcements_to_consume=set(announcements_to_assert[launcher_id]),
+                            )
+                        )
+                        if tx.spend_bundle is not None
+                    ]
+                )
+            )
+
+        return Offer.from_spend_bundle(
+            SpendBundle.aggregate(
+                [
+                    SpendBundle(
+                        [
+                            *(
+                                spend
+                                for spend in offer.to_spend_bundle().coin_spends
+                                if spend.coin.parent_coin_info == bytes32([0] * 32)
+                            ),
+                            *other_spends,
+                        ],
+                        offer._bundle.aggregated_signature,
+                    ),
+                    *vc_spends,
+                ]
+            )
+        ), Solver({"vc_authorizations": coin_args})
+
+    async def get_vc_with_provider_in_and_proofs(
+        self, authorized_providers: List[bytes32], proofs: List[str]
+    ) -> VerifiedCredential:
+        vc_records: List[VCRecord] = await self.store.get_vc_records_by_providers(authorized_providers)
+        if len(vc_records) == 0:  # pragma: no cover
+            raise ValueError(f"VCWallet has no VCs with providers in the following list: {authorized_providers}")
+        else:
+            for rec in vc_records:
+                if rec.vc.proof_hash is None:
+                    continue  # pragma: no cover
+                vc_proofs: Optional[VCProofs] = await self.store.get_proofs_for_root(rec.vc.proof_hash)
+                if vc_proofs is None:
+                    continue  # pragma: no cover
+                if all(proof in vc_proofs.key_value_pairs for proof in proofs):
+                    return rec.vc
+        raise ValueError(f"No authorized VC has the correct proofs: {proofs}")  # pragma: no cover
+
+    async def proof_of_inclusions_for_root_and_keys(self, root: bytes32, keys: List[str]) -> Program:
+        vc_proofs: Optional[VCProofs] = await self.store.get_proofs_for_root(root)
+        if vc_proofs is None:
+            raise RuntimeError(f"No proofs exist for VC root: {root.hex()}")  # pragma: no cover
+        else:
+            return vc_proofs.prove_keys(keys)
 
     async def select_coins(
         self,
         amount: uint64,
-        exclude: Optional[List[Coin]] = None,
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        coin_selection_config: CoinSelectionConfig,
     ) -> Set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 
@@ -462,6 +653,9 @@ class VCWallet:
     def get_name(self) -> str:
         return self.wallet_info.name  # pragma: no cover
 
+    async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
+        return False
+
 
 if TYPE_CHECKING:
-    _dummy: WalletProtocol = VCWallet()  # pragma: no cover
+    _dummy: WalletProtocol[VerifiedCredential] = VCWallet()  # pragma: no cover

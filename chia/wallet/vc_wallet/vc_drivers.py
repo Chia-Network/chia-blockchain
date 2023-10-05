@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import List, Optional, Tuple, Type, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -10,6 +10,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import Condition
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
@@ -63,6 +64,7 @@ VIRAL_BACKDOOR: Program = load_clvm_maybe_recompile(
 # (mod (METADATA conditions . solution) (if solution solution (list METADATA () ())))
 # (a (i 7 (q . 7) (q 4 2 (q () ()))) 1)
 ACS_TRANSFER_PROGRAM: Program = Program.to([2, [3, 7, (1, 7), [1, 4, 2, [1, None, None]]], 1])
+
 
 # Hashes
 EXTIGENT_METADATA_LAYER_HASH = EXTIGENT_METADATA_LAYER.get_tree_hash()
@@ -337,6 +339,7 @@ class VerifiedCredential(Streamable):
         new_inner_puzzle_hash: bytes32,
         memos: List[bytes32],
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[Program, List[CoinSpend], _T_VerifiedCredential]:
         """
         Launch a VC.
@@ -408,6 +411,7 @@ class VerifiedCredential(Streamable):
                 [52, fee],
                 [61, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
                 [61, std_hash(second_launcher_coin.name() + launch_dpuz.get_tree_hash())],
+                *[cond.to_program() for cond in extra_conditions],
             ]
         )
 
@@ -583,7 +587,7 @@ class VerifiedCredential(Streamable):
             dpuz: Program = solution.at("rrf").at("f").at("f")
             dsol: Program = solution.at("rrf").at("f").at("rf")
 
-            conditions: Iterator[Program] = dpuz.run(dsol).as_iter()
+            conditions: List[Program] = list(dpuz.run(dsol).as_iter())
             remark_condition: Program = next(c for c in conditions if c.at("f").as_int() == 1)
             inner_puzzle_hash = bytes32(remark_condition.at("rf").atom)
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
@@ -594,7 +598,7 @@ class VerifiedCredential(Streamable):
             # Dig to find the inner puzzle / inner solution and extract next inner puzhash and proof hash
             inner_puzzle: Program = solution.at("rrf").at("f").at("rf")
             inner_solution: Program = solution.at("rrf").at("f").at("rrf")
-            conditions = inner_puzzle.run(inner_solution).as_iter()
+            conditions = list(inner_puzzle.run(inner_solution).as_iter())
             new_singleton_condition: Program = next(
                 c for c in conditions if c.at("f").as_int() == 51 and c.at("rrf").as_int() % 2 != 0
             )
@@ -681,6 +685,20 @@ class VerifiedCredential(Streamable):
                     self.launcher_id,
                 ],
                 None,
+            ]
+        )
+        return magic_condition
+
+    def magic_condition_for_self_revoke(self) -> Program:
+        magic_condition: Program = Program.to(
+            [
+                -10,
+                self.eml_lineage_proof.to_program(),
+                [
+                    Program.to(self.eml_lineage_proof.parent_proof_hash),
+                    self.launcher_id,
+                ],
+                ACS_TRANSFER_PROGRAM.get_tree_hash(),
             ]
         )
         return magic_condition

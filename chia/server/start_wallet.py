@@ -16,6 +16,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.misc import SignalHandlers
 from chia.util.task_timing import maybe_manage_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
 
@@ -62,14 +63,13 @@ def create_wallet_service(
         config=config,
         node=node,
         peer_api=peer_api,
-        listen=False,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         network_id=network_id,
         rpc_info=rpc_info,
-        advertised_port=service_config["port"],
+        advertised_port=None,
         connect_to_daemon=connect_to_daemon,
     )
 
@@ -93,8 +93,9 @@ async def async_main() -> int:
         constants = DEFAULT_CONSTANTS
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

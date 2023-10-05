@@ -37,17 +37,17 @@ def dummy_plot(path: str) -> Plot:
 )
 def test_list_delta(delta: DeltaType) -> None:
     assert delta.empty()
-    if type(delta) == PathListDelta:
+    if type(delta) is PathListDelta:
         assert delta.additions == []
-    elif type(delta) == PlotListDelta:
+    elif type(delta) is PlotListDelta:
         assert delta.additions == {}
     else:
         assert False
     assert delta.removals == []
     assert delta.empty()
-    if type(delta) == PathListDelta:
+    if type(delta) is PathListDelta:
         delta.additions.append("0")
-    elif type(delta) == PlotListDelta:
+    elif type(delta) is PlotListDelta:
         delta.additions["0"] = dummy_plot("0")
     else:
         assert False, "Invalid delta type"

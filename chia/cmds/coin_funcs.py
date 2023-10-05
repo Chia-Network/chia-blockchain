@@ -4,7 +4,7 @@ import sys
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from chia.cmds.cmds_util import get_wallet_client
+from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.types.blockchain_format.coin import Coin
@@ -22,9 +22,9 @@ async def async_list(
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
-    max_coin_amount: Decimal,
-    min_coin_amount: Decimal,
-    excluded_amounts: Sequence[int],
+    max_coin_amount: str,
+    min_coin_amount: str,
+    excluded_amounts: Sequence[str],
     excluded_coin_ids: Sequence[str],
     show_unconfirmed: bool,
     paginate: Optional[bool],
@@ -42,17 +42,14 @@ async def async_list(
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
             return
-        final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
-        final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
-        final_excluded_amounts: List[uint64] = [
-            uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts
-        ]
         conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
             wallet_id=wallet_id,
-            max_coin_amount=final_max_coin_amount,
-            min_coin_amount=final_min_coin_amount,
-            excluded_amounts=final_excluded_amounts,
-            excluded_coin_ids=excluded_coin_ids,
+            coin_selection_config=CMDCoinSelectionConfigLoader(
+                max_coin_amount=max_coin_amount,
+                min_coin_amount=min_coin_amount,
+                excluded_coin_amounts=list(excluded_amounts),
+                excluded_coin_ids=list(excluded_coin_ids),
+            ).to_coin_selection_config(mojo_per_unit),
         )
         print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {wallet_id}.")
         print(f"{len(conf_coins)} confirmed coins.")
@@ -119,9 +116,10 @@ async def async_combine(
     fingerprint: Optional[int],
     wallet_id: int,
     fee: Decimal,
-    max_coin_amount: Decimal,
-    min_coin_amount: Decimal,
+    max_coin_amount: str,
+    min_coin_amount: str,
     excluded_amounts: Sequence[str],
+    # TODO: [add TXConfig args] add excluded_coin_ids
     number_of_coins: int,
     target_coin_amount: Decimal,
     target_coin_ids_str: Sequence[str],
@@ -142,27 +140,26 @@ async def async_combine(
             print("Wallet not synced. Please wait.")
             return
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly combining Chia
-        final_max_amount = uint64(int(max_coin_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
-        final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
-        final_excluded_amounts: List[uint64] = [
-            uint64(int(Decimal(amount) * mojo_per_unit)) for amount in excluded_amounts
-        ]
+
+        tx_config = CMDTXConfigLoader(
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_coin_amounts=[*excluded_amounts, str(target_coin_amount)],  # dont reuse coins of same amount.
+            # TODO: [add TXConfig args] add excluded_coin_ids
+        ).to_tx_config(mojo_per_unit, config, fingerprint)
+
         final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
+
         if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
             removals: List[Coin] = await wallet_client.select_coins(
                 amount=(final_target_coin_amount + final_fee) if is_xch else final_target_coin_amount,
                 wallet_id=wallet_id,
-                max_coin_amount=final_max_amount,
-                min_coin_amount=final_min_coin_amount,
-                excluded_amounts=final_excluded_amounts
-                + [final_target_coin_amount],  # dont reuse coins of same amount.
+                coin_selection_config=tx_config.coin_selection_config,
             )
         else:
             conf_coins, _, _ = await wallet_client.get_spendable_coins(
                 wallet_id=wallet_id,
-                max_coin_amount=final_max_amount,
-                min_coin_amount=final_min_coin_amount,
-                excluded_amounts=final_excluded_amounts,
+                coin_selection_config=tx_config.coin_selection_config,
             )
             if len(target_coin_ids) > 0:
                 conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
@@ -180,8 +177,7 @@ async def async_combine(
                 conf_coins = conf_coins[:number_of_coins]
             removals = [cr.coin for cr in conf_coins]
         print(f"Combining {len(removals)} coins.")
-        if input("Would you like to Continue? (y/n): ") != "y":
-            return
+        cli_confirm("Would you like to Continue? (y/n): ")
         total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
         if is_xch and total_amount - final_fee <= 0:
             print("Total amount is less than 0 after fee, exiting.")
@@ -189,7 +185,7 @@ async def async_combine(
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - final_fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
         transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, removals, final_fee
+            wallet_id, additions, tx_config, removals, final_fee
         )
         tx_id = transaction.name.hex()
         print(f"Transaction sent: {tx_id}")
@@ -205,6 +201,7 @@ async def async_split(
     number_of_coins: int,
     amount_per_coin: Decimal,
     target_coin_id_str: str,
+    # TODO: [add TXConfig args]
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         final_fee = uint64(int(fee * units["chia"]))
@@ -240,9 +237,23 @@ async def async_split(
             # we always use new addresses
             target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, new_address=True))
             additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
+
+        tx_config = CMDTXConfigLoader(
+            # TODO: [add TXConfig args]
+        ).to_tx_config(mojo_per_unit, config, fingerprint)
+
         transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, [removal_coin_record.coin], final_fee
+            wallet_id, additions, tx_config, [removal_coin_record.coin], final_fee
         )
         tx_id = transaction.name.hex()
         print(f"Transaction sent: {tx_id}")
         print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        dust_threshold = config.get("xch_spam_amount", 1000000)  # min amount per coin in mojo
+        spam_filter_after_n_txs = config.get("spam_filter_after_n_txs", 200)  # how many txs to wait before filtering
+        if final_amount_per_coin < dust_threshold and wallet_type == WalletType.STANDARD_WALLET:
+            print(
+                f"WARNING: The amount per coin: {amount_per_coin} is less than the dust threshold: "
+                f"{dust_threshold / mojo_per_unit}. Some or all of the Coins "
+                f"{'will' if number_of_coins > spam_filter_after_n_txs else 'may'} not show up in your wallet unless "
+                f"you decrease the dust limit to below {final_amount_per_coin} mojos or disable it by setting it to 0."
+            )

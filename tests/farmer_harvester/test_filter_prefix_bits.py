@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
@@ -21,11 +22,17 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
+from tests.conftest import ConsensusMode
 from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 
 
+# these numbers are only valid for chains farmed with the fixed original plot
+# filter. The HARD_FORK_2_0 consensus mode uses a chain where blocks are farmed
+# with wider filters. i.e. some valid blocks may still not pass the filter in
+# this test
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
-    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)]
+    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
 )
 def test_filter_prefix_bits_on_blocks(
     default_10000_blocks: List[FullBlock], filter_prefix_bits: uint8, should_pass: int
@@ -52,13 +59,13 @@ async def farmer_harvester_with_filter_size_9(
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     local_b_tools = await create_block_tools_async(
-        constants=test_constants.replace(NUMBER_ZERO_BITS_PLOT_FILTER=9), keychain=get_temp_keyring
+        constants=dataclasses.replace(test_constants, NUMBER_ZERO_BITS_PLOT_FILTER=9), keychain=get_temp_keyring
     )
     new_config = local_b_tools._config
     local_b_tools.change_config(new_config)
-    async for harvesters, farmer_service, _ in setup_farmer_multi_harvester(
+    async with setup_farmer_multi_harvester(
         local_b_tools, 1, tmp_path, local_b_tools.constants, start_services=True
-    ):
+    ) as (harvesters, farmer_service, _):
         harvester_service = harvesters[0]
         assert farmer_service.rpc_server is not None
         farmer_rpc_cl = await FarmerRpcClient.create(

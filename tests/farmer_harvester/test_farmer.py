@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -7,8 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS, default_kwargs
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import increment_pool_stats, strip_old_entries
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -559,9 +559,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     )
 
     p2_singleton_puzzle_hash = case.pool_contract_puzzle_hash
-    constant_kwargs = default_kwargs.copy()
-    constant_kwargs["POOL_SUB_SLOT_ITERS"] = case.sub_slot_iters
-    farmer_api.farmer.constants = ConsensusConstants(**constant_kwargs)  # type: ignore
+    farmer_api.farmer.constants = dataclasses.replace(DEFAULT_CONSTANTS, POOL_SUB_SLOT_ITERS=case.sub_slot_iters)
     farmer_api.farmer._private_keys = case.farmer_private_keys
     farmer_api.farmer.authentication_keys = case.authentication_keys
     farmer_api.farmer.sps[case.sp_hash] = [sp]

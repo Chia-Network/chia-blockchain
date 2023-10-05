@@ -13,9 +13,6 @@ from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 import aiosqlite
 import pytest
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
-
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -46,7 +43,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from tests.util.misc import Marks, assert_runtime, datacases
+from tests.util.misc import BenchmarkRunner, Marks, datacases
 
 log = logging.getLogger(__name__)
 
@@ -1297,7 +1294,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 counter += 1
             await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(tree_id)
-            await write_files_for_root(data_store_server, tree_id, root, tmp_path)
+            await write_files_for_root(data_store_server, tree_id, root, tmp_path, 0)
             roots.append(root)
     finally:
         await data_store_server.close()
@@ -1394,20 +1391,19 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=17,
+        limit=18,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
-        limit=19,
+        limit=24,
     ),
 )
-@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     tree_id: bytes32,
-    request: SubRequest,
+    benchmark_runner: BenchmarkRunner,
     case: BatchInsertBenchmarkCase,
 ) -> None:
     r = random.Random()
@@ -1432,7 +1428,7 @@ async def test_benchmark_batch_insert_speed(
             status=Status.COMMITTED,
         )
 
-    with assert_runtime(seconds=case.limit, label=request.node.name):
+    with benchmark_runner.assert_runtime(seconds=case.limit):
         await data_store.insert_batch(
             tree_id=tree_id,
             changelist=batch,
