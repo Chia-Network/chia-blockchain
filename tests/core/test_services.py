@@ -101,11 +101,13 @@ async def test_services_terminate(
 ) -> None:
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
         config["daemon_port"] = find_available_listen_port(name="daemon")
+        await asyncio.sleep(180)
         service_config = config[service_config_name]
         if "port" in service_config:
             port = find_available_listen_port(name="service")
             service_config["port"] = port
         rpc_port = find_available_listen_port(name="rpc")
+        await asyncio.sleep(180)
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
