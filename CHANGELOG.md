@@ -68,7 +68,6 @@ for setuptools_scm/PEP 440 reasons.
 - fixed issue with reuse_puzhash when minting NFTs (thanks @YeungTing)
 - Refactor Seeder & Crawler code + add tests
 - fix testnet10 sync-from-scratch
-- Remove pointless outgoing TX for CR-CAT claim
 - Fix timelord-install.sh for CentOS\RHEL (thanks @LeroyINC)
 - Don't raise on duplicate VC proof insertion
 - Add self revocation path to VC wallet
@@ -90,7 +89,6 @@ for setuptools_scm/PEP 440 reasons.
 - rename `chia data add_missing_files` `-f`/`--foldername` to `-d`/`--directory`
 - Wallet workaround for python issue 97641 and update anyio for issue 589
 - Fix issue with trade failures
-- Fix CAT --> CR-CAT wallet conversion
 - Fix glitch NFT wallet test
 
 ### Removed
