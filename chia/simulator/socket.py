@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import secrets
+import random
 import socket
 import time
 from typing import Set
@@ -12,7 +12,8 @@ def find_available_listen_port(name: str = "free") -> int:
     global recent_ports
 
     while True:
-        port = secrets.randbelow(0xFFFF - 1024) + 1024
+        random.seed(42)
+        port = random.randint(0xFFFF - 1024) + 1024
         if port in recent_ports:
             continue
 
