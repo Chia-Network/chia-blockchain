@@ -34,6 +34,7 @@ NETWORK_ID_DEFAULT_PORTS = {
     "mainnet": 8444,
     "testnet7": 58444,
     "testnet10": 58444,
+    "testneta": 58444,
     "testnet8": 58445,
 }
 
