@@ -2596,7 +2596,7 @@ class TestMaliciousGenerators:
         else:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with benchmark_runner.assert_runtime(seconds=12):
+        with benchmark_runner.assert_runtime(seconds=11.5):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
