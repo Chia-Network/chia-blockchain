@@ -64,6 +64,9 @@ class BlockchainInterface:
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
 
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        return  # type: ignore[return-value]
+
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
