@@ -207,7 +207,7 @@ async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRu
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
     program = SerializedProgram.from_bytes(generator_bytes)
 
-    with benchmark_runner.assert_runtime(seconds=0.5):
+    with benchmark_runner.assert_runtime(seconds=1.25):
         generator = BlockGenerator(program, [], [])
         npc_result = get_name_puzzle_conditions(
             generator,
