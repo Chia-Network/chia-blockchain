@@ -255,7 +255,7 @@ class Blockchain(BlockchainInterface):
             block,
             block.height,
             npc_result,
-            block.height - 1 if fork_point_with_peak is None else fork_point_with_peak,
+            -1 if fork_point_with_peak is None else fork_point_with_peak,
             self.get_block_generator,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
