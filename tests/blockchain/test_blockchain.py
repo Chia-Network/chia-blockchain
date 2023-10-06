@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 import multiprocessing
+import random
 import time
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from secrets import token_bytes
 from typing import List
 
 import pytest
@@ -559,7 +559,11 @@ class TestBlockHeaderValidation:
 
     async def do_test_invalid_icc_sub_slot_vdf(self, keychain, db_version, constants: ConsensusConstants):
         bt_high_iters = await create_block_tools_async(
-            constants=dataclasses.replace(constants, SUB_SLOT_ITERS_STARTING=(2**12), DIFFICULTY_STARTING=(2**14)),
+            constants=dataclasses.replace(
+                constants,
+                SUB_SLOT_ITERS_STARTING=uint64(2**12),
+                DIFFICULTY_STARTING=uint64(2**14),
+            ),
             keychain=keychain,
         )
         bc1, db_wrapper, db_path = await create_blockchain(bt_high_iters.constants, db_version)
@@ -612,7 +616,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            challenge=bytes([0] * 32),
+                            challenge=bytes32([0] * 32),
                         )
                     ),
                 )
@@ -1367,7 +1371,7 @@ class TestBlockHeaderValidation:
             attempts += 1
 
     @pytest.mark.asyncio
-    async def test_pool_target_contract(self, empty_blockchain, bt):
+    async def test_pool_target_contract(self, empty_blockchain, bt, seeded_random: random.Random):
         # 20c invalid pool target with contract
         blocks_initial = bt.get_consecutive_blocks(2)
         await _validate_and_add_block(empty_blockchain, blocks_initial[0])
@@ -1381,7 +1385,7 @@ class TestBlockHeaderValidation:
             )
             if blocks[-1].foliage.foliage_block_data.pool_signature is None:
                 block_bad: FullBlock = recursive_replace(
-                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32(token_bytes(32))
+                    blocks[-1], "foliage.foliage_block_data.pool_target.puzzle_hash", bytes32.random(seeded_random)
                 )
                 new_m = block_bad.foliage.foliage_block_data.get_hash()
                 new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_block.proof_of_space.plot_public_key)
@@ -1549,7 +1553,7 @@ class TestBlockHeaderValidation:
 
                     # since tests can run slow sometimes, and since we're using
                     # the system clock, add some extra slack
-                    slack = 5
+                    slack = 30
                     block_bad: FullBlock = recursive_replace(
                         blocks[-1],
                         "foliage_transaction_block.timestamp",

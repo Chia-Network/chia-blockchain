@@ -32,7 +32,7 @@ from tests.core.test_farmer_harvester_rpc import wait_for_plot_sync
 # this test
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN])
 @pytest.mark.parametrize(
-    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 33), (8, 66), (7, 138), (6, 265), (5, 607)]
+    argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
 )
 def test_filter_prefix_bits_on_blocks(
     default_10000_blocks: List[FullBlock], filter_prefix_bits: uint8, should_pass: int

@@ -41,7 +41,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_system,
-    setup_full_system_connect_to_deamon,
     setup_n_nodes,
     setup_simulators_and_wallets,
     setup_simulators_and_wallets_service,
@@ -50,9 +49,11 @@ from chia.simulator.setup_nodes import (
 from chia.simulator.setup_services import setup_crawler, setup_daemon, setup_introducer, setup_seeder, setup_timelord
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from chia.timelord.timelord import Timelord
+from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -61,6 +62,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
+from tests.util.misc import BenchmarkRunner
 
 multiprocessing.set_start_method("spawn")
 
@@ -70,6 +72,19 @@ from chia.simulator.block_tools import BlockTools, create_block_tools, create_bl
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
+
+
+@pytest.fixture(name="seeded_random")
+def seeded_random_fixture() -> random.Random:
+    seeded_random = random.Random()
+    seeded_random.seed(a=0, version=2)
+    return seeded_random
+
+
+@pytest.fixture(name="benchmark_runner")
+def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+    label = request.node.name
+    return BenchmarkRunner(label=label)
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -119,15 +134,15 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
     if consensus_mode == ConsensusMode.PLAIN:
         return test_constants
     if consensus_mode == ConsensusMode.SOFT_FORK3:
-        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=3)
+        return dataclasses.replace(test_constants, SOFT_FORK3_HEIGHT=uint32(3))
     if consensus_mode == ConsensusMode.HARD_FORK_2_0:
         return dataclasses.replace(
             test_constants,
-            HARD_FORK_HEIGHT=2,
-            HARD_FORK_FIX_HEIGHT=2,
-            PLOT_FILTER_128_HEIGHT=10,
-            PLOT_FILTER_64_HEIGHT=15,
-            PLOT_FILTER_32_HEIGHT=20,
+            HARD_FORK_HEIGHT=uint32(2),
+            HARD_FORK_FIX_HEIGHT=uint32(2),
+            PLOT_FILTER_128_HEIGHT=uint32(10),
+            PLOT_FILTER_64_HEIGHT=uint32(15),
+            PLOT_FILTER_32_HEIGHT=uint32(20),
         )
     raise AssertionError("Invalid Blockchain mode in simulation")
 
@@ -328,10 +343,15 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
+    all_error_lines: List[str] = []
     limit_consensus_modes_problems: List[str] = []
     for item in items:
         limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
@@ -357,8 +377,25 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         items[:] = kept
 
     if len(limit_consensus_modes_problems) > 0:
-        name_lines = "\n".join(f"    {line}" for line in limit_consensus_modes_problems)
-        raise Exception(f"@pytest.mark.limit_consensus_modes used without consensus_mode:\n{name_lines}")
+        all_error_lines.append("@pytest.mark.limit_consensus_modes used without consensus_mode:")
+        all_error_lines.extend(f"    {line}" for line in limit_consensus_modes_problems)
+
+    benchmark_problems: List[str] = []
+    for item in items:
+        existing_benchmark_mark = item.get_closest_marker("benchmark")
+        if existing_benchmark_mark is not None:
+            benchmark_problems.append(item.name)
+
+        if "benchmark_runner" in getattr(item, "fixturenames", ()):
+            item.add_marker("benchmark")
+
+    if len(benchmark_problems) > 0:
+        all_error_lines.append("use the benchmark_runner fixture, not @pytest.mark.benchmark:")
+        all_error_lines.extend(f"    {line}" for line in benchmark_problems)
+
+    if len(all_error_lines) > 0:
+        all_error_lines.insert(0, "custom chia collection rules failed")
+        raise Exception("\n".join(all_error_lines))
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -657,29 +694,6 @@ async def farmer_three_harvester_not_started(
         yield _
 
 
-# TODO: Ideally, the db_version should be the (parameterized) db_version
-# fixture, to test all versions of the database schema. This doesn't work
-# because of a hack in shutting down the full node, which means you cannot run
-# more than one simulations per process.
-@pytest_asyncio.fixture(
-    scope="function",
-    params=[
-        pytest.param(
-            None, marks=pytest.mark.limit_consensus_modes(reason="This test only supports one running at a time.")
-        )
-    ],
-)
-async def daemon_simulation(consensus_mode, bt, get_b_tools, get_b_tools_1):
-    async with setup_full_system_connect_to_deamon(
-        test_constants_modified,
-        bt,
-        b_tools=get_b_tools,
-        b_tools_1=get_b_tools_1,
-        db_version=1,
-    ) as _:
-        yield _, get_b_tools, get_b_tools_1
-
-
 @pytest_asyncio.fixture(scope="function")
 async def get_daemon(bt):
     async with setup_daemon(btools=bt) as _:
@@ -769,8 +783,8 @@ async def wallets_prefarm_services(two_wallet_nodes_services, self_hostname, tru
         wallet_service_1.config,
     )
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_1.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_1.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -823,9 +837,9 @@ async def three_wallets_prefarm(three_wallet_nodes, self_hostname, trusted):
         wallet_node_1.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
@@ -862,7 +876,7 @@ async def timelord(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def timelord_service(bt):
+async def timelord_service(bt: BlockTools) -> AsyncIterator[Service[Timelord, TimelordAPI]]:
     async with setup_timelord(uint16(0), False, bt.constants, bt.config, bt.root_path) as _:
         yield _
 
@@ -944,9 +958,9 @@ def cost_logger_fixture() -> Iterator[CostLogger]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def simulation(bt):
-    async with setup_full_system(test_constants_modified, bt, db_version=1) as _:
-        yield _
+async def simulation(bt, get_b_tools):
+    async with setup_full_system(test_constants_modified, bt, get_b_tools, db_version=2) as full_system:
+        yield full_system, get_b_tools
 
 
 HarvesterFarmerEnvironment = Tuple[

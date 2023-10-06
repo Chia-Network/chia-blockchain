@@ -39,7 +39,7 @@ permissions:
 
 jobs:
   build:
-    name: Windows 10 Installer
+    name: Build EXE
     runs-on: [windows-2019]
     timeout-minutes: 65
     strategy:
@@ -60,15 +60,16 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check tag type
-      id: check_tag_type
       shell: bash
       run: |
         REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
         REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
         if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
-          echo "TAG_TYPE=beta" >> "$GITHUB_OUTPUT"
+          echo "TAG_TYPE=beta"
+          echo "TAG_TYPE=beta" >> "$GITHUB_ENV"
         elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
-          echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
+          echo "TAG_TYPE=rc"
+          echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
         fi
 
     - name: Set git urls to https instead of ssh
@@ -198,7 +199,7 @@ jobs:
         LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
 
         # Compare the versions and choose the newest that matches the requirements
-        if [[ "$TAG_TYPE" == "beta" || -z "${{ github.event.release.tag_name }}" ]]; then
+        if [[ "$TAG_TYPE" == "beta" || -z "$TAG_TYPE" ]]; then
           # For beta or dev builds (indicated by the absence of a tag), use the latest version available
           LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
         elif [[ "$TAG_TYPE" == "rc" ]]; then
@@ -364,3 +365,47 @@ jobs:
         Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
         Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
+
+  test:
+    name: Test ${{ matrix.os.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: 2019
+            matrix: 2019
+            runs-on:
+              intel: windows-2019
+          - name: 2022
+            matrix: 2022
+            runs-on:
+              intel: windows-2022
+        arch:
+          - name: Intel
+            matrix: intel
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-windows-exe-intel
+        path: packages
+
+    - name: Install package
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        dir ./packages/
+        $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
+        Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
+
+    - name: Run chia version
+      env:
+        INSTALL_PATH: ${{ github.workspace }}\installed
+      run: |
+        & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") version
