@@ -201,7 +201,7 @@ jobs:
           fi
 
       - name: Remove previous coverage report comment and label from PR
-        if: always()
+        if: github.base_ref != '' && always()
         shell: bash
         env:
           COV_STATUS: ${{ env.COV_STATUS }}
@@ -222,7 +222,7 @@ jobs:
           fi
 
       - name: Add diff coverage report comment to PR
-        if: always()
+        if: github.base_ref != '' && always()
         env:
           BRANCH_NAME: ${{ github.sha }}
           COV_STATUS: ${{ env.COV_STATUS }}
