@@ -76,33 +76,33 @@ jobs:
       run: |
         git config --global url."https://github.com/".insteadOf ssh://git@github.com/
 
-    - name: Get npm cache directory
-      id: npm-cache
-      shell: bash
-      run: |
-        echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
-
-    - name: Cache npm
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.npm-cache.outputs.dir }}
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
-    - name: Get pip cache dir
-      id: pip-cache
-      shell: bash
-      run: |
-        echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
-
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+#    - name: Get npm cache directory
+#      id: npm-cache
+#      shell: bash
+#      run: |
+#        echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+#
+#    - name: Cache npm
+#      uses: actions/cache@v3
+#      with:
+#        path: ${{ steps.npm-cache.outputs.dir }}
+#        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+#        restore-keys: |
+#          ${{ runner.os }}-node-
+#
+#    - name: Get pip cache dir
+#      id: pip-cache
+#      shell: bash
+#      run: |
+#        echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
+#
+#    - name: Cache pip
+#      uses: actions/cache@v3
+#      with:
+#        path: ${{ steps.pip-cache.outputs.dir }}
+#        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+#        restore-keys: |
+#          ${{ runner.os }}-pip-
 
     - uses: Chia-Network/actions/setup-python@main
       name: Install Python ${{ matrix.python-version }}
@@ -135,35 +135,35 @@ jobs:
         AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
         GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
-    - name: Setup Certificate
-      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-      shell: bash
-      run: |
-        echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
-
-    - name: Set signing variables
-      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-      shell: bash
-      run: |
-        echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
-        echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
-        echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
-        echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
-        echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}" >> "$GITHUB_ENV"
-        echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
-        echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
-        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
-
-    - name: Setup SSM KSP on windows latest
-      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
-      shell: cmd
-      run: |
-        curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
-        msiexec /i smtools-windows-x64.msi /quiet /qn
-        smksp_registrar.exe list
-        smctl.exe keypair ls
-        C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-        smksp_cert_sync.exe
+#    - name: Setup Certificate
+#      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+#      shell: bash
+#      run: |
+#        echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+#
+#    - name: Set signing variables
+#      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+#      shell: bash
+#      run: |
+#        echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
+#        echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
+#        echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
+#        echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+#        echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}" >> "$GITHUB_ENV"
+#        echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
+#        echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
+#        echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
+#
+#    - name: Setup SSM KSP on windows latest
+#      if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
+#      shell: cmd
+#      run: |
+#        curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
+#        msiexec /i smtools-windows-x64.msi /quiet /qn
+#        smksp_registrar.exe list
+#        smctl.exe keypair ls
+#        C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
+#        smksp_cert_sync.exe
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -178,82 +178,89 @@ jobs:
         echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >> "$GITHUB_OUTPUT"
         deactivate
 
-    - name: Get latest madmax plotter
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
-      run: |
-        LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        mkdir "$GITHUB_WORKSPACE"\\madmax
-        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot.exe
-        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot_k34.exe
+#    - name: Get latest madmax plotter
+#      env:
+#        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      shell: bash
+#      run: |
+#        LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+#        mkdir "$GITHUB_WORKSPACE"\\madmax
+#        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot.exe
+#        gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-*.exe' -O "$GITHUB_WORKSPACE"\\madmax\\chia_plot_k34.exe
+#
+#    - name: Fetch bladebit versions
+#      shell: bash
+#      env:
+#        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      run: |
+#        # Fetch the latest version of each type
+#        LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
+#        LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
+#        LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
+#
+#        # Compare the versions and choose the newest that matches the requirements
+#        if [[ "$TAG_TYPE" == "beta" || -z "$TAG_TYPE" ]]; then
+#          # For beta or dev builds (indicated by the absence of a tag), use the latest version available
+#          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+#        elif [[ "$TAG_TYPE" == "rc" ]]; then
+#          # For RC builds, use the latest RC or full release if it's newer
+#          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
+#        else
+#          # For full releases, use the latest full release
+#          LATEST_VERSION="$LATEST_RELEASE"
+#        fi
+#        echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
+#
+#    - name: Get latest bladebit plotter
+#      shell: bash
+#      env:
+#        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      run: |
+#        # Download and extract the chosen version
+#        mkdir "$GITHUB_WORKSPACE\\bladebit"
+#        cd "$GITHUB_WORKSPACE\\bladebit"
+#        gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*windows-x86-64.zip'
+#        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+#        cd "$OLDPWD"
 
-    - name: Fetch bladebit versions
-      shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Fetch the latest version of each type
-        LATEST_RELEASE=$(gh api repos/Chia-Network/bladebit/releases/latest --jq 'select(.prerelease == false) | .tag_name')
-        LATEST_BETA=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+$"))) | first | .tag_name')
-        LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
+#    - name: Run install script
+#      env:
+#        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+#      run: |
+#        .\Install.ps1 -d
+#
+#    - uses: chia-network/actions/activate-venv@main
+#
+#    - name: Prepare GUI cache
+#      id: gui-ref
+#      shell: bash
+#      run: |
+#        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+#        echo "${gui_ref}"
+#        echo "GUI_REF=${gui_ref}" >> "$GITHUB_OUTPUT"
+#        echo "rm -rf ./chia-blockchain-gui"
+#        rm -rf ./chia-blockchain-gui
+#
+#    - name: Cache GUI
+#      uses: actions/cache@v3
+#      id: cache-gui
+#      with:
+#        path: .\chia-blockchain-gui
+#        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-        # Compare the versions and choose the newest that matches the requirements
-        if [[ "$TAG_TYPE" == "beta" || -z "$TAG_TYPE" ]]; then
-          # For beta or dev builds (indicated by the absence of a tag), use the latest version available
-          LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
-        elif [[ "$TAG_TYPE" == "rc" ]]; then
-          # For RC builds, use the latest RC or full release if it's newer
-          LATEST_VERSION=$(printf "%s\n%s\n" "$LATEST_RELEASE" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
-        else
-          # For full releases, use the latest full release
-          LATEST_VERSION="$LATEST_RELEASE"
-        fi
-        echo "LATEST_VERSION=$LATEST_VERSION" >> "$GITHUB_ENV"
-
-    - name: Get latest bladebit plotter
-      shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Download and extract the chosen version
-        mkdir "$GITHUB_WORKSPACE\\bladebit"
-        cd "$GITHUB_WORKSPACE\\bladebit"
-        gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*windows-x86-64.zip'
-        ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
-        cd "$OLDPWD"
-
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        .\Install.ps1 -d
-
-    - uses: chia-network/actions/activate-venv@main
-
-    - name: Prepare GUI cache
-      id: gui-ref
-      shell: bash
-      run: |
-        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
-        echo "${gui_ref}"
-        echo "GUI_REF=${gui_ref}" >> "$GITHUB_OUTPUT"
-        echo "rm -rf ./chia-blockchain-gui"
-        rm -rf ./chia-blockchain-gui
-
-    - name: Cache GUI
-      uses: actions/cache@v3
-      id: cache-gui
-      with:
-        path: .\chia-blockchain-gui
-        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
-
-    - if: steps.cache-gui.outputs.cache-hit != 'true'
-      name: Build GUI
+    - name: Build GUI
+      if: steps.cache-gui.outputs.cache-hit != 'true'
       continue-on-error: false
       run: |
         cd .\build_scripts
         .\build_windows-1-gui.ps1
+
+    - name: Upload logs always
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: npm-logs
+        path: C:\npm\cache\_logs
 
     - name: Build Windows installer
       env:
