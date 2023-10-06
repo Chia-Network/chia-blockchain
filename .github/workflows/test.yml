@@ -6,7 +6,7 @@ on:
     - '**.md'
     branches:
     - long_lived/**
-    - main
+    # - main
     - release/**
     tags:
     - '**'
