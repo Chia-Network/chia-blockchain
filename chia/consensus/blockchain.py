@@ -848,6 +848,16 @@ class Blockchain(BlockchainInterface):
             return ret
         return await self.block_store.get_block_record(header_hash)
 
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        ret = []
+        for h in header_hashes:
+            b = self.__block_records.get(h)
+            if b is not None:
+                ret.append(b.prev_hash)
+            else:
+                ret.append(await self.block_store.get_prev_hash(h))
+        return ret
+
     async def contains_block_from_db(self, header_hash: bytes32) -> bool:
         ret = header_hash in self.__block_records
         if ret:
