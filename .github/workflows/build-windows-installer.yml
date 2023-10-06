@@ -104,10 +104,10 @@ jobs:
 #        restore-keys: |
 #          ${{ runner.os }}-pip-
 
-    - uses: Chia-Network/actions/setup-python@main
-      name: Install Python ${{ matrix.python-version }}
-      with:
-        python-version: ${{ matrix.python-version }}
+#    - uses: Chia-Network/actions/setup-python@main
+#      name: Install Python ${{ matrix.python-version }}
+#      with:
+#        python-version: ${{ matrix.python-version }}
 
     - name: Setup Node 18.x
       uses: actions/setup-node@v3
@@ -166,17 +166,17 @@ jobs:
 #        smksp_cert_sync.exe
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
-    - name: Get version number
-      id: version_number
-      shell: bash
-      run: |
-        python -m venv ../venv
-        source ../venv/Scripts/activate
-        pip3 install setuptools_scm
-        CHIA_INSTALLER_VERSION=$(python ./build_scripts/installer-version.py)
-        echo "$CHIA_INSTALLER_VERSION"
-        echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >> "$GITHUB_OUTPUT"
-        deactivate
+#    - name: Get version number
+#      id: version_number
+#      shell: bash
+#      run: |
+#        python -m venv ../venv
+#        source ../venv/Scripts/activate
+#        pip3 install setuptools_scm
+#        CHIA_INSTALLER_VERSION=$(python ./build_scripts/installer-version.py)
+#        echo "$CHIA_INSTALLER_VERSION"
+#        echo "CHIA_INSTALLER_VERSION=$CHIA_INSTALLER_VERSION" >> "$GITHUB_OUTPUT"
+#        deactivate
 
 #    - name: Get latest madmax plotter
 #      env:
@@ -247,6 +247,9 @@ jobs:
 #      with:
 #        path: .\chia-blockchain-gui
 #        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - name: Clear npm cache
+      run: npm cache clean --force
 
     - name: Build GUI
       if: steps.cache-gui.outputs.cache-hit != 'true'
