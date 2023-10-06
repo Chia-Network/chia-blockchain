@@ -215,6 +215,12 @@ class WalletBlockchain(BlockchainInterface):
         # blockchain_interface
         return self._block_records.get(header_hash)
 
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        ret = []
+        for h in header_hashes:
+            ret.append(self._block_records[h].prev_hash)
+        return ret
+
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._block_records[block_record.header_hash] = block_record
 
