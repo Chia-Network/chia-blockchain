@@ -1,22 +1,5 @@
 name: 🧪 test
 
-on:
-  push:
-    paths-ignore:
-    - '**.md'
-    branches:
-    - long_lived/**
-    # - main
-    - release/**
-    tags:
-    - '**'
-  pull_request:
-    paths-ignore:
-    - '**.md'
-    branches:
-    - '**'
-  workflow_dispatch: null
-
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
