@@ -13,14 +13,14 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from chia.consensus.block_body_validation import validate_block_body
+from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.find_fork_point import find_fork_point_in_chain
+from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import (
     PreValidationResult,
@@ -203,11 +203,66 @@ class Blockchain(BlockchainInterface):
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
+    async def advance_fork_info(self, block: FullBlock, fork_info: ForkInfo) -> None:
+        """
+        This function is used to advance the peak_height of fork_info given the
+        full block extending the chain. block is required to be the next block on
+        top of fork_info.peak_height. If the block is part of the main chain,
+        the fork_height will set to the same as the peak, making the fork_info
+        represent an empty fork chain.
+        If the block is part of a fork, we need to compute the additions and
+        removals, to update the fork_info object. This is an expensive operation.
+        """
+
+        assert fork_info.peak_height <= block.height - 1
+
+        if fork_info.peak_height == block.height - 1 and fork_info.peak_hash == block.header_hash:
+            return
+
+        peak = self.get_peak()
+        assert peak is not None
+        fork_chain, fork_hash = await lookup_fork_chain(
+            self, (peak.height, peak.header_hash), (uint32(block.height - 1), block.prev_header_hash)
+        )
+        fork_info.fork_height = block.height - len(fork_chain) - 1
+        fork_info.peak_height = fork_info.fork_height
+        fork_info.peak_hash = fork_hash
+        fork_info.removals_since_fork = set()
+        fork_info.additions_since_fork = {}
+        for height in range(fork_info.fork_height + 1, block.height):
+            fork_block: Optional[FullBlock] = await self.block_store.get_full_block(fork_chain[uint32(height)])
+            assert fork_block is not None
+            await self.run_single_block(fork_block, fork_info)
+
+    async def run_single_block(self, block: FullBlock, fork_info: ForkInfo) -> None:
+        assert fork_info.peak_height == block.height - 1
+        assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
+
+        npc: Optional[NPCResult] = None
+        if block.transactions_generator is not None:
+            block_generator: Optional[BlockGenerator] = await self.get_block_generator(block)
+            assert block_generator is not None
+            assert block.transactions_info is not None
+            assert block.foliage_transaction_block is not None
+            npc = get_name_puzzle_conditions(
+                block_generator,
+                block.transactions_info.cost,
+                mempool_mode=False,
+                height=block.height,
+                constants=self.constants,
+            )
+            assert npc.error is None
+
+        fork_info.include_spends(npc, block)
+
+        fork_info.peak_height = block.height
+        fork_info.peak_hash = block.header_hash
+
     async def add_block(
         self,
         block: FullBlock,
         pre_validation_result: PreValidationResult,
-        fork_point_with_peak: Optional[uint32] = None,
+        fork_info: Optional[ForkInfo] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
@@ -219,7 +274,8 @@ class Blockchain(BlockchainInterface):
         Args:
             block: The FullBlock to be validated.
             pre_validation_result: A result of successful pre validation
-            fork_point_with_peak: The fork point, for efficiency reasons, if None, it will be recomputed
+            fork_info: Information about the fork chain this block is part of,
+               to make validation more efficient. This is an in-out parameter.
 
         Returns:
             The result of adding the block to the blockchain (NEW_PEAK, ADDED_AS_ORPHAN, INVALID_BLOCK,
@@ -231,19 +287,97 @@ class Blockchain(BlockchainInterface):
                 - A list of NPCResult for any new transaction block added to the chain
         """
 
+        if block.height == 0 and block.prev_header_hash != self.constants.GENESIS_CHALLENGE:
+            return AddBlockResult.INVALID_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+
+        peak = self.get_peak()
         genesis: bool = block.height == 0
+        extending_main_chain: bool = genesis or peak is None or (block.prev_header_hash == peak.header_hash)
+
+        # first check if this block is disconnected from the currently known
+        # blocks. We can only accept blocks that are connected to another block
+        # we know of.
+        prev_block: Optional[BlockRecord] = None
+        if not extending_main_chain:
+            prev_block = await self.get_block_record_from_db(block.prev_header_hash)
+            if not genesis:
+                if prev_block is None:
+                    return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+
+                if prev_block.height + 1 != block.height:
+                    return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+
         header_hash: bytes32 = block.header_hash
 
-        if await self.contains_block_from_db(header_hash):
-            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+        # maybe fork_info should be mandatory to pass in, but we have a lot of
+        # tests that make sure the Blockchain object can handle any blocks,
+        # including orphaned ones, without any fork context
+        if fork_info is None:
+            # remember that this fork_info object is temporary and won't be
+            # returned to the caller. It means we can save time by not updating
+            # it once the block validates
+            temporary_fork_info = True
 
-        prev_block = await self.get_block_record_from_db(block.prev_header_hash)
-        if not genesis:
-            if prev_block is None:
-                return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+            if await self.contains_block_from_db(header_hash):
+                # this means we have already seen and validated this block.
+                return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+            elif extending_main_chain:
+                # this is the common and efficient case where we extend the main
+                # chain. The fork_info can be empty
+                prev_height = block.height - 1
+                fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
+            else:
+                assert peak is not None
+                # the block is extending a fork, and we don't have any fork_info
+                # for it. This can potentially be quite expensive and we should
+                # try to avoid getting here
 
-            if prev_block.height + 1 != block.height:
-                return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+                # first, collect all the block hashes of the forked chain
+                # the block we're trying to add doesn't exist in the chain yet,
+                # so we need to start traversing from its prev_header_hash
+                fork_chain, fork_hash = await lookup_fork_chain(
+                    self, (peak.height, peak.header_hash), (uint32(block.height - 1), block.prev_header_hash)
+                )
+                # now we know how long the fork is, and can compute the fork
+                # height.
+                fork_height = block.height - len(fork_chain) - 1
+                fork_info = ForkInfo(fork_height, fork_height, fork_hash)
+
+                # now run all the blocks of the fork to compute the additions
+                # and removals. They are recorded in the fork_info object
+                for height in range(fork_info.fork_height + 1, block.height):
+                    fork_block: Optional[FullBlock] = await self.block_store.get_full_block(fork_chain[uint32(height)])
+                    assert fork_block is not None
+                    assert fork_block.height - 1 == fork_info.peak_height
+                    assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
+                    await self.run_single_block(fork_block, fork_info)
+
+        else:
+            temporary_fork_info = False
+            if extending_main_chain:
+                fork_info.fork_height = block.height - 1
+                fork_info.peak_height = block.height - 1
+                fork_info.peak_hash = block.prev_header_hash
+                fork_info.additions_since_fork == {}
+                fork_info.removals_since_fork == set()
+
+            if await self.contains_block_from_db(header_hash):
+                # We have already validated the block, but if it's not part of the
+                # main chain, we still need to re-run it to update the additions and
+                # removals in fork_info.
+                await self.advance_fork_info(block, fork_info)
+                await self.run_single_block(block, fork_info)
+
+                return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+
+            if fork_info.peak_height < block.height - 1:
+                await self.advance_fork_info(block, fork_info)
+
+        # if these prerequisites of the fork_info aren't met, the fork_info
+        # object is invalid for this block. If the caller would have passed in
+        # None, a valid fork_info would have been computed
+        assert fork_info.peak_height == block.height - 1
+        assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
@@ -260,7 +394,7 @@ class Blockchain(BlockchainInterface):
             block,
             block.height,
             npc_result,
-            fork_point_with_peak,
+            fork_info,
             self.get_block_generator,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
@@ -268,9 +402,17 @@ class Blockchain(BlockchainInterface):
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
 
+        # commit the additions and removals from this block into the ForkInfo, in
+        # case we're validating blocks on a fork, the next block validation will
+        # need to know of these additions and removals
+        if not temporary_fork_info:
+            assert fork_info.peak_height == block.height - 1
+            fork_info.include_spends(npc_result, block)
+            fork_info.peak_height = int(block.height)
+            fork_info.peak_hash = header_hash
+
         # block_to_block_record() require the previous block in the cache
-        if not genesis:
-            assert prev_block is not None
+        if not genesis and prev_block is not None:
             self.add_block_record(prev_block)
 
         block_record = block_to_block_record(
@@ -286,7 +428,7 @@ class Blockchain(BlockchainInterface):
                 # Perform the DB operations to update the state, and rollback if something goes wrong
                 await self.block_store.add_full_block(header_hash, block, block_record)
                 records, state_change_summary = await self._reconsider_peak(
-                    block_record, genesis, fork_point_with_peak, npc_result
+                    block_record, genesis, fork_info, npc_result
                 )
 
                 # Then update the memory cache. It is important that this is not cancelled and does not throw
@@ -328,7 +470,7 @@ class Blockchain(BlockchainInterface):
         self,
         block_record: BlockRecord,
         genesis: bool,
-        fork_point_with_peak: Optional[uint32],
+        fork_info: ForkInfo,
         npc_result: Optional[NPCResult],
     ) -> Tuple[List[BlockRecord], Optional[StateChangeSummary]]:
         """
@@ -371,17 +513,8 @@ class Blockchain(BlockchainInterface):
             # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
             return [], None
 
-        # Finds the fork. if the block is just being appended, it will return the peak
-        # If no blocks in common, returns -1, and reverts all blocks
-        if block_record.prev_hash == peak.header_hash:
-            fork_height: int = peak.height
-        elif fork_point_with_peak is not None:
-            fork_height = fork_point_with_peak
-        else:
-            fork_height = await find_fork_point_in_chain(self, block_record, peak)
-
         if block_record.prev_hash != peak.header_hash:
-            for coin_record in await self.coin_store.rollback_to_block(fork_height):
+            for coin_record in await self.coin_store.rollback_to_block(fork_info.fork_height):
                 rolled_back_state[coin_record.name] = coin_record
 
         # Collects all blocks from fork point to new peak
@@ -389,7 +522,7 @@ class Blockchain(BlockchainInterface):
         curr = block_record.header_hash
 
         # Backtracks up to the fork point, pulling all the required blocks from DB (that will soon be in the chain)
-        while fork_height < 0 or curr != self.height_to_hash(uint32(fork_height)):
+        while fork_info.fork_height < 0 or curr != self.height_to_hash(uint32(fork_info.fork_height)):
             fetched_full_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
             fetched_block_record: Optional[BlockRecord] = await self.block_store.get_block_record(curr)
             assert fetched_full_block is not None
@@ -435,14 +568,18 @@ class Blockchain(BlockchainInterface):
 
         # we made it to the end successfully
         # Rollback sub_epoch_summaries
-        await self.block_store.rollback(fork_height)
+        await self.block_store.rollback(fork_info.fork_height)
         await self.block_store.set_in_chain([(br.header_hash,) for br in records_to_add])
 
         # Changes the peak to be the new peak
         await self.block_store.set_peak(block_record.header_hash)
 
         return records_to_add, StateChangeSummary(
-            block_record, uint32(max(fork_height, 0)), list(rolled_back_state.values()), npc_results, reward_coins
+            block_record,
+            uint32(max(fork_info.fork_height, 0)),
+            list(rolled_back_state.values()),
+            npc_results,
+            reward_coins,
         )
 
     async def get_tx_removals_and_additions(
@@ -628,6 +765,8 @@ class Blockchain(BlockchainInterface):
             else self.block_record(block.prev_header_hash).height
         )
 
+        fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
+
         error_code, cost_result = await validate_block_body(
             self.constants,
             self,
@@ -637,7 +776,7 @@ class Blockchain(BlockchainInterface):
             block,
             uint32(prev_height + 1),
             npc_result,
-            None,
+            fork_info,
             self.get_block_generator,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )

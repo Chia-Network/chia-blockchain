@@ -7,12 +7,13 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from secrets import token_bytes
-from typing import List
+from typing import List, Optional
 
 import pytest
 from blspy import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.consensus.blockchain import AddBlockResult
@@ -3368,15 +3369,16 @@ async def test_reorg_new_ref(empty_blockchain, bt):
     blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
 
     for i, block in enumerate(blocks_reorg_chain):
-        fork_point_with_peak = None
+        fork_info: Optional[ForkInfo] = None
         if i < 10:
             expected = AddBlockResult.ALREADY_HAVE_BLOCK
         elif i < 20:
             expected = AddBlockResult.ADDED_AS_ORPHAN
         else:
             expected = AddBlockResult.NEW_PEAK
-            fork_point_with_peak = uint32(1)
-        await _validate_and_add_block(b, block, expected_result=expected, fork_point_with_peak=fork_point_with_peak)
+            if fork_info is None:
+                fork_info = ForkInfo(blocks[1].height, blocks[1].height, blocks[19].header_hash)
+        await _validate_and_add_block(b, block, expected_result=expected, fork_info=fork_info)
     assert b.get_peak().height == 20
 
 
@@ -3424,9 +3426,10 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
     for block in blocks[:5]:
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
 
-    # fake the fork_height to make every new block look like a reorg
+    # fake the fork_info to make every new block look like a reorg
+    fork_info = ForkInfo(blocks[1].height, blocks[1].height, blocks[1].header_hash)
     for block in blocks[5:]:
-        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_point_with_peak=2)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_info=fork_info)
     assert b.get_peak().height == 13
 
 
@@ -3578,17 +3581,15 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
             block1, block2 = b1, b2
         counter += 1
 
-        fork_height = 2 if counter > 3 else None
-
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block1], {}, validate_signatures=False
         )
-        result, err, _ = await b.add_block(block1, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.add_block(block1, preval[0])
         assert not err
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block2], {}, validate_signatures=False
         )
-        result, err, _ = await b.add_block(block2, preval[0], fork_point_with_peak=fork_height)
+        result, err, _ = await b.add_block(block2, preval[0])
         assert not err
 
     assert b.get_peak().height == 39
