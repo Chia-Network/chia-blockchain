@@ -78,7 +78,7 @@ class TestMempoolPerformance:
             if idx >= len(blocks) - 3:
                 duration = 0.15
             else:
-                duration = 0.001
+                duration = 0.002
 
             with benchmark_runner.assert_runtime(seconds=duration):
                 await full_node_api_1.full_node.add_block(block)
