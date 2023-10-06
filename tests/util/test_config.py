@@ -153,17 +153,22 @@ def test_get_unresolved_peer_infos(case: GetUnresolvedPeerInfosCase) -> None:
 
 @dataclass
 class SetPeerInfoCase(DataCase):
-    id: str
+    description: str
     service_config: Dict[str, Any]
     requested_node_type: NodeType
     expected_service_config: Dict[str, Any]
     peer_host: Optional[str] = None
     peer_port: Optional[int] = None
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self.description
 
 
 @datacases(
     SetPeerInfoCase(
-        id="multiple peers, modify first entry, set host and port",
+        description="multiple peers, modify first entry, set host and port",
         service_config={
             "farmer_peers": [
                 {
@@ -193,7 +198,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="multiple peers, modify first entry, set host",
+        description="multiple peers, modify first entry, set host",
         service_config={
             "farmer_peers": [
                 {
@@ -222,7 +227,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="multiple peers, modify first entry, set port",
+        description="multiple peers, modify first entry, set port",
         service_config={
             "farmer_peers": [
                 {
@@ -251,7 +256,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single peer, set host and port",
+        description="single peer, set host and port",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
@@ -269,7 +274,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single peer, set host",
+        description="single peer, set host",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
@@ -286,7 +291,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single peer, set port",
+        description="single peer, set port",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
@@ -303,7 +308,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single and multiple peers, modify single peer, set host and port",
+        description="single and multiple peers, modify single peer, set host and port",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
@@ -341,7 +346,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single and multiple peers, modify single peer, set host",
+        description="single and multiple peers, modify single peer, set host",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
@@ -378,7 +383,7 @@ class SetPeerInfoCase(DataCase):
         },
     ),
     SetPeerInfoCase(
-        id="single and multiple peers, modify single peer, set port",
+        description="single and multiple peers, modify single peer, set port",
         service_config={
             "farmer_peer": {
                 "host": "127.0.0.1",
