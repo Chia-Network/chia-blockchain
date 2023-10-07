@@ -243,7 +243,6 @@ jobs:
 
     - name: Download constraints file
       uses: actions/download-artifact@v3
-      id: download
       with:
         name: constraints-file-${{ matrix.os.arch }}
         path: venv
@@ -254,7 +253,6 @@ jobs:
 
     - name: Download packages
       uses: actions/download-artifact@v3
-      id: download
       with:
         name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: packages
