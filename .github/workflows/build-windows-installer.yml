@@ -251,6 +251,9 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
 
+    - name: Show users
+      run: ls C:\Users\
+
 #    - name: Try installing electron before the other script, so its already pre-cached and we hopefully dont hit the race later
 #      continue-on-error: true
 #      run: |
