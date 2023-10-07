@@ -13,10 +13,6 @@ npm ci
 Set-Location -Path "..\..\" -PassThru
 git submodule update --init chia-blockchain-gui
 
-# Pre-cache electron, to work around a race
-$ELECTRON_VERSION = $(jq -r '.devDependencies.electron' ./chia-blockchain-gui/packages/core/package.json)
-npm cache add "electron@$ELECTRON_VERSION"
-
 Set-Location -Path ".\chia-blockchain-gui" -PassThru
 
 Write-Output "   ---"
@@ -27,8 +23,9 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 Write-Output "lerna clean -y"
 npx lerna clean -y
 $env:DEBUG="*"
-Write-Output "npm ci"
-npm ci
+# Force one project at a time for lerna, to avoid the cache race
+Write-Output "npx lerna bootstrap --ci --concurrency 1"
+npx lerna bootstrap --ci --concurrency 1
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 
