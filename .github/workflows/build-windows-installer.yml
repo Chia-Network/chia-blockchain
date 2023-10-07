@@ -248,6 +248,12 @@ jobs:
         path: .\chia-blockchain-gui
         key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
+    # See https://github.com/actions/runner-images/issues/712
+    - name: Normalize temp names
+      run: |
+        echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+        echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+
     - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
       continue-on-error: false
