@@ -267,10 +267,10 @@ jobs:
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
-      - uses: chia-network/actions/create-venv
+      - uses: chia-network/actions/create-venv@main
         id: create-venv
 
-      - uses: chia-network/actions/activate-venv
+      - uses: chia-network/actions/activate-venv@main
         with:
           directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
