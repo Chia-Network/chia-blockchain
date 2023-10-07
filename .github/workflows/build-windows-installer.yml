@@ -251,11 +251,11 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
 
-    - name: ls and then delete the electron cache
+    - name: Try installing electron before the other script, so its already pre-cached and we hopefully dont hit the race later
+      continue-on-error: true
       run: |
-        ls C:\Users\runneradmin\AppData\Local\electron
-        ls C:\Users\runneradmin\AppData\Local\electron\Cache
-        rm -r -fo path C:\Users\runneradmin\AppData\Local\electron
+        npm install electron@25.9.0
+        rm -r -fo path node_modules
 
     - name: Build GUI
       if: steps.cache-gui.outputs.cache-hit != 'true'
