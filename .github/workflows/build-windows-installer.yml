@@ -251,6 +251,12 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
 
+    - name: ls and then delete the electron cache
+      run: |
+        ls C:\Users\runneradmin\AppData\Local\electron
+        ls C:\Users\runneradmin\AppData\Local\electron\Cache
+        rm -r -fo path C:\Users\runneradmin\AppData\Local\electron
+
     - name: Build GUI
       if: steps.cache-gui.outputs.cache-hit != 'true'
       continue-on-error: false
