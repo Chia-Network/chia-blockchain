@@ -251,7 +251,7 @@ jobs:
     - name: Add electron to cache before running install to avoid a race
       shell: bash
       run: |
-        ELECTRON_VERSION=$(jq -r '.devDependencies.electron' packages/core/package.json)
+        ELECTRON_VERSION=$(jq -r '.devDependencies.electron' chia-blockchain-gui/packages/core/package.json)
         npm cache add electron@${ELECTRON_VERSION}
 
     - if: steps.cache-gui.outputs.cache-hit != 'true'
