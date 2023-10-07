@@ -352,7 +352,6 @@ def set_peer_info(
     peer_port: Optional[int] = None,
 ):
     peer_info_key = PEER_INFO_MAPPING[peer_type]
-    assert peer_info_key is not None
     if peer_info_key in service_config:
         if peer_host is not None:
             service_config[peer_info_key]["host"] = peer_host
