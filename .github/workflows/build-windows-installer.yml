@@ -109,10 +109,10 @@ jobs:
 #      with:
 #        python-version: ${{ matrix.python-version }}
 
-    - name: Setup Node 16.x
+    - name: Setup Node 18.15
       uses: actions/setup-node@v3
       with:
-        node-version: '16.x'
+        node-version: '18.15'
 
     - name: Test for secrets access
       id: check_secrets
