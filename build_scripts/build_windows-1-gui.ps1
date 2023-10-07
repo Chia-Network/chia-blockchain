@@ -13,6 +13,10 @@ npm ci
 Set-Location -Path "..\..\" -PassThru
 git submodule update --init chia-blockchain-gui
 
+# Pre-cache electron, to work around a race
+$ELECTRON_VERSION = $(jq -r '.devDependencies.electron' ./chia-blockchain-gui/packages/core/package.json)
+npm cache add "electron@$ELECTRON_VERSION"
+
 Set-Location -Path ".\chia-blockchain-gui" -PassThru
 
 Write-Output "   ---"
