@@ -22,6 +22,7 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
 Write-Output "lerna clean -y"
 npx lerna clean -y
+$env:DEBUG="*"
 Write-Output "npm ci"
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
