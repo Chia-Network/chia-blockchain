@@ -23,9 +23,11 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 Write-Output "lerna clean -y"
 npx lerna clean -y
 $env:DEBUG="*"
-# Force one project at a time for lerna, to avoid the cache race
-Write-Output "npx lerna bootstrap --ci --concurrency 1"
-npx lerna bootstrap --ci --concurrency 1
+# Do core first, so that electron is already done there
+Write-Output "npm ci --workspace core"
+npm ci --workspace core
+Write-Output "npm ci"
+npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 
