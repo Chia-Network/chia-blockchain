@@ -50,15 +50,9 @@ jobs:
         os:
           - runs-on: macos-11
             name: intel
-            file-suffix: ""
-            mac-package-name: "Chia-darwin-x64"
-            glue-name: "build-macos"
             bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
             name: m1
-            file-suffix: "-arm64"
-            mac-package-name: "Chia-darwin-arm64"
-            glue-name: "build-mac-m1"
             bladebit-suffix: macos-arm64.tar.gz
 
     steps:
@@ -200,6 +194,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
+          constraints-file-artifact-name: constraints-file-${{ matrix.os.name }}
 
       - uses: chia-network/actions/activate-venv@main
 
@@ -249,6 +244,53 @@ jobs:
         with:
           name: chia-installers-macos-dmg-${{ matrix.os.name }}
           path: ${{ github.workspace }}/build_scripts/final_installer/
+
+  publish:
+    name: Publish ${{ matrix.os.name }} DMG
+    runs-on: ${{ matrix.os.runs-on }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        python-version: ["3.10"]
+        os:
+          - runs-on: macos-11
+            name: intel
+            file-suffix: ""
+            glue-name: "build-macos"
+          - runs-on: [MacOS, ARM64]
+            name: m1
+            file-suffix: "-arm64"
+            glue-name: "build-mac-m1"
+
+    steps:
+      - uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: chia-network/actions/create-venv
+        id: create-venv
+
+      - uses: chia-network/actions/activate-venv
+        with:
+          directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+
+      - name: Download constraints file
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: constraints-file-${{ matrix.os.name }}
+          path: venv
+
+      - name: Install utilities
+        run: |
+          pip install --constraint venv/constraints.txt py3createtorrent
+
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: chia-installers-macos-dmg-${{ matrix.os.name }}
+          path: packages
 
       - name: Install AWS CLI
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -339,7 +381,7 @@ jobs:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
-    - build
+    - publish
     strategy:
       fail-fast: false
       matrix:
