@@ -24,7 +24,7 @@ Write-Output "lerna clean -y"
 npx lerna clean -y
 $env:DEBUG="*"
 # Do core first, so that electron is already done there
-Write-Output "npm ci --workspace core"
+Write-Output "npm ci --workspace @chia-network/core"
 npm ci --workspace core
 Write-Output "npm ci"
 npm ci
