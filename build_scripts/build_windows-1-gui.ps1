@@ -8,7 +8,7 @@ Write-Output "   ---"
 Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
-npm ci
+npm ci --no-cache
 
 Set-Location -Path "..\..\" -PassThru
 git submodule update --init chia-blockchain-gui
@@ -23,7 +23,7 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 Write-Output "lerna clean -y"
 npx lerna clean -y
 Write-Output "npm ci"
-npm ci
+npm ci --no-cache
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 
