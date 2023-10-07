@@ -22,6 +22,9 @@ $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
 Write-Output "lerna clean -y"
 npx lerna clean -y
+# Do core first, so that electron is already done there to avoid a race condition
+Write-Output "npm ci --workspace @chia-network/core"
+npm ci --workspace @chia-network/core
 Write-Output "npm ci"
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
