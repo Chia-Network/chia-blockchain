@@ -248,14 +248,11 @@ jobs:
         path: .\chia-blockchain-gui
         key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-    - name: Clear npm cache
-      run: npm cache clean --force
-
-    # See https://github.com/actions/runner-images/issues/712
-    - name: Normalize temp names
+    - name: Add electron to cache before running install to avoid a race
+      shell: bash
       run: |
-        echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-        echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+        ELECTRON_VERSION=$(jq -r '.devDependencies.electron' packages/core/package.json)
+        npm cache add electron@${ELECTRON_VERSION}
 
     - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
