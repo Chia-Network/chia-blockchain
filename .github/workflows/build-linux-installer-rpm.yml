@@ -207,6 +207,8 @@ jobs:
   publish:
     name: Publish amd64 RPM
     runs-on: ubuntu-latest
+    needs:
+    - build
     container:
       image: chianetwork/rocky8-builder:latest
     timeout-minutes: 40

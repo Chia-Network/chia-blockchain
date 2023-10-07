@@ -275,6 +275,8 @@ jobs:
   publish:
     name: Publish EXE
     runs-on: [windows-2019]
+    needs:
+    - build
     timeout-minutes: 65
     strategy:
       fail-fast: false

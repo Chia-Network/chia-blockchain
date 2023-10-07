@@ -248,6 +248,8 @@ jobs:
   publish:
     name: Publish ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
+    needs:
+    - build
     timeout-minutes: 90
     strategy:
       fail-fast: false
