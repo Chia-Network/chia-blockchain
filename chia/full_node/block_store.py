@@ -45,7 +45,7 @@ class BlockStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
-        if db_wrapper.db_version != 2:
+        if db_wrapper.db_version != 3:
             raise RuntimeError(f"BlockStore does not support database schema v{db_wrapper.db_version}")
 
         if use_cache:
