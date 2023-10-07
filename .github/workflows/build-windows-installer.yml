@@ -297,7 +297,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: chia-installers-windows-exe-intel
-        path: packages
+        path: chia-blockchain-gui\release-builds\
 
     - name: Set Env
       uses: Chia-Network/actions/setjobenv@main

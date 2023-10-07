@@ -226,7 +226,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: chia-installers-linux-rpm-intel
-        path: packages
+        path: build_scripts/final_installer/
 
     - name: Set Env
       uses: Chia-Network/actions/setjobenv@main
