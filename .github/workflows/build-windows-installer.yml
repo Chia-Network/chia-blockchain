@@ -109,10 +109,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Setup Node 18.15
+    - name: Setup Node 18.x
       uses: actions/setup-node@v3
       with:
-        node-version: '18.15'
+        node-version: '18.x'
 
     - name: Test for secrets access
       id: check_secrets
@@ -247,6 +247,9 @@ jobs:
       with:
         path: .\chia-blockchain-gui
         key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - name: Clear npm cache
+      run: npm cache clean --force
 
     # See https://github.com/actions/runner-images/issues/712
     - name: Normalize temp names
