@@ -251,11 +251,11 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
 
-    - name: Try installing electron before the other script, so its already pre-cached and we hopefully dont hit the race later
-      continue-on-error: true
-      run: |
-        npm install electron@25.9.0
-        rm -r -fo path node_modules
+#    - name: Try installing electron before the other script, so its already pre-cached and we hopefully dont hit the race later
+#      continue-on-error: true
+#      run: |
+#        npm install electron@25.9.0
+#        rm -r -fo path node_modules
 
     - name: Build GUI
       if: steps.cache-gui.outputs.cache-hit != 'true'
