@@ -95,10 +95,6 @@ jobs:
           echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
         fi
 
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python-version }}
-
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
       id: version_number
@@ -230,10 +226,6 @@ jobs:
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
-
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python-version }}
 
     - uses: chia-network/actions/create-venv@main
       id: create-venv
