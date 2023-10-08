@@ -195,6 +195,10 @@ jobs:
         name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
   publish:
     name: Publish ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
@@ -342,10 +346,6 @@ jobs:
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
-
-    - name: Remove working files to exclude from cache
-      run: |
-        rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}

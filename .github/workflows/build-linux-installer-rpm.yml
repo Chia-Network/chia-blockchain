@@ -188,6 +188,10 @@ jobs:
         name: chia-installers-linux-rpm-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
   publish:
     name: Publish amd64 RPM
     runs-on: ubuntu-latest
@@ -330,10 +334,6 @@ jobs:
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-linux-rpm
-
-    - name: Remove working files to exclude from cache
-      run: |
-        rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
