@@ -110,7 +110,6 @@ jobs:
       name: Install Python ${{ matrix.python-version }}
       with:
         python-version: ${{ matrix.python-version }}
-        constraints-file-artifact-name: constraints-file-intel
 
     - name: Setup Node 18.x
       uses: actions/setup-node@v3
@@ -216,11 +215,11 @@ jobs:
         ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
         cd "$OLDPWD"
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        .\Install.ps1 -d
+    - uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+        constraints-file-artifact-name: constraints-file-intel
 
     - uses: chia-network/actions/activate-venv@main
 
