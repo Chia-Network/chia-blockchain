@@ -42,6 +42,8 @@ jobs:
     name: Build ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: 90
+    outputs:
+      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -260,6 +262,9 @@ jobs:
             file-suffix: "-arm64"
             glue-name: "build-mac-m1"
 
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
@@ -331,8 +336,6 @@ jobs:
 
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         run: |
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
@@ -350,8 +353,6 @@ jobs:
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
-        env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         run: |
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
@@ -367,7 +368,6 @@ jobs:
         if: env.RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         run: |
           gh release upload \
             $RELEASE_TAG \
