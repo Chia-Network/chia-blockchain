@@ -186,6 +186,10 @@ jobs:
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
 
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python-version }}
