@@ -101,6 +101,10 @@ jobs:
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
 
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Create installer version number
         id: version_number
         run: |
@@ -267,6 +271,10 @@ jobs:
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
+
+      - uses: Chia-Network/actions/setup-python@main
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv

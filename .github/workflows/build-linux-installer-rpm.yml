@@ -85,6 +85,10 @@ jobs:
           echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
         fi
 
+    - uses: Chia-Network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
+
     - uses: Chia-Network/actions/enforce-semver@main
       if: env.FULL_RELEASE == 'true'
 
@@ -213,6 +217,10 @@ jobs:
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
+
+    - uses: Chia-Network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
 
     - uses: chia-network/actions/create-venv@main
       id: create-venv
