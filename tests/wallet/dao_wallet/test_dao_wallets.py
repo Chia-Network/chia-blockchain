@@ -2592,7 +2592,7 @@ async def test_dao_complex_spends(
 async def test_dao_concurrency(
     self_hostname: str, three_wallet_nodes: SimulatorsAndWallets, trusted: bool, consensus_mode: ConsensusMode
 ) -> None:
-    num_blocks = 2
+    num_blocks = 3
     full_nodes, wallets, _ = three_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
