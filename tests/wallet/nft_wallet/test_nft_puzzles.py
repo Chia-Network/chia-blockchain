@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from secrets import token_bytes
+import random
 from typing import Tuple
 
 from clvm.casts import int_from_bytes
@@ -22,20 +22,25 @@ from tests.core.make_block_generator import int_to_public_key
 
 SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clsp")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
-DID_MOD = load_clvm("did_innerpuz.clsp")
-NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clsp")
-NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clsp")
-NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clsp")
+DID_MOD = load_clvm("did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles")
+NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm(
+    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
+    package_or_requirement="chia.wallet.nft_wallet.puzzles",
+)
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
 OFFER_MOD = load_clvm("settlement_payments.clsp")
 
 LAUNCHER_ID = Program.to(b"launcher-id").get_tree_hash()
-NFT_METADATA_UPDATER_DEFAULT = load_clvm("nft_metadata_updater_default.clsp")
+NFT_METADATA_UPDATER_DEFAULT = load_clvm(
+    "nft_metadata_updater_default.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 
-def test_nft_transfer_puzzle_hashes():
+def test_nft_transfer_puzzle_hashes(seeded_random: random.Random):
     maker_pk = int_to_public_key(111)
     maker_p2_puz = puzzle_for_pk(maker_pk)
     maker_p2_ph = maker_p2_puz.get_tree_hash()
@@ -68,7 +73,11 @@ def test_nft_transfer_puzzle_hashes():
     nft_puz = SINGLETON_MOD.curry(SINGLETON_STRUCT, metadata_puz)
 
     nft_info = match_puzzle(uncurry_puzzle(nft_puz))
-    assert nft_info.also().also() is not None
+    assert nft_info is not None
+    also = nft_info.also()
+    assert also is not None
+    also_also = also.also()
+    assert also_also is not None
 
     unft = uncurry_nft.UncurriedNFT.uncurry(*nft_puz.uncurry())
     assert unft is not None
@@ -80,7 +89,7 @@ def test_nft_transfer_puzzle_hashes():
     taker_p2_ph = taker_p2_puz.get_tree_hash()
 
     # make nft solution
-    fake_lineage_proof = Program.to([token_bytes(32), maker_p2_ph, 1])
+    fake_lineage_proof = Program.to([bytes32.random(seeded_random), maker_p2_ph, 1])
     transfer_conditions = Program.to([[51, taker_p2_ph, 1, [taker_p2_ph]], [-10, [], [], []]])
 
     ownership_sol = Program.to([solution_for_conditions(transfer_conditions)])

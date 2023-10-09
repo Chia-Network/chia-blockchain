@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 import math
 import time
 import traceback
 from dataclasses import dataclass, field
-from secrets import token_bytes
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
@@ -19,16 +17,21 @@ from typing_extensions import Protocol, final
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
-from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.protocol_timing import (
+    API_EXCEPTION_BAN_SECONDS,
+    CONSENSUS_ERROR_BAN_SECONDS,
+    INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
+)
+from chia.protocols.shared_protocol import Capability, Error, Handshake
+from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
-from chia.util.errors import Err, ProtocolError
-from chia.util.ints import uint8, uint16
+from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
+from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
@@ -40,6 +43,8 @@ LENGTH_BYTES: int = 4
 
 WebSocket = Union[WebSocketResponse, ClientWebSocketResponse]
 ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
+
+error_response_version = Version("0.0.35")
 
 
 def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]:
@@ -66,9 +71,9 @@ class WSChiaConnection:
     """
 
     ws: WebSocket = field(repr=False)
-    api: Any = field(repr=False)
+    api: ApiProtocol = field(repr=False)
     local_type: NodeType
-    local_port: int
+    local_port: Optional[int]
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
     local_capabilities: List[Capability]
     peer_info: PeerInfo
@@ -100,7 +105,6 @@ class WSChiaConnection:
     inbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     incoming_message_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
     outbound_task: Optional[asyncio.Task[None]] = field(default=None, repr=False)
-    active: bool = False  # once handshake is successful this will be changed to True
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
@@ -111,7 +115,7 @@ class WSChiaConnection:
     request_nonce: uint16 = uint16(0)
     peer_capabilities: List[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
-    version: Version = field(default_factory=lambda: Version("0"))
+    version: str = field(default_factory=str)
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
     log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
@@ -124,8 +128,8 @@ class WSChiaConnection:
         cls,
         local_type: NodeType,
         ws: WebSocket,
-        api: Any,
-        server_port: int,
+        api: ApiProtocol,
+        server_port: Optional[int],
         log: logging.Logger,
         is_outbound: bool,
         received_message_callback: Optional[ConnectionCallback],
@@ -219,7 +223,7 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
-            self.version = Version(inbound_handshake.software_version)
+            self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
@@ -247,6 +251,8 @@ class WSChiaConnection:
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
             await self._send_message(outbound_handshake)
+            self.version = inbound_handshake.software_version
+            self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
             # "1" means capability is enabled
@@ -360,6 +366,11 @@ class WSChiaConnection:
             )
             message_type = ProtocolMessageTypes(full_message.type).name
 
+            if full_message.type == ProtocolMessageTypes.error.value:
+                error = Error.from_bytes(full_message.data)
+                self.api.log.warning(f"ApiError: {error} from {self.peer_node_id}, {self.peer_info}")
+                return None
+
             f = getattr(self.api, message_type, None)
 
             if f is None:
@@ -372,9 +383,9 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
             # If api is not ready ignore the request
-            if hasattr(self.api, "api_ready"):
-                if self.api.api_ready is False:
-                    return None
+            if not self.api.ready():
+                self.log.warning(f"API not ready, ignore request: {full_message}")
+                return None
 
             timeout: Optional[int] = 600
             if metadata.execute_task:
@@ -394,6 +405,17 @@ class WSChiaConnection:
                     return result
                 except asyncio.CancelledError:
                     pass
+                except ApiError as api_error:
+                    self.log.warning(f"ApiError: {api_error} from {self.peer_node_id}, {self.peer_info}")
+                    if self.protocol_version >= error_response_version:
+                        return make_msg(
+                            ProtocolMessageTypes.error,
+                            Error(int16(api_error.code.value), api_error.message, api_error.data),
+                        )
+                    else:
+                        return None
+                except TimestampError:
+                    raise
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Exception: {e}, {self.get_peer_logging()}. {tb}")
@@ -419,14 +441,20 @@ class WSChiaConnection:
             #     await self.send_message(response_message)
         except TimeoutError:
             self.log.error(f"Timeout error for: {message_type}")
+        except TimestampError:
+            self.log.info("Received block with timestamp too far into the future")
         except Exception as e:
             if not self.closed:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception: {e} {type(e)}, closing connection {self.get_peer_logging()}. {tb}")
             else:
                 self.log.debug(f"Exception: {e} while closing connection")
+            if isinstance(e, ConsensusError):
+                ban_time = CONSENSUS_ERROR_BAN_SECONDS
+            else:
+                ban_time = API_EXCEPTION_BAN_SECONDS
             # TODO: actually throw one of the errors from errors.py and pass this to close
-            await self.close(API_EXCEPTION_BAN_SECONDS, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
+            await self.close(ban_time, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
         finally:
             if task_id in self.api_tasks:
                 self.api_tasks.pop(task_id)
@@ -436,7 +464,7 @@ class WSChiaConnection:
     async def incoming_message_handler(self) -> None:
         while True:
             message = await self.incoming_queue.get()
-            task_id: bytes32 = bytes32(token_bytes(32))
+            task_id: bytes32 = bytes32.secret()
             api_task = asyncio.create_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
@@ -495,6 +523,8 @@ class WSChiaConnection:
             return None
         sent_message_type = ProtocolMessageTypes(request.type)
         recv_message_type = ProtocolMessageTypes(response.type)
+        if recv_message_type == ProtocolMessageTypes.error:
+            return Error.from_bytes(response.data)
         if not message_response_ok(sent_message_type, recv_message_type):
             # peer protocol violation
             error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
@@ -530,9 +560,10 @@ class WSChiaConnection:
         self.pending_requests[message.id] = event
         await self.outgoing_queue.put(message)
 
-        # Either the result is available below or not, no need to detect the timeout error
-        with contextlib.suppress(asyncio.TimeoutError):
+        try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            self.log.debug(f"Request timeout: {message}")
 
         self.pending_requests.pop(message.id)
         result: Optional[Message] = None
@@ -545,12 +576,6 @@ class WSChiaConnection:
             self.request_results.pop(message.id)
 
         return result
-
-    async def send_messages(self, messages: List[Message]) -> None:
-        if self.closed:
-            return None
-        for message in messages:
-            await self.outgoing_queue.put(message)
 
     async def _wait_and_retry(self, msg: Message) -> None:
         try:
@@ -673,7 +698,7 @@ class WSChiaConnection:
 
     # Used by the Chia Seeder.
     def get_version(self) -> str:
-        return str(self.version)
+        return self.version
 
     def get_tls_version(self) -> str:
         ssl_obj = self._get_extra_info("ssl_object")

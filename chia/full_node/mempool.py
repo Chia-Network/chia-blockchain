@@ -19,10 +19,10 @@ from chia.types.eligible_coin_spends import EligibleCoinSpends
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
-from chia.util.chunks import chunks
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -175,11 +175,12 @@ class Mempool:
 
     def get_items_by_coin_ids(self, spent_coin_ids: List[bytes32]) -> List[MempoolItem]:
         items: List[MempoolItem] = []
-        for coin_ids in chunks(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
-            args = ",".join(["?"] * len(coin_ids))
+        for batch in to_batches(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
+            args = ",".join(["?"] * len(batch.entries))
             with self._db_conn:
                 cursor = self._db_conn.execute(
-                    f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))", tuple(coin_ids)
+                    f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))",
+                    tuple(batch.entries),
                 )
                 items.extend(self._row_to_item(row) for row in cursor)
         return items
@@ -237,11 +238,11 @@ class Mempool:
 
         removed_items: List[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
-            for spend_bundle_ids in chunks(items, SQLITE_MAX_VARIABLE_NUMBER):
-                args = ",".join(["?"] * len(spend_bundle_ids))
+            for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
+                args = ",".join(["?"] * len(batch.entries))
                 with self._db_conn:
                     cursor = self._db_conn.execute(
-                        f"SELECT name, cost, fee FROM tx WHERE name in ({args})", spend_bundle_ids
+                        f"SELECT name, cost, fee FROM tx WHERE name in ({args})", batch.entries
                     )
                     for row in cursor:
                         name = bytes32(row[0])
@@ -252,11 +253,11 @@ class Mempool:
         for name in items:
             self._items.pop(name)
 
-        for spend_bundle_ids in chunks(items, SQLITE_MAX_VARIABLE_NUMBER):
-            args = ",".join(["?"] * len(spend_bundle_ids))
+        for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
+            args = ",".join(["?"] * len(batch.entries))
             with self._db_conn:
-                self._db_conn.execute(f"DELETE FROM tx WHERE name in ({args})", spend_bundle_ids)
-                self._db_conn.execute(f"DELETE FROM spends WHERE tx in ({args})", spend_bundle_ids)
+                self._db_conn.execute(f"DELETE FROM tx WHERE name in ({args})", batch.entries)
+                self._db_conn.execute(f"DELETE FROM spends WHERE tx in ({args})", batch.entries)
 
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
             info = FeeMempoolInfo(

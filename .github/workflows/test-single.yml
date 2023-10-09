@@ -39,6 +39,10 @@ concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
@@ -55,15 +59,6 @@ jobs:
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-            exclude_from:
-              limited: True
-              main: True
           - name: '3.8'
             file_name: '3.8'
             action: '3.8'
@@ -79,15 +74,15 @@ jobs:
             apt: '3.9'
             install_sh: '3.9'
             matrix: '3.9'
+            exclude_from:
+              limited: True
+              main: True
           - name: '3.10'
             file_name: '3.10'
             action: '3.10'
             apt: '3.10'
             install_sh: '3.10'
             matrix: '3.10'
-            exclude_from:
-              limited: True
-              main: True
           - name: '3.11'
             file_name: '3.11'
             action: '3.11'
@@ -98,10 +93,6 @@ jobs:
               limited: True
               main: True
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.7'
           - os:
               matrix: macos
             python:
@@ -122,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.33.0
 
     steps:
       - name: Configure git
@@ -167,7 +158,7 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
-          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -192,24 +183,15 @@ jobs:
             ${{ github.workspace }}/.chia/test-plots
           key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
-      - name: Checkout test blocks and plots (macOS, Ubuntu)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release download -R Chia-Network/test-cache 0.29.0 --archive=tar.gz -O - | tar xzf -
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
-      - name: Checkout test blocks and plots (Windows)
-        if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
+      - name: Checkout test blocks and plots
+        if: matrix.configuration.checkout_blocks_and_plots && steps.test-blocks-plots.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=zip -O blocks_and_plots.zip
-          Expand-Archive blocks_and_plots.zip -DestinationPath .
-          mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
+          gh release download -R Chia-Network/test-cache ${{ env.BLOCKS_AND_PLOTS_VERSION }} --archive=tar.gz -O - | tar xzf -
+          mkdir "${GITHUB_WORKSPACE}/.chia"
+          mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
@@ -220,6 +202,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.install_sh }}
           development: true
+          editable: false
           legacy_keyring: ${{ matrix.configuration.legacy_keyring_required }}
 
       - uses: chia-network/actions/activate-venv@main
@@ -230,11 +213,26 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Move chia/ so we test the installed code
+        run: |
+          mv chia/ notchia/
+
       - name: Test blockchain code with pytest
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= -o 'junit_suite_name=${{ env.JOB_FILE_NAME }}' --junitxml=junit-data/junit.${{ env.JOB_FILE_NAME }}.xml --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+
+      - name: Move back to chia/ for coverage
+        run: |
+          mv notchia/ chia/
+
+      - name: Publish JUnit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*
+          if-no-files-found: error
 
       - name: Process coverage data
         run: |

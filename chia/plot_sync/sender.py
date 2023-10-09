@@ -13,7 +13,7 @@ from typing_extensions import Protocol
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
-from chia.plotting.util import PlotInfo
+from chia.plotting.util import HarvestingMode, PlotInfo
 from chia.protocols.harvester_protocol import (
     Plot,
     PlotSyncDone,
@@ -26,8 +26,8 @@ from chia.protocols.harvester_protocol import (
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint32, uint64
+from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
                 plot_public_key=plot_info.plot_public_key,
                 file_size=uint64(plot_info.file_size),
                 time_modified=uint64(int(plot_info.time_modified)),
+                compression_level=plot_info.prover.get_compression_level(),
             )
         )
     return converted
@@ -98,8 +99,9 @@ class Sender:
     _stop_requested = False
     _task: Optional[asyncio.Task[None]]
     _response: Optional[ExpectedResponse]
+    _harvesting_mode: HarvestingMode
 
-    def __init__(self, plot_manager: PlotManager) -> None:
+    def __init__(self, plot_manager: PlotManager, harvesting_mode: HarvestingMode) -> None:
         self._plot_manager = plot_manager
         self._connection = None
         self._sync_id = uint64(0)
@@ -109,6 +111,7 @@ class Sender:
         self._stop_requested = False
         self._task = None
         self._response = None
+        self._harvesting_mode = harvesting_mode
 
     def __str__(self) -> str:
         return f"sync_id {self._sync_id}, next_message_id {self._next_message_id}, messages {len(self._messages)}"
@@ -150,10 +153,10 @@ class Sender:
         self._messages.clear()
         if self._task is not None:
             self.sync_start(self._plot_manager.plot_count(), True)
-            for remaining, batch in list_to_batches(
+            for batch in to_batches(
                 list(self._plot_manager.plots.values()), self._plot_manager.refresh_parameter.batch_size
             ):
-                self.process_batch(batch, remaining)
+                self.process_batch(batch.entries, batch.remaining)
             self.sync_done([], 0)
 
     async def _wait_for_response(self) -> bool:
@@ -251,8 +254,8 @@ class Sender:
         if len(data) == 0:
             self._add_message(message_type, payload_type, [], True)
             return
-        for remaining, batch in list_to_batches(data, self._plot_manager.refresh_parameter.batch_size):
-            self._add_message(message_type, payload_type, batch, remaining == 0)
+        for batch in to_batches(data, self._plot_manager.refresh_parameter.batch_size):
+            self._add_message(message_type, payload_type, batch.entries, batch.remaining == 0)
 
     def sync_start(self, count: float, initial: bool) -> None:
         log.debug(f"sync_start {self}: count {count}, initial {initial}")
@@ -268,7 +271,12 @@ class Sender:
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
         self._add_message(
-            ProtocolMessageTypes.plot_sync_start, PlotSyncStart, initial, self._last_sync_id, uint32(int(count))
+            ProtocolMessageTypes.plot_sync_start,
+            PlotSyncStart,
+            initial,
+            self._last_sync_id,
+            uint32(int(count)),
+            self._harvesting_mode,
         )
 
     def process_batch(self, loaded: List[PlotInfo], remaining: int) -> None:

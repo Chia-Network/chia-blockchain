@@ -14,6 +14,7 @@ from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinStateUpdate, RespondToCoinUpdates, RespondToPhUpdates
 from chia.server.outbound_message import NodeType
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
@@ -24,6 +25,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
@@ -58,7 +60,7 @@ class TestSimpleSyncProtocol:
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         zero_ph = 32 * b"\0"
@@ -97,7 +99,7 @@ class TestSimpleSyncProtocol:
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
-        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [zero_ph])
+        zero_coin = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {zero_ph})
         all_zero_coin = set(zero_coin)
         notified_zero_coins = set()
 
@@ -131,9 +133,9 @@ class TestSimpleSyncProtocol:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(one_ph))
 
         zero_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(
-            True, [zero_ph], peak.height + 1
+            True, {zero_ph}, peak.height + 1
         )
-        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, [one_ph])
+        one_coins = await full_node_api.full_node.coin_store.get_coin_states_by_puzzle_hashes(True, {one_ph})
 
         all_coins = set(zero_coins)
         all_coins.update(one_coins)
@@ -184,7 +186,7 @@ class TestSimpleSyncProtocol:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        [tx_record] = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
         assert spent_coin.puzzle_hash == puzzle_hash
@@ -198,7 +200,9 @@ class TestSimpleSyncProtocol:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
+        [tx_record] = await wallet.generate_signed_transaction(
+            uint64(10), SINGLETON_LAUNCHER_HASH, DEFAULT_TX_CONFIG, uint64(0)
+        )
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -206,7 +210,7 @@ class TestSimpleSyncProtocol:
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         # Send a transaction to make sure the wallet is still running
-        tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
+        [tx_record] = await wallet.generate_signed_transaction(uint64(10), junk_ph, DEFAULT_TX_CONFIG, uint64(0))
         await wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -237,7 +241,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -266,7 +270,9 @@ class TestSimpleSyncProtocol:
 
         coins = set()
         coins.add(coin_to_spend)
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0), coins=coins)
+        [tx_record] = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0), coins=coins
+        )
         await standard_wallet.push_transaction(tx_record)
 
         await full_node_api.process_transaction_records(records=[tx_record])
@@ -286,7 +292,9 @@ class TestSimpleSyncProtocol:
         # Test getting notification for coin that is about to be created
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
+        [tx_record] = await standard_wallet.generate_signed_transaction(
+            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, uint64(0)
+        )
 
         tx_record.spend_bundle.additions()
 
@@ -335,7 +343,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -410,7 +418,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -474,7 +482,7 @@ class TestSimpleSyncProtocol:
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
@@ -536,6 +544,40 @@ class TestSimpleSyncProtocol:
         assert data_response.coin_states == []
 
     @pytest.mark.asyncio
+    async def test_subscribe_for_puzzle_hash_coin_hint_duplicates(
+        self, simulator_and_wallet: SimulatorsAndWallets, self_hostname: str
+    ) -> None:
+        [full_node_api], [[_, wallet_server]], bt = simulator_and_wallet
+        full_node_server = full_node_api.full_node.server
+
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+
+        wt: WalletTool = bt.get_pool_wallet_tool()
+        ph = wt.get_new_puzzlehash()
+        await full_node_api.farm_blocks_to_puzzlehash(4, ph)
+        coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hashes(False, [ph])
+        wallet_connection = full_node_server.all_connections[wallet_server.node_id]
+
+        # Create a coin which is hinted with its own destination puzzle hash
+        tx: SpendBundle = wt.generate_signed_transaction(
+            uint64(10),
+            wt.get_new_puzzlehash(),
+            coins[0].coin,
+            condition_dic={
+                ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [ph, int_to_bytes(1), ph])]
+            },
+        )
+        await full_node_api.respond_transaction(RespondTransaction(tx), wallet_connection)
+        await full_node_api.process_spend_bundles(bundles=[tx])
+        # Query the coin states and make sure it doesn't contain duplicated entries
+        msg = wallet_protocol.RegisterForPhUpdates([ph], uint32(0))
+        msg_response = await full_node_api.register_interest_in_puzzle_hash(msg, wallet_connection)
+        assert msg_response.type == ProtocolMessageTypes.respond_to_ph_update.value
+        response = RespondToCoinUpdates.from_bytes(msg_response.data)
+        assert len(response.coin_states) > 0
+        assert len(set(response.coin_states)) == len(response.coin_states)
+
+    @pytest.mark.asyncio
     async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
         num_blocks = 4
         full_nodes, wallets, bt = wallet_two_node_simulator
@@ -548,7 +590,7 @@ class TestSimpleSyncProtocol:
 
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
         incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, self_hostname, 12313, NodeType.WALLET)
 
@@ -599,7 +641,7 @@ class TestSimpleSyncProtocol:
         node1_height = full_node_api_1.full_node.blockchain.get_peak_height()
         assert node1_height is None
 
-        await fn_server_1.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server_1.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         node0_height = full_node_api.full_node.blockchain.get_peak_height()
         await time_out_assert(60, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
 
@@ -627,8 +669,7 @@ class TestSimpleSyncProtocol:
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         con = list(fn_server.all_connections.values())[0]
         phs = []
         phs.append(32 * b"\0")
@@ -668,8 +709,7 @@ class TestSimpleSyncProtocol:
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        await fn_server.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
         con = list(fn_server.all_connections.values())[0]
         coins = []
         coins.append(32 * b"\0")

@@ -11,6 +11,7 @@ from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
@@ -18,16 +19,19 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 
 
 @pytest_asyncio.fixture(scope="function")
 async def setup_node_and_rpc(
-    two_wallet_nodes_services: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools],
+    two_wallet_nodes_services: Tuple[
+        List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools
+    ],
 ) -> Tuple[FullNodeRpcClient, FullNodeRpcApi]:
     full_nodes, wallets, bt = two_wallet_nodes_services
     wallet = wallets[0]._node.wallet_state_manager.main_wallet
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
-    full_node_api = full_node_apis[0]
+    full_node_api: FullNodeSimulator = full_node_apis[0]
     full_node_service_1 = full_nodes[0]
     assert full_node_service_1.rpc_server is not None
     client = await FullNodeRpcClient.create(
@@ -48,11 +52,11 @@ async def setup_node_and_rpc(
 
 @pytest_asyncio.fixture(scope="function")
 async def one_node_no_blocks(
-    one_node: Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
+    one_node: Tuple[List[Service[FullNode, FullNodeSimulator]], List[Service[WalletNode, WalletNodeAPI]], BlockTools]
 ) -> Tuple[FullNodeRpcClient, FullNodeRpcApi]:
     full_nodes, wallets, bt = one_node
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
-    full_node_api = full_node_apis[0]
+    full_node_api: FullNodeSimulator = full_node_apis[0]
     full_node_service_1 = full_nodes[0]
     assert full_node_service_1.rpc_server is not None
     client = await FullNodeRpcClient.create(

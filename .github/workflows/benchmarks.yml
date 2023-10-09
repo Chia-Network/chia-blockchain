@@ -1,20 +1,21 @@
 name: ⚡️ Benchmarks
 
 on:
-  push:
-    paths-ignore:
-        - '**.md'
-    branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
-  release:
-    types: [published]
-  pull_request:
-    paths-ignore:
-        - '**.md'
-    branches:
-      - '**'
+ workflow_dispatch:
+ push:
+   paths-ignore:
+       - '**.md'
+   branches:
+     - 'long_lived/**'
+     - main
+     - 'release/**'
+ release:
+   types: [published]
+ pull_request:
+   paths-ignore:
+       - '**.md'
+   branches:
+     - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
@@ -30,10 +31,10 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [ 3.9 ]
+        python-version: [ "3.10" ]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      BLOCKS_AND_PLOTS_VERSION: 0.29.0
+      BLOCKS_AND_PLOTS_VERSION: 0.33.0
 
     steps:
       - name: Clean workspace
@@ -53,7 +54,7 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
-          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
         uses: actions/cache@v3

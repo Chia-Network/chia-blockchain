@@ -1,29 +1,37 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field, replace
-from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple
 
 import pytest
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
+from chia.util.streamable import Streamable
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.util.query_filter import AmountFilter, HashFilter
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, GetCoinRecordsResult, WalletCoinStore
 from tests.util.db_connection import DBConnection
 
-coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_2 = Coin(coin_1.parent_coin_info, token_bytes(32), uint64(12311))
-coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_4 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_5 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_6 = Coin(token_bytes(32), coin_4.puzzle_hash, uint64(12312))
-coin_7 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-coin_8 = Coin(token_bytes(32), token_bytes(32), uint64(2))
-coin_9 = Coin(coin_5.name(), token_bytes(32), uint64(4))
+clawback_metadata = ClawbackMetadata(uint64(0), bytes32(b"1" * 32), bytes32(b"2" * 32))
+
+module_seeded_random = random.Random()
+module_seeded_random.seed(a=0, version=2)
+
+coin_1 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_2 = Coin(coin_1.parent_coin_info, bytes32.random(module_seeded_random), uint64(12311))
+coin_3 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_4 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_5 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_6 = Coin(bytes32.random(module_seeded_random), coin_4.puzzle_hash, uint64(12312))
+coin_7 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12312))
+coin_8 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(2))
+coin_9 = Coin(coin_5.name(), bytes32.random(module_seeded_random), uint64(4))
 record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
@@ -81,7 +89,7 @@ record_8 = WalletCoinRecord(
     WalletType.STANDARD_WALLET,
     1,
     CoinType.CLAWBACK,
-    VersionedBlob(uint16(1), b"TEST"),
+    VersionedBlob(uint16(1), bytes(clawback_metadata)),
 )
 record_9 = WalletCoinRecord(
     coin_9,
@@ -92,13 +100,13 @@ record_9 = WalletCoinRecord(
     WalletType.STANDARD_WALLET,
     2,
     CoinType.CLAWBACK,
-    VersionedBlob(uint16(1), b"TEST"),
+    VersionedBlob(uint16(1), bytes(clawback_metadata)),
 )
 
 
-def get_dummy_record(wallet_id: int) -> WalletCoinRecord:
+def get_dummy_record(wallet_id: int, seeded_random: random.Random) -> WalletCoinRecord:
     return WalletCoinRecord(
-        Coin(token_bytes(32), token_bytes(32), uint64(12312)),
+        Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312)),
         uint32(0),
         uint32(0),
         False,
@@ -110,12 +118,13 @@ def get_dummy_record(wallet_id: int) -> WalletCoinRecord:
 
 @dataclass
 class DummyWalletCoinRecords:
+    seeded_random: random.Random
     records_per_wallet: Dict[int, List[WalletCoinRecord]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         records = self.records_per_wallet.setdefault(wallet_id, [])
         for _ in range(count):
-            records.append(get_dummy_record(wallet_id))
+            records.append(get_dummy_record(wallet_id, seeded_random=self.seeded_random))
 
 
 @pytest.mark.parametrize(
@@ -131,13 +140,13 @@ def test_wallet_coin_record_parsed_metadata_failures(invalid_record: WalletCoinR
 
 
 @pytest.mark.parametrize(
-    "coin_record, expected_metadata_type",
+    "coin_record, expected_metadata",
     [
-        (record_8, VersionedBlob),  # TODO: Replace proper clawback metadata here when its introduced
+        (record_8, clawback_metadata),
     ],
 )
-def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata_type: type) -> None:
-    assert type(coin_record.parsed_metadata()) == expected_metadata_type
+def test_wallet_coin_record_parsed_metadata(coin_record: WalletCoinRecord, expected_metadata: Streamable) -> None:
+    assert coin_record.parsed_metadata() == expected_metadata
 
 
 @pytest.mark.parametrize("coin_record", [record_1, record_2, record_8])
@@ -145,8 +154,7 @@ def test_wallet_coin_record_json_parsed(coin_record: WalletCoinRecord) -> None:
     expected_metadata = None
     if coin_record.coin_type == CoinType.CLAWBACK:
         assert coin_record.metadata is not None
-        #  TODO: Parse proper clawback metadata here when its introduced
-        expected_metadata = coin_record.metadata.to_json_dict()
+        expected_metadata = coin_record.parsed_metadata().to_json_dict()
 
     assert coin_record.to_json_dict_parsed_metadata() == {
         "id": "0x" + coin_record.name().hex(),
@@ -202,7 +210,7 @@ async def test_set_spent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_records_by_puzzle_hash() -> None:
+async def test_get_records_by_puzzle_hash(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
@@ -214,10 +222,10 @@ async def test_get_records_by_puzzle_hash() -> None:
 
         await store.add_coin_record(record_6)
         assert len(await store.get_coin_records_by_puzzle_hash(record_6.coin.puzzle_hash)) == 2  # 4 and 6
-        assert len(await store.get_coin_records_by_puzzle_hash(token_bytes(32))) == 0
+        assert len(await store.get_coin_records_by_puzzle_hash(bytes32.random(seeded_random))) == 0
 
         assert await store.get_coin_record(coin_6.name()) == record_6
-        assert await store.get_coin_record(token_bytes(32)) is None
+        assert await store.get_coin_record(bytes32.random(seeded_random)) is None
 
 
 @pytest.mark.asyncio
@@ -917,13 +925,13 @@ async def test_rollback_to_block() -> None:
 
 
 @pytest.mark.asyncio
-async def test_count_small_unspent() -> None:
+async def test_count_small_unspent(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
-        coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(1))
-        coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(2))
-        coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(4))
+        coin_1 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(1))
+        coin_2 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(2))
+        coin_3 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(4))
 
         r1 = record(coin_1, confirmed=1, spent=0)
         r2 = record(coin_2, confirmed=2, spent=0)
@@ -975,8 +983,8 @@ async def test_get_coin_records_between() -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_wallet() -> None:
-    dummy_records = DummyWalletCoinRecords()
+async def test_delete_wallet(seeded_random: random.Random) -> None:
+    dummy_records = DummyWalletCoinRecords(seeded_random=seeded_random)
     for i in range(5):
         dummy_records.generate(i, i * 5)
     async with DBConnection(1) as wrapper:

@@ -11,7 +11,7 @@ from chiapos import Verifier
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -41,29 +41,31 @@ def verify_and_get_quality_string(
     constants: ConsensusConstants,
     original_challenge_hash: bytes32,
     signage_point: bytes32,
+    *,
+    height: uint32,
 ) -> Optional[bytes32]:
     # Exactly one of (pool_public_key, pool_contract_puzzle_hash) must not be None
     if (pos.pool_public_key is None) and (pos.pool_contract_puzzle_hash is None):
-        log.error("Fail 1")
+        log.error("Expected pool public key or pool contract puzzle hash but got neither")
         return None
     if (pos.pool_public_key is not None) and (pos.pool_contract_puzzle_hash is not None):
-        log.error("Fail 2")
+        log.error("Expected pool public key or pool contract puzzle hash but got both")
         return None
     if pos.size < constants.MIN_PLOT_SIZE:
-        log.error("Fail 3")
+        log.error("Plot size is lower than the minimum")
         return None
     if pos.size > constants.MAX_PLOT_SIZE:
-        log.error("Fail 4")
+        log.error("Plot size is higher than the maximum")
         return None
     plot_id: bytes32 = get_plot_id(pos)
     new_challenge: bytes32 = calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
     if new_challenge != pos.challenge:
-        log.error("New challenge is not challenge")
+        log.error("Calculated pos challenge doesn't match the provided one")
         return None
-
-    if not passes_plot_filter(constants, plot_id, original_challenge_hash, signage_point):
-        log.error("Fail 5")
+    prefix_bits = calculate_prefix_bits(constants, height)
+    if not passes_plot_filter(prefix_bits, plot_id, original_challenge_hash, signage_point):
+        log.error("Did not pass the plot filter")
         return None
 
     return get_quality_string(pos, plot_id)
@@ -77,14 +79,34 @@ def get_quality_string(pos: ProofOfSpace, plot_id: bytes32) -> Optional[bytes32]
 
 
 def passes_plot_filter(
-    constants: ConsensusConstants,
+    prefix_bits: int,
     plot_id: bytes32,
     challenge_hash: bytes32,
     signage_point: bytes32,
 ) -> bool:
+    # this is possible when using non-mainnet constants with a low
+    # NUMBER_ZERO_BITS_PLOT_FILTER constant and activating sufficient plot
+    # filter reductions
+    if prefix_bits == 0:
+        return True
+
     plot_filter = BitArray(calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
     # TODO: compensating for https://github.com/scott-griffiths/bitstring/issues/248
-    return cast(bool, plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0)
+    return cast(bool, plot_filter[:prefix_bits].uint == 0)
+
+
+def calculate_prefix_bits(constants: ConsensusConstants, height: uint32) -> int:
+    prefix_bits = constants.NUMBER_ZERO_BITS_PLOT_FILTER
+    if height >= constants.PLOT_FILTER_32_HEIGHT:
+        prefix_bits -= 4
+    elif height >= constants.PLOT_FILTER_64_HEIGHT:
+        prefix_bits -= 3
+    elif height >= constants.PLOT_FILTER_128_HEIGHT:
+        prefix_bits -= 2
+    elif height >= constants.HARD_FORK_HEIGHT:
+        prefix_bits -= 1
+
+    return max(0, prefix_bits)
 
 
 def calculate_plot_filter_input(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:

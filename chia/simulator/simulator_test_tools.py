@@ -26,6 +26,7 @@ from chia.util.errors import KeychainFingerprintExists
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
+from chia.util.misc import SignalHandlers
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 
 """
@@ -107,7 +108,8 @@ def create_config(
 
 async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
+    service = started_simulator.service
     await service.start()
 
     yield service._api
@@ -157,7 +159,8 @@ async def get_full_chia_simulator(
         ca_key_path = chia_root / config["private_ssl_ca"]["key"]
 
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path)
-        await ws_server.setup_process_global_state()
-        async with ws_server.run():
-            async for simulator in start_simulator(chia_root, automated_testing):
-                yield simulator, chia_root, config, mnemonic, fingerprint, keychain
+        async with SignalHandlers.manage() as signal_handlers:
+            await ws_server.setup_process_global_state(signal_handlers=signal_handlers)
+            async with ws_server.run():
+                async for simulator in start_simulator(chia_root, automated_testing):
+                    yield simulator, chia_root, config, mnemonic, fingerprint, keychain

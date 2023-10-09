@@ -4,21 +4,27 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint16
+from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
 log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
-NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp")
-NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile("nft_ownership_layer.clsp")
+NFT_MOD = load_clvm_maybe_recompile("nft_state_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles")
+NFT_OWNERSHIP_LAYER = load_clvm_maybe_recompile(
+    "nft_ownership_layer.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
+)
 
 _T_UncurriedNFT = TypeVar("_T_UncurriedNFT", bound="UncurriedNFT")
 
 
+@streamable
 @dataclass(frozen=True)
-class UncurriedNFT:
+class UncurriedNFT(Streamable):
     """
     A simple solution for uncurry NFT puzzle.
     Initial the class with a full NFT puzzle, it will do a deep uncurry.
@@ -166,7 +172,7 @@ class UncurriedNFT:
             return None
 
         return cls(
-            nft_mod_hash=nft_mod_hash,
+            nft_mod_hash=bytes32(nft_mod_hash.atom),
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
@@ -199,3 +205,11 @@ class UncurriedNFT:
             return state_layer_inner_solution.first()  # type: ignore
         else:
             return state_layer_inner_solution
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTCoinData(Streamable):
+    uncurried_nft: UncurriedNFT
+    parent_coin_state: CoinState
+    parent_coin_spend: CoinSpend

@@ -54,6 +54,32 @@ class VCProofs:
         else:
             raise ValueError("Malformatted VCProofs program")  # pragma: no cover
 
+    def prove_keys(self, keys: List[str], tree: Optional[Program] = None) -> Program:
+        if tree is None:
+            tree = self.as_program()
+
+        first = tree.first()
+        if first.atom is not None:
+            if first.atom.decode("utf8") in keys:
+                return tree
+            else:
+                tree_hash_as_atom: Program = Program.to(tree.get_tree_hash())
+                return tree_hash_as_atom
+        else:
+            rest = tree.rest()
+            first_tree = self.prove_keys(keys, first)
+            rest_tree = self.prove_keys(keys, rest)
+            if first_tree.atom is not None and rest_tree.atom is not None:
+                tree_hash_as_atom = Program.to(
+                    Program.to((first_tree, rest_tree)).get_tree_hash_precalc(
+                        bytes32(first_tree.atom), bytes32(rest_tree.atom)
+                    )
+                )
+                return tree_hash_as_atom
+            else:
+                new_tree: Program = first_tree.cons(rest_tree)
+                return new_tree
+
 
 _T_VCStore = TypeVar("_T_VCStore", bound="VCStore")
 
@@ -167,15 +193,15 @@ class VCStore:
             return _row_to_vc_record(row)
         return None
 
-    # Coverage coming with CR-CAT Wallet
     async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:  # pragma: no cover
         """
         Checks DB for VCs with a proof_provider in a specified list and returns them.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            providers_param: str = ",".join(["?"] * len(provider_ids))
+            providers_param: str = ", ".join(["?"] * len(provider_ids))
             cursor = await conn.execute(
-                f"SELECT * from vc_records WHERE proof_provider IN {providers_param} LIMIT 1000", provider_ids
+                f"SELECT * from vc_records WHERE proof_provider IN ({providers_param}) LIMIT 1000",
+                tuple(id.hex() for id in provider_ids),
             )
             rows = await cursor.fetchall()
             await cursor.close()
@@ -225,7 +251,7 @@ class VCStore:
     async def add_vc_proofs(self, vc_proofs: VCProofs) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                "INSERT INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
+                "INSERT OR IGNORE INTO vc_proofs VALUES(?, ?)", (vc_proofs.root().hex(), bytes(vc_proofs.as_program()))
             )
 
     async def get_proofs_for_root(self, root: bytes32) -> Optional[VCProofs]:

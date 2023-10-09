@@ -288,13 +288,18 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_all_puzzle_hashes(self) -> Set[bytes32]:
+    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> Set[bytes32]:
         """
         Return a set containing all puzzle_hashes we generated.
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall("SELECT puzzle_hash FROM derivation_paths")
+            if wallet_id is None:
+                rows = await conn.execute_fetchall("SELECT puzzle_hash FROM derivation_paths")
+            else:
+                rows = await conn.execute_fetchall(
+                    "SELECT puzzle_hash FROM derivation_paths WHERE wallet_id=?", (wallet_id,)
+                )
             return set(bytes32.fromhex(row[0]) for row in rows)
 
     async def get_last_derivation_path(self) -> Optional[uint32]:

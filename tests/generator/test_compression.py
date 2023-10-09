@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, List
 
 import pytest
+from chia_rs import ALLOW_BACKREFS
 from clvm import SExp
 from clvm.serialize import sexp_from_stream
 from clvm_tools import binutils
@@ -16,7 +17,7 @@ from chia.full_node.bundle_tools import (
     compressed_spend_bundle_solution,
     match_standard_transaction_at_any_index,
     simple_solution_generator,
-    spend_bundle_to_serialized_coin_spend_entry_list,
+    simple_solution_generator_backrefs,
 )
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
@@ -29,17 +30,19 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.core.make_block_generator import make_spend_bundle
 from tests.generator.test_rom import run_generator
 
-TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="chia.wallet.puzzles")
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.wallet.puzzles")
+TEST_GEN_DESERIALIZE = load_clvm("test_generator_deserialize.clsp", package_or_requirement="tests.generator.puzzles")
+DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
 
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clsp", package_or_requirement="chia.full_node.puzzles")
+DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clsp", package_or_requirement="chia.full_node.puzzles")
 
 DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
-    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.wallet.puzzles"
+    "decompress_coin_spend_entry_with_prefix.clsp", package_or_requirement="chia.full_node.puzzles"
 )
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.wallet.puzzles")
-TEST_MULTIPLE = load_clvm("test_multiple_generator_input_arguments.clsp", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm("block_program_zero.clsp", package_or_requirement="chia.full_node.puzzles")
+TEST_MULTIPLE = load_clvm(
+    "test_multiple_generator_input_arguments.clsp", package_or_requirement="tests.generator.puzzles"
+)
 
 Nil = Program.from_bytes(b"\x80")
 
@@ -158,21 +161,22 @@ class TestCompression:
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
         removal = sb.coin_spends[0].coin
-        spend_info = get_puzzle_and_solution_for_coin(c, removal)
+        spend_info = get_puzzle_and_solution_for_coin(c, removal, 0)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
         # Test non compressed generator as well
         s = simple_solution_generator(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, 0)
         assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
 
-    def test_spend_byndle_coin_spend(self) -> None:
-        for i in range(0, 10):
-            sb: SpendBundle = make_spend_bundle(i)
-            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()  # pylint: disable=E1101
-            cs2 = spend_bundle_to_serialized_coin_spend_entry_list(sb)
-            assert cs1 == cs2
+        # test with backrefs (2.0 hard-fork)
+        s = simple_solution_generator_backrefs(sb)
+        spend_info = get_puzzle_and_solution_for_coin(s, removal, ALLOW_BACKREFS)
+        assert Program.from_bytes(bytes(spend_info.puzzle)) == Program.from_bytes(
+            bytes(sb.coin_spends[0].puzzle_reveal)
+        )
+        assert Program.from_bytes(bytes(spend_info.solution)) == Program.from_bytes(bytes(sb.coin_spends[0].solution))
 
 
 class TestDecompression:
