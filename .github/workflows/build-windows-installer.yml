@@ -279,7 +279,7 @@ jobs:
     runs-on: [windows-2019]
     needs:
     - build
-    timeout-minutes: 65
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:

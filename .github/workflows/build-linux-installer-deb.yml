@@ -207,7 +207,7 @@ jobs:
     needs:
     - build
     container: chianetwork/ubuntu-20.04-builder:latest
-    timeout-minutes: 120
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       max-parallel: 4

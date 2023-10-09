@@ -201,7 +201,7 @@ jobs:
     - build
     container:
       image: chianetwork/rocky8-builder:latest
-    timeout-minutes: 40
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       max-parallel: 4
