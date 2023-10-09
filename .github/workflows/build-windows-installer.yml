@@ -92,10 +92,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
-    - uses: Chia-Network/actions/setup-python@main
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Get pip cache dir
       id: pip-cache
       shell: bash

@@ -101,10 +101,6 @@ jobs:
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
 
-      - uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Create installer version number
         id: version_number
         run: |
@@ -185,10 +181,6 @@ jobs:
           ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
           ls bladebit* | xargs -I{} chmod +x {}
           cd "$OLDPWD"
-
-      - uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - uses: ./.github/actions/install
         with:
@@ -276,9 +268,11 @@ jobs:
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
-      - uses: Chia-Network/actions/setup-python@main
+      - name: Setup Python environment
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
+          force-pyenv: 'true'
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv
