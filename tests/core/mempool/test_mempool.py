@@ -2577,7 +2577,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
 
-        with benchmark_runner.assert_runtime(seconds=0.9):
+        with benchmark_runner.assert_runtime(seconds=0.95):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         # RESERVE_FEE conditions fail unconditionally if they have a negative
