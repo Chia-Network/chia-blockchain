@@ -59,7 +59,7 @@ runs:
       if: inputs.constraints-file-artifact-name != ''
       shell: bash
       run: |
-        ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze | grep -v '^\-e ' > venv/constraints.txt
+        ${{ runner.os == 'windows' && 'venv/scripts/pip' || 'venv/bin/pip' }} freeze --exclude-editable > venv/constraints.txt
 
     - name: Upload constraints file
       if: inputs.constraints-file-artifact-name != ''
