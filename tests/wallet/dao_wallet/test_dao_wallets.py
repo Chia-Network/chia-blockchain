@@ -2664,9 +2664,7 @@ async def test_dao_concurrency(
     await full_node_api.process_transaction_records(records=[tx_record])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
 
-    # Farm enough blocks to pass the oracle_spend_delay and then complete the treasury eve spend
-    for i in range(1, 11):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
@@ -2978,13 +2976,13 @@ async def test_dao_cat_exits(
         assert lockup_0["success"]
 
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash_0))
-            await asyncio.sleep(0.5)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_0))
+            await asyncio.sleep(1)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         assert isinstance(dao_cat_wallet_0, DAOCATWallet)
-        await time_out_assert(60, dao_cat_wallet_0.get_votable_balance, cat_amt)
+        await time_out_assert(60, dao_cat_wallet_0.get_confirmed_balance, cat_amt)
 
         # create a spend proposal
         additions = [
