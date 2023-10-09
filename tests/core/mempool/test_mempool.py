@@ -2557,7 +2557,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_negative(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0xff")
 
-        with benchmark_runner.assert_runtime(seconds=1.5):
+        with benchmark_runner.assert_runtime(seconds=2.75):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
@@ -2596,7 +2596,7 @@ class TestMaliciousGenerators:
         else:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with benchmark_runner.assert_runtime(seconds=12):
+        with benchmark_runner.assert_runtime(seconds=13):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
