@@ -284,3 +284,13 @@ async def test_missing_signage_point(
     _, sp_for_farmer_api = create_sp(index=2, challenge_hash=std_hash(b"4"))
     await farmer_api.new_signage_point(sp_for_farmer_api)
     assert number_of_missing_sps == uint32(1)
+
+
+@pytest.mark.asyncio
+async def test_harvester_has_no_server(
+    farmer_one_harvester: Tuple[List[Service[Farmer, FarmerAPI]], Service[Harvester, HarvesterAPI], BlockTools],
+) -> None:
+    harvesters, _, bt = farmer_one_harvester
+    harvester_server = harvesters[0]._server
+
+    assert harvester_server.webserver is None

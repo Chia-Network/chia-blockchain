@@ -80,7 +80,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -755,6 +755,8 @@ class WalletStateManager:
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
+                get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                parent_coin_state,
             )
             return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
@@ -1127,6 +1129,10 @@ class WalletStateManager:
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
                         return WalletIdentifier.create(wallet)
+            if coin_state.spent_height is not None:
+                # The first coin we received for DID wallet is spent.
+                # This means the wallet is in a resync process, skip the coin
+                return None
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,
@@ -2023,7 +2029,7 @@ class WalletStateManager:
                 ):
                     coins_removed = tx.spend_bundle.removals()
                     trade_coins_removed = set([])
-                    trade = None
+                    trades = []
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)
                         if trade is not None and trade.status in (
@@ -2031,21 +2037,22 @@ class WalletStateManager:
                             TradeStatus.PENDING_ACCEPT.value,
                             TradeStatus.PENDING_CANCEL.value,
                         ):
+                            if trade not in trades:
+                                trades.append(trade)
                             # offer was tied to these coins, lets subscribe to them to get a confirmation to
                             # cancel it if it's confirmed
                             # we send transactions to multiple peers, and in cases when mempool gets
                             # fragmented, it's safest to wait for confirmation from blockchain before setting
                             # offer to failed
                             trade_coins_removed.add(removed_coin.name())
-                    if trade and trade_coins_removed:
+                    if trades != [] and trade_coins_removed != set():
                         if not tx.is_valid():
                             # we've tried to send this transaction to a full node multiple times
                             # but failed, it's safe to assume that it's not going to be accepted
                             # we can mark this offer as failed
                             self.log.info("This offer can't be posted, removing it from pending offers")
-                            assert trade is not None
-                            await self.trade_manager.fail_pending_offer(trade.trade_id)
-
+                            for trade in trades:
+                                await self.trade_manager.fail_pending_offer(trade.trade_id)
                         else:
                             self.log.info(
                                 "Subscribing to unspendable offer coins: %s",
