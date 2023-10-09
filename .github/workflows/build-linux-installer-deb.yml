@@ -346,7 +346,7 @@ jobs:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
-    - publish
+    - build
     container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false

@@ -425,7 +425,7 @@ jobs:
     name: Test ${{ matrix.os.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
-    - publish
+    - build
     strategy:
       fail-fast: false
       matrix:
