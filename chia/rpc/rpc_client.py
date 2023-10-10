@@ -52,7 +52,7 @@ class RpcClient:
             hostname=self_hostname,
             port=port,
             url=f"https://{self_hostname}:{str(port)}/",
-            session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=600)),
+            session=aiohttp.ClientSession(),
             ssl_context=ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path),
         )
 
