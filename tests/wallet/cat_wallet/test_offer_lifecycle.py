@@ -7,7 +7,6 @@ import pytest
 from blspy import G2Element
 
 from chia.clvm.spend_sim import sim_and_client
-from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -21,7 +20,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import AssertCoinAnnouncement, ConditionValidTimes
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -121,11 +120,11 @@ async def generate_coins(
 # but doesn't bother with non-offer announcements
 def generate_secure_bundle(
     selected_coins: List[Coin],
-    announcements: List[Announcement],
+    announcements: List[AssertCoinAnnouncement],
     offered_amount: uint64,
     tail_str: Optional[str] = None,
 ) -> SpendBundle:
-    announcement_assertions: List[List] = [[63, a.name()] for a in announcements]
+    announcement_assertions: List[Program] = [a.to_program() for a in announcements]
     selected_coin_amount: int = sum([c.amount for c in selected_coins])
     non_primaries: List[Coin] = [] if len(selected_coins) < 2 else selected_coins[1:]
     inner_solution: List[List] = [
@@ -204,7 +203,9 @@ class TestOfferLifecycle:
             chia_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 chia_requested_payments, chia_coins
             )
-            chia_announcements: List[Announcement] = Offer.calculate_announcements(chia_requested_payments, driver_dict)
+            chia_announcements: List[AssertCoinAnnouncement] = Offer.calculate_announcements(
+                chia_requested_payments, driver_dict
+            )
             chia_secured_bundle: SpendBundle = generate_secure_bundle(chia_coins, chia_announcements, 1000)
             chia_offer = Offer(chia_requested_payments, chia_secured_bundle, driver_dict)
             assert not chia_offer.is_valid()
@@ -222,7 +223,9 @@ class TestOfferLifecycle:
             red_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 red_requested_payments, red_coins_1
             )
-            red_announcements: List[Announcement] = Offer.calculate_announcements(red_requested_payments, driver_dict)
+            red_announcements: List[AssertCoinAnnouncement] = Offer.calculate_announcements(
+                red_requested_payments, driver_dict
+            )
             red_secured_bundle: SpendBundle = generate_secure_bundle(
                 red_coins_1, red_announcements, sum([c.amount for c in red_coins_1]), tail_str="red"
             )
@@ -238,7 +241,7 @@ class TestOfferLifecycle:
             red_requested_payments_2: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 red_requested_payments_2, red_coins_2
             )
-            red_announcements_2: List[Announcement] = Offer.calculate_announcements(
+            red_announcements_2: List[AssertCoinAnnouncement] = Offer.calculate_announcements(
                 red_requested_payments_2, driver_dict
             )
             red_secured_bundle_2: SpendBundle = generate_secure_bundle(
@@ -266,7 +269,9 @@ class TestOfferLifecycle:
             blue_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
                 blue_requested_payments, blue_coins
             )
-            blue_announcements: List[Announcement] = Offer.calculate_announcements(blue_requested_payments, driver_dict)
+            blue_announcements: List[AssertCoinAnnouncement] = Offer.calculate_announcements(
+                blue_requested_payments, driver_dict
+            )
             blue_secured_bundle: SpendBundle = generate_secure_bundle(
                 blue_coins, blue_announcements, 2000, tail_str="blue"
             )
