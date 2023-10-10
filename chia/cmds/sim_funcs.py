@@ -85,14 +85,12 @@ def create_chia_directory(
             config["daemon_port"] -= port_offset
             config["network_overrides"]["config"]["simulator0"]["default_full_node_port"] = 38444 + port_offset
             # wallet
-            config["wallet"]["port"] += port_offset
             config["wallet"]["rpc_port"] += port_offset
             # full node
             config["full_node"]["port"] -= port_offset
             config["full_node"]["rpc_port"] += port_offset
             # connect wallet to full node
             config["wallet"]["full_node_peer"]["port"] = config["full_node"]["port"]
-            config["full_node"]["wallet_peer"]["port"] = config["wallet"]["port"]
             # ui
             config["ui"]["daemon_port"] = config["daemon_port"]
         else:
