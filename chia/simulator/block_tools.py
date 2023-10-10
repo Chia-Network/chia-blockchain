@@ -13,7 +13,7 @@ import tempfile
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, compute_merkle_set_root
@@ -2264,7 +2264,7 @@ async def create_block_tools_async(
     return bt
 
 
-def init_async_loop() -> None:
+def init_async_loop() -> Generator[None, None, None]:
     import asyncio
     import sys
 
@@ -2277,6 +2277,9 @@ def init_async_loop() -> None:
             loop = asyncio.new_event_loop()
 
         asyncio.set_event_loop(loop)
+        yield None
+        loop.close()
+    yield None
 
 
 def create_block_tools(
