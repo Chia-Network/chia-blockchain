@@ -663,3 +663,6 @@ class FullNodeSimulator(FullNodeAPI):
                 if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
                     break
                 await asyncio.sleep(backoff_time)
+
+
+# CI test 05
