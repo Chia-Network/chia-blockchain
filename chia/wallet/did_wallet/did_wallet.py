@@ -1250,7 +1250,6 @@ class DIDWallet:
             fee,
             coins,
             None,
-            False,
             announcement_set,
             origin_id=origin.name(),
         )

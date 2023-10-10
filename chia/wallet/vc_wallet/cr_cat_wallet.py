@@ -628,7 +628,6 @@ class CRCATWallet(CATWallet):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
@@ -660,11 +659,6 @@ class CRCATWallet(CATWallet):
                 )
             )
 
-        payment_sum = sum([p.amount for p in payments])
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if payment_sum > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")  # pragma: no cover
         unsigned_spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
             payments,
             tx_config,
