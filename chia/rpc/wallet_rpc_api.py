@@ -1142,10 +1142,14 @@ class WalletRpcApi:
                     new_txs = await self.service.wallet_state_manager.spend_clawback_coins(
                         coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
                     )
-                    if push:
-                        for tx in new_txs:
-                            await self.service.wallet_state_manager.add_pending_transaction(tx)
                     tx_list.extend(new_txs)
+                    tx_config = dataclasses.replace(
+                        tx_config,
+                        excluded_coin_ids=[
+                            *tx_config.excluded_coin_ids,
+                            *(c.name() for tx in new_txs for c in tx.removals),
+                        ],
+                    )
                     coins = {}
             except Exception as e:
                 log.error(f"Failed to spend clawback coin {coin_id.hex()}: %s", e)
@@ -1153,10 +1157,11 @@ class WalletRpcApi:
             new_txs = await self.service.wallet_state_manager.spend_clawback_coins(
                 coins, tx_fee, tx_config, request.get("force", False), extra_conditions=extra_conditions
             )
-            if push:
-                for tx in new_txs:
-                    await self.service.wallet_state_manager.add_pending_transaction(tx)
             tx_list.extend(new_txs)
+
+        if push:
+            for tx in tx_list:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
 
         return {
             "success": True,

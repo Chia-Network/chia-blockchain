@@ -800,6 +800,7 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
+        all_txs: List[TransactionRecord] = []
         for coin in unspent_coins.records:
             try:
                 metadata: MetadataTypes = coin.parsed_metadata()
@@ -810,15 +811,22 @@ class WalletStateManager:
                         clawback_coins[coin.coin] = metadata
                         if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
                             txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
-                            for tx in txs:
-                                await self.add_pending_transaction(tx)
+                            all_txs.extend(txs)
+                            tx_config = dataclasses.replace(
+                                tx_config,
+                                excluded_coin_ids=[
+                                    *tx_config.excluded_coin_ids,
+                                    *(c.name() for tx in txs for c in tx.removals),
+                                ],
+                            )
                             clawback_coins = {}
             except Exception as e:
                 self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
         if len(clawback_coins) > 0:
-            txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
-            for tx in txs:
-                await self.add_pending_transaction(tx)
+            all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))
+
+        for tx in all_txs:
+            await self.add_pending_transaction(tx)
 
     async def spend_clawback_coins(
         self,
