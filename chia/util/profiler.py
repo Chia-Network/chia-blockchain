@@ -52,7 +52,7 @@ if __name__ == "__main__":
     profile_dir = pathlib.Path(sys.argv[1])
     init(strip=False)
 
-    def analyze_cpu_usage(profile_dir: pathlib.Path):
+    def analyze_cpu_usage(profile_dir: pathlib.Path) -> None:
         counter = 0
         try:
             while True:
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
 
-    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int):
+    def analyze_slot_range(profile_dir: pathlib.Path, first: int, last: int) -> None:
         if last < first:
             print("ERROR: first must be <= last when specifying slot range")
             return

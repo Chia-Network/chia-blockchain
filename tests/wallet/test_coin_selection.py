@@ -109,7 +109,13 @@ class TestCoinSelection:
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(1)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         # make sure coins are not identical.
@@ -130,7 +136,13 @@ class TestCoinSelection:
         for i in range(100):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(2000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(2000)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         spendable_amount = uint128(spendable_amount + 2000 * 100)
@@ -155,14 +167,26 @@ class TestCoinSelection:
         for i in range(5):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(5000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(5000)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
 
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(1)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
@@ -193,7 +217,13 @@ class TestCoinSelection:
         for i in range(10000):
             new_coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(1)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         for target_amount in [50000, 10001, 10000, 9999]:
@@ -216,7 +246,13 @@ class TestCoinSelection:
         for i in range(10000):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(1)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         # make sure coins are not identical.
@@ -437,13 +473,25 @@ class TestCoinSelection:
         for i in range(500):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(1)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         for i in range(1, 90):
             coin_list.append(
                 WalletCoinRecord(
-                    Coin(a_hash, std_hash(i), uint64(i * 10)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                    Coin(a_hash, std_hash(i.to_bytes(length=32, byteorder="big")), uint64(i * 10)),
+                    uint32(1),
+                    uint32(1),
+                    False,
+                    True,
+                    WalletType(0),
+                    1,
                 )
             )
         # make sure coins are not identical.
