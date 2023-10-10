@@ -743,7 +743,7 @@ async def offer_setup_fixture(
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallets.append(wallet)
 
-        await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet)
+        await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet, timeout=60)
 
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
@@ -758,7 +758,7 @@ async def offer_setup_fixture(
             data_rpc_api = DataLayerRpcApi(data_layer)
 
             create_response = await data_rpc_api.create_data_store({"verbose": True})
-            await full_node_api.process_transaction_records(records=create_response["txs"])
+            await full_node_api.process_transaction_records(records=create_response["txs"], timeout=60)
 
             store_setups.append(
                 StoreSetup(
@@ -776,6 +776,12 @@ async def offer_setup_fixture(
             try:
                 await maker.api.get_root({"id": maker.id.hex()})
                 await taker.api.get_root({"id": taker.id.hex()})
+                # this checks that the node has the coin states for both launchers
+                coins = await full_node_service._node.coin_store.get_coin_states_by_ids(
+                    include_spent_coins=True, coin_ids={maker.id, taker.id}
+                )
+                if len(coins) < 2:
+                    continue
             except Exception as e:
                 # TODO: more specific exceptions...
                 if "Failed to get root for" not in str(e):
@@ -888,7 +894,7 @@ async def process_for_data_layer_keys(
         else:
             if expected_value is None or value == expected_value:
                 break
-        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=60)
         await asyncio.sleep(sleep_time)
     else:
         raise Exception("failed to confirm the new data")
