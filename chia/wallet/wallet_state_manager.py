@@ -80,7 +80,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_hash_for_synthetic_public_key,
 )
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.singleton import create_singleton_puzzle
+from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -755,6 +755,8 @@ class WalletStateManager:
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
+                get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                parent_coin_state,
             )
             return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
@@ -1127,6 +1129,10 @@ class WalletStateManager:
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
                         return WalletIdentifier.create(wallet)
+            if coin_state.spent_height is not None:
+                # The first coin we received for DID wallet is spent.
+                # This means the wallet is in a resync process, skip the coin
+                return None
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,

@@ -11,7 +11,7 @@ from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.util.wallet_types import WalletType
@@ -89,7 +89,7 @@ async def test_determine_coin_type(simulator_and_wallet: SimulatorsAndWallets, s
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
     wallet_node, wallet_server = wallets[0]
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     peer = wallet_node.server.get_connections(NodeType.FULL_NODE)[0]
     assert (None, None) == await wallet_state_manager.determine_coin_type(
