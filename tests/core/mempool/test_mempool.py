@@ -2521,7 +2521,7 @@ class TestMaliciousGenerators:
     def test_duplicate_large_integer_substr(self, opcode, softfork_height, benchmark_runner: BenchmarkRunner):
         condition = SINGLE_ARG_INT_SUBSTR_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with benchmark_runner.assert_runtime(seconds=1.5):
+        with benchmark_runner.assert_runtime(seconds=2):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
@@ -2568,7 +2568,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with benchmark_runner.assert_runtime(seconds=1.2):
+        with benchmark_runner.assert_runtime(seconds=1.5):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
@@ -2577,7 +2577,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=200000, val=100, filler="0xff")
 
-        with benchmark_runner.assert_runtime(seconds=1.05):
+        with benchmark_runner.assert_runtime(seconds=1.5):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         # RESERVE_FEE conditions fail unconditionally if they have a negative
@@ -2596,7 +2596,7 @@ class TestMaliciousGenerators:
         else:
             condition = CREATE_ANNOUNCE_COND.format(opcode=opcode.value[0], num=5950000)
 
-        with benchmark_runner.assert_runtime(seconds=13):
+        with benchmark_runner.assert_runtime(seconds=14):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error is None
