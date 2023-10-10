@@ -422,7 +422,7 @@ class SimClient:
         generator: BlockGenerator = filtered_generators[0].transactions_generator  # type: ignore[assignment]
         coin_record = await self.service.coin_store.get_coin_record(coin_id)
         assert coin_record is not None
-        spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin, 0)
+        spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin, height, self.service.defaults)
         return CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
