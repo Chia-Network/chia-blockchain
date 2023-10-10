@@ -55,13 +55,12 @@ def create_timelord_service(
         peer_api=peer_api,
         node=node,
         node_type=NodeType.TIMELORD,
-        advertised_port=service_config["port"],
+        advertised_port=None,
         service_name=SERVICE_NAME,
         connect_peers=connect_peers,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        listen=False,
     )
 
 

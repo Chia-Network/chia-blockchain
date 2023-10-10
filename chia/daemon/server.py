@@ -173,7 +173,7 @@ class WebSocketServer:
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
-        self.log.info("Starting Daemon Server")
+        self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
