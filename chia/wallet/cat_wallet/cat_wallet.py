@@ -717,7 +717,7 @@ class CATWallet:
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:  # pragma: no cover
+                    elif regular_chia_to_claim > fee:
                         chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
@@ -774,7 +774,6 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
-        ignore_max_send_amount: bool = False,
         memos: Optional[List[List[bytes]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
@@ -794,10 +793,6 @@ class CATWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum([p.amount for p in payments])
-        if not ignore_max_send_amount:
-            max_send = await self.get_max_send_amount()
-            if payment_sum > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,

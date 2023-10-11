@@ -515,7 +515,6 @@ class PoolWallet:
             origin_id=None,
             coins=None,
             primaries=None,
-            ignore_max_send_amount=False,
             extra_conditions=extra_conditions,
         )
         return fee_tx
@@ -702,7 +701,6 @@ class PoolWallet:
             fee,
             coins,
             None,
-            False,
             origin_id=launcher_parent.name(),
             extra_conditions=(
                 *extra_conditions,
