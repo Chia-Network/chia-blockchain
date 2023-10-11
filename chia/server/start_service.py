@@ -55,14 +55,20 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         network_id: str,
         *,
         config: Dict[str, Any],
-        upnp_ports: List[int] = [],
-        connect_peers: Set[UnresolvedPeerInfo] = set(),
+        upnp_ports: Optional[List[int]] = None,
+        connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
+        if upnp_ports is None:
+            upnp_ports = []
+
+        if connect_peers is None:
+            connect_peers = set()
+
         self.root_path = root_path
         self.config = config
         ping_interval = self.config.get("ping_interval")

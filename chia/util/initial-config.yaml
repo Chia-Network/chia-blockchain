@@ -4,6 +4,7 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
+rpc_timeout: 300
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
@@ -176,8 +177,6 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  # The harvester server (if run) will run on this port
-  port: 8448
   farmer_peer:
     host: *self_hostname
     port: 8447
@@ -243,9 +242,6 @@ farmer:
   full_node_peer:
     host: *self_hostname
     port: 8444
-  harvester_peer:
-    host: *self_hostname
-    port: 8448
 
   pool_public_keys: []
 
@@ -278,8 +274,6 @@ timelord_launcher:
   logging: *logging
 
 timelord:
-  # The timelord server (if run) will run on this port
-  port: 8446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -450,19 +444,10 @@ full_node:
     - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
-  timelord_peer:
-    host: *self_hostname
-    port: 8446
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
     enable_private_networks: False
-  wallet_peer:
-    host: *self_hostname
-    port: 8449
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -479,9 +464,6 @@ full_node:
   use_chia_loop_policy: True
 
 ui:
-  # The ui node server (if run) will run on this port
-  port: 8222
-
   # Which port to use to communicate with the full node
   rpc_port: 8555
 
@@ -515,7 +497,6 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
   rpc_port: 9256
 
   enable_profiler: False
@@ -633,9 +614,6 @@ wallet:
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
-
-  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
-  port: 8561
   wallet_peer:
     host: localhost
     port: 9256

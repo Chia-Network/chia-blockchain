@@ -1248,7 +1248,7 @@ class FullNode:
             return None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-            await self.sync_store.clear_sync_info()
+            self.sync_store.clear_sync_info()
 
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -1709,7 +1709,7 @@ class FullNode:
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
-            await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
+            self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
 
         state_changed_data: Dict[str, Any] = {
             "transaction_block": False,

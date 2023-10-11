@@ -13,7 +13,7 @@ dependencies = [
     "chiavdf==1.0.11",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
-    "clvm==0.9.7",
+    "clvm==0.9.8",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.11",
     "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
@@ -44,12 +44,10 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    # pinned for https://github.com/pylint-dev/pylint/issues/9069
-    "astroid==2.15.6",
     "build==0.10.0",
     "coverage==7.3.0",
     "diff-cover==7.7.0",
-    "pre-commit==3.3.3",
+    "pre-commit==3.4.0",
     "py3createtorrent==1.1.0",
     "pylint==2.17.5",
     "pytest==7.4.0",
@@ -66,7 +64,7 @@ dev_dependencies = [
     "aiohttp_cors==0.7.0",  # For blackd
     "ipython==8.12.2",  # For asyncio debugging
     "pyinstaller==5.13.0",
-    "types-aiofiles==23.1.0.5",
+    "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
     "types-pkg_resources==0.1.3",
     "types-pyyaml==6.0.12.11",

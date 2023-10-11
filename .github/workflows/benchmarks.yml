@@ -41,7 +41,7 @@ jobs:
         uses: Chia-Network/actions/clean-workspace@main
 
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -65,7 +65,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Checkout test blocks and plots
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'Chia-Network/test-cache'
           path: '.chia'
