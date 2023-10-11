@@ -101,10 +101,6 @@ jobs:
               matrix: windows
             configuration:
               install_timelord: true
-          - os:
-              matrix: windows
-            configuration:
-              name: core.full_node
           - python:
               exclude_from:
                 ${{ inputs.matrix_mode }}: True
