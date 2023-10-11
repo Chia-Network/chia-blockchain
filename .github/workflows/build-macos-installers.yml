@@ -300,7 +300,6 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MACOSX_DEPLOYMENT_TARGET: 11
 
       - name: Test for secrets access
         id: check_secrets
