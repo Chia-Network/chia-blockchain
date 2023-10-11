@@ -205,12 +205,6 @@ def configure(
 
 
 @click.command("configure", help="Modify configuration", no_args_is_help=True)
-@click.option(
-    "--testnet",
-    "-t",
-    help="configures for connection to testnet",
-    type=click.Choice(["true", "t", "false", "f"]),
-)
 @click.option("--set-node-introducer", help="Set the introducer for node - IP:Port", type=str)
 @click.option("--set-farmer-peer", help="Set the farmer peer for harvester - IP:Port", type=str)
 @click.option(
@@ -275,7 +269,6 @@ def configure_cmd(
     enable_upnp: str,
     set_outbound_peer_count: str,
     set_peer_count: str,
-    testnet: str,
     set_peer_connect_timeout: str,
     crawler_db_path: str,
     crawler_minimum_version_count: int,
@@ -292,7 +285,6 @@ def configure_cmd(
         enable_upnp,
         set_outbound_peer_count,
         set_peer_count,
-        testnet,
         set_peer_connect_timeout,
         crawler_db_path,
         crawler_minimum_version_count,
