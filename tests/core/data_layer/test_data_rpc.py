@@ -11,7 +11,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import anyio
 import pytest
@@ -25,7 +25,6 @@ from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, Status, StoreProofs
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.download_data import get_delta_filename, get_full_tree_filename
-from chia.full_node.full_node import FullNode
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -168,8 +167,8 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: i
     return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
-async def check_coin_states(full_node: FullNode, coin_ids: Set[bytes32]) -> bool:
-    coin_states = await full_node.coin_store.get_coin_states_by_ids(include_spent_coins=True, coin_ids=coin_ids)
+async def check_coin_states(wallet_node: WalletNode, coin_ids: List[bytes32]) -> bool:
+    coin_states = await wallet_node.get_coin_state(coin_ids, wallet_node.get_full_node_peer())
 
     if len(coin_states) != len(coin_ids):
         return False
@@ -799,7 +798,8 @@ async def offer_setup_fixture(
             await asyncio.sleep(sleep_time)
 
         # this checks that the node has the coin states for both launchers
-        await time_out_assert(30, check_coin_states, True, full_node_service._node, {maker.id, taker.id})
+        await time_out_assert(30, check_coin_states, True, wallet_services[0]._node, [taker.id])
+        await time_out_assert(30, check_coin_states, True, wallet_services[1]._node, [maker.id])
 
         await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
         await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
