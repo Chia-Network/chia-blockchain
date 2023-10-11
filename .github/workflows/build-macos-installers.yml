@@ -270,7 +270,6 @@ jobs:
         uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-          force-pyenv: 'true'
 
       - uses: chia-network/actions/create-venv@main
         id: create-venv
