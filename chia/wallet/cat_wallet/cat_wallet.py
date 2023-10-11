@@ -173,8 +173,7 @@ class CATWallet:
             valid_times=ConditionValidTimes(),
         )
         chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle)
-        await self.standard_wallet.push_transaction(chia_tx)
-        await self.standard_wallet.push_transaction(cat_record)
+        await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
         return self
 
     @staticmethod

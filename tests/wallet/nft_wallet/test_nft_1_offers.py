@@ -137,8 +137,8 @@ async def test_nft_offer_sell_nft(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -185,8 +185,7 @@ async def test_nft_offer_sell_nft(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=uint64(taker_fee)
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
 
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -296,8 +295,8 @@ async def test_nft_offer_request_nft(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_taker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -346,8 +345,7 @@ async def test_nft_offer_request_nft(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=uint64(taker_fee)
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
 
@@ -454,8 +452,8 @@ async def test_nft_offer_sell_did_to_did(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -519,8 +517,7 @@ async def test_nft_offer_sell_did_to_did(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=uint64(taker_fee)
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
     assert tx_records is not None
@@ -633,8 +630,8 @@ async def test_nft_offer_sell_nft_for_cat(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -693,8 +690,7 @@ async def test_nft_offer_sell_nft_for_cat(
         DEFAULT_TX_CONFIG,
         memos=[[ph_taker_cat_1], [ph_taker_cat_2]],
     )
-    for tx_record in cat_tx_records:
-        await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
+    await wallet_maker.wallet_state_manager.add_pending_transactions(cat_tx_records)
     await full_node_api.process_transaction_records(records=cat_tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
@@ -724,8 +720,7 @@ async def test_nft_offer_sell_nft_for_cat(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=uint64(taker_fee)
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
     assert tx_records is not None
@@ -835,8 +830,8 @@ async def test_nft_offer_request_nft_for_cat(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_taker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -899,8 +894,7 @@ async def test_nft_offer_request_nft_for_cat(
         amounts.append(uint64(extra_change))
         puzzle_hashes.append(ph_taker_cat_1)
     cat_tx_records = await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes, DEFAULT_TX_CONFIG)
-    for tx_record in cat_tx_records:
-        await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
+    await wallet_maker.wallet_state_manager.add_pending_transactions(cat_tx_records)
     await full_node_api.process_transaction_records(records=cat_tx_records)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
@@ -935,8 +929,7 @@ async def test_nft_offer_request_nft_for_cat(
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, fee=uint64(taker_fee)
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert trade_take is not None
     assert tx_records is not None
@@ -1038,8 +1031,8 @@ async def test_nft_offer_sell_cancel(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -1072,8 +1065,7 @@ async def test_nft_offer_sell_cancel(
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=FEE, secure=True
     )
-    for tx in txs:
-        await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -1165,8 +1157,8 @@ async def test_nft_offer_sell_cancel_in_batch(
         royalty_basis_pts,
         did_id,
     )
+    await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             assert compute_memos(tx.spend_bundle)
             await time_out_assert_not_none(
@@ -1200,8 +1192,7 @@ async def test_nft_offer_sell_cancel_in_batch(
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=FEE, secure=True
     )
-    for tx in txs:
-        await trade_manager_maker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
@@ -1389,8 +1380,8 @@ async def test_complex_nft_offer(
             uint16(royalty_basis_pts_maker),
             did_id_maker,
         )
+        await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
         for tx in txs:
-            await nft_wallet_maker.wallet_state_manager.add_pending_transaction(tx)
             if tx.spend_bundle is not None:
                 await time_out_assert_not_none(
                     20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -1404,8 +1395,8 @@ async def test_complex_nft_offer(
         royalty_basis_pts_taker_1,
         did_id_taker,
     )
+    await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_taker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -1431,8 +1422,8 @@ async def test_complex_nft_offer(
         royalty_basis_pts_taker_2,
         did_id_taker,
     )
+    await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
-        await nft_wallet_taker.wallet_state_manager.add_pending_transaction(tx)
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
@@ -1505,8 +1496,7 @@ async def test_complex_nft_offer(
             DEFAULT_TX_CONFIG,
             fee=FEE,
         )
-        for tx in tx_records:
-            await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+        await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     assert trade_take is not None
     assert tx_records is not None
     await full_node_api.process_transaction_records(records=tx_records)
@@ -1608,8 +1598,7 @@ async def test_complex_nft_offer(
         DEFAULT_TX_CONFIG,
         fee=uint64(0),
     )
-    for tx in tx_records:
-        await trade_manager_taker.wallet_state_manager.add_pending_transaction(tx)
+    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
     assert trade_take is not None
     assert tx_records is not None
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
