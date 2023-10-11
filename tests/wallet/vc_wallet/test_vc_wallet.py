@@ -253,7 +253,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         memos=["hey"],
     )
     confirmed_balance -= 2000000000
-    await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
+    await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     spend_bundle = tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -359,7 +359,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         uint64(0),
         cat_discrepancy=(-50, Program.to(None), Program.to(None)),
     )
-    await wallet_node_1.wallet_state_manager.add_pending_transaction(tx)
+    await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     spend_bundle = tx.spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -451,7 +451,8 @@ async def test_self_revoke(
             new_vc_record.vc.launcher_id, DEFAULT_TX_CONFIG, new_proof_hash=bytes32([0] * 32), self_revoke=True
         )
 
-    await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, DEFAULT_TX_CONFIG)
+    await did_wallet.wallet_state_manager.add_pending_transactions(txs)
     spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
