@@ -237,7 +237,7 @@ def softfork_height(request) -> int:
     return request.param
 
 
-saved_blocks_version = "rc5"
+saved_blocks_version = "2.0"
 
 
 @pytest.fixture(scope="session")
@@ -299,7 +299,11 @@ def default_10000_blocks(bt, consensus_mode):
         version = "_hardfork"
 
     return persistent_blocks(
-        10000, f"test_blocks_10000_{saved_blocks_version}{version}.db", bt, seed=b"10000", dummy_block_references=True
+        10000,
+        f"test_blocks_10000_{saved_blocks_version}{version}.db",
+        bt,
+        seed=b"10000",
+        dummy_block_references=True,
     )
 
 
@@ -321,6 +325,7 @@ def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
         seed=b"reorg_blocks",
         time_per_block=8,
         dummy_block_references=True,
+        include_transactions=True,
     )
 
 
@@ -341,6 +346,7 @@ def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
         block_list_input=default_10000_blocks[:500],
         seed=b"reorg_blocks2",
         dummy_block_references=True,
+        include_transactions=True,
     )
 
 
