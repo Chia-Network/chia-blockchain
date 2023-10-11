@@ -13,6 +13,7 @@ import tempfile
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
+from random import Random
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -174,6 +175,27 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             amount = int_from_bytes(next(atoms).atom)
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
+
+
+def make_spend_bundle(coins: List[Coin], wallet: WalletTool, rng: Random) -> Tuple[SpendBundle, List[Coin]]:
+    """
+    makes a new spend bundle (block generator) spending some of the coins in the
+    list of coins. The list will be updated to have spent coins removed and new
+    coins appended.
+    """
+    new_coins: List[Coin] = []
+    spend_bundles: List[SpendBundle] = []
+    to_spend = rng.sample(coins, min(5, len(coins)))
+    receiver = wallet.get_new_puzzlehash()
+    for c in to_spend:
+        bundle = wallet.generate_signed_transaction(uint64(c.amount // 2), receiver, c)
+        new_coins.extend(bundle.additions())
+        spend_bundles.append(bundle)
+        coins.remove(c)
+
+    coins.extend(new_coins)
+
+    return SpendBundle.aggregate(spend_bundles), new_coins
 
 
 class BlockTools:
@@ -574,6 +596,7 @@ class BlockTools:
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
+        include_transactions: bool = False,
     ) -> List[FullBlock]:
         assert num_blocks > 0
         if block_list_input is not None:
@@ -593,6 +616,29 @@ class BlockTools:
         transaction_data_included = False
         if time_per_block is None:
             time_per_block = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_BLOCKS_TARGET)
+
+        available_coins: List[Coin] = []
+        pending_rewards: List[Coin] = []
+        wallet: Optional[WalletTool] = None
+        rng: Optional[Random] = None
+        if include_transactions:
+            # when we generate transactions in the chain, the caller cannot also
+            # have ownership of the rewards and control the transactions
+            assert farmer_reward_puzzle_hash is None
+            assert pool_reward_puzzle_hash is None
+            assert transaction_data is None
+
+            for b in block_list:
+                for coin in b.get_included_reward_coins():
+                    if coin.puzzle_hash == self.farmer_ph:
+                        available_coins.append(coin)
+            print(
+                f"found {len(available_coins)} reward coins in existing chain."
+                "for simplicity, we assume the rewards are all unspent in the original chain"
+            )
+            wallet = self.get_farmer_wallet_tool()
+            rng = Random()
+            rng.seed(seed)
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
@@ -726,6 +772,13 @@ class BlockTools:
                         if transaction_data is not None:
                             additions = compute_additions_unchecked(transaction_data)
                             removals = transaction_data.removals()
+                        elif include_transactions:
+                            assert wallet is not None
+                            assert rng is not None
+                            transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
+                            removals = transaction_data.removals()
+                            transaction_data_included = False
+
                         assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
@@ -819,12 +872,23 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
-                        # print(f"{full_block.height}: difficulty {difficulty} "
+                        # print(f"{full_block.height:4}: difficulty {difficulty} "
                         #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"additions: {len(additions) if block_record.is_transaction_block else 0:2} "
+                        #     f"removals: {len(removals) if block_record.is_transaction_block else 0:2} "
                         #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
                         #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
                         block_list.append(full_block)
+
+                        if include_transactions:
+                            for coin in full_block.get_included_reward_coins():
+                                if coin.puzzle_hash == self.farmer_ph:
+                                    pending_rewards.append(coin)
+                            if full_block.is_transaction_block():
+                                available_coins.extend(pending_rewards)
+                                pending_rewards = []
+
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
                             compressor_arg = detect_potential_template_generator(
@@ -990,6 +1054,12 @@ class BlockTools:
             if transaction_data is not None:
                 additions = compute_additions_unchecked(transaction_data)
                 removals = transaction_data.removals()
+            elif include_transactions:
+                assert wallet is not None
+                assert rng is not None
+                transaction_data, additions = make_spend_bundle(available_coins, wallet, rng)
+                removals = transaction_data.removals()
+                transaction_data_included = False
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
@@ -1129,13 +1199,24 @@ class BlockTools:
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
                             continue
-                        # print(f"{full_block.height}: difficulty {difficulty} "
+                        # print(f"{full_block.height:4}: difficulty {difficulty} "
                         #     f"time: {new_timestamp - last_timestamp:0.2f} "
+                        #     f"additions: {len(additions) if block_record.is_transaction_block else 0:2} "
+                        #     f"removals: {len(removals) if block_record.is_transaction_block else 0:2} "
                         #     f"refs: {len(full_block.transactions_generator_ref_list):3} "
                         #     f"tx: {block_record.is_transaction_block}")
                         last_timestamp = new_timestamp
 
                         block_list.append(full_block)
+
+                        if include_transactions:
+                            for coin in full_block.get_included_reward_coins():
+                                if coin.puzzle_hash == self.farmer_ph:
+                                    pending_rewards.append(coin)
+                            if full_block.is_transaction_block():
+                                available_coins.extend(pending_rewards)
+                                pending_rewards = []
+
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
                             compressor_arg = detect_potential_template_generator(
