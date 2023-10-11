@@ -168,9 +168,16 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: i
     return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
-async def check_coin_state_count(full_node: FullNode, coin_ids: Set[bytes32], num_of_spends: int) -> bool:
-    coins = await full_node.coin_store.get_coin_states_by_ids(include_spent_coins=True, coin_ids=coin_ids)
-    return len(coins) >= num_of_spends
+async def check_coin_states(full_node: FullNode, coin_ids: Set[bytes32]) -> bool:
+    coin_states = await full_node.coin_store.get_coin_states_by_ids(include_spent_coins=True, coin_ids=coin_ids)
+
+    if len(coin_states) != len(coin_ids):
+        return False
+
+    for coin_state in coin_states:
+        if coin_state.coin.name() not in coin_ids:
+            return False
+    return True
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
@@ -792,7 +799,7 @@ async def offer_setup_fixture(
             await asyncio.sleep(sleep_time)
 
         # this checks that the node has the coin states for both launchers
-        await time_out_assert(30, check_coin_state_count, True, full_node_service._node, {maker.id, taker.id}, 2)
+        await time_out_assert(30, check_coin_states, True, full_node_service._node, {maker.id, taker.id})
 
         await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
         await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
