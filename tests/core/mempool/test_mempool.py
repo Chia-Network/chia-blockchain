@@ -2964,4 +2964,4 @@ def test_get_puzzle_and_solution_for_coin_failure():
     with pytest.raises(
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: failed to fill whole buffer"
     ):
-        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram(), [], []), TEST_COIN, 0)
+        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram(), [], []), TEST_COIN, 0, test_constants)
