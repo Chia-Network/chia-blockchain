@@ -58,8 +58,6 @@ def configure(
                         ":".join(set_farmer_peer.split(":")[:-1]),
                         set_farmer_peer.split(":")[-1],
                     )
-                    config["full_node"]["farmer_peer"]["host"] = host
-                    config["full_node"]["farmer_peer"]["port"] = int(port)
                     set_peer_info(config["harvester"], peer_type=NodeType.FARMER, peer_host=host, peer_port=int(port))
                     print("Farmer peer updated, make sure your harvester has the proper cert installed")
                     change_made = True
@@ -77,7 +75,6 @@ def configure(
             change_made = True
         if set_harvester_port:
             config["harvester"]["port"] = int(set_harvester_port)
-            config["farmer"]["harvester_peer"]["port"] = int(set_harvester_port)
             print("Default harvester port updated")
             change_made = True
         if set_log_level:
