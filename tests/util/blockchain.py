@@ -40,6 +40,7 @@ def persistent_blocks(
     block_list_input: Optional[List[FullBlock]] = None,
     time_per_block: Optional[float] = None,
     dummy_block_references: bool = False,
+    include_transactions: bool = False,
 ) -> List[FullBlock]:
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
@@ -84,6 +85,7 @@ def persistent_blocks(
         normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
+        include_transactions=include_transactions,
     )
 
 
@@ -101,6 +103,7 @@ def new_test_db(
     normalized_to_identity_cc_sp: bool = False,  # CC_SP,
     normalized_to_identity_cc_ip: bool = False,  # CC_IP
     dummy_block_references: bool = False,
+    include_transactions: bool = False,
 ) -> List[FullBlock]:
     print(f"create {path} with {num_of_blocks} blocks with ")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(
@@ -114,6 +117,7 @@ def new_test_db(
         normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
         normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
         dummy_block_references=dummy_block_references,
+        include_transactions=include_transactions,
     )
     block_bytes_list: List[bytes] = []
     for block in blocks:
