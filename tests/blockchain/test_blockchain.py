@@ -1553,7 +1553,7 @@ class TestBlockHeaderValidation:
 
                     # since tests can run slow sometimes, and since we're using
                     # the system clock, add some extra slack
-                    slack = 5
+                    slack = 30
                     block_bad: FullBlock = recursive_replace(
                         blocks[-1],
                         "foliage_transaction_block.timestamp",
