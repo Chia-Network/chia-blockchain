@@ -340,6 +340,7 @@ jobs:
 
     - name: Install AWS CLI
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      shell: pwsh
       run: |
           msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
 
@@ -361,6 +362,7 @@ jobs:
         aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
 
     - name: Create Checksums
+      shell: pwsh
       run: |
          certutil.exe -hashfile ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe SHA256 > ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
          ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
