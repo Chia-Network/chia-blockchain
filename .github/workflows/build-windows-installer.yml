@@ -273,6 +273,9 @@ jobs:
   publish:
     name: Publish EXE
     runs-on: [windows-2019]
+    defaults:
+      run:
+        shell: bash
     needs:
     - build
     timeout-minutes: 5
@@ -321,7 +324,6 @@ jobs:
 
     - name: Test for secrets access
       id: check_secrets
-      shell: bash
       run: |
         unset HAS_AWS_SECRET
         unset HAS_GLUE_SECRET
@@ -350,7 +352,6 @@ jobs:
 
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      shell: bash
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
@@ -396,26 +397,12 @@ jobs:
     - name: Mark pre-release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
       run: |
-        $headers = @{
-            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
-        }
-        $data = @{
-            chia_ref='${{ env.RELEASE_TAG }}'
-        }
-        $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-windows
 
     - name: Mark release installer complete
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
-        $headers = @{
-            Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
-        }
-        $data = @{
-            chia_ref='${{ env.RELEASE_TAG }}'
-        }
-        $json = $data | ConvertTo-Json
-        $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows
 
   test:
     name: Test ${{ matrix.os.name }}
