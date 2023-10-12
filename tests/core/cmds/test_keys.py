@@ -12,8 +12,9 @@ from click.testing import CliRunner, Result
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
 from chia.util.config import load_config
+from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
-from chia.util.keyring_wrapper import DEFAULT_KEYS_ROOT_PATH, KeyringWrapper
+from chia.util.keyring_wrapper import KeyringWrapper
 
 TEST_MNEMONIC_SEED = (
     "grief lock ketchup video day owner torch young work "

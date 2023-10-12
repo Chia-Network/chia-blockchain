@@ -357,7 +357,7 @@ class CoinGenerator:
 
     def _get_hash(self) -> bytes32:
         self._seed += 1
-        return std_hash(self._seed)
+        return std_hash(self._seed.to_bytes(length=32, byteorder="big"))
 
     def _get_amount(self) -> uint64:
         self._seed += 1

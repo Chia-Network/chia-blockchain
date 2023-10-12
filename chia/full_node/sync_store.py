@@ -120,7 +120,7 @@ class SyncStore:
         assert heaviest_peak is not None
         return heaviest_peak
 
-    async def clear_sync_info(self) -> None:
+    def clear_sync_info(self) -> None:
         """
         Clears the peak_to_peer info which can get quite large.
         """
