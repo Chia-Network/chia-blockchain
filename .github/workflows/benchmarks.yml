@@ -46,7 +46,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
-          apt-get install -y lsb-release git
+          apt-get install -y lsb-release git sudo
 
       - name: Add safe git directory
         uses: Chia-Network/actions/git-mark-workspace-safe@main
