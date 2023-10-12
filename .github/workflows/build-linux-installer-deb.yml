@@ -220,6 +220,8 @@ jobs:
             main-format: "chia-blockchain_{0}_{1}.{2}"
             cli-format: "chia-blockchain_{0}_{1}-1.{2}"
             latest-format: "chia-blockchain_{1}_latest_dev.{2}"
+            latest-main-format: "chia-blockchain_{1}_latest_dev.{2}"
+            latest-cli-format: "chia-blockchain-cli_{1}_latest_dev.{2}"
           - runs-on: [Linux, ARM64]
             container: chianetwork/ubuntu-20.04-builder:latest
             arch: arm64
