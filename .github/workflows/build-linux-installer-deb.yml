@@ -243,12 +243,12 @@ jobs:
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
 
-        echo "MAIN_FILE=${{ format(main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
-        echo "CLI_FILE=${{ format(cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
-        echo "DEV_MAIN_FILE=${{ format(dev-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
-        echo "DEV_CLI_FILE=${{ format(dev-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
-        echo "LATEST_MAIN_FILE=${{ format(latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
-        echo "LATEST_CLI_FILE=${{ format(latest-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "MAIN_FILE=${{ format(matrix.os.main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "CLI_FILE=${{ format(matrix.os.cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "DEV_MAIN_FILE=${{ format(matrix.os.dev-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "DEV_CLI_FILE=${{ format(matrix.os.dev-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "LATEST_MAIN_FILE=${{ format(matrix.os.latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "LATEST_CLI_FILE=${{ format(matrix.os.latest-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
 
     - uses: chia-network/actions/create-venv@main
       id: create-venv
