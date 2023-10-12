@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
-
-from typing_extensions import Literal
+from typing import Literal, Union
 
 # Defaults are conservative.
 parallel: Union[bool, int, Literal["auto"]] = True
