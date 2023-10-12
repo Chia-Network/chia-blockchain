@@ -239,6 +239,12 @@ jobs:
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
+      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+      - name: Delete signing keychain
+        if: always()
+        run:
+          security delete-keychain signing_temp.keychain || true
+
   publish:
     name: Publish ${{ matrix.os.arch }} ${{ matrix.os.extension }}
     runs-on: ${{ matrix.os.runs-on }}

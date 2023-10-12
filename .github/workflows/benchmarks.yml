@@ -26,6 +26,8 @@ jobs:
   build:
     name: Benchmarks
     runs-on: benchmark
+    container:
+      image: ubuntu:22.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -38,6 +40,16 @@ jobs:
     steps:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
+
+      - name: Set up container
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y lsb-release git sudo
+
+      - name: Add safe git directory
+        uses: Chia-Network/actions/git-mark-workspace-safe@main
 
       - name: Checkout Code
         uses: actions/checkout@v4

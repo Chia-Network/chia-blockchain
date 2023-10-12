@@ -22,6 +22,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
@@ -37,6 +38,8 @@ _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtoco
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 
 RpcInfo = Tuple[Type[RpcApiProtocol], int]
+
+log = logging.getLogger(__name__)
 
 
 class ServiceException(Exception):
@@ -226,8 +229,13 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     async def run(self) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
-                await self.start()
-                await self.wait_closed()
+                try:
+                    await self.start()
+                except:  # noqa E722
+                    self.stop()
+                    raise
+                finally:
+                    await self.wait_closed()
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
@@ -319,6 +327,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
-    if connection_limit is not None:
-        set_chia_policy(connection_limit)
-    return asyncio.run(coro)
+    with log_exceptions(log=log, message="fatal uncaught exception"):
+        if connection_limit is not None:
+            set_chia_policy(connection_limit)
+        return asyncio.run(coro)
