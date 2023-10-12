@@ -220,11 +220,12 @@ jobs:
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
 
-    - name: Set variables
-      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+    - name: Set git short hash
       run: |
-        GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+        echo "GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)" >> "$GITHUB_ENV"
 
+    - name: Set variables
+      run: |
         echo "MAIN_FILE=${{ format(matrix.os.main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
         echo "CLI_FILE=${{ format(matrix.os.cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
         echo "DEV_MAIN_FILE=${{ format(matrix.os.dev-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
