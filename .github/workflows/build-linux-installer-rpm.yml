@@ -148,7 +148,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
-        constraints-file-artifact-name: constraints-file-intel
+        constraints-file-artifact-name: constraints-file-x86_64
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -390,7 +390,7 @@ jobs:
       uses: actions/download-artifact@v3
       id: download
       with:
-        name: chia-installers-linux-rpm-intel
+        name: chia-installers-linux-rpm-x86_64
         path: packages
 
     - name: Install package
