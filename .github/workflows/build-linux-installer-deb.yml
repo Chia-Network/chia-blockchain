@@ -219,7 +219,8 @@ jobs:
             extension: deb
             main-format: "chia-blockchain_{0}_{1}.{2}"
             cli-format: "chia-blockchain_{0}_{1}-1.{2}"
-            latest-format: "chia-blockchain_{1}_latest_dev.{2}"
+            dev-main-format: "chia-blockchain_{0}-{3}_{1}.{2}"
+            dev-cli-format: "chia-blockchain-cli_{0}-{3}_{1}.{2}"
             latest-main-format: "chia-blockchain_{1}_latest_dev.{2}"
             latest-cli-format: "chia-blockchain-cli_{1}_latest_dev.{2}"
           - runs-on: [Linux, ARM64]
@@ -228,6 +229,8 @@ jobs:
             glue-name: "build-arm64-deb"
             main-format: "chia-blockchain_{0}_{1}.{2}"
             cli-format: "chia-blockchain_{0}-1_{1}.{2}"
+            dev-main-format: "chia-blockchain_{0}-{3}_{1}.{2}"
+            dev-cli-format: "chia-blockchain-cli_{0}-{3}_{1}.{2}"
             latest-main-format: "chia-blockchain_{1}_latest_dev.{2}"
             latest-cli-format: "chia-blockchain-cli_{1}_latest_dev.{2}"
 
@@ -239,11 +242,12 @@ jobs:
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
 
-        echo "CHIA_DEV_BUILD=${{ needs.build.outputs.chia-installer-version }}-$GIT_SHORT_HASH" >> "$GITHUB_ENV"
-        echo "MAIN_FILE=${{ format(main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
-        echo "CLI_FILE=${{ format(cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
-        echo "LATEST_MAIN_FILE=${{ format(latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
-        echo "LATEST_CLI_FILE=${{ format(latest-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
+        echo "MAIN_FILE=${{ format(main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "CLI_FILE=${{ format(cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "DEV_MAIN_FILE=${{ format(dev-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "DEV_CLI_FILE=${{ format(dev-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "LATEST_MAIN_FILE=${{ format(latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "LATEST_CLI_FILE=${{ format(latest-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
 
     - uses: chia-network/actions/create-venv@main
       id: create-venv
@@ -300,8 +304,8 @@ jobs:
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       run: |
         ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
-        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.MAIN_FILE }}" "s3://download.chia.net/dev/chia-blockchain-${CHIA_DEV_BUILD}-1.${{ matrix.os.arch }}.rpm"
-        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.CLI_FILE }}" "s3://download.chia.net/dev/chia-blockchain-cli-${CHIA_DEV_BUILD}-1.${{ matrix.os.arch }}.rpm"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.MAIN_FILE }}" "s3://download.chia.net/dev/${{ env.DEV_MAIN_FILE }}"
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.CLI_FILE }}" "s3://download.chia.net/dev/${{ env.DEV_CLI_FILE }}"
 
     - name: Create Checksums
       if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
