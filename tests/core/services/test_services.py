@@ -138,7 +138,10 @@ async def test_services_terminate(
 
                     try:
                         result = await client.healthz()
-                    except aiohttp.client_exceptions.ClientConnectorError:
+                    except (
+                        aiohttp.client_exceptions.ClientConnectorError,
+                        aiohttp.client_exceptions.ClientResponseError,
+                    ):
                         pass
                     else:
                         if result.get("success", False):
