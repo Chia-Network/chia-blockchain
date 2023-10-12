@@ -41,6 +41,13 @@ jobs:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
 
+      - name: Set up container
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y lsb-release
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
