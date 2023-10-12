@@ -297,7 +297,7 @@ class DAOCATWallet:
                     )
                 ]
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                puzzle_announcements = set([message])
+                puzzle_announcements = {message}
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
@@ -320,7 +320,7 @@ class DAOCATWallet:
                         )
                     )
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                puzzle_announcements = set([message])
+                puzzle_announcements = {message}
                 inner_solution = self.standard_wallet.make_solution(
                     primaries=primaries, puzzle_announcements=puzzle_announcements
                 )
