@@ -214,8 +214,8 @@ jobs:
             cli-format: "chia-blockchain-cli-{0}-1.{1}.{2}"
             dev-main-format: "chia-blockchain-{0}-{3}-1.{1}.{2}"
             dev-cli-format: "chia-blockchain-cli-{0}-{3}-1.{1}.{2}"
-            latest-main-format: "chia-blockchain-1.${{ matrix.os.arch }}_latest_dev.{2}"
-            latest-cli-format: "chia-blockchain-cli-1.${{ matrix.os.arch }}_latest_dev.{2}"
+            latest-main-format: "chia-blockchain-1.{1}_latest_dev.{2}"
+            latest-cli-format: "chia-blockchain-cli-1.{1}_latest_dev.{2}"
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
