@@ -227,6 +227,7 @@ jobs:
             container: chianetwork/ubuntu-20.04-builder:latest
             arch: arm64
             glue-name: "build-arm64-deb"
+            extension: deb
             main-format: "chia-blockchain_{0}_{1}.{2}"
             cli-format: "chia-blockchain-cli_{0}-1_{1}.{2}"
             dev-main-format: "chia-blockchain_{0}-{3}_{1}.{2}"

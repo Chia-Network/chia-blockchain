@@ -240,7 +240,7 @@ jobs:
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   publish:
-    name: Publish ${{ matrix.os.name }} DMG
+    name: Publish ${{ matrix.os.arch }} ${{ matrix.os.extension }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
     - build
@@ -251,144 +251,149 @@ jobs:
         python-version: ["3.10"]
         os:
           - runs-on: macos-11
-            name: intel
-            file-suffix: ""
+            arch: intel
             glue-name: "build-macos"
+            extension: dmg
+            main-format: "Chia-{0}.{2}"
+            dev-main-format: "Chia-{0}-{3}.{2}"
+            latest-main-format: "Chia_latest_dev.{2}"
           - runs-on: [MacOS, ARM64]
-            name: m1
-            file-suffix: "-arm64"
+            arch: m1
             glue-name: "build-mac-m1"
-
-    env:
-      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+            extension: dmg
+            main-format: "Chia-{0}-arm64.{2}"
+            dev-main-format: "Chia-{0}-{3}-arm64.{2}"
+            latest-main-format: "Chia-arm64_latest_dev.{2}"
 
     steps:
-      - uses: Chia-Network/actions/clean-workspace@main
+    - uses: Chia-Network/actions/clean-workspace@main
 
-      - name: Setup Python environment
-        uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Setup Python environment
+      uses: Chia-Network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - uses: chia-network/actions/create-venv@main
-        id: create-venv
+    - name: Set variables
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      run: |
+        GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
 
-      - uses: chia-network/actions/activate-venv@main
-        with:
-          directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+        echo "MAIN_FILE=${{ format(main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "DEV_MAIN_FILE=${{ format(dev-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
+        echo "LATEST_MAIN_FILE=${{ format(latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension, env.GIT_SHORT_HASH) }}" >> "$GITHUB_ENV"
 
-      - name: Download constraints file
-        uses: actions/download-artifact@v3
-        with:
-          name: constraints-file-${{ matrix.os.name }}
-          path: venv
+    - uses: chia-network/actions/create-venv@main
+      id: create-venv
 
-      - name: Install utilities
-        run: |
-          pip install --constraint venv/constraints.txt py3createtorrent
+    - uses: chia-network/actions/activate-venv@main
+      with:
+        directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
 
-      - name: Download packages
-        uses: actions/download-artifact@v3
-        with:
-          name: chia-installers-macos-dmg-${{ matrix.os.name }}
-          path: build_scripts/final_installer/
+    - name: Download constraints file
+      uses: actions/download-artifact@v3
+      with:
+        name: constraints-file-${{ matrix.os.arch }}
+        path: venv
 
-      - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install utilities
+      run: |
+        pip install --constraint venv/constraints.txt py3createtorrent
 
-      - name: Test for secrets access
-        id: check_secrets
-        shell: bash
-        run: |
-          unset HAS_AWS_SECRET
-          unset HAS_GLUE_SECRET
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-macos-${{ matrix.os.extension }}-${{ matrix.os.arch }}
+        path: build_scripts/final_installer/
 
-          if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-          echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-          echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
-        env:
-          AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
 
-      - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          command -v aws || brew install awscli
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
 
-      - name: Install GH CLI
-        run: |
-          command -v gh || brew install gh
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
+      env:
+        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
-      - name: Create Checksums
-        run: |
-          ls
-          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
+    - name: Install AWS CLI
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      run: |
+        command -v aws || brew install awscli
 
-      - name: Configure AWS credentials
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
-          aws-region: us-west-2
+    - name: Install GH CLI
+      run: |
+        command -v gh || brew install gh
 
-      - name: Upload to s3
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-          echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+    - name: Configure AWS credentials
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
+        aws-region: us-west-2
 
-      - name: Create torrent
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: env.FULL_RELEASE == 'true'
-        run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
-          ls ${{ github.workspace }}/build_scripts/final_installer/
-          gh release upload $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+    - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      run: |
+        ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
+        aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.MAIN_FILE }}" "s3://download.chia.net/dev/${{ env.DEV_MAIN_FILE }}"
 
-      - name: Upload Dev Installer
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
-        run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
+    - name: Create Checksums
+      if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
+      run: |
+        ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
+        shasum -a 256 "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} > "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.sha256
+        ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
 
-      - name: Upload Release Files
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-        run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
+    - name: Create torrent
+      if: env.FULL_RELEASE == 'true'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.torrent --webseed https://download.chia.net/install/${{ env.MAIN_FILE }}
+        gh release upload $RELEASE_TAG "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.torrent
 
-      - name: Upload release artifacts
-        if: env.RELEASE == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload \
-            $RELEASE_TAG \
-            build_scripts/final_installer/*.dmg
+    - name: Upload Dev Installer
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
+      run: |
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} s3://download.chia.net/latest-dev/${{ env.LATEST_MAIN_FILE }}
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.sha256 s3://download.chia.net/latest-dev/${{ env.LATEST_MAIN_FILE }}.sha256
 
-      - name: Mark pre-release installer complete
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+    - name: Upload Release Files
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
+      run: |
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.sha256 s3://download.chia.net/install/
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.torrent s3://download.chia.net/torrents/
 
-      - name: Mark release installer complete
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+    - name: Upload release artifacts
+      if: env.RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload \
+          $RELEASE_TAG \
+          build_scripts/final_installer/${{ env.MAIN_FILE }}
 
-      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
-      - name: Delete signing keychain
-        if: always()
-        run:
-          security delete-keychain signing_temp.keychain || true
+    - name: Mark pre-release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+
+    - name: Mark release installer complete
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
+      run: |
+        curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
