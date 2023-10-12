@@ -55,6 +55,7 @@ from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
+from chia.util.locks import Semaphore
 from chia.util.misc import to_batches
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
@@ -130,7 +131,7 @@ class WalletNode:
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
     peer_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
-    validation_semaphore: Optional[asyncio.Semaphore] = None
+    validation_semaphore: Optional[Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 300
     last_wallet_tx_resend_time: int = 0
@@ -830,7 +831,7 @@ class WalletNode:
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
         if self.validation_semaphore is None:
-            self.validation_semaphore = asyncio.Semaphore(10)
+            self.validation_semaphore = Semaphore(10)
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
         # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX disappear.

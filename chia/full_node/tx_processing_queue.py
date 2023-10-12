@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
+from chia.util.locks import Semaphore
 
 
 class TransactionQueueFull(Exception):
@@ -24,7 +25,7 @@ class TransactionQueue:
     """
 
     _list_cursor: int  # this is which index
-    _queue_length: asyncio.Semaphore
+    _queue_length: Semaphore
     _index_to_peer_map: List[bytes32]
     _queue_dict: Dict[bytes32, SimpleQueue[TransactionQueueEntry]]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
@@ -33,7 +34,7 @@ class TransactionQueue:
 
     def __init__(self, peer_size_limit: int, log: logging.Logger) -> None:
         self._list_cursor = 0
-        self._queue_length = asyncio.Semaphore(0)  # default is 1
+        self._queue_length = Semaphore(0)  # default is 1
         self._index_to_peer_map = []
         self._queue_dict = {}
         self._high_priority_queue = SimpleQueue()  # we don't limit the number of high priority transactions

@@ -73,6 +73,7 @@ from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.locks import Semaphore
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
@@ -129,7 +130,7 @@ class FullNode:
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
-    _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
+    _add_transaction_semaphore: Optional[Semaphore] = None
     _db_wrapper: Optional[DBWrapper2] = None
     _hint_store: Optional[HintStore] = None
     transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = dataclasses.field(
@@ -205,7 +206,7 @@ class FullNode:
         return self._coin_store
 
     @property
-    def add_transaction_semaphore(self) -> asyncio.Semaphore:
+    def add_transaction_semaphore(self) -> Semaphore:
         assert self._add_transaction_semaphore is not None
         return self._add_transaction_semaphore
 
@@ -282,7 +283,7 @@ class FullNode:
         self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
 
         # These many respond_transaction tasks can be active at any point in time
-        self._add_transaction_semaphore = asyncio.Semaphore(200)
+        self._add_transaction_semaphore = Semaphore(200)
 
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):

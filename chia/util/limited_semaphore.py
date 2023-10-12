@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from chia.util.locks import Semaphore
 from dataclasses import dataclass
 from typing import AsyncIterator
 
@@ -16,13 +17,13 @@ class LimitedSemaphoreFullError(Exception):
 @final
 @dataclass
 class LimitedSemaphore:
-    _semaphore: asyncio.Semaphore
+    _semaphore: Semaphore
     _available_count: int
 
     @classmethod
     def create(cls, active_limit: int, waiting_limit: int) -> LimitedSemaphore:
         return cls(
-            _semaphore=asyncio.Semaphore(active_limit),
+            _semaphore=Semaphore(active_limit),
             _available_count=active_limit + waiting_limit,
         )
 
