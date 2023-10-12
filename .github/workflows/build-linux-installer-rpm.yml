@@ -210,16 +210,24 @@ jobs:
             arch: x86_64
             glue-name: "build-linux-rpm"
             extension: rpm
-            main-file-format: "chia-blockchain-{0}-1.{1}.{2}"
-            cli-file-format: "chia-blockchain-cli-{0}-1.{1}.{2}"
-
-    env:
-      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
-      MAIN_FILE: ${{ format(main-file-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}
-      CLI_FILE: ${{ format(main-file-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}
+            main-format: "chia-blockchain-{0}-1.{1}.{2}"
+            cli-format: "chia-blockchain-cli-{0}-1.{1}.{2}"
+            latest-main-format: "chia-blockchain-1.${{ matrix.os.arch }}_latest_dev.{2}"
+            latest-cli-format: "chia-blockchain-cli-1.${{ matrix.os.arch }}_latest_dev.{2}"
 
     steps:
     - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Set variables
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
+      run: |
+        GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+
+        echo "CHIA_DEV_BUILD=${{ needs.build.outputs.chia-installer-version }}-$GIT_SHORT_HASH" >> "$GITHUB_ENV"
+        echo "MAIN_FILE=${{ format(main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
+        echo "CLI_FILE=${{ format(cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
+        echo "LATEST_MAIN_FILE=${{ format(latest-main-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
+        echo "LATEST_CLI_FILE=${{ format(latest-cli-format, needs.build.outputs.chia-installer-version, matrix.os.arch, matrix.os.extension) }}" >> "$GITHUB_ENV"
 
     - uses: chia-network/actions/create-venv@main
       id: create-venv
@@ -275,9 +283,6 @@ jobs:
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       run: |
-        GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
-        CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-        echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
         ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
         aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.MAIN_FILE }}" "s3://download.chia.net/dev/chia-blockchain-${CHIA_DEV_BUILD}-1.${{ matrix.os.arch }}.rpm"
         aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/${{ env.CLI_FILE }}" "s3://download.chia.net/dev/chia-blockchain-cli-${CHIA_DEV_BUILD}-1.${{ matrix.os.arch }}.rpm"
@@ -302,10 +307,10 @@ jobs:
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
       run: |
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} s3://download.chia.net/latest-dev/chia-blockchain-1.${{ matrix.os.arch }}_latest_dev.rpm
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.sha256 s3://download.chia.net/latest-dev/chia-blockchain-1.${{ matrix.os.arch }}_latest_dev.rpm.sha256
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.CLI_FILE }} s3://download.chia.net/latest-dev/chia-blockchain-cli-1.${{ matrix.os.arch }}_latest_dev.rpm
-        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.CLI_FILE }}.sha256 s3://download.chia.net/latest-dev/chia-blockchain-cli-1.${{ matrix.os.arch }}_latest_dev.rpm.sha256
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }} s3://download.chia.net/latest-dev/${{ env.LATEST_MAIN_FILE }}
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.MAIN_FILE }}.sha256 s3://download.chia.net/latest-dev/${{ env.LATEST_MAIN_FILE }}.sha256
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.CLI_FILE }} s3://download.chia.net/latest-dev/${{ env.LATEST_CLI_FILE }}
+        aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/${{ env.CLI_FILE }}.sha256 s3://download.chia.net/latest-dev/${{ env.LATEST_CLI_FILE }}.sha256
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
