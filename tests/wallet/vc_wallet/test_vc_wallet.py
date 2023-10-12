@@ -16,7 +16,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -123,7 +123,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1],
+            "blocks_needed": [1, 1],
         }
     ],
     indirect=True,
@@ -421,7 +421,7 @@ async def test_self_revoke(
     else:
         wallet_node_0.config["trusted_peers"] = {}
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 
@@ -502,7 +502,7 @@ async def test_cat_wallet_conversion(
     else:
         wallet_node_0.config["trusted_peers"] = {}
 
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_0.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 

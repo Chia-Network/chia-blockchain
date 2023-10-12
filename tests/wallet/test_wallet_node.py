@@ -17,7 +17,7 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.ints import uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.wallet_node import Balance, WalletNode
 from tests.conftest import ConsensusMode
@@ -328,7 +328,7 @@ async def test_get_timestamp_for_height_from_peer(
     async def get_timestamp(height: int) -> Optional[uint64]:
         return await wallet_node.get_timestamp_for_height_from_peer(uint32(height), full_node_peer)
 
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_blocks_to_wallet(2, wallet)
     full_node_peer = list(wallet_server.all_connections.values())[0]
@@ -412,7 +412,7 @@ async def test_get_balance(
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()
     # Generate some funds, get the balance and make sure it's as expected
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
     generated_funds = await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
     expected_generated_balance = Balance(
@@ -441,7 +441,7 @@ async def test_get_balance(
     #       also store the chain data or maybe adjust the weight proof consideration logic in new_valid_weight_proof.
     await full_node_api.farm_blocks_to_puzzlehash(1)
     assert not wallet_synced()
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await time_out_assert(30, wallet_synced)
     generated_funds += await full_node_api.farm_blocks_to_wallet(5, wallet_node.wallet_state_manager.main_wallet)
     expected_more_balance = Balance(
@@ -466,7 +466,7 @@ async def test_add_states_from_peer_reorg_failure(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
     coin_generator = CoinGenerator()
@@ -484,7 +484,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
     simulator_and_wallet: SimulatorsAndWallets, self_hostname: str, caplog: pytest.LogCaptureFixture
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
     # Close to trigger the shutdown
