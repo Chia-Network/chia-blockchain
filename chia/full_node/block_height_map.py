@@ -112,18 +112,18 @@ class BlockHeightMap:
 
         self.__first_dirty = height + 1
 
-        # if the peak hash is already in the height-to-hash map, we don't need
-        # to load anything more from the DB
         if self.get_hash(height) != peak:
             self.__set_hash(height, peak)
 
-            if row[3] is not None:
-                self.__sub_epoch_summaries[height] = row[3]
+        if row[3] is not None:
+            self.__sub_epoch_summaries[height] = row[3]
 
-            # prepopulate the height -> hash mapping
-            await self._load_blocks_from(height, prev_hash)
+        # prepopulate the height -> hash mapping
+        # run this unconditionally in to ensure both the height-to-hash and sub
+        # epoch summaries caches are in sync with the DB
+        await self._load_blocks_from(height, prev_hash)
 
-            await self.maybe_flush()
+        await self.maybe_flush()
 
         return self
 
@@ -163,14 +163,22 @@ class BlockHeightMap:
     # load height-to-hash map entries from the DB starting at height back in
     # time until we hit a match in the existing map, at which point we can
     # assume all previous blocks have already been populated
+    # the first iteration is mandatory on each startup, so we make it load fewer
+    # blocks to be fast. The common case is that the files are in sync with the
+    # DB so iteration can stop early.
     async def _load_blocks_from(self, height: uint32, prev_hash: bytes32) -> None:
+        # on mainnet, every 384th block has a sub-epoch summary. This should
+        # guarantee that we find at least one in the first iteration. If it
+        # matches, we're done reconciliating the cache with the DB.
+        window_size = 400
         while height > 0:
             # load 5000 blocks at a time
-            window_end = max(0, height - 5000)
+            window_end = max(0, height - window_size)
+            window_size = 5000
 
             query = (
                 "SELECT header_hash,prev_hash,height,sub_epoch_summary from full_blocks "
-                "INDEXED BY height WHERE height>=? AND height <?"
+                "INDEXED BY height WHERE in_main_chain=1 AND height>=? AND height <?"
             )
 
             async with self.db.reader_no_transaction() as conn:
@@ -195,6 +203,9 @@ class BlockHeightMap:
                         and height in self.__sub_epoch_summaries
                         and self.__sub_epoch_summaries[height] == entry[2]
                     ):
+                        # we only terminate the loop if we encounter a block
+                        # that has a sub epoch summary matching the cache and
+                        # the block hash matches the cache
                         return
                     self.__sub_epoch_summaries[height] = entry[2]
                 elif height in self.__sub_epoch_summaries:

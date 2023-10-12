@@ -27,7 +27,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         python-version: ["3.10"]
         os: [macOS-latest, ubuntu-latest]
@@ -39,7 +38,7 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -70,7 +69,6 @@ jobs:
     container: ${{ matrix.distribution.url }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         os: [ubuntu-latest]
         distribution:
@@ -162,7 +160,7 @@ jobs:
 
     # after installing git so we use that copy
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
