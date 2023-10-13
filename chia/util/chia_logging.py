@@ -41,7 +41,12 @@ def get_file_log_handler(
     return handler
 
 
-def initialize_logging(service_name: str, logging_config: Dict, root_path: Path, beta_root_path: Optional[Path] = None):
+def initialize_logging(
+    service_name: str,
+    logging_config: Dict[str, Any],
+    root_path: Path,
+    beta_root_path: Optional[Path] = None,
+) -> None:
     log_level = logging_config.get("log_level", default_log_level)
     file_name_length = 33 - len(service_name)
     log_date_format = "%Y-%m-%dT%H:%M:%S"

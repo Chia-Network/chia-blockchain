@@ -123,7 +123,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1],
+            "blocks_needed": [1, 1],
         }
     ],
     indirect=True,
