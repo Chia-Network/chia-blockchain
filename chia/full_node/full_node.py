@@ -275,11 +275,11 @@ class FullNode:
 
     async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
-        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20, log=self.log)
+        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20, log=self.log, monitor=True)
+        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20, log=self.log)
 
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)

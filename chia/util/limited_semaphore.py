@@ -38,7 +38,7 @@ class TaskInfo:
 @final
 @dataclass
 class LimitedSemaphore:
-    _log: logging.Logger
+    _log: Optional[logging.Logger]
     _semaphore: asyncio.Semaphore
     _available_count: int
     _monitor_task: Optional[asyncio.Task[None]] = None
@@ -46,21 +46,29 @@ class LimitedSemaphore:
 
     @classmethod
     def create(
-        cls, active_limit: int, waiting_limit: int, log: logging.Logger, monitor: bool = False
+        cls,
+        active_limit: int,
+        waiting_limit: int,
+        log: Optional[logging.Logger] = None,
     ) -> LimitedSemaphore:
         self = cls(
             _semaphore=asyncio.Semaphore(active_limit),
             _available_count=active_limit + waiting_limit,
             _log=log,
         )
-        if monitor:
+        if self.log is not None:
             self._monitor_task = asyncio.create_task(self.monitor())
         return self
 
     def log(self, message: str, *args: object, **kwargs: object) -> None:
+        if self._log is None:
+            return
+
         self._log.info(f"{log_filter} {message}", *args, **kwargs)  # type: ignore[arg-type]
 
     async def monitor(self) -> None:
+        assert self._log is not None
+
         with contextlib.suppress(asyncio.CancelledError):
             while True:
                 with log_exceptions(
@@ -111,7 +119,7 @@ class LimitedSemaphore:
                 self.log(f"task_info: {task_info}")
 
     async def close(self) -> None:
-        if self._monitor_task is not None:
+        if self._monitor_task is not None and self._log is not None:
             self._monitor_task.cancel()
             with log_exceptions(
                 log=self._log,
