@@ -19,7 +19,7 @@ async def test_basic_store():
         assert sync_mode == store.get_sync_mode()
 
     # clear sync info
-    await store.clear_sync_info()
+    store.clear_sync_info()
 
     peer_ids = [std_hash(bytes([a])) for a in range(3)]
 

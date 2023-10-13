@@ -10,7 +10,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.wallet_node import WalletNode
 
@@ -33,7 +33,7 @@ async def test_is_recipient(
     wallet = wallet_node.wallet_state_manager.main_wallet
     puzhash_1 = await wallet.get_new_puzzlehash()
     puzhash_2 = await wallet.get_new_puzzlehash()
-    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
     invalid_data = ClawbackMetadata(uint64(500), bytes32.random(seeded_random), bytes32.random(seeded_random))
     both_data = ClawbackMetadata(uint64(500), puzhash_1, puzhash_2)
     sender_data = ClawbackMetadata(uint64(500), puzhash_1, bytes32.random(seeded_random))
