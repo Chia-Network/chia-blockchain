@@ -265,7 +265,8 @@ class Blockchain(BlockchainInterface):
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
 
-        if random.choices(population=[True, False], weights=[1, 9])[0]:
+        failure_percent = 2
+        if random.choices(population=[True, False], weights=[failure_percent, 100 - failure_percent])[0]:
             return AddBlockResult.INVALID_BLOCK, Err.PRETEND_FAILURE, None
 
         block_record = block_to_block_record(
