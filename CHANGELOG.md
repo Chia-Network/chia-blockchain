@@ -6,6 +6,96 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.0 Chia blockchain 2023-10-05
+
+### Added
+- Credential Restricted CATs
+- Add timelock information to Trades and Transactions
+- Add ergonomic timelock parsing to RPCs
+- Add valid_times to Offer object
+- Add uncurried args to debug_spend_bundle
+- Add force option for spend_clawback_coin
+- Add Wallet CLI Unit tests
+- Add ergonomic condition classes
+- Add the option for arbitrary conditions to make_solution
+- Add flags to CR-CAT offer summary
+- Improve testnet connectivity
+- Add `get_public_key` and `get_public_keys` daemon RPCs
+- Add `extra_conditions` as an option to transaction endpoints
+- DataLayer fingerprint control
+- Delete Datalayer DAT files on unsubscribe
+- add new Datalayer `plugins:` config allowing for custom headers
+- Add support for multi node farmers (thanks @felixbrucker)
+- Add a full node RPC endpoint, `get_mempool_items_by_coin_name` (thanks @kimsk)
+- Add CLI NFT Pagination (thanks @yyolk)
+- Add traceback to front-end error responses
+- Configure number of stored full files in Datalayer
+- Add timelock information to Trades and Transactions
+- Bladebit Hybrid disk mode
+
+### Changed
+- Remove CAT1 UX guards
+- Dedup offer cancellation logic
+- upgrade electron-builder to 24.6.3 and Lerna to 7.1.3
+- Simplify get_max_send_amount for XCH and CATs
+- Added wallet id showing when using the 'chia plotnft show' (thanks @d1m1trus)
+- Introduce TXConfig and CoinSelectionConfig
+- Print JSON for all DL commands
+- demote log level for TIMESTAMP_TOO_FAR_IN_FUTURE errors
+- Prevent redundant peer calls in coin_added
+- Timelord peak change
+- full_node: Stop updating wallets during long sync
+- Optimize CAT coin_added
+- Optimize NFT coin_added
+- flush only the updated parts of the height-to-hash cache file
+- Rename USDS --> USDSC
+- wallet: Drop `is_peer_synced` / More cache usage
+- run_block_generator2()
+- full_node: Move wallet updates into a separate task
+- send --fix-ssl-permissions to stderr
+- update chiabip158 to 1.3
+- Update chiapos to 2.0.3
+- Update install-gui.sh to check Node 18 and npm 9
+
+### Fixed
+- Fixed python3-venv in install.sh (thanks @d1m1trus)
+- Change include_standard_libraries for CLVM compilation default to True
+- add dust warning message to chia coins commands & cleanup code
+- Fixed `chia rpc status` output
+- Fix a typo in code style documentation (thanks @UncertainBadg3r)
+- Add condition opcodes for agg sigs to condition_codes.clib
+- correct netspace calculation
+- fixed issue with reuse_puzhash when minting NFTs (thanks @YeungTing)
+- Refactor Seeder & Crawler code + add tests
+- fix testnet10 sync-from-scratch
+- Fix timelord-install.sh for CentOS\RHEL (thanks @LeroyINC)
+- Don't raise on duplicate VC proof insertion
+- Add self revocation path to VC wallet
+- Support calling get_routes via wss
+- Make sure reuse_puzhash works for nft1 offers
+- Fix comment typo (thanks @xchdata1)
+- type mismatch for last_time_farmed (thanks @dkackman)
+- fix waiting for co-routines in plotters_util.py
+- wallet: Fix and improve untrusted race caching
+- Add `--verbose` option to `data create_data_store` and limit default output to the store id
+- chiavdf==1.0.11 for setuptools fix
+- more ws message type awareness in the deamon
+- add fee for cat creation
+- max_coin_amount should default to None in wallet send command
+- Add extra_conditions to special offer making
+- bump chia_rs to include bugfix for new AGG_SIG_* conditions in mempool mode
+- Fix `chia farm summary` aborting early if no local full node present (fixes #16164) (thanks @xchdata1)
+- fix typo in PendingTxCache
+- rename `chia data add_missing_files` `-f`/`--foldername` to `-d`/`--directory`
+- Wallet workaround for python issue 97641 and update anyio for issue 589
+- Fix issue with trade failures
+- Fix glitch NFT wallet test
+
+### Removed
+- Support for MacOS 10.14 and 10.15
+- Support for Chia database schema version 1
+- Support for minting CATs via RPC
+
 ## 2.0.1 Chia blockchain 2023-09-06
 
 ### Fixed

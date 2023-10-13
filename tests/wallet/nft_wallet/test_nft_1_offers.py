@@ -81,8 +81,8 @@ async def test_nft_offer_sell_nft(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -239,8 +239,8 @@ async def test_nft_offer_request_nft(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -395,8 +395,8 @@ async def test_nft_offer_sell_did_to_did(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -574,8 +574,8 @@ async def test_nft_offer_sell_nft_for_cat(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -774,8 +774,8 @@ async def test_nft_offer_request_nft_for_cat(
         wallet_node_maker.config["trusted_peers"] = {}
         wallet_node_taker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
@@ -978,7 +978,7 @@ async def test_nft_offer_sell_cancel(
     else:
         wallet_node_maker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     for _ in range(2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
@@ -1103,7 +1103,7 @@ async def test_nft_offer_sell_cancel_in_batch(
     else:
         wallet_node_maker.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
@@ -1256,8 +1256,8 @@ async def test_complex_nft_offer(
     wallet_node_maker.config["automatically_add_unknown_cats"] = True
     wallet_node_taker.config["automatically_add_unknown_cats"] = True
 
-    await server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Need money for fees and offering
     for i in range(0, 2):

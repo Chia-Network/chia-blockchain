@@ -74,6 +74,9 @@ async def get_average_block_time(
 
     assert newer_block.timestamp is not None and older_block.timestamp is not None
 
+    if newer_block.height == older_block.height:  # small chain not long enough to have a block in between
+        return None
+
     average_block_time = uint32(
         (newer_block.timestamp - older_block.timestamp) / (newer_block.height - older_block.height)
     )

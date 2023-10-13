@@ -638,7 +638,11 @@ class WalletNode:
     def initialize_wallet_peers(self) -> None:
         self.server.on_connect = self.on_connect
         network_name = self.config["selected_network"]
-
+        try:
+            default_port = self.config["network_overrides"]["config"][network_name]["default_full_node_port"]
+        except KeyError:
+            self.log.info("Default port field not found in config.")
+            default_port = None
         connect_to_unknown_peers = self.config.get("connect_to_unknown_peers", True)
         testing = self.config.get("testing", False)
         if self.wallet_peers is None and connect_to_unknown_peers and not testing:
@@ -657,7 +661,7 @@ class WalletNode:
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
                 network_name,
-                None,
+                default_port,
                 self.log,
             )
             asyncio.create_task(self.wallet_peers.start())
