@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import io
 import logging
-import random
 import time
 from dataclasses import dataclass, field
 from typing import AsyncIterator, Dict, Optional
@@ -98,13 +97,13 @@ class LimitedSemaphore:
                                 f"task_info traceback ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
                             )
 
-                    if len(self._active_tasks) > 0:
-                        task_info_to_cancel = random.choice(list(self._active_tasks.values()))
-                        active_duration = task_info_to_cancel.active_duration()
-
-                        self.log(
-                            f"task_info cancelling ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
-                        )
+                    # if len(self._active_tasks) > 0:
+                    #     task_info_to_cancel = random.choice(list(self._active_tasks.values()))
+                    #     active_duration = task_info_to_cancel.active_duration()
+                    #
+                    #     self.log(
+                    #         f"task_info cancelling ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
+                    #     )
 
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
