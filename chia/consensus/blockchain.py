@@ -70,8 +70,6 @@ class AddBlockResult(Enum):
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
-    PRETEND_FAILURE = 6
-
 
 @dataclasses.dataclass
 class StateChangeSummary:
@@ -267,8 +265,8 @@ class Blockchain(BlockchainInterface):
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
 
-        if random.choices(population=[True, False], weights=[3, 7])[0]:
-            return AddBlockResult.PRETEND_FAILURE, None, None
+        if random.choices(population=[True, False], weights=[1, 9])[0]:
+            return AddBlockResult.INVALID_BLOCK, Err.PRETEND_FAILURE, None
 
         block_record = block_to_block_record(
             self.constants,

@@ -73,7 +73,7 @@ from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.limited_semaphore import LimitedSemaphore, log_filter
+from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
@@ -1223,12 +1223,6 @@ class FullNode:
                         agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
                         agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
                     )
-            elif result == AddBlockResult.PRETEND_FAILURE:
-                self.log.error(
-                    f"{log_filter} Error: pretending there's a failure,"
-                    f" Invalid block from peer: {peer.get_peer_logging()} "
-                )
-                return False, agg_state_change_summary, error
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
