@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Optional
 
 import pytest
@@ -14,7 +15,7 @@ async def test_stuff() -> None:
     waiting_limit = 4
     total_limit = active_limit + waiting_limit
     beyond_limit = 3
-    semaphore = LimitedSemaphore.create(active_limit=active_limit, waiting_limit=waiting_limit)
+    semaphore = LimitedSemaphore.create(active_limit=active_limit, waiting_limit=waiting_limit, log=logging.getLogger())
     finish_event = asyncio.Event()
 
     async def acquire(entered_event: Optional[asyncio.Event] = None) -> None:
