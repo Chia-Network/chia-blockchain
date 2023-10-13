@@ -93,7 +93,9 @@ class LimitedSemaphore:
                     for task_info in self._active_tasks.values():
                         active_duration = task_info.active_duration()
                         if active_duration > 10:
-                            self.log(f"task_info ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}")
+                            self.log(
+                                f"task_info traceback ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
+                            )
 
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
