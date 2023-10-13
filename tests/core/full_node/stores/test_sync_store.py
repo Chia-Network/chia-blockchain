@@ -18,9 +18,6 @@ async def test_basic_store():
         store.set_sync_mode(sync_mode)
         assert sync_mode == store.get_sync_mode()
 
-    # clear sync info
-    store.clear_sync_info()
-
     peer_ids = [std_hash(bytes([a])) for a in range(3)]
 
     assert store.get_peers_that_have_peak([]) == set()
