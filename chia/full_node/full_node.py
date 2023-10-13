@@ -1209,13 +1209,6 @@ class FullNode:
             )
 
             if result == AddBlockResult.NEW_PEAK:
-                if random.choices(population=[True, False], weights=[3, 7])[0]:
-                    self.log.error(
-                        f"{log_filter} Error: pretending there's a failure,"
-                        f" Invalid block from peer: {peer.get_peer_logging()} "
-                    )
-                    return False, agg_state_change_summary, error
-
                 assert state_change_summary is not None
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
                 if agg_state_change_summary is None:
@@ -1230,10 +1223,17 @@ class FullNode:
                         agg_state_change_summary.new_npc_results + state_change_summary.new_npc_results,
                         agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
                     )
+            elif result == AddBlockResult.PRETEND_FAILURE:
+                self.log.error(
+                    f"{log_filter} Error: pretending there's a failure,"
+                    f" Invalid block from peer: {peer.get_peer_logging()} "
+                )
+                return False, agg_state_change_summary, error
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
                 return False, agg_state_change_summary, error
+
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
                 if self.weight_proof_handler is not None:

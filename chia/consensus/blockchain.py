@@ -5,6 +5,7 @@ import dataclasses
 import enum
 import logging
 import multiprocessing
+import random
 import traceback
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
@@ -68,6 +69,8 @@ class AddBlockResult(Enum):
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
+
+    PRETEND_FAILURE = 6
 
 
 @dataclasses.dataclass
@@ -263,6 +266,9 @@ class Blockchain(BlockchainInterface):
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
+
+        if random.choices(population=[True, False], weights=[3, 7])[0]:
+            return AddBlockResult.PRETEND_FAILURE, None, None
 
         block_record = block_to_block_record(
             self.constants,
