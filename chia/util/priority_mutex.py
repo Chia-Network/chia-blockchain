@@ -10,6 +10,8 @@ from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
 
 from typing_extensions import final
 
+from chia.util.misc import log_after
+
 log = logging.getLogger(__name__)
 
 
@@ -74,7 +76,13 @@ class PriorityMutex(Generic[_T_Priority]):
                 self._active = element
             else:
                 await element.ready_event.wait()
-            yield
+            # TODO: lazy and not configurable since we presently have just one use, kinda
+            async with log_after(
+                message=f"{type(self).__name__} held by {task}",
+                delay=15,
+                log=log,
+            ):
+                yield
         finally:
             # another element might be active if the wait is cancelled
             if self._active is element:

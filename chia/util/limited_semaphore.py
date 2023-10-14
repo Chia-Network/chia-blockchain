@@ -10,6 +10,7 @@ from typing import AsyncIterator, Dict, Optional
 
 from typing_extensions import final
 
+from chia.misc.util import log_after
 from chia.util.log_exceptions import log_exceptions
 
 log_filter = "oodIXIboo"
@@ -42,6 +43,7 @@ class LimitedSemaphore:
     _semaphore: asyncio.Semaphore
     _available_count: int
     _monitor_task: Optional[asyncio.Task[None]] = None
+    _name: Optional[str] = None
     _active_tasks: Dict[asyncio.Task[object], TaskInfo] = field(default_factory=dict)
 
     @classmethod
@@ -50,11 +52,13 @@ class LimitedSemaphore:
         active_limit: int,
         waiting_limit: int,
         log: Optional[logging.Logger] = None,
+        name: Optional[str] = None,
     ) -> LimitedSemaphore:
         self = cls(
             _semaphore=asyncio.Semaphore(active_limit),
             _available_count=active_limit + waiting_limit,
             _log=log,
+            _name=name,
         )
         if self.log is not None:
             self._monitor_task = asyncio.create_task(self.monitor())
@@ -90,21 +94,6 @@ class LimitedSemaphore:
                             )
                         )
 
-                    for task_info in self._active_tasks.values():
-                        active_duration = task_info.active_duration()
-                        if active_duration > 5:
-                            self.log(
-                                f"task_info traceback ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
-                            )
-
-                    # if len(self._active_tasks) > 0:
-                    #     task_info_to_cancel = random.choice(list(self._active_tasks.values()))
-                    #     active_duration = task_info_to_cancel.active_duration()
-                    #
-                    #     self.log(
-                    #         f"task_info cancelling ({active_duration:7.1f}): {task_info}\n{task_info.stack_string()}"
-                    #     )
-
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
         task = asyncio.current_task()
@@ -121,7 +110,12 @@ class LimitedSemaphore:
                 if task in self._active_tasks:
                     self.log(f"reentering with task: {task}")
                 self._active_tasks[task] = TaskInfo(task=task)
-                yield self._available_count
+                async with log_after(
+                    message=f"{type(self).__name__} ({self._name}) held by {task}",
+                    delay=15,
+                    log=self.log,
+                ):
+                    yield self._available_count
         finally:
             self._available_count += 1
             task_info = self._active_tasks.pop(task, None)
