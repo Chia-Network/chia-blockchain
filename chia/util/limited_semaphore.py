@@ -110,11 +110,15 @@ class LimitedSemaphore:
                 if task in self._active_tasks:
                     self.log(f"reentering with task: {task}")
                 self._active_tasks[task] = TaskInfo(task=task)
-                async with log_after(
-                    message=f"{type(self).__name__} ({self._name}) held by {task}",
-                    delay=15,
-                    log=self.log,
-                ):
+                async with contextlib.AsyncExitStack() as async_exit_stack:
+                    if self._log is not None:
+                        await async_exit_stack.enter_async_context(
+                            log_after(
+                                message=f"{type(self).__name__} ({self._name}) held by {task}",
+                                delay=15,
+                                log=self._log,
+                            )
+                        )
                     yield self._available_count
         finally:
             self._available_count += 1
