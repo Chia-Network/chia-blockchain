@@ -10,8 +10,8 @@ from typing import AsyncIterator, Dict, Optional
 
 from typing_extensions import final
 
-from chia.misc.util import log_after
 from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import log_after
 
 log_filter = "oodIXIboo"
 
