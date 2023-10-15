@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes100
 from chia.util.streamable import Streamable, streamable
 
@@ -31,5 +30,5 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement.from_bytes(b"\x08")
 
     @staticmethod
-    def get_size(constants: ConsensusConstants) -> int:
+    def get_size() -> int:
         return 100

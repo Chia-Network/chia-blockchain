@@ -1026,7 +1026,7 @@ class Timelord:
                 proof_bytes: bytes = stdout_bytes_io.read()
 
                 # Verifies our own proof just in case
-                form_size = ClassgroupElement.get_size(self.constants)
+                form_size = ClassgroupElement.get_size()
                 output = ClassgroupElement.from_bytes(y_bytes[:form_size])
                 # default value so that it's always set for state_changed later
                 ips: float = 0
