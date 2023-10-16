@@ -76,7 +76,7 @@ class PriorityMutex(Generic[_T_Priority]):
                     self._log.info(
                         "\n".join(
                             [
-                                f"{type(self).__name__} monitor:",
+                                f"{log_filter} {type(self).__name__} monitor:",
                                 f"active: {self._active}",
                                 *(f"{priority}: {len(deque)}" for priority, deque in self._deques.items()),
                             ]
