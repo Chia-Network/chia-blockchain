@@ -305,6 +305,7 @@ class FullNode:
             reader_count=4,
             log_path=sql_log_path,
             synchronous=db_sync,
+            log=self.log,
         )
 
         if self.db_wrapper.db_version != 2:
