@@ -5,7 +5,8 @@ import dataclasses
 import enum
 import logging
 import multiprocessing
-import random
+
+# import random
 import traceback
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
@@ -265,9 +266,9 @@ class Blockchain(BlockchainInterface):
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
 
-        failure_percent = 2
-        if random.choices(population=[True, False], weights=[failure_percent, 100 - failure_percent])[0]:
-            return AddBlockResult.INVALID_BLOCK, Err.PRETEND_FAILURE, None
+        # failure_percent = 2
+        # if random.choices(population=[True, False], weights=[failure_percent, 100 - failure_percent])[0]:
+        #     return AddBlockResult.INVALID_BLOCK, Err.PRETEND_FAILURE, None
 
         block_record = block_to_block_record(
             self.constants,
