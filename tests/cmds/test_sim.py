@@ -4,7 +4,6 @@ from pathlib import Path
 from shutil import rmtree
 
 import pytest
-import time
 from click.testing import CliRunner
 
 from chia.cmds.chia import cli
@@ -49,7 +48,7 @@ def test_every_simulator_command() -> None:
 
     config_dir = SIMULATOR_ROOT_PATH.joinpath(simulator_name)
     with lock_and_load_config(config_dir, "config.yaml") as config:
-        config["rpc_timeout"] = 600
+        config["rpc_timeout"] = 6000
         save_config(config_dir, "config.yaml", config)
 
     try:
@@ -91,9 +90,7 @@ def stop_simulator(runner: CliRunner, simulator_name: str) -> None:
     )
     assert result.exit_code == 0
     assert "chia_full_node_simulator: Stopped\nDaemon stopped\n" == result.output
-    time.sleep(15)
     rmtree(SIMULATOR_ROOT_PATH / simulator_name)
-    time.sleep(15)
 
 
 def run_all_tests(runner: CliRunner, address: str, simulator_name: str) -> None:
