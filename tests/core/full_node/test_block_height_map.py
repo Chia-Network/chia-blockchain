@@ -501,31 +501,32 @@ async def test_cache_file_extend(tmp_dir: Path, db_version: int) -> None:
             for idx in range(0, len(heights), 32):
                 assert new_heights[idx : idx + 32] == heights[idx : idx + 32]
 
-    @pytest.mark.asyncio
-    async def test_cache_file_truncate(tmp_dir: Path, db_version: int) -> None:
-        # Test the case where the cache has more blocks than the DB, the cache
-        # file will be truncated
-        async with DBConnection(db_version) as db_wrapper:
-            await setup_db(db_wrapper)
-            await setup_chain(db_wrapper, 2000, ses_every=20)
-            bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
-            await bh.maybe_flush()
 
-            # extend the cache file
-            with open(tmp_dir / "height-to-hash", "r+b") as f:
-                f.truncate(32 * 4000)
-            assert os.path.getsize(tmp_dir / "height-to-hash") == 32 * 4000
+@pytest.mark.asyncio
+async def test_cache_file_truncate(tmp_dir: Path, db_version: int) -> None:
+    # Test the case where the cache has more blocks than the DB, the cache
+    # file will be truncated
+    async with DBConnection(db_version) as db_wrapper:
+        await setup_db(db_wrapper)
+        await setup_chain(db_wrapper, 2000, ses_every=20)
+        bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        await bh.maybe_flush()
 
-            bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
-            await bh.maybe_flush()
+        # extend the cache file
+        with open(tmp_dir / "height-to-hash", "r+b") as f:
+            f.truncate(32 * 4000)
+        assert os.path.getsize(tmp_dir / "height-to-hash") == 32 * 4000
 
-            with open(tmp_dir / "height-to-hash", "rb") as f:
-                new_heights = f.read()
-                assert len(new_heights) == 4000 * 32
-                # pytest doesn't behave very well comparing large buffers
-                # (when the test fails). Compare small portions at a time instead
-                for idx in range(0, 2000):
-                    assert new_heights[idx * 32 : idx * 32 + 32] == gen_block_hash(idx)
+        bh = await BlockHeightMap.create(tmp_dir, db_wrapper)
+        await bh.maybe_flush()
+
+        with open(tmp_dir / "height-to-hash", "rb") as f:
+            new_heights = f.read()
+            assert len(new_heights) == 4000 * 32
+            # pytest doesn't behave very well comparing large buffers
+            # (when the test fails). Compare small portions at a time instead
+            for idx in range(0, 2000):
+                assert new_heights[idx * 32 : idx * 32 + 32] == gen_block_hash(idx)
 
 
 @pytest.mark.asyncio
