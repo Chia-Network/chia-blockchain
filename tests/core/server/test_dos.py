@@ -164,7 +164,7 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
         assert len(server_1.all_connections) == 1
 
@@ -219,7 +219,7 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
         assert len(server_1.all_connections) == 1
 
@@ -268,7 +268,7 @@ class TestDos:
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
         assert len(server_1.all_connections) == 1
 

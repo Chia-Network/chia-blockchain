@@ -73,7 +73,7 @@ class WSChiaConnection:
     ws: WebSocket = field(repr=False)
     api: ApiProtocol = field(repr=False)
     local_type: NodeType
-    local_port: int
+    local_port: Optional[int]
     local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
     local_capabilities: List[Capability]
     peer_info: PeerInfo
@@ -129,7 +129,7 @@ class WSChiaConnection:
         local_type: NodeType,
         ws: WebSocket,
         api: ApiProtocol,
-        server_port: int,
+        server_port: Optional[int],
         log: logging.Logger,
         is_outbound: bool,
         received_message_callback: Optional[ConnectionCallback],

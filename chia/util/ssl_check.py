@@ -5,7 +5,7 @@ import stat
 import sys
 from logging import Logger
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from chia.util.config import load_config, traverse_dict
 from chia.util.permissions import octal_mode_string, verify_file_permissions
@@ -71,7 +71,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
     all_keys: List[Path] = []
 
     try:
-        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False, fill_missing_services=True)
+        config = load_config(root_path, "config.yaml", exit_on_error=False, fill_missing_services=True)
         for paths, parsed_list in [(CERT_CONFIG_KEY_PATHS, all_certs), (KEY_CONFIG_KEY_PATHS, all_keys)]:
             for path in paths:
                 try:
@@ -108,7 +108,7 @@ def verify_ssl_certs_and_keys(
 
     invalid_files_and_modes: List[Tuple[Path, int, int]] = []
 
-    def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int):
+    def verify_paths(paths: List[Path], restrict_mask: int, expected_permissions: int) -> None:
         nonlocal invalid_files_and_modes
         for path in paths:
             try:
