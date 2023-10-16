@@ -31,7 +31,7 @@ from chia.types.blockchain_format.foliage import TransactionsInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import InfusedChallengeChainSubSlot
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -86,7 +86,7 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
@@ -97,7 +97,7 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
@@ -108,7 +108,7 @@ class TestGenesisBlock:
             blockchain_constants.GENESIS_CHALLENGE,
             uint64(231),
         )
-        if proof.is_valid(blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
+        if validate_vdf(proof, blockchain_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
