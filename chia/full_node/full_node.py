@@ -75,6 +75,7 @@ from chia.util.errors import ConsensusError, Err, TimestampError, ValidationErro
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import log_filter
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -701,6 +702,12 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
+            if self._sync_task is not None:
+                done = self._sync_task.done()
+                if not done:
+                    self.log.warning(
+                        f"{log_filter} overwriting FullNode._sync_task that is not done: {self._sync_task}"
+                    )
             self._sync_task = asyncio.create_task(self._sync())
 
     async def send_peak_to_timelords(

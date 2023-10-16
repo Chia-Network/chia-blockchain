@@ -10,9 +10,8 @@ from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
 
 from typing_extensions import final
 
-from chia.util.misc import log_after
-
-log = logging.getLogger(__name__)
+from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import log_after, log_filter
 
 
 class NestedLockUnsupportedError(Exception):
@@ -48,13 +47,41 @@ class PriorityMutex(Generic[_T_Priority]):
     """
 
     _deques: Dict[_T_Priority, collections.deque[_Element]]
+    _log: logging.Logger
     _active: Optional[_Element] = None
+    _monitor_task: Optional[asyncio.Task[None]] = None
 
     @classmethod
-    def create(cls, priority_type: Type[_T_Priority]) -> PriorityMutex[_T_Priority]:
-        return cls(
+    def create(cls, priority_type: Type[_T_Priority], log: logging.Logger) -> PriorityMutex[_T_Priority]:
+        self = cls(
             _deques={priority: collections.deque() for priority in sorted(priority_type)},
+            _log=log,
         )
+        self._monitor_task = asyncio.create_task(self.monitor())
+
+        return self
+
+    async def monitor(self) -> None:
+        assert self._log is not None
+
+        with contextlib.suppress(asyncio.CancelledError):
+            while True:
+                with log_exceptions(
+                    log=self._log,
+                    message=f"{log_filter} {type(self).__name__}: unhandled exception while monitoring: ",
+                    consume=True,
+                ):
+                    await asyncio.sleep(10)
+
+                    self._log.info(
+                        "\n".join(
+                            [
+                                f"{type(self).__name__} monitor:",
+                                f"active: {self._active}",
+                                *(f"{priority}: {len(deque)}" for priority, deque in self._deques.items()),
+                            ]
+                        )
+                    )
 
     @contextlib.asynccontextmanager
     async def acquire(
@@ -80,7 +107,7 @@ class PriorityMutex(Generic[_T_Priority]):
             async with log_after(
                 message=f"{type(self).__name__} held by {task}",
                 delay=15,
-                log=log,
+                log=self._log,
             ):
                 yield
         finally:

@@ -335,15 +335,23 @@ async def _log_after_monitor(
                 await asyncio.sleep(period)
 
 
+log_filter = "oodIXIboo"
+
+
 @contextlib.asynccontextmanager
 async def log_after(
     message: str,
     delay: float,
-    log: logging.Logger,
+    # TODO: should this be optional in a 'real' implementation?
+    log: Optional[logging.Logger],
     period: float = 5,
     level: int = logging.WARNING,
     clock: Callable[[], float] = time.monotonic,
 ) -> AsyncIterator[None]:
+    if log is None:
+        yield
+        return
+
     stack = traceback.extract_stack()
     for index, frame in enumerate(reversed(stack)):
         if index == 0:

@@ -11,9 +11,7 @@ from typing import AsyncIterator, Dict, Optional
 from typing_extensions import final
 
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import log_after
-
-log_filter = "oodIXIboo"
+from chia.util.misc import log_after, log_filter
 
 
 class LimitedSemaphoreFullError(Exception):
@@ -80,19 +78,18 @@ class LimitedSemaphore:
                     message=f"{log_filter} {type(self).__name__}: unhandled exception while monitoring: ",
                     consume=True,
                 ):
-                    for _ in range(15):
-                        await asyncio.sleep(1)
-                        self.log(
-                            "\n".join(
-                                [
-                                    f"{type(self).__name__} monitor:",
-                                    f"available waiters count: {self._available_count}",
-                                    f"active task count: {len(self._active_tasks)}",
-                                    f"semaphore locked: {self._semaphore.locked()}",
-                                    f"semaphore: {self._semaphore}",
-                                ]
-                            )
+                    await asyncio.sleep(1)
+                    self.log(
+                        "\n".join(
+                            [
+                                f"{type(self).__name__} monitor:",
+                                f"available waiters count: {self._available_count}",
+                                f"active task count: {len(self._active_tasks)}",
+                                f"semaphore locked: {self._semaphore.locked()}",
+                                f"semaphore: {self._semaphore}",
+                            ]
                         )
+                    )
 
     @contextlib.asynccontextmanager
     async def acquire(self) -> AsyncIterator[int]:
@@ -110,15 +107,11 @@ class LimitedSemaphore:
                 if task in self._active_tasks:
                     self.log(f"reentering with task: {task}")
                 self._active_tasks[task] = TaskInfo(task=task)
-                async with contextlib.AsyncExitStack() as async_exit_stack:
-                    if self._log is not None:
-                        await async_exit_stack.enter_async_context(
-                            log_after(
-                                message=f"{type(self).__name__} ({self._name}) held by {task}",
-                                delay=15,
-                                log=self._log,
-                            )
-                        )
+                async with log_after(
+                    message=f"{type(self).__name__} ({self._name}) held by {task}",
+                    delay=15,
+                    log=self._log,
+                ):
                     yield self._available_count
         finally:
             self._available_count += 1
