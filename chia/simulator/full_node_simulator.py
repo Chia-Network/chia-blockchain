@@ -33,13 +33,6 @@ from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
-class _Default:
-    pass
-
-
-default = _Default()
-
-
 def backoff_times(
     initial: float = 0.001,
     final: float = 0.100,
@@ -393,6 +386,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         amount: int,
         wallet: Wallet,
+        timeout: Union[None, float] = None,
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
@@ -405,26 +399,28 @@ class FullNodeSimulator(FullNodeAPI):
         Returns:
             The total number of reward mojos farmed to the requested wallet.
         """
-        rewards = 0
 
-        if amount == 0:
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            rewards = 0
+
+            if amount == 0:
+                return rewards
+
+            height_before: Optional[uint32] = self.full_node.blockchain.get_peak_height()
+            if height_before is None:
+                height_before = uint32(0)
+
+            for count in itertools.count(1):
+                height = uint32(height_before + count)
+                rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
+
+                if rewards >= amount:
+                    break
+            else:
+                raise Exception("internal error")
+
+            await self.farm_blocks_to_wallet(count=count, wallet=wallet)
             return rewards
-
-        height_before: Optional[uint32] = self.full_node.blockchain.get_peak_height()
-        if height_before is None:
-            height_before = uint32(0)
-
-        for count in itertools.count(1):
-            height = uint32(height_before + count)
-            rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
-
-            if rewards >= amount:
-                break
-        else:
-            raise Exception("internal error")
-
-        await self.farm_blocks_to_wallet(count=count, wallet=wallet)
-        return rewards
 
     async def wait_transaction_records_entered_mempool(
         self,
