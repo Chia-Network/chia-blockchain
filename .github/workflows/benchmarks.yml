@@ -26,10 +26,11 @@ jobs:
   build:
     name: Benchmarks
     runs-on: benchmark
+    container:
+      image: ubuntu:22.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         python-version: [ "3.10" ]
     env:
@@ -40,8 +41,18 @@ jobs:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
 
+      - name: Set up container
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y lsb-release git sudo
+
+      - name: Add safe git directory
+        uses: Chia-Network/actions/git-mark-workspace-safe@main
+
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -65,7 +76,7 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Checkout test blocks and plots
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'Chia-Network/test-cache'
           path: '.chia'

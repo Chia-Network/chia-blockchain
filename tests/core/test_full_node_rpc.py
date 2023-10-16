@@ -31,13 +31,13 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.conftest import ConsensusMode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.rpc import validate_get_routes
 
 
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.asyncio
-async def test1(two_nodes_sim_and_wallets_services, self_hostname):
+async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mode):
     num_blocks = 5
     nodes, _, bt = two_nodes_sim_and_wallets_services
     full_node_service_1, full_node_service_2 = nodes
@@ -221,7 +221,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname):
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
         block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-        assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
+        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+            # after the hard fork, we don't compress blocks using
+            # block references anymore
+            assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
 
         block_spends = await client.get_block_spends(block.header_hash)
 
