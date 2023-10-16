@@ -120,12 +120,6 @@ class SyncStore:
         assert heaviest_peak is not None
         return heaviest_peak
 
-    def clear_sync_info(self) -> None:
-        """
-        Clears the peak_to_peer info which can get quite large.
-        """
-        self.peak_to_peer = orderedDict()
-
     def peer_disconnected(self, node_id: bytes32) -> None:
         if node_id in self.peer_to_peak:
             del self.peer_to_peak[node_id]

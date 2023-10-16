@@ -87,7 +87,7 @@ class TestClawbackLifecycle:
     @pytest.mark.asyncio()
     async def test_clawback_spends(self, cost_logger: CostLogger) -> None:
         async with sim_and_client() as (sim, sim_client):
-            key_lookup = KeyTool()  # type: ignore[no-untyped-call]
+            key_lookup = KeyTool()
             sender_index = 1
             sender_pk = G1Element.from_bytes(public_key_for_index(sender_index, key_lookup))
             sender_puz = puzzle_for_pk(sender_pk)
