@@ -105,7 +105,7 @@ class PriorityMutex(Generic[_T_Priority]):
                 await element.ready_event.wait()
             # TODO: lazy and not configurable since we presently have just one use, kinda
             async with log_after(
-                message=f"{type(self).__name__} held by {task}",
+                message=f"{log_filter} {type(self).__name__} held by {task}",
                 delay=15,
                 log=self._log,
             ):

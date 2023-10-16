@@ -108,7 +108,7 @@ class LimitedSemaphore:
                     self.log(f"reentering with task: {task}")
                 self._active_tasks[task] = TaskInfo(task=task)
                 async with log_after(
-                    message=f"{type(self).__name__} ({self._name}) held by {task}",
+                    message=f"{log_filter} {type(self).__name__} ({self._name}) held by {task}",
                     delay=15,
                     log=self._log,
                 ):

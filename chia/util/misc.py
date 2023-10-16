@@ -303,7 +303,7 @@ async def _log_after_monitor(
     with log_exceptions(
         log=log,
         consume=True,
-        message="Caught exception in log_after monitor task",
+        message=f"{log_filter} Caught exception in log_after monitor task",
         exceptions_to_process=BaseException,
     ):
         with contextlib.suppress(asyncio.CancelledError):
@@ -323,7 +323,7 @@ async def _log_after_monitor(
 
                 complete_message = "\n".join(
                     [
-                        f"activity exceeded limit of {delay_string}s ({duration_string}s): {message}",
+                        f"{log_filter} activity exceeded limit of {delay_string}s ({duration_string}s): {message}",
                         "entered via:",
                         entry_stack_string,
                         f"monitoring task presently at: {monitored_task}",
@@ -360,7 +360,7 @@ async def log_after(
         if frame.filename != contextlib.__file__:
             break
     else:
-        raise Exception("did not find wanted frame")
+        raise Exception(f"{log_filter} did not find wanted frame")
 
     entry_stack_string = "".join(traceback.format_list(stack[:-index]))
 

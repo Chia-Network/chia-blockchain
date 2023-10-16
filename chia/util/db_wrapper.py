@@ -206,7 +206,7 @@ class DBWrapper2:
                     self._log.info(
                         "\n".join(
                             [
-                                f"{type(self).__name__} monitor:",
+                                f"{log_filter} {type(self).__name__} monitor:",
                                 f"peak available readers count: {peak_available_readers_count}",
                             ]
                         )
@@ -277,7 +277,7 @@ class DBWrapper2:
                 try:
                     # TODO: lazy and not configurable since we presently have just one use, kinda
                     async with log_after(
-                        message=f"{type(self).__name__} (reader) held",
+                        message=f"{log_filter} {type(self).__name__} (reader) held",
                         delay=15,
                         log=self._log,
                     ):
@@ -307,7 +307,7 @@ class DBWrapper2:
                 try:
                     # TODO: lazy and not configurable since we presently have just one use, kinda
                     async with log_after(
-                        message=f"{type(self).__name__} (writer) held",
+                        message=f"{log_filter} {type(self).__name__} (writer) held",
                         delay=15,
                         log=self._log,
                     ):
@@ -353,7 +353,7 @@ class DBWrapper2:
             yield self._in_use[task]
         else:
             async with log_after(
-                message=f"{type(self).__name__} (reader) waiting for read connection",
+                message=f"{log_filter} {type(self).__name__} (reader) waiting for read connection",
                 delay=15,
                 log=self._log,
             ):
@@ -366,7 +366,7 @@ class DBWrapper2:
                         )
             # TODO: lazy and not configurable since we presently have just one use, kinda
             async with log_after(
-                message=f"{type(self).__name__} (reader)",
+                message=f"{log_filter} {type(self).__name__} (reader)",
                 delay=15,
                 log=self._log,
             ):
