@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from shutil import rmtree
 
+import asyncio
 import pytest
 from click.testing import CliRunner, Result
 
