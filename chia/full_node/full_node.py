@@ -947,13 +947,40 @@ class FullNode:
                         target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
-            fork_point, summaries = await self.request_validate_wp(
-                target_peak.header_hash, target_peak.height, target_peak.weight
-            )
+            self.log.info(f"{log_filter} ._sync() - before .request_validate_wp()")
+            try:
+                fork_point, summaries = await self.request_validate_wp(
+                    target_peak.header_hash, target_peak.height, target_peak.weight
+                )
+            except BaseException:
+                self.log.exception(f"{log_filter} ._sync() - after .request_validate_wp() failure")
+                raise
+            self.log.info(f"{log_filter} ._sync() - after .request_validate_wp() success")
             # Ensures that the fork point does not change
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                await self.blockchain.warmup(fork_point)
-                await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
+            self.log.info(f"{log_filter} ._sync() - before waiting on priority mutex")
+            try:
+                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    self.log.info(f"{log_filter} ._sync() - inside priority mutex success")
+                    self.log.info(f"{log_filter} ._sync() - before .warmup()")
+                    try:
+                        await self.blockchain.warmup(fork_point)
+                    except BaseException:
+                        self.log.exception(f"{log_filter} ._sync() - after .warmup() failure")
+                        raise
+                    self.log.info(f"{log_filter} ._sync() - after .warmup() success")
+                    self.log.info(f"{log_filter} ._sync() - before .sync_from_fork_point()")
+                    try:
+                        await self.sync_from_fork_point(
+                            fork_point, target_peak.height, target_peak.header_hash, summaries
+                        )
+                    except BaseException:
+                        self.log.exception(f"{log_filter} ._sync() - after .sync_from_fork_point() failure")
+                        raise
+                    self.log.info(f"{log_filter} ._sync() - after .sync_from_fork_point() success")
+            except BaseException:
+                self.log.exception(f"{log_filter} ._sync() - after mutex/warmup/sync failure")
+                raise
+            self.log.info(f"{log_filter} ._sync() - after mutex/warmup/sync success")
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -1026,6 +1053,7 @@ class FullNode:
         summaries: List[SubEpochSummary],
     ) -> None:
         buffer_size = 4
+        self.log.info(f"{log_filter} ._sync() - .sync_from_fork_point() - just getting started")
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak: List[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
         fork_point_height = await check_fork_next_block(
