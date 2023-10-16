@@ -100,6 +100,8 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:  # pragma: no cover
         mojo_per_unit = units["chia"]
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
         mojo_per_unit = units["cat"]
+    elif wallet_type in {WalletType.NFT, WalletType.DECENTRALIZED_ID, WalletType.DAO_CAT}:
+        mojo_per_unit = units["mojo"]
     else:
         raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
