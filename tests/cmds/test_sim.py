@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from shutil import rmtree
 
-import asyncio
 import pytest
+import time
 from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
@@ -81,9 +81,9 @@ def stop_simulator(runner: CliRunner, simulator_name: str) -> None:
     result: Result = runner.invoke(cli, ["dev", "sim", "-n", simulator_name, "stop", "-d"])
     assert result.exit_code == 0
     assert "chia_full_node_simulator: Stopped\nDaemon stopped\n" == result.output
-    await asyncio.sleep(15)
+    time.sleep(15)
     rmtree(SIMULATOR_ROOT_PATH / simulator_name)
-    await asyncio.sleep(15)
+    time.sleep(15)
 
 
 def run_all_tests(runner: CliRunner, address: str, simulator_name: str) -> None:
