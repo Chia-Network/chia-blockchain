@@ -122,12 +122,7 @@ class TestFullNodeBlockCompression:
         wallet = wallet_node_1.wallet_state_manager.main_wallet
 
         # Avoid retesting the slow reorg portion, not necessary more than once
-        test_reorgs = (
-            tx_size == 10000
-            and empty_blockchain.block_store.db_wrapper.db_version >= 2
-            and full_node_1.full_node.block_store.db_wrapper.db_version >= 2
-            and full_node_2.full_node.block_store.db_wrapper.db_version >= 2
-        )
+        test_reorgs = True
         _ = await connect_and_get_peer(server_1, server_2, self_hostname)
         _ = await connect_and_get_peer(server_1, server_3, self_hostname)
 

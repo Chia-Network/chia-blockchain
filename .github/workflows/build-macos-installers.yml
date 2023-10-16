@@ -239,6 +239,12 @@ jobs:
         run: |
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
+      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+      - name: Delete signing keychain
+        if: always()
+        run:
+          security delete-keychain signing_temp.keychain || true
+
   publish:
     name: Publish ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
@@ -383,12 +389,6 @@ jobs:
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
         run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
-
-      # We want to delete this no matter what happened in the previous steps (failures, success, etc)
-      - name: Delete signing keychain
-        if: always()
-        run:
-          security delete-keychain signing_temp.keychain || true
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
