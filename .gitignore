@@ -45,6 +45,7 @@ build_scripts/build
 .penv*/
 .venv*/
 venv*/
+venv*
 activate
 
 # Editors
