@@ -15,12 +15,6 @@ if ($d)
     $extras += "dev"
 }
 
-$editable_cli = "--editable"
-if ($i)
-{
-    $editable_cli = ""
-}
-
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
     Write-Output "Chia requires a 64-bit Windows installation"
@@ -109,13 +103,18 @@ foreach ($extra in $extras)
 
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 .penv/Scripts/poetry env use "$pythonVersion"
-# TODO: support $editable_cli
 .penv/Scripts/poetry install @extras_cli
+
+if ($i)
+{
+    .venv/Scripts/pip install --no-deps .
+}
+
 
 if ($p)
 {
     $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
-    $env:VIRTUAL_ENV = "venv"
+    $env:VIRTUAL_ENV = ".venv"
     .\Install-plotter.ps1 bladebit
     .\Install-plotter.ps1 madmax
     $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
