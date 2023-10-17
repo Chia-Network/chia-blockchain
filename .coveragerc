@@ -22,3 +22,4 @@ exclude_also =
   ^\s*\.\.\.\s*$
   if typing.TYPE_CHECKING:
   if TYPE_CHECKING:
+  ^ *@pytest.mark.skip($|\()
