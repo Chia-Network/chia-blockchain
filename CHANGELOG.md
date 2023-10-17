@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.1.1 Chia blockchain 2023-10-11
+
+### Fixed
+- Changed electron version for GUI to 25.9.0 to fix whitescreen issues seen on some linux systems (fixes #16538)
+
 ## 2.1.0 Chia blockchain 2023-10-05
 
 ### Added
