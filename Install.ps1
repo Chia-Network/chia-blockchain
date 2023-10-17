@@ -107,7 +107,7 @@ foreach ($extra in $extras)
 
 if ($i)
 {
-    .venv/Scripts/pip install --no-deps .
+    .venv/Scripts/python -m pip install --no-deps .
 }
 
 

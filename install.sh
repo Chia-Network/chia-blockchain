@@ -314,7 +314,7 @@ if [ ! -f "activate" ]; then
 fi
 
 if [ -n "$EDITABLE" ]; then
-  python install --no-deps .
+  python -m pip install --no-deps .
 fi
 
 # TODO: integrate with poetry?
