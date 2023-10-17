@@ -433,10 +433,11 @@ class BlockStore:
             ) as cursor:
                 log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - inside conn.execute() success")
                 log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - before cursor.fetchall()")
-                for row in await cursor.fetchall():
-                    log.info(
-                        f"{log_filter} ._sync() - .get_block_records_in_range() - inside cursor.fetchall() success"
-                    )
+                for i, row in enumerate(await cursor.fetchall()):
+                    if i == 0:
+                        log.info(
+                            f"{log_filter} ._sync() - .get_block_records_in_range() - inside cursor.fetchall() success"
+                        )
                     header_hash = bytes32(row[0])
                     block_record = BlockRecord.from_bytes(row[1])
                     ret[header_hash] = block_record
