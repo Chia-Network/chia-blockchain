@@ -5,6 +5,7 @@ import dataclasses
 import enum
 import logging
 import multiprocessing
+import time
 import traceback
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
@@ -357,14 +358,27 @@ class Blockchain(BlockchainInterface):
                 fork_height = block.height - len(fork_chain) - 1
                 fork_info = ForkInfo(fork_height, fork_height, fork_hash)
 
+                log.warning(
+                    f"slow path in block validation. Building coin set for fork ({fork_height}, {block.height})"
+                )
+
                 # now run all the blocks of the fork to compute the additions
                 # and removals. They are recorded in the fork_info object
+                counter = 0
+                start = time.monotonic()
                 for height in range(fork_info.fork_height + 1, block.height):
                     fork_block: Optional[FullBlock] = await self.block_store.get_full_block(fork_chain[uint32(height)])
                     assert fork_block is not None
                     assert fork_block.height - 1 == fork_info.peak_height
                     assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
                     await self.run_single_block(fork_block, fork_info, {})
+                    counter += 1
+                end = time.monotonic()
+                log.info(
+                    f"executed {counter} block generators in {end - start:2f} s. "
+                    f"{len(fork_info.additions_since_fork)} additions, "
+                    f"{len(fork_info.removals_since_fork)} removals"
+                )
 
         else:
             temporary_fork_info = False
