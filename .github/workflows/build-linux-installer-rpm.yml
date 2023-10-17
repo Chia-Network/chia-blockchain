@@ -44,9 +44,10 @@ jobs:
     container:
       image: chianetwork/rocky8-builder:latest
     timeout-minutes: 40
+    outputs:
+      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         python-version: ["3.10"]
 
@@ -95,22 +96,6 @@ jobs:
         pip3 install setuptools_scm
         echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
         deactivate
-
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_AWS_SECRET
-        unset HAS_GLUE_SECRET
-
-        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
-
-        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
-      env:
-        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
     - name: Get latest madmax plotter
       env:
@@ -163,6 +148,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        constraints-file-artifact-name: constraints-file-intel
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -203,6 +189,73 @@ jobs:
         name: chia-installers-linux-rpm-intel
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  publish:
+    name: Publish amd64 RPM
+    runs-on: ubuntu-latest
+    needs:
+    - build
+    container:
+      image: chianetwork/rocky8-builder:latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - uses: chia-network/actions/create-venv@main
+      id: create-venv
+
+    - uses: chia-network/actions/activate-venv@main
+      with:
+        directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+
+    - name: Download constraints file
+      uses: actions/download-artifact@v3
+      with:
+        name: constraints-file-intel
+        path: venv
+
+    - name: Install utilities
+      run: |
+        pip install --constraint venv/constraints.txt py3createtorrent
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-linux-rpm-intel
+        path: build_scripts/final_installer/
+
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
+
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
+
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
+      env:
+        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+
     - name: Configure AWS credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
       uses: aws-actions/configure-aws-credentials@v4
@@ -212,8 +265,6 @@ jobs:
 
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
@@ -224,8 +275,6 @@ jobs:
 
     - name: Create Checksums
       if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
         sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
@@ -235,7 +284,6 @@ jobs:
     - name: Create .rpm torrent
       if: env.FULL_RELEASE == 'true'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.torrent --webseed https://download.chia.net/install/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm
@@ -244,8 +292,6 @@ jobs:
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/latest-dev/chia-blockchain-1.x86_64_latest_dev.rpm
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/latest-dev/chia-blockchain-1.x86_64_latest_dev.rpm.sha256
@@ -254,8 +300,6 @@ jobs:
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm s3://download.chia.net/install/
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256 s3://download.chia.net/install/
@@ -268,7 +312,6 @@ jobs:
       if: env.RELEASE == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         gh release upload \
           $RELEASE_TAG \
@@ -284,10 +327,6 @@ jobs:
       if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-linux-rpm
-
-    - name: Remove working files to exclude from cache
-      run: |
-        rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }}
