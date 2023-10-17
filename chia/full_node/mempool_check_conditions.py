@@ -117,7 +117,9 @@ def get_name_puzzle_conditions(
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
 
 
-def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flags: int) -> SpendInfo:
+def get_puzzle_and_solution_for_coin(
+    generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
+) -> SpendInfo:
     try:
         args = bytearray(b"\xff")
         args += bytes(DESERIALIZE_MOD)
@@ -132,7 +134,7 @@ def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin: Coin, flag
             coin.parent_coin_info,
             coin.amount,
             coin.puzzle_hash,
-            flags,
+            get_flags_for_height_and_constants(height, constants),
         )
         return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
     except Exception as e:

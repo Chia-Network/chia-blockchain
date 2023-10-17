@@ -494,7 +494,7 @@ async def test_get_coin_states(db_version: int) -> None:
 
 
 @pytest.mark.asyncio
-async def test_unsupported_version(tmp_dir: Path) -> None:
+async def test_unsupported_version() -> None:
     with pytest.raises(RuntimeError, match="CoinStore does not support database schema v1"):
         async with DBConnection(1) as db_wrapper:
             await CoinStore.create(db_wrapper)
