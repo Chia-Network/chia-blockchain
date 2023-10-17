@@ -29,7 +29,6 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         python-version: [ "3.10" ]
     env:
