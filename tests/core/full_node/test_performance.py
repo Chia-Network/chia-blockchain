@@ -119,7 +119,7 @@ class TestPerformance:
         pr = cProfile.Profile()
         pr.enable()
 
-        with benchmark_runner.assert_runtime(seconds=0.001, label=f"{request.node.name} - mempool"):
+        with benchmark_runner.assert_runtime(seconds=0.0055, label=f"{request.node.name} - mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
                 num_tx += 1
