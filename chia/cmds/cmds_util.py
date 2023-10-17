@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import enum
 import logging
 import traceback
 from contextlib import asynccontextmanager
@@ -30,6 +31,12 @@ from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
+
+
+class OutputType(enum.StrEnum):
+    human = "human"
+    json = "JSON"
+
 
 NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "farmer": FarmerRpcClient,
