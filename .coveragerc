@@ -16,8 +16,7 @@ source =
 
 [report]
 precision = 1
-exclude_lines =
-  pragma: no cover
+exclude_also =
   abc\.abstractmethod
   typing\.overload
   ^\s*\.\.\.\s*$
