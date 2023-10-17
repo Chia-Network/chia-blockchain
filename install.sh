@@ -313,7 +313,7 @@ if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
 
-if [ -n "$EDITABLE" ]; then
+if [ -z "$EDITABLE" ]; then
   .venv/bin/python -m pip install --no-deps .
 fi
 
