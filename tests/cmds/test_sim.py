@@ -7,6 +7,7 @@ import pytest
 from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 mnemonic = (  # ignore any secret warnings
@@ -40,6 +41,12 @@ def test_every_simulator_command() -> None:
     assert f"Farming & Prefarm reward address: {address}" in start_result.output
     assert "chia_full_node_simulator: started" in start_result.output
     assert "Genesis block generated, exiting." in start_result.output
+
+    config_dir = SIMULATOR_ROOT_PATH.joinpath(simulator_name)
+    with lock_and_load_config(config_dir, "config.yaml") as config:
+        config["rpc_timeout"] = 600
+        save_config(config_dir, "config.yaml", config)
+
     try:
         # run all tests
         run_all_tests(runner, address, simulator_name)
