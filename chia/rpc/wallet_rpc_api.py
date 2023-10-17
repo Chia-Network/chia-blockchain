@@ -2227,7 +2227,7 @@ class WalletRpcApi:
             get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
             coin_state,
         )
-        hinted_coins = compute_spend_hints_and_additions(coin_spend)
+        hinted_coins, _ = compute_spend_hints_and_additions(coin_spend)
         # Hint is required, if it doesn't have any hint then it should be invalid
         hint: Optional[bytes32] = None
         for hinted_coin in hinted_coins.values():
