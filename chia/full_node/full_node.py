@@ -1052,12 +1052,6 @@ class FullNode:
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
         # seems to refer to the first diverging block
-        if fork_point_height == 0:
-            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
-        else:
-            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
-            assert fork_hash is not None
-            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
@@ -1094,6 +1088,8 @@ class FullNode:
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
+            fork_info: Optional[ForkInfo] = None
+
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
                 if res is None:
@@ -1102,6 +1098,25 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+
+                # in case we're validating a reorg fork (i.e. not extending the
+                # main chain), we need to record the coin set from that fork in
+                # fork_info. Otherwise validation is very expensive, especially
+                # for deep reorgs
+                peak: Optional[BlockRecord]
+                if fork_info is None:
+                    peak = self.blockchain.get_peak()
+                    extending_main_chain: bool = peak is None or (
+                        peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
+                    )
+                    if not extending_main_chain:
+                        if fork_point_height == 0:
+                            fork_info = ForkInfo(-1, -1, bytes32([0] * 32))
+                        else:
+                            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+                            assert fork_hash is not None
+                            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
+
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
@@ -1116,7 +1131,7 @@ class FullNode:
                         raise ValidationError(err, f"Failed to validate block batch {start_height} to {end_height}")
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 self.log.info(f"Added blocks {start_height} to {end_height}")
-                peak: Optional[BlockRecord] = self.blockchain.get_peak()
+                peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
