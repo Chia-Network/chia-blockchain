@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -69,3 +71,24 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # June 2033
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
 )
+
+
+def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
+    if network_id != "testnet10":
+        return
+    # activate softforks immediately on testnet
+    # these numbers are supposed to match initial-config.yaml
+    if "SOFT_FORK2_HEIGHT" not in overrides:
+        overrides["SOFT_FORK2_HEIGHT"] = 3000000
+    if "SOFT_FORK3_HEIGHT" not in overrides:
+        overrides["SOFT_FORK3_HEIGHT"] = 2997292
+    if "HARD_FORK_HEIGHT" not in overrides:
+        overrides["HARD_FORK_HEIGHT"] = 2997292
+    if "HARD_FORK_FIX_HEIGHT" not in overrides:
+        overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
+    if "PLOT_FILTER_128_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
+    if "PLOT_FILTER_64_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_64_HEIGHT"] = 8010796
+    if "PLOT_FILTER_32_HEIGHT" not in overrides:
+        overrides["PLOT_FILTER_32_HEIGHT"] = 13056556
