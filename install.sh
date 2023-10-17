@@ -23,7 +23,7 @@ EXTRAS='--extras upnp'
 BLSPY_STUBS=
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
-EDITABLE=
+EDITABLE=1
 EDITABLE_CLI='-e'
 
 while getopts adilpsh flag
@@ -34,7 +34,7 @@ do
     # development
     d) EXTRAS="${EXTRAS} --extras dev";BLSPY_STUBS=1;;
     # non-editable
-    i) EDITABLE_CLI='';EDITABLE=1;;
+    i) EDITABLE_CLI='';EDITABLE=;;
     # legacy keyring
     l) EXTRAS="${EXTRAS} --extras legacy_keyring";;
     p) PLOTTER_INSTALL=1;;
@@ -314,12 +314,12 @@ if [ ! -f "activate" ]; then
 fi
 
 if [ -n "$EDITABLE" ]; then
-  python -m pip install --no-deps .
+  .venv/bin/python -m pip install --no-deps .
 fi
 
 # TODO: integrate with poetry?
 if [ -n "$BLSPY_STUBS" ]; then
-python -m pip install ${EDITABLE_CLI} ./blspy-stubs
+  .venv/bin/python -m pip install ${EDITABLE_CLI} ./blspy-stubs
 fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then

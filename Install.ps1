@@ -15,6 +15,12 @@ if ($d)
     $extras += "dev"
 }
 
+$editable = $True
+if ($i)
+{
+    $editable = $False
+}
+
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
     Write-Output "Chia requires a 64-bit Windows installation"
@@ -105,7 +111,7 @@ foreach ($extra in $extras)
 .penv/Scripts/poetry env use "$pythonVersion"
 .penv/Scripts/poetry install @extras_cli
 
-if ($i)
+if (-not $editable)
 {
     .venv/Scripts/python -m pip install --no-deps .
 }
