@@ -10,8 +10,8 @@
   ; DELAYED_PUZZLE_HASH is the puzzle hash of the delayed puzzle
   ; if my_id is passed in as () then this signals that we are trying to do a delayed spend case
   ; p1's meaning changes depending upon which case we're using
-    ; if we are paying to singleton then p1 is singleton_inner_puzzle_hash
-    ; if we are running the delayed case then p1 is the amount to output
+  ; if we are paying to singleton then p1 is singleton_inner_puzzle_hash
+  ; if we are running the delayed case then p1 is the amount to output
 
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
@@ -29,22 +29,22 @@
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
   ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
   (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH inner_puzzle_hash)
-     (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
-                                      inner_puzzle_hash
-                                      (sha256tree (c SINGLETON_MOD_HASH (c LAUNCHER_ID LAUNCHER_PUZZLE_HASH)))
-     )
+    (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
+      inner_puzzle_hash
+      (sha256tree (c SINGLETON_MOD_HASH (c LAUNCHER_ID LAUNCHER_PUZZLE_HASH)))
+    )
   )
 
   (defun-inline claim_rewards (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
     (list
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash) my_id))
-        (list CREATE_COIN_ANNOUNCEMENT '$')
-        (list ASSERT_MY_COIN_ID my_id))
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash) my_id))
+      (list CREATE_COIN_ANNOUNCEMENT '$')
+    (list ASSERT_MY_COIN_ID my_id))
   )
 
   ; main
   (if my_id
-    (claim_rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH p1 my_id)
-    (delayed_spend SECONDS_DELAY DELAYED_PUZZLE_HASH p1)
+      (claim_rewards SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH p1 my_id)
+      (delayed_spend SECONDS_DELAY DELAYED_PUZZLE_HASH p1)
   )
 )

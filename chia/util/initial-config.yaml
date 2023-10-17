@@ -4,6 +4,7 @@ min_mainnet_k_size: 32
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 prefer_ipv6: False
+rpc_timeout: 300
 daemon_port: 55400
 daemon_max_message_size: 50000000 # maximum size of RPC message in bytes
 daemon_heartbeat: 300 # sets the heartbeat for ping/ping interval and timeouts
@@ -71,8 +72,19 @@ network_overrides: &network_overrides
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
-      SOFT_FORK_HEIGHT: 2598742
-      SOFT_FORK2_HEIGHT: 2968742
+      SOFT_FORK2_HEIGHT: 3000000
+      SOFT_FORK3_HEIGHT: 2997292
+      # planned 2.0 release is July 26, height 2965036 on testnet
+      # 1 week later
+      HARD_FORK_HEIGHT: 2997292
+      # November 2023
+      HARD_FORK_FIX_HEIGHT: 3426000
+      # another 2 weeks later
+      PLOT_FILTER_128_HEIGHT: 3061804
+      # 3 years later
+      PLOT_FILTER_64_HEIGHT: 8010796
+      # 3 years later
+      PLOT_FILTER_32_HEIGHT: 13056556
   config:
     mainnet:
       address_prefix: "xch"
@@ -130,6 +142,8 @@ seeder:
   port: 8444
   # Most full nodes on the network run on this port. (i.e. 8444 for mainnet, 58444 for testnet).
   other_peers_port: 8444
+  # What port to run the DNS server on, (this is useful if you are already using port 53 for DNS).
+  dns_port: 53
   # This will override the default full_node.peer_connect_timeout for the crawler full node
   peer_connect_timeout: 2
   # Path to crawler DB. Defaults to $CHIA_ROOT/crawler.db
@@ -145,7 +159,7 @@ seeder:
   nameserver: "example.com."
   ttl: 300
   soa:
-    rname: "hostmaster.example.com."
+    rname: "hostmaster.example.com" # all @ symbols need to be replaced with . in dns records.
     serial_number: 1619105223
     refresh: 10800
     retry: 10800
@@ -163,8 +177,6 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  # The harvester server (if run) will run on this port
-  port: 8448
   farmer_peer:
     host: *self_hostname
     port: 8447
@@ -202,6 +214,20 @@ harvester:
     crt: "config/ssl/ca/chia_ca.crt"
     key: "config/ssl/ca/chia_ca.key"
 
+  # Compressed harvesting.
+  parallel_decompressor_count: 0
+  # If set to 0, `decompressor_thread_count` will default to half of nproc available on the machine.
+  # A non-zero number overrides this default.
+  decompressor_thread_count: 0
+  disable_cpu_affinity: False
+  # Ignore compressed plots with compression level greater than this.
+  max_compression_level_allowed: 7
+  use_gpu_harvesting: False
+  gpu_index: 0
+  enforce_gpu_index: False
+  # If no decompressor is available after `decompressor_timeout` seconds, abort the current operation.
+  decompressor_timeout: 20
+
 pool:
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
@@ -216,9 +242,6 @@ farmer:
   full_node_peer:
     host: *self_hostname
     port: 8444
-  harvester_peer:
-    host: *self_hostname
-    port: 8448
 
   pool_public_keys: []
 
@@ -251,8 +274,6 @@ timelord_launcher:
   logging: *logging
 
 timelord:
-  # The timelord server (if run) will run on this port
-  port: 8446
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
@@ -350,6 +371,8 @@ full_node:
   # If node is more than these blocks behind, will do a short batch-sync, if it's less, will do a backtrack sync
   short_sync_blocks_behind_threshold: 20
 
+  bad_peak_cache_size: 100
+
   # When creating process pools the process count will generally be the CPU count minus
   # this reserved core count.
   reserved_cores: 0
@@ -421,18 +444,10 @@ full_node:
     - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
-  timelord_peer:
-    host: *self_hostname
-    port: 8446
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
-  wallet_peer:
-    host: *self_hostname
-    port: 8449
+    enable_private_networks: False
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -449,9 +464,6 @@ full_node:
   use_chia_loop_policy: True
 
 ui:
-  # The ui node server (if run) will run on this port
-  port: 8222
-
   # Which port to use to communicate with the full node
   rpc_port: 8555
 
@@ -485,7 +497,6 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
-  port: 8449
   rpc_port: 9256
 
   enable_profiler: False
@@ -542,6 +553,7 @@ wallet:
   introducer_peer:
     host: introducer.chia.net # Chia AWS introducer IPv4/IPv6
     port: 8444
+    enable_private_networks: False
 
   ssl:
     private_crt: "config/ssl/wallet/private_wallet.crt"
@@ -581,12 +593,27 @@ wallet:
   # The amount someone has to pay you in mojos for you to see their notification
   required_notification_amount: 10000000
 
+  #################################
+  #  Inner puzzle decorators      #
+  #################################
+  # Default puzzle decorator settings, this will apply to all asset wallets under the same key
+  # Here is an example
+  # puzzle_decorators:
+  #   2999502625:
+  #     - decorator: "CLAWBACK"
+  #       clawback_timelock: 3600
+  #     - decorator: "DECORATOR_TYPE" #If you want to add more decorators
+  #       parameter1: 0
+
+  auto_claim:
+    enabled: False
+    tx_fee: 0
+    min_amount: 0
+    batch_size: 50
+
 data_layer:
   # TODO: consider name
   # TODO: organize consistently with other sections
-
-  # TODO: shouldn't we not need this since we have no actual public interface (yet)?
-  port: 8561
   wallet_peer:
     host: localhost
     port: 9256
@@ -611,6 +638,11 @@ data_layer:
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
   fee: 1000000000
+
+  # this is a debug and profiling facility that logs all SQLite commands to a
+  # separate log file (under logging/data_sql.log).
+  log_sqlite_cmds: False
+
   logging: *logging
 
   # TODO: which of these are really appropriate?
@@ -621,8 +653,11 @@ data_layer:
     public_crt: "config/ssl/data_layer/public_data_layer.crt"
     public_key: "config/ssl/data_layer/public_data_layer.key"
 
-  uploaders: []
-  downloaders: []
+  plugins:
+    uploaders: []
+    downloaders: []
+  maximum_full_file_count: 1
+
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True

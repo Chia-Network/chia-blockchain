@@ -51,8 +51,6 @@ def configure(
                         ":".join(set_farmer_peer.split(":")[:-1]),
                         set_farmer_peer.split(":")[-1],
                     )
-                    config["full_node"]["farmer_peer"]["host"] = host
-                    config["full_node"]["farmer_peer"]["port"] = int(port)
                     config["harvester"]["farmer_peer"]["host"] = host
                     config["harvester"]["farmer_peer"]["port"] = int(port)
                     print("Farmer peer updated, make sure your harvester has the proper cert installed")
@@ -71,7 +69,6 @@ def configure(
             change_made = True
         if set_harvester_port:
             config["harvester"]["port"] = int(set_harvester_port)
-            config["farmer"]["harvester_peer"]["port"] = int(set_harvester_port)
             print("Default harvester port updated")
             change_made = True
         if set_log_level:
@@ -207,7 +204,7 @@ def configure(
             save_config(root_path, "config.yaml", config)
 
 
-@click.command("configure", short_help="Modify configuration", no_args_is_help=True)
+@click.command("configure", help="Modify configuration", no_args_is_help=True)
 @click.option(
     "--testnet",
     "-t",

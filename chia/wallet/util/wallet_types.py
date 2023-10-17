@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, TypeVar
 
-from typing_extensions import TypedDict
-
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32
+from chia.util.streamable import Streamable, streamable
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
@@ -27,17 +25,26 @@ class WalletType(IntEnum):
     NFT = 10
     DATA_LAYER = 11
     DATA_LAYER_OFFER = 12
+    VC = 13
+    DAO = 14
+    DAO_CAT = 15
+    CRCAT = 57
 
 
 class CoinType(IntEnum):
     NORMAL = 0
     CLAWBACK = 1
+    CRCAT_PENDING = 2
+    CRCAT = 3
 
 
-class AmountWithPuzzlehash(TypedDict):
-    amount: uint64
-    puzzlehash: bytes32
-    memos: List[bytes]
+class RemarkDataType(IntEnum):
+    NORMAL = 0
+    CUSTODY = 1
+    CLAWBACK = 2
+
+
+T = TypeVar("T", contravariant=True)
 
 
 @dataclass(frozen=True)
@@ -46,5 +53,13 @@ class WalletIdentifier:
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol[T]) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
+
+
+# TODO, Can be replaced with WalletIdentifier if we have streamable enums
+@streamable
+@dataclass(frozen=True)
+class StreamableWalletIdentifier(Streamable):
+    id: uint32
+    type: uint8

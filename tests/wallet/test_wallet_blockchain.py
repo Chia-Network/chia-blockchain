@@ -6,16 +6,17 @@ import pytest
 
 from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
-from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.weight_proof import WeightProof
 from chia.util.generator_tools import get_block_header
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
+from tests.conftest import ConsensusMode
 from tests.util.db_connection import DBConnection
 
 
 class TestWalletBlockchain:
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
     @pytest.mark.asyncio
     async def test_wallet_blockchain(self, simulator_and_wallet, default_1000_blocks):
         [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
@@ -48,7 +49,7 @@ class TestWalletBlockchain:
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
-            chain = await WalletBlockchain.create(store, test_constants)
+            chain = await WalletBlockchain.create(store, bt.constants)
 
             assert (await chain.get_peak_block()) is None
             assert chain.get_latest_timestamp() == 0

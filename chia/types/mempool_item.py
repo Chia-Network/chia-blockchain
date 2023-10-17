@@ -1,15 +1,25 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
+
+
+@dataclass(frozen=True)
+class BundleCoinSpend:
+    coin_spend: CoinSpend
+    eligible_for_dedup: bool
+    additions: List[Coin]
+    # cost on the specific solution in this item
+    cost: Optional[uint64] = None
 
 
 @dataclass(frozen=True)
@@ -23,10 +33,13 @@ class MempoolItem:
     # If present, this SpendBundle is not valid at or before this height
     assert_height: Optional[uint32] = None
 
-    # If presemt, this SpendBundle is not valid once the block height reaches
+    # If present, this SpendBundle is not valid once the block height reaches
     # the specified height
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
+
+    # Map of coin ID to coin spend data between the bundle and its NPCResult
+    bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = field(default_factory=dict)
 
     def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
@@ -44,8 +57,7 @@ class MempoolItem:
 
     @property
     def cost(self) -> uint64:
-        assert self.npc_result.conds is not None
-        return uint64(self.npc_result.conds.cost)
+        return self.npc_result.cost
 
     @property
     def additions(self) -> List[Coin]:

@@ -142,29 +142,34 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            full_tree_name: str = data["full_tree_filename"]
+            full_tree_name: Optional[str] = data.get("full_tree_filename", None)
             diff_name: str = data["diff_filename"]
 
             # filenames must follow the DataLayer naming convention
-            if not is_filename_valid(full_tree_name) or not is_filename_valid(diff_name):
+            if full_tree_name is not None and not is_filename_valid(full_tree_name):
+                return web.json_response({"uploaded": False})
+            if not is_filename_valid(diff_name):
                 return web.json_response({"uploaded": False})
 
             # Pull the store_id from the filename to make sure we only upload for configured stores
-            full_tree_id = bytes32.fromhex(full_tree_name[:64])
+            full_tree_id = None if full_tree_name is None else bytes32.fromhex(full_tree_name[:64])
             diff_tree_id = bytes32.fromhex(diff_name[:64])
 
-            if not (full_tree_id == diff_tree_id == store_id):
+            if full_tree_id is not None and not (full_tree_id == diff_tree_id == store_id):
+                return web.json_response({"uploaded": False})
+            if full_tree_id is None and diff_tree_id != store_id:
                 return web.json_response({"uploaded": False})
 
-            full_tree_path = self.server_files_path.joinpath(full_tree_name)
+            full_tree_path = None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
             diff_path = self.server_files_path.joinpath(diff_name)
 
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    await asyncio.get_running_loop().run_in_executor(
-                        pool,
-                        functools.partial(my_bucket.upload_file, full_tree_path, full_tree_path.name),
-                    )
+                    if full_tree_path is not None:
+                        await asyncio.get_running_loop().run_in_executor(
+                            pool,
+                            functools.partial(my_bucket.upload_file, full_tree_path, full_tree_path.name),
+                        )
                     await asyncio.get_running_loop().run_in_executor(
                         pool, functools.partial(my_bucket.upload_file, diff_path, diff_path.name)
                     )

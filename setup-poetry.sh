@@ -28,4 +28,3 @@ $PYTHON_COMMAND -m venv .penv
 .penv/bin/python -m pip install --upgrade pip setuptools wheel
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
 .penv/bin/python -m pip install poetry
-.penv/bin/poetry self add poetry-dynamic-versioning-plugin@latest

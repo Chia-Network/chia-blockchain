@@ -19,16 +19,14 @@ class HintStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> HintStore:
+        if db_wrapper.db_version != 2:
+            raise RuntimeError(f"HintStore does not support database schema v{db_wrapper.db_version}")
+
         self = HintStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating hint store tables and indexes.")
-            if self.db_wrapper.db_version == 2:
-                await conn.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
-            else:
-                await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob, hint blob)"
-                )
+            await conn.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             log.info("DB: Creating index hint_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
         return self
@@ -45,16 +43,10 @@ class HintStore:
             return None
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            if self.db_wrapper.db_version == 2:
-                cursor = await conn.executemany(
-                    "INSERT OR IGNORE INTO hints VALUES(?, ?)",
-                    coin_hint_list,
-                )
-            else:
-                cursor = await conn.executemany(
-                    "INSERT INTO hints VALUES(?, ?, ?)",
-                    [(None,) + record for record in coin_hint_list],
-                )
+            cursor = await conn.executemany(
+                "INSERT OR IGNORE INTO hints VALUES(?, ?)",
+                coin_hint_list,
+            )
             await cursor.close()
 
     async def count_hints(self) -> int:

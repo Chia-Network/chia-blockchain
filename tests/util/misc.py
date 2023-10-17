@@ -3,21 +3,30 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import enum
+import functools
 import gc
+import logging
 import math
 import os
 import subprocess
+import sys
 from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Type, Union
 
 import pytest
-from typing_extensions import final
+from chia_rs import Coin
+from typing_extensions import Protocol, final
 
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
+from chia.util.hash import std_hash
+from chia.util.ints import uint64
+from chia.wallet.util.compute_hints import HintedCoin
 from tests.core.data_layer.util import ChiaRoot
 
 
@@ -230,6 +239,7 @@ class _AssertRuntime:
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
@@ -272,15 +282,23 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if exc_type is None:
+        if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
             assert runtime.duration < self.seconds, results.message()
 
 
-# Related to the comment above about needing a class vs. using the context manager
-# decorator, this is just here to retain the function-style naming as the public
-# interface.  Hopefully we can switch away from the class at some point.
-assert_runtime = _AssertRuntime
+@final
+@dataclasses.dataclass
+class BenchmarkRunner:
+    enable_assertion: bool = True
+    label: Optional[str] = None
+
+    @functools.wraps(_AssertRuntime)
+    def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", self.enable_assertion)
+        if self.label is not None:
+            kwargs.setdefault("label", self.label)
+        return _AssertRuntime(*args, **kwargs)
 
 
 @contextlib.contextmanager
@@ -303,3 +321,75 @@ def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[su
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+
+
+# https://github.com/pytest-dev/pytest/blob/7.3.1/src/_pytest/mark/__init__.py#L45
+Marks = Union[pytest.MarkDecorator, Collection[Union[pytest.MarkDecorator, pytest.Mark]]]
+
+
+class DataCase(Protocol):
+    marks: Marks
+
+    @property
+    def id(self) -> str:
+        ...
+
+
+def datacases(*cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+    return pytest.mark.parametrize(
+        argnames=_name,
+        argvalues=[pytest.param(case, id=case.id, marks=case.marks) for case in cases],
+    )
+
+
+class DataCasesDecorator(Protocol):
+    def __call__(self, *cases: DataCase, _name: str = "case") -> pytest.MarkDecorator:
+        ...
+
+
+def named_datacases(name: str) -> DataCasesDecorator:
+    return functools.partial(datacases, _name=name)
+
+
+@dataclasses.dataclass
+class CoinGenerator:
+    _seed: int = -1
+
+    def _get_hash(self) -> bytes32:
+        self._seed += 1
+        return std_hash(self._seed.to_bytes(length=32, byteorder="big"))
+
+    def _get_amount(self) -> uint64:
+        self._seed += 1
+        return uint64(self._seed)
+
+    def get(self, parent_coin_id: Optional[bytes32] = None, include_hint: bool = True) -> HintedCoin:
+        if parent_coin_id is None:
+            parent_coin_id = self._get_hash()
+        hint = None
+        if include_hint:
+            hint = self._get_hash()
+        return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), hint)
+
+
+def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
+    if hinted_coin.hint is not None:
+        memos = [hinted_coin.hint]
+    else:
+        memos = []
+    return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
+
+
+def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=file)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
+    return logger

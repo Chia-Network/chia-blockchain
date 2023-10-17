@@ -5,11 +5,11 @@ After `chia plots create` becomes obsolete, consider removing it from there.
 from __future__ import annotations
 
 import asyncio
+import importlib.metadata
 import logging
+from argparse import Namespace
 from pathlib import Path
 from typing import Any, Dict, Optional
-
-import pkg_resources
 
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from chia.plotting.util import Params, add_plot_directory, validate_plot_size
@@ -18,11 +18,11 @@ log = logging.getLogger(__name__)
 
 
 def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
-    chiapos_version: str = pkg_resources.get_distribution("chiapos").version
+    chiapos_version: str = importlib.metadata.version("chiapos")
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 
-def plot_chia(args, root_path):
+def plot_chia(args: Namespace, root_path: Path) -> None:
     try:
         validate_plot_size(root_path, args.size, args.override)
     except ValueError as e:

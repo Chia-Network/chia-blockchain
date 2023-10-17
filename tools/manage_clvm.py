@@ -13,6 +13,8 @@ import typing
 import click
 import typing_extensions
 
+from chia.types.blockchain_format.sized_bytes import bytes32
+
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
 cache_path = root.joinpath(".chia_cache", "manage_clvm.json")
@@ -43,7 +45,7 @@ class ManageClvmError(Exception):
     pass
 
 
-class CacheEntry(typing.TypedDict):
+class CacheEntry(typing_extensions.TypedDict):
     clsp: str
     hex: str
     hash: str
@@ -70,7 +72,7 @@ class WrongCacheVersionError(CacheVersionError):
         super().__init__(f"Cache has wrong version, expected {expected_version!r} got: {found_version!r}")
 
 
-class Cache(typing.TypedDict):
+class Cache(typing_extensions.TypedDict):
     entries: CacheEntries
     version: CacheVersion
 
@@ -99,7 +101,7 @@ def dump_cache(cache: Cache, file: typing.IO[str]) -> None:
     json.dump(cache, file, indent=4)
 
 
-def generate_hash_bytes(hex_bytes: bytes) -> bytes:
+def generate_hash_bytes(hex_bytes: bytes) -> bytes32:
     cleaned_blob = bytes.fromhex(hex_bytes.decode("utf-8"))
     serialize_program = SerializedProgram.from_bytes(cleaned_blob)
     return serialize_program.get_tree_hash()
@@ -141,7 +143,7 @@ class ClvmBytes:
         hex_bytes = paths.hex.read_bytes()
         return cls(
             hex=hex_bytes,
-            hash=bytes.fromhex(hash_dict[paths.hash])
+            hash=bytes32(bytes.fromhex(hash_dict[paths.hash]))
             if paths.hash in hash_dict
             else generate_hash_bytes(hex_bytes=hex_bytes),
         )

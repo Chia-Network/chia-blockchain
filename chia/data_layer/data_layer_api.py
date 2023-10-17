@@ -7,9 +7,11 @@ from chia.server.server import ChiaServer
 
 
 class DataLayerAPI:
+    log: logging.Logger
     data_layer: DataLayer
 
     def __init__(self, data_layer: DataLayer) -> None:
+        self.log = logging.getLogger(__name__)
         self.data_layer = data_layer
 
     # def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
@@ -19,10 +21,5 @@ class DataLayerAPI:
     def server(self) -> ChiaServer:
         return self.data_layer.server
 
-    @property
-    def log(self) -> logging.Logger:
-        return self.data_layer.log
-
-    @property
-    def api_ready(self) -> bool:
+    def ready(self) -> bool:
         return self.data_layer.initialized

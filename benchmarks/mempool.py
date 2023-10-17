@@ -19,8 +19,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.chunks import chunks
 from chia.util.ints import uint32, uint64
+from chia.util.misc import to_batches
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -140,12 +140,12 @@ async def run_mempool_benchmark() -> None:
 
         bundles = []
         print("     large spend bundles")
-        for coins in chunks(unspent, 200):
-            print(f"{len(coins)} coins")
+        for batch in to_batches(unspent, 200):
+            print(f"{len(batch.entries)} coins")
             tx = SpendBundle.aggregate(
                 [
                     wt.generate_signed_transaction(uint64(c.amount // 2), wt.get_new_puzzlehash(), c, fee=peer + idx)
-                    for c in coins
+                    for c in batch.entries
                 ]
             )
             bundles.append(tx)
@@ -238,7 +238,29 @@ async def run_mempool_benchmark() -> None:
             npc_result = NPCResult(
                 None,
                 SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, None, None, None, None, None, [], [], 0)],
+                    [
+                        Spend(
+                            coin_id,
+                            bytes32(b" " * 32),
+                            bytes32(b" " * 32),
+                            123,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            0,
+                        )
+                    ],
                     0,
                     0,
                     0,
@@ -270,7 +292,29 @@ async def run_mempool_benchmark() -> None:
             npc_result = NPCResult(
                 None,
                 SpendBundleConditions(
-                    [Spend(coin_id, bytes32(b" " * 32), None, None, None, None, None, None, [], [], 0)],
+                    [
+                        Spend(
+                            coin_id,
+                            bytes32(b" " * 32),
+                            bytes32(b" " * 32),
+                            123,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            None,
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            [],
+                            0,
+                        )
+                    ],
                     0,
                     0,
                     0,

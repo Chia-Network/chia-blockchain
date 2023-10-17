@@ -47,7 +47,7 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: tuple[str, 
     return return_val
 
 
-@click.command("stop", short_help="Stop services")
+@click.command("stop", help="Stop services")
 @click.option("-d", "--daemon", is_flag=True, type=bool, help="Stop daemon")
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context

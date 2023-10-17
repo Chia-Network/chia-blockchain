@@ -2,6 +2,8 @@ param(
     [Parameter(HelpMessage="install development dependencies")]
     [switch]$d = $False,
     [Parameter()]
+    [switch]$i = $False,
+    [Parameter()]
     [switch]$p = $False
 )
 
@@ -11,6 +13,12 @@ $extras = @("upnp")
 if ($d)
 {
     $extras += "dev"
+}
+
+$editable_cli = "--editable"
+if ($i)
+{
+    $editable_cli = ""
 }
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
@@ -45,7 +53,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.11", "3.10", "3.9", "3.8", "3.7"
+$supportedPythonVersions = "3.11", "3.10", "3.9", "3.8"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -101,6 +109,7 @@ foreach ($extra in $extras)
 
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 .penv/Scripts/poetry env use "$pythonVersion"
+# TODO: support $editable_cli
 .penv/Scripts/poetry install @extras_cli
 
 if ($p)
@@ -114,8 +123,8 @@ if ($p)
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
-Write-Output "For assistance join us on Keybase in the #support chat channel:"
-Write-Output "https://keybase.io/team/chia_network.public"
+Write-Output "For assistance join us on Discord in the #support chat channel:"
+Write-Output "https://discord.gg/chia"
 Write-Output ""
 Write-Output "Try the Quick Start Guide to running chia-blockchain:"
 Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"

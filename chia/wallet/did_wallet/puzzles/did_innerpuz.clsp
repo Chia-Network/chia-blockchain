@@ -1,0 +1,135 @@
+; The DID innerpuzzle is designed to sit inside the singleton layer and provide functionality related to being an identity.
+; At the moment the two pieces of functionality are recovery and message creation.
+; A DID's ID is it's Singleton ID
+; Recovery is based around having a list of known other DIDs which can send messages approving you change the innerpuzzle of your DID singleton
+
+(mod
+  (
+    INNER_PUZZLE  ; Standard P2 inner puzzle, used to record the ownership of the DID.
+    RECOVERY_DID_LIST_HASH  ; the list of DIDs that can send messages to you for recovery we store only the hash so that we don't have to reveal every time we make a message spend
+    NUM_VERIFICATIONS_REQUIRED  ; how many of the above list are required for a recovery
+    SINGLETON_STRUCT  ; my singleton_struct, formerly a Truth - ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
+    METADATA  ; Customized metadata, e.g KYC info
+    mode  ; this indicates which spend mode we want. 0. Recovery mode 1. Run INNER_PUZZLE with p2_solution
+    my_amount_or_inner_solution  ; In mode 0, we use this to recover our coin and assert it is our actual amount
+    ; In mode 1 this is the solution of the inner P2 puzzle, only required in the create message mode and transfer mode.
+    new_inner_puzhash  ; In recovery mode, this will be the new wallet DID puzzle hash
+    parent_innerpuzhash_amounts_for_recovery_ids  ; during a recovery we need extra information about our recovery list coins
+    pubkey  ; this is the new pubkey used for a recovery
+    recovery_list_reveal  ; this is the reveal of the stored list of DIDs approved for recovery
+    my_id  ; my coin ID
+  )
+  ;message is the new puzzle in the recovery and standard spend cases
+
+  ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST_HASH are curried into the puzzle
+  ;EXAMPLE SOLUTION (0xcafef00d 0x12341234 0x923bf9a7856b19d335a65f12d68957d497e1f0c16c0e14baf6d120e60753a1ce 2 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) () (0xfafafafa 0xfaf5faf5 200)) 0xfadeddab (0x22222222 0x33333333 0x44444444))
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+    (if (l TREE)
+        (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+        (sha256 1 TREE)
+    )
+  )
+
+  ; recovery message module - gets values curried in to make the puzzle
+  (defun make_message_puzzle (recovering_coin newpuz pubkey)
+    (qq (q . (((unquote CREATE_COIN_ANNOUNCEMENT) (unquote recovering_coin)) ((unquote AGG_SIG_UNSAFE) (unquote pubkey) (unquote newpuz)))))
+  )
+
+  ; this function creates the assert announcement for each message coin approving a recovery
+  (defun-inline create_consume_message (coin_id my_id new_innerpuz pubkey)
+    (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 coin_id (sha256tree1 (make_message_puzzle my_id new_innerpuz pubkey))) my_id))
+  )
+
+  ; this function calculates a coin ID given the inner puzzle and singleton information
+  (defun create_coin_ID_for_recovery (SINGLETON_STRUCT launcher_id parent innerpuzhash amount)
+    (sha256 parent (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c launcher_id (r (r SINGLETON_STRUCT)))) innerpuzhash) amount)
+  )
+
+
+  ; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clib
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree1 SINGLETON_STRUCT)
+    )
+  )
+
+  ; this loops over our identities to check list, and checks if we have been given parent information for this identity
+  ; the reason for this is because we might only require 3/5 of the IDs give approval messages for a recovery
+  ; if we have the information for an identity then we create a consume message using that information
+
+  (defun check_messages_from_identities (SINGLETON_STRUCT num_verifications_required identities my_id  new_puz parent_innerpuzhash_amounts_for_recovery_ids pubkey num_verifications)
+    (if identities
+        (if (f parent_innerpuzhash_amounts_for_recovery_ids)
+            ; if we have parent information then we should create a consume coin condition
+            (c
+              (create_consume_message
+                ; create coin_id from DID
+                (create_coin_ID_for_recovery
+                  SINGLETON_STRUCT
+                  (f identities)
+                  (f (f parent_innerpuzhash_amounts_for_recovery_ids))
+                  (f (r (f parent_innerpuzhash_amounts_for_recovery_ids)))
+                (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
+                my_id
+                new_puz
+                pubkey
+              )
+              (check_messages_from_identities
+                SINGLETON_STRUCT
+                num_verifications_required
+                (r identities)
+                my_id
+                new_puz
+                (r parent_innerpuzhash_amounts_for_recovery_ids)
+                pubkey
+                (+ num_verifications 1)
+              )
+            )
+            ; if no parent information found for this identity, move on to next in list
+            (check_messages_from_identities
+              SINGLETON_STRUCT
+              (r identities)
+              my_id
+              new_puz
+              (r parent_innerpuzhash_amounts_for_recovery_ids)
+              pubkey
+              num_verifications
+            )
+        )
+        ;if we're out of identites to check for, check we have enough
+        (if (> num_verifications (- num_verifications_required 1))
+            (list (list AGG_SIG_UNSAFE pubkey new_puz) )
+            (x)
+        )
+    )
+  )
+
+  ;Spend modes:
+  ;0 = recovery
+  ;1 = run the INNER_PUZZLE
+
+  ;MAIN
+  (if mode
+      ; mode 1 - run INNER_PUZZLE
+      (a INNER_PUZZLE my_amount_or_inner_solution)
+
+      ; mode 0 - recovery
+      (if (all (= (sha256tree1 recovery_list_reveal) RECOVERY_DID_LIST_HASH) (> NUM_VERIFICATIONS_REQUIRED 0))
+          (c (list ASSERT_MY_AMOUNT my_amount_or_inner_solution)
+            (c (list CREATE_COIN new_inner_puzhash my_amount_or_inner_solution (list new_inner_puzhash))
+              (c (list ASSERT_MY_COIN_ID my_id)
+                (check_messages_from_identities SINGLETON_STRUCT NUM_VERIFICATIONS_REQUIRED recovery_list_reveal my_id new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey 0)
+              )
+            )
+          )
+          (x)
+      )
+  )
+)

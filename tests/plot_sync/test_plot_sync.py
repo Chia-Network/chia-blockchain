@@ -11,8 +11,10 @@ import pytest
 import pytest_asyncio
 from blspy import G1Element
 
-from chia.farmer.farmer_api import Farmer
+from chia.farmer.farmer import Farmer
+from chia.farmer.farmer_api import FarmerAPI
 from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.receiver import Receiver
 from chia.plot_sync.sender import Sender
@@ -71,6 +73,7 @@ class ExpectedResult:
                 G1Element(),
                 uint64(0),
                 uint64(0),
+                uint8(0),
             )
 
         self.valid_count += len(list_plots)
@@ -108,8 +111,8 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[Service[Harvester]]
-    farmer_service: Service[Farmer]
+    harvester_services: List[Service[Harvester, HarvesterAPI]]
+    farmer_service: Service[Farmer, FarmerAPI]
     harvesters: List[Harvester]
     farmer: Farmer
     dir_1: Directory
@@ -191,6 +194,7 @@ class Environment:
             assert plot.prover.get_filename() == delta.valid.additions[path].filename
             assert plot.prover.get_size() == delta.valid.additions[path].size
             assert plot.prover.get_id() == delta.valid.additions[path].plot_id
+            assert plot.prover.get_compression_level() == delta.valid.additions[path].compression_level
             assert plot.pool_public_key == delta.valid.additions[path].pool_public_key
             assert plot.pool_contract_puzzle_hash == delta.valid.additions[path].pool_contract_puzzle_hash
             assert plot.plot_public_key == delta.valid.additions[path].plot_public_key
@@ -251,6 +255,7 @@ class Environment:
                 assert plot_info.prover.get_filename() == receiver.plots()[str(path)].filename
                 assert plot_info.prover.get_size() == receiver.plots()[str(path)].size
                 assert plot_info.prover.get_id() == receiver.plots()[str(path)].plot_id
+                assert plot_info.prover.get_compression_level() == receiver.plots()[str(path)].compression_level
                 assert plot_info.pool_public_key == receiver.plots()[str(path)].pool_public_key
                 assert plot_info.pool_contract_puzzle_hash == receiver.plots()[str(path)].pool_contract_puzzle_hash
                 assert plot_info.plot_public_key == receiver.plots()[str(path)].plot_public_key
@@ -272,7 +277,10 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+    tmp_path: Path,
+    farmer_two_harvester_not_started: Tuple[
+        List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
+    ],
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -558,7 +566,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools]
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

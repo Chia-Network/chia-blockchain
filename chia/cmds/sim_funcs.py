@@ -85,14 +85,12 @@ def create_chia_directory(
             config["daemon_port"] -= port_offset
             config["network_overrides"]["config"]["simulator0"]["default_full_node_port"] = 38444 + port_offset
             # wallet
-            config["wallet"]["port"] += port_offset
             config["wallet"]["rpc_port"] += port_offset
             # full node
             config["full_node"]["port"] -= port_offset
             config["full_node"]["rpc_port"] += port_offset
             # connect wallet to full node
             config["wallet"]["full_node_peer"]["port"] = config["full_node"]["port"]
-            config["full_node"]["wallet_peer"]["port"] = config["wallet"]["port"]
             # ui
             config["ui"]["daemon_port"] = config["daemon_port"]
         else:
@@ -257,9 +255,7 @@ async def get_current_height(root_path: Path) -> int:
     async with get_any_service_client(SimulatorFullNodeRpcClient, root_path=root_path, consume_errors=False) as (
         node_client,
         _,
-        _,
     ):
-        assert node_client is not None  # this cant be None, because we don't catch errors
         num_blocks = len(await node_client.get_all_blocks())
     return num_blocks
 
@@ -393,42 +389,37 @@ async def print_status(
     from chia.cmds.show_funcs import print_blockchain_state
     from chia.cmds.units import units
 
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path, fingerprint) as (
-        node_client,
-        config,
-        _,
-    ):
-        if node_client is not None:
-            # Display keychain info
-            if show_key:
-                if fingerprint is None:
-                    fingerprint = config["simulator"]["key_fingerprint"]
-                if fingerprint is not None:
-                    display_key_info(
-                        fingerprint, config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-                    )
-                else:
-                    print(
-                        "No fingerprint in config, either rerun 'cdv sim create' "
-                        "or use --fingerprint to specify one, skipping key information."
-                    )
-            # chain status ( basically chia show -s)
-            await print_blockchain_state(node_client, config)
-            print("")
-            # farming information
-            target_ph: bytes32 = await node_client.get_farming_ph()
-            farming_coin_records = await node_client.get_coin_records_by_puzzle_hash(target_ph, False)
-            prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-            print(
-                f"Current Farming address: {encode_puzzle_hash(target_ph, prefix)}, "
-                f"with a balance of: "
-                f"{sum(coin_records.coin.amount for coin_records in farming_coin_records) / units['chia']} TXCH."
-            )
-            if show_addresses:
-                print("All Addresses: ")
-                await print_wallets(config, node_client)
-            if show_coins:
-                await print_coin_records(config, node_client, include_reward_coins)
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+        # Display keychain info
+        if show_key:
+            if fingerprint is None:
+                fingerprint = config["simulator"]["key_fingerprint"]
+            if fingerprint is not None:
+                display_key_info(
+                    fingerprint, config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+                )
+            else:
+                print(
+                    "No fingerprint in config, either rerun 'cdv sim create' "
+                    "or use --fingerprint to specify one, skipping key information."
+                )
+        # chain status ( basically chia show -s)
+        await print_blockchain_state(node_client, config)
+        print("")
+        # farming information
+        target_ph: bytes32 = await node_client.get_farming_ph()
+        farming_coin_records = await node_client.get_coin_records_by_puzzle_hash(target_ph, False)
+        prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+        print(
+            f"Current Farming address: {encode_puzzle_hash(target_ph, prefix)}, "
+            f"with a balance of: "
+            f"{sum(coin_records.coin.amount for coin_records in farming_coin_records) / units['chia']} TXCH."
+        )
+        if show_addresses:
+            print("All Addresses: ")
+            await print_wallets(config, node_client)
+        if show_coins:
+            await print_coin_records(config, node_client, include_reward_coins)
 
 
 async def revert_block_height(
@@ -442,27 +433,22 @@ async def revert_block_height(
     """
     This function allows users to easily revert the chain to a previous state or perform a reorg.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        _,
-        _,
-    ):
-        if node_client is not None:
-            if use_revert_blocks:
-                if num_new_blocks != 1:
-                    print(f"Ignoring num_new_blocks: {num_new_blocks}, because we are not performing a reorg.")
-                # in this case num_blocks is the number of blocks to delete
-                new_height: int = await node_client.revert_blocks(num_blocks, reset_chain_to_genesis)
-                print(
-                    f"All transactions in Block: {new_height + num_blocks} and above were successfully deleted, "
-                    "you should now delete & restart all wallets."
-                )
-            else:
-                # However, in this case num_blocks is the fork height.
-                new_height = await node_client.reorg_blocks(num_blocks, num_new_blocks, use_revert_blocks)
-                old_height = new_height - num_new_blocks
-                print(f"All transactions in Block: {old_height - num_blocks} and above were successfully reverted.")
-            print(f"Block Height is now: {new_height}")
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+        if use_revert_blocks:
+            if num_new_blocks != 1:
+                print(f"Ignoring num_new_blocks: {num_new_blocks}, because we are not performing a reorg.")
+            # in this case num_blocks is the number of blocks to delete
+            new_height: int = await node_client.revert_blocks(num_blocks, reset_chain_to_genesis)
+            print(
+                f"All transactions in Block: {new_height + num_blocks} and above were successfully deleted, "
+                "you should now delete & restart all wallets."
+            )
+        else:
+            # However, in this case num_blocks is the fork height.
+            new_height = await node_client.reorg_blocks(num_blocks, num_new_blocks, use_revert_blocks)
+            old_height = new_height - num_new_blocks
+            print(f"All transactions in Block: {old_height - num_blocks} and above were successfully reverted.")
+        print(f"Block Height is now: {new_height}")
 
 
 async def farm_blocks(
@@ -475,41 +461,31 @@ async def farm_blocks(
     """
     This function is used to generate new blocks.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        config,
-        _,
-    ):
-        if node_client is not None:
-            if target_address == "":
-                target_address = config["simulator"]["farming_address"]
-            if target_address is None:
-                print(
-                    "No target address in config, falling back to the temporary address currently in use. "
-                    "You can use 'cdv sim create' or use --target-address to specify a different address."
-                )
-                target_ph: bytes32 = await node_client.get_farming_ph()
-            else:
-                target_ph = decode_puzzle_hash(target_address)
-            await node_client.farm_block(target_ph, num_blocks, transaction_blocks)
-            print(f"Farmed {num_blocks}{' Transaction' if transaction_blocks else ''} blocks")
-            block_height = (await node_client.get_blockchain_state())["peak"].height
-            print(f"Block Height is now: {block_height}")
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, config):
+        if target_address == "":
+            target_address = config["simulator"]["farming_address"]
+        if target_address is None:
+            print(
+                "No target address in config, falling back to the temporary address currently in use. "
+                "You can use 'cdv sim create' or use --target-address to specify a different address."
+            )
+            target_ph: bytes32 = await node_client.get_farming_ph()
+        else:
+            target_ph = decode_puzzle_hash(target_address)
+        await node_client.farm_block(target_ph, num_blocks, transaction_blocks)
+        print(f"Farmed {num_blocks}{' Transaction' if transaction_blocks else ''} blocks")
+        block_height = (await node_client.get_blockchain_state())["peak"].height
+        print(f"Block Height is now: {block_height}")
 
 
 async def set_auto_farm(rpc_port: Optional[int], root_path: Path, set_autofarm: bool) -> None:
     """
     This function can be used to enable or disable Auto Farming.
     """
-    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (
-        node_client,
-        _,
-        _,
-    ):
-        if node_client is not None:
-            current = await node_client.get_auto_farming()
-            if current == set_autofarm:
-                print(f"Auto farming is already {'on' if set_autofarm else 'off'}")
-                return
-            result = await node_client.set_auto_farming(set_autofarm)
-            print(f"Auto farming is now {'on' if result else 'off'}")
+    async with get_any_service_client(SimulatorFullNodeRpcClient, rpc_port, root_path) as (node_client, _):
+        current = await node_client.get_auto_farming()
+        if current == set_autofarm:
+            print(f"Auto farming is already {'on' if set_autofarm else 'off'}")
+            return
+        result = await node_client.set_auto_farming(set_autofarm)
+        print(f"Auto farming is now {'on' if result else 'off'}")

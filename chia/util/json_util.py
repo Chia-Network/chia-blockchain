@@ -14,7 +14,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     Encodes bytes as hex strings with 0x, and converts all dataclasses to json.
     """
 
-    def default(self, o: Any):
+    def default(self, o: Any) -> Any:
         if dataclasses.is_dataclass(o):
             return o.to_json_dict()
         elif isinstance(o, WalletType):

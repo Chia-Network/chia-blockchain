@@ -5,7 +5,6 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
 import pkg_resources
@@ -13,6 +12,7 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
     KeychainException,
     KeychainFingerprintExists,
@@ -57,7 +57,7 @@ def bip39_word_list() -> str:
 
 
 def generate_mnemonic() -> str:
-    mnemonic_bytes = token_bytes(32)
+    mnemonic_bytes = bytes32.secret()
     mnemonic = bytes_to_mnemonic(mnemonic_bytes)
     return mnemonic
 
@@ -106,7 +106,8 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     assert len(bit_array) == len(mnemonic) * 11
     assert ENT % 32 == 0
 
-    entropy_bytes = bit_array[:ENT].bytes
+    # mypy doesn't seem to understand the `property()` call used not as a decorator
+    entropy_bytes: bytes = bit_array[:ENT].bytes
     checksum_bytes = bit_array[ENT:]
     checksum = BitArray(std_hash(entropy_bytes))[:CS]
 
@@ -202,14 +203,14 @@ class KeyData(Streamable):
         # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
         if self.secrets is not None and self.public_key != self.private_key.get_g1():
             raise KeychainKeyDataMismatch("public_key")
-        if self.public_key.get_fingerprint() != self.fingerprint:
+        if uint32(self.public_key.get_fingerprint()) != self.fingerprint:
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
-            fingerprint=private_key.get_g1().get_fingerprint(),
+            fingerprint=uint32(private_key.get_g1().get_fingerprint()),
             public_key=private_key.get_g1(),
             label=label,
             secrets=KeyDataSecrets.from_mnemonic(mnemonic),
@@ -285,7 +286,7 @@ class Keychain:
         entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
 
         return KeyData(
-            fingerprint=fingerprint,
+            fingerprint=uint32(fingerprint),
             public_key=public_key,
             label=self.keyring_wrapper.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
@@ -451,7 +452,7 @@ class Keychain:
                 pass
         return removed
 
-    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
+    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]) -> None:
         """
         Deletes all keys in the list.
         """

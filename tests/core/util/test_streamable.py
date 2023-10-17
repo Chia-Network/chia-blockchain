@@ -202,21 +202,41 @@ class ConvertUnhashableTypeFailures(Streamable):
 
 
 @pytest.mark.parametrize(
-    "input_dict, error",
+    "input_dict, error, error_msg",
     [
-        pytest.param({"a": 0}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": []}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": {}}, InvalidTypeError, id="a: no string and no bytes"),
-        pytest.param({"a": "invalid"}, ConversionError, id="a: invalid hex string"),
-        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, ConversionError, id="a: hex string too short"),
-        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, ConversionError, id="a: hex string too long"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, ConversionError, id="a: bytes too short"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, ConversionError, id="a: bytes too long"),
-        pytest.param({"a": b"\00" * G1Element.SIZE}, ConversionError, id="a: invalid g1 element"),
+        pytest.param({"a": 0}, InvalidTypeError, "Invalid type: Expected str, Actual: int"),
+        pytest.param({"a": []}, InvalidTypeError, "Invalid type: Expected str, Actual: list"),
+        pytest.param({"a": {}}, InvalidTypeError, "Invalid type: Expected str, Actual: dict"),
+        pytest.param({"a": "invalid"}, ConversionError, "non-hexadecimal number found in fromhex() arg at position 0"),
+        pytest.param(
+            {"a": "00" * (G1Element.SIZE - 1)},
+            ConversionError,
+            "from type bytes to G1Element: ValueError: Length of bytes object not equal to G1Element::SIZE",
+        ),
+        pytest.param(
+            {"a": "00" * (G1Element.SIZE + 1)},
+            ConversionError,
+            "from type bytes to G1Element: ValueError: Length of bytes object not equal to G1Element::SIZE",
+        ),
+        pytest.param(
+            {"a": b"\00" * (G1Element.SIZE - 1)},
+            ConversionError,
+            "from type bytes to G1Element: ValueError: Length of bytes object not equal to G1Element::SIZE",
+        ),
+        pytest.param(
+            {"a": b"\00" * (G1Element.SIZE + 1)},
+            ConversionError,
+            "from type bytes to G1Element: ValueError: Length of bytes object not equal to G1Element::SIZE",
+        ),
+        pytest.param(
+            {"a": b"\00" * G1Element.SIZE},
+            ConversionError,
+            "from type bytes to G1Element: ValueError: Given G1 non-infinity element must start with 0b10",
+        ),
     ],
 )
-def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
-    with pytest.raises(error):
+def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any, error_msg: str) -> None:
+    with pytest.raises(error, match=re.escape(error_msg)):
         streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
 
@@ -418,12 +438,12 @@ def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
         if is_type_SpecificOptional(type_in):
             return item is None or validate_item_type(get_args(type_in)[0], item)
         if is_type_Tuple(type_in):
-            assert type(item) == tuple
+            assert type(item) is tuple
             types = get_args(type_in)
             return all(validate_item_type(tuple_type, tuple_item) for tuple_type, tuple_item in zip(types, item))
         if is_type_List(type_in):
             list_type = get_args(type_in)[0]
-            assert type(item) == list
+            assert type(item) is list
             return all(validate_item_type(list_type, list_item) for list_item in item)
         return isinstance(item, type_in)
 
