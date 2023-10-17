@@ -2130,10 +2130,8 @@ async def test_maximum_full_file_count(
                 filenames = {entry.name for entry in entries}
                 expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
 
-                async def check_filenames() -> bool:
-                    return len(filenames) == expected_files_count
+                assert len(filenames) == expected_files_count
 
-                await time_out_assert(60, check_filenames)
                 for generation, hash in enumerate(root_hashes):
                     filename = get_delta_filename(store_id, hash, generation + 1)
                     assert filename in filenames
