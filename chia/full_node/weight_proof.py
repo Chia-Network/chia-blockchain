@@ -1618,7 +1618,7 @@ def _validate_vdf_batch(
 ) -> bool:
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
         vdf = VDFProof.from_bytes(vdf_proof_bytes)
-        class_group = ClassgroupElement.from_bytes(class_group_bytes)
+        class_group = ClassgroupElement.create(class_group_bytes)
         vdf_info = VDFInfo.from_bytes(info)
         if not vdf.is_valid(constants, class_group, vdf_info):
             return False
