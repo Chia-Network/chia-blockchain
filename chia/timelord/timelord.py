@@ -1026,8 +1026,9 @@ class Timelord:
                 proof_bytes: bytes = stdout_bytes_io.read()
 
                 # Verifies our own proof just in case
+
                 form_size = ClassgroupElement.get_size()
-                output = ClassgroupElement.from_bytes(y_bytes[:form_size])
+                output = ClassgroupElement.create(y_bytes[:form_size])
                 # default value so that it's always set for state_changed later
                 ips: float = 0
                 if not self.bluebox_mode:
@@ -1180,7 +1181,7 @@ class Timelord:
                     log.info(f"Finished compact proof: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
                     output = proof[:100]
                     proof_part = proof[100:200]
-                    if ClassgroupElement.from_bytes(output) != picked_info.new_proof_of_time.output:
+                    if ClassgroupElement.create(output) != picked_info.new_proof_of_time.output:
                         log.error("Expected vdf output different than produced one. Stopping.")
                         return
                     vdf_proof = VDFProof(uint8(0), proof_part, True)
