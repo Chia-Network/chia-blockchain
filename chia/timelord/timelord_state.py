@@ -80,11 +80,10 @@ class LastState:
                 self.passed_ses_height_but_not_yet_included = state.passes_ses_height_but_not_yet_included
         elif isinstance(state, EndOfSubSlotBundle):
             self.state_type = StateType.END_OF_SUB_SLOT
-            if self.peak is not None:
+            if self.subslot_end is None:
                 self.total_iters = uint128(self.total_iters - self.get_last_ip() + self.sub_slot_iters)
             else:
                 self.total_iters = uint128(self.total_iters + self.sub_slot_iters)
-            self.peak = None
             self.subslot_end = state
             self.last_ip = uint64(0)
             self.deficit = state.reward_chain.deficit
