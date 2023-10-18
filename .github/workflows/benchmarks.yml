@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     name: Benchmarks
-    runs-on: benchmark
+    runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
     timeout-minutes: 30
