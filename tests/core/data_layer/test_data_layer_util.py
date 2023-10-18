@@ -78,7 +78,7 @@ def invalid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> Proof
     elif request.param == "bad node hash":
         return dataclasses.replace(valid_proof_of_inclusion, node_hash=a_hash)
 
-    raise Exception(f"Unhandled parametrization: {request.param!r}")
+    raise Exception(f"Unhandled parametrization: {request.param!r}")  # pragma: no cover
 
 
 def test_proof_of_inclusion_is_valid(valid_proof_of_inclusion: ProofOfInclusion) -> None:
