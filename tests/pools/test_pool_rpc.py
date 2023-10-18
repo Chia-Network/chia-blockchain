@@ -1004,7 +1004,7 @@ class TestPoolWalletRpc:
             await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=our_ph, guarantee_transaction_blocks=True)
             await asyncio.sleep(1)
             if await status_is_farming_to_pool():
-                break
+                return
 
         # Eventually, leaves pool
         assert await status_is_farming_to_pool()
