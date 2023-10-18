@@ -47,12 +47,12 @@ class RpcClient:
         ca_crt_path, ca_key_path = private_ssl_ca_paths(root_path, net_config)
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
-
+        timeout = net_config.get("rpc_timeout", 300)
         self = cls(
             hostname=self_hostname,
             port=port,
             url=f"https://{self_hostname}:{str(port)}/",
-            session=aiohttp.ClientSession(),
+            session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
             ssl_context=ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path),
         )
 
