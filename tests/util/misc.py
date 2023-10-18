@@ -6,7 +6,6 @@ import enum
 import functools
 import gc
 import logging
-import math
 import os
 import subprocess
 import sys
@@ -39,7 +38,9 @@ class GcMode(enum.Enum):
 
 @contextlib.contextmanager
 def manage_gc(mode: GcMode) -> Iterator[None]:
-    if mode == GcMode.precollect:
+    if mode == GcMode.nothing:
+        yield
+    elif mode == GcMode.precollect:
         gc.collect()
         yield
     elif mode == GcMode.disable:
@@ -71,7 +72,7 @@ class RuntimeResults:
     end: float
     duration: float
     entry_line: str
-    overhead: float
+    overhead: Optional[float]
 
     def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -82,7 +83,7 @@ class RuntimeResults:
             Measuring runtime: {label}
             {self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
             """
         )
 
@@ -94,13 +95,13 @@ class AssertRuntimeResults:
     end: float
     duration: float
     entry_line: str
-    overhead: float
+    overhead: Optional[float]
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: float
+        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: Optional[float]
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -121,7 +122,7 @@ class AssertRuntimeResults:
             Asserting maximum duration: {label}
             {self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
             """
@@ -164,18 +165,10 @@ def measure_runtime(
     label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
-    calibrate: bool = True,
+    overhead: Optional[float] = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
     entry_line = caller_file_and_line()
-
-    def manager_maker() -> contextlib.AbstractContextManager[Future[RuntimeResults]]:
-        return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
-
-    if calibrate:
-        overhead = measure_overhead(manager_maker=manager_maker)
-    else:
-        overhead = 0
 
     results_future: Future[RuntimeResults] = Future()
 
@@ -188,7 +181,8 @@ def measure_runtime(
             end = clock()
 
             duration = end - start
-            duration -= overhead
+            if overhead is not None:
+                duration -= overhead
 
             results = RuntimeResults(
                 start=start,
@@ -232,9 +226,8 @@ class _AssertRuntime:
     label: str = ""
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
-    calibrate: bool = True
     print: bool = True
-    overhead: float = 0
+    overhead: Optional[float] = None
     entry_line: Optional[str] = None
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
@@ -243,15 +236,9 @@ class _AssertRuntime:
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
-        if self.calibrate:
-
-            def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
-                return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
-
-            self.overhead = measure_overhead(manager_maker=manager_maker)
 
         self.runtime_manager = measure_runtime(
-            clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
+            clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
         self.results_callable: Future[AssertRuntimeResults] = Future()
@@ -292,10 +279,12 @@ class _AssertRuntime:
 class BenchmarkRunner:
     enable_assertion: bool = True
     label: Optional[str] = None
+    overhead: Optional[float] = None
 
     @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
+        kwargs.setdefault("overhead", self.overhead)
         if self.label is not None:
             kwargs.setdefault("label", self.label)
         return _AssertRuntime(*args, **kwargs)
