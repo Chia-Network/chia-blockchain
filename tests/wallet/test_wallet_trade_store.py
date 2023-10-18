@@ -171,3 +171,31 @@ async def test_valid_times_migration() -> None:
         rec = await trade_store.get_trade_record(old_record.trade_id)
         assert rec is not None
         assert rec.valid_times == ConditionValidTimes()
+
+
+@pytest.mark.asyncio
+async def test_large_trade_record_query() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await TradeStore.create(db_wrapper)
+
+        for _ in range(0, db_wrapper.host_parameter_limit + 1):
+            offer_name = bytes32.secret()
+            await store.add_trade_record(
+                TradeRecord(
+                    confirmed_at_index=uint32(0),
+                    accepted_at_time=None,
+                    created_at_time=uint64(1000000),
+                    is_my_offer=True,
+                    sent=uint32(0),
+                    offer=b"",
+                    taken_offer=None,
+                    coins_of_interest=[],
+                    trade_id=offer_name,
+                    status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                    sent_to=[],
+                    valid_times=ConditionValidTimes(),
+                ),
+                offer_name,
+            )
+
+        assert len(await store.get_all_trades()) == db_wrapper.host_parameter_limit + 1
