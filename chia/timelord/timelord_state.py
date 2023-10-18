@@ -31,6 +31,7 @@ class LastState:
     def __init__(self, constants: ConsensusConstants):
         self.state_type: StateType = StateType.FIRST_SUB_SLOT
         self.peak: Optional[timelord_protocol.NewPeakTimelord] = None
+        self.last_peak: Optional[timelord_protocol.NewPeakTimelord] = None
         self.subslot_end: Optional[EndOfSubSlotBundle] = None
         self.last_ip: uint64 = uint64(0)
         self.deficit: uint8 = constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
@@ -53,6 +54,7 @@ class LastState:
         if isinstance(state, timelord_protocol.NewPeakTimelord):
             self.state_type = StateType.PEAK
             self.peak = state
+            self.last_peak = state
             self.subslot_end = None
             _, self.last_ip = iters_from_block(
                 self.constants,
