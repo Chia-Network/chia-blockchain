@@ -429,14 +429,21 @@ class WalletTransactionStore:
 
     async def _get_new_tx_records_from_old(self, old_records: List[TransactionRecordOld]) -> List[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(
-                f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(old_records))})",
-                tuple(tx.name for tx in old_records),
-            )
-            valid_times: Dict[bytes32, ConditionValidTimes] = {
-                bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()
-            }
-            await cursor.close()
+            valid_times: Dict[bytes32, ConditionValidTimes] = {}
+            chunked_records: List[List[TransactionRecordOld]] = [
+                old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
+                for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
+            ]
+            for records_chunk in chunked_records:
+                cursor = await conn.execute(
+                    f"SELECT txid, valid_times from tx_times WHERE txid IN ({','.join('?' *  len(records_chunk))})",
+                    tuple(tx.name for tx in records_chunk),
+                )
+                valid_times = {
+                    **valid_times,
+                    **{bytes32(res[0]): ConditionValidTimes.from_bytes(res[1]) for res in await cursor.fetchall()},
+                }
+                await cursor.close()
         return [
             TransactionRecord(
                 valid_times=valid_times[record.name] if record.name in valid_times else ConditionValidTimes(),
