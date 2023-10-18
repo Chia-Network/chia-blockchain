@@ -65,6 +65,16 @@ jobs:
         id: pip-cache
         shell: bash
         run: |
+          set -vx
+          which pip
+          head $(which pip)
+          which python
+          ls -la $(which python)
+          ls -la $(dirname $(which python))
+          ls -la /home/ubuntu/actions-runner/_work/_tool/
+          ls -la /home/ubuntu/actions-runner/_work/_tool/Python/
+          ls -la /home/ubuntu/actions-runner/_work/_tool/Python/3.10.12/x64/bin/
+          pip cache dir
           echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pip
