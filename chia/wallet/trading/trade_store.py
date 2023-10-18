@@ -164,17 +164,18 @@ class TradeStore:
 
         return self
 
-    async def add_trade_record(self, record: TradeRecord, offer_name: bytes32) -> None:
+    async def add_trade_record(self, record: TradeRecord, offer_name: bytes32, replace: bool = False) -> None:
         """
         Store TradeRecord into DB
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            existing_trades_with_same_offer = await conn.execute_fetchall(
-                "SELECT trade_id FROM trade_records WHERE offer_name=? AND trade_id<>? LIMIT 1",
-                (offer_name, record.trade_id.hex()),
-            )
-            if existing_trades_with_same_offer:
-                raise ValueError("Trade for this offer already exists.")
+            if not replace:
+                existing_trades_with_same_offer = await conn.execute_fetchall(
+                    "SELECT trade_id FROM trade_records WHERE offer_name=? AND trade_id<>? LIMIT 1",
+                    (offer_name, record.trade_id.hex()),
+                )
+                if existing_trades_with_same_offer:
+                    raise ValueError("Trade for this offer already exists.")
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_records "
                 "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, offer_name, is_my_offer) "
@@ -242,7 +243,7 @@ class TradeStore:
             sent_to=current.sent_to,
             valid_times=current.valid_times,
         )
-        await self.add_trade_record(tx, offer_name)
+        await self.add_trade_record(tx, offer_name, replace=True)
 
     async def increment_sent(
         self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err]
