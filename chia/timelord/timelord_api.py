@@ -48,7 +48,8 @@ class TimelordAPI:
                             break
 
                     if not found:
-                        log.info("there is a heavier unfinished block that does not belong to this chain- skip peak")
+                        log.info(f"there is a heavier unfinished block that does not belong to this chain- skip peak"
+                                 f"rc hash {unf_block.reward_chain_block.get_hash()}")
                         return None
 
             if new_peak.reward_chain_block.weight > self.timelord.last_state.get_weight():

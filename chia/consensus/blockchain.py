@@ -593,6 +593,8 @@ class Blockchain(BlockchainInterface):
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
         )
+
+        log.info(f"validate unfinished block {unfinished_header_block.reward_chain_block.get_hash()}")
         required_iters, error = validate_unfinished_header_block(
             self.constants,
             self,
@@ -603,6 +605,7 @@ class Blockchain(BlockchainInterface):
             skip_overflow_ss_validation,
         )
         if error is not None:
+            log.info(f"failed to validate unfinished block {unfinished_header_block.reward_chain_block.get_hash()}")
             return required_iters, error.code
         return required_iters, None
 
