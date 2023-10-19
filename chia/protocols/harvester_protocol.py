@@ -33,6 +33,27 @@ class HarvesterHandshake(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class HarvesterFeeInfo(Streamable):
+    """
+    Used when connected to a third-party Harvester that provides specialized harvesting
+    services in exchange for a fee.
+    Which is said to be a percentage of the farmer reward.
+    """
+    fee_rate: float # Must be >= 0 and <= 1
+    fee_reward_puzzle_hash: bytes32
+
+    def __str__(self) -> str:
+        return f"HarvesterFeeInfo: fee_rate: {self.fee_rate}, fee_reward_puzzle_hash: {self.fee_reward_puzzle_hash.hex()}"
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondHarvesterHandshake(Streamable):
+    fee_info: Optional[HarvesterFeeInfo]
+
+
+@streamable
+@dataclass(frozen=True)
 class NewSignagePointHarvester(Streamable):
     challenge_hash: bytes32
     difficulty: uint64
