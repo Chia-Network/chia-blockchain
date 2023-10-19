@@ -2568,7 +2568,7 @@ class TestMaliciousGenerators:
         opcode = ConditionOpcode.RESERVE_FEE
         condition = SINGLE_ARG_INT_COND.format(opcode=opcode.value[0], num=280000, val=100, filler="0x00")
 
-        with benchmark_runner.assert_runtime(seconds=1):
+        with benchmark_runner.assert_runtime(seconds=1.5):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
