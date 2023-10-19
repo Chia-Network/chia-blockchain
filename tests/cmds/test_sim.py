@@ -50,7 +50,7 @@ def test_every_simulator_command() -> None:
         config["rpc_timeout"] = 600
         save_config(config_dir, "config.yaml", config)
 
-   stop_simulator(runner, simulator_name)
+    stop_simulator(runner, simulator_name)
 
 
 @pytest.mark.skip("Need to rewrite")
