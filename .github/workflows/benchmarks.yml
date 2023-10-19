@@ -93,11 +93,13 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.xml tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml tests
 
       - name: Format JUnit data and prepare results
         run: |
-          sudo snap install yq
+          apt update
+          apt install --yes snapd
+          snap install yq
           yq --inplace junit-data/benchmarks.xml
 
       - name: Publish JUnit results
