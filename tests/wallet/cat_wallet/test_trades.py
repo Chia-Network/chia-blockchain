@@ -339,7 +339,9 @@ async def test_cat_trades(
     ).index
     # Execute all of the trades
     # chia_for_cat
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, tx_config, fee=uint64(1))
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
+        chia_for_cat, tx_config, fee=uint64(1)
+    )
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -437,7 +439,7 @@ async def test_cat_trades(
     )
 
     # cat_for_chia
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, tx_config)
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, tx_config)
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -490,7 +492,7 @@ async def test_cat_trades(
     taker_unused_index = (
         await wallet_taker.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(uint32(1))
     ).index
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat, tx_config)
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(cat_for_cat, tx_config)
     assert error is None
     assert success is True
     assert trade_make is not None
@@ -566,7 +568,7 @@ async def test_cat_trades(
         )
 
     # chia_for_multiple_cat
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         chia_for_multiple_cat,
         tx_config,
         driver_dict=driver_dict,
@@ -630,7 +632,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     # multiple_cat_for_chia
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         multiple_cat_for_chia,
         tx_config,
     )
@@ -675,7 +677,7 @@ async def test_cat_trades(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
     # chia_and_cat_for_cat
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         chia_and_cat_for_cat,
         tx_config,
     )
@@ -792,7 +794,7 @@ class TestCATTrades:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, DEFAULT_TX_CONFIG)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -852,7 +854,7 @@ class TestCATTrades:
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG)
 
         # Now we're going to create the other way around for test coverage sake
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -913,7 +915,7 @@ class TestCATTrades:
             trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
             return TradeStatus(trade_rec.status)
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
@@ -972,7 +974,7 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
@@ -1035,7 +1037,7 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True
@@ -1095,7 +1097,7 @@ class TestCATTrades:
                 return TradeStatus(trade_rec.status)
             raise ValueError("Couldn't find the trade record")
 
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, DEFAULT_TX_CONFIG)
         await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
         assert error is None
         assert success is True

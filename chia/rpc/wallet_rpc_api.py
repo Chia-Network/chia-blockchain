@@ -1820,10 +1820,11 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         if result[0]:
-            success, trade_record, error = result
+            success, trade_record, tx_records, error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
+                "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in tx_records],
             }
         raise ValueError(result[2])
 

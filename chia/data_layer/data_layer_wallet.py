@@ -1155,7 +1155,7 @@ class DataLayerWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Offer:
+    ) -> Tuple[Offer, List[TransactionRecord]]:
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.DATA_LAYER.value:
@@ -1167,6 +1167,7 @@ class DataLayerWallet:
         offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
         fee_left_to_pay: uint64 = fee
         all_bundles: List[SpendBundle] = []
+        all_transactions: List[TransactionRecord] = []
         for launcher in offered_launchers:
             try:
                 this_solver: Solver = solver[launcher.hex()]
@@ -1212,7 +1213,16 @@ class DataLayerWallet:
                 txs[0].spend_bundle,
                 coin_spends=all_other_spends,
             )
-            all_bundles.append(SpendBundle.aggregate([signed_bundle, new_bundle]))
+            agg_bundle: SpendBundle = SpendBundle.aggregate([signed_bundle, new_bundle])
+            all_bundles.append(agg_bundle)
+            all_transactions.append(
+                dataclasses.replace(
+                    txs[0],
+                    spend_bundle=agg_bundle,
+                    name=agg_bundle.name(),
+                )
+            )
+            all_transactions.extend(txs[1:])
 
         # create some dummy requested payments
         requested_payments = {
@@ -1220,7 +1230,7 @@ class DataLayerWallet:
             for k, v in offer_dict.items()
             if v > 0
         }
-        return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict)
+        return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict), all_transactions
 
     @staticmethod
     async def finish_graftroot_solutions(offer: Offer, solver: Solver) -> Offer:
