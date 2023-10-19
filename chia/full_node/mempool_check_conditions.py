@@ -82,6 +82,14 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
             | AGG_SIG_ARGS
             | ALLOW_BACKREFS
         )
+        
+## TEST START ##
+    if height >= 250:
+        flags = (
+            flags
+            | ENABLE_SOFTFORK_CONDITION
+        )
+## TEST END ##
 
     return flags
 
@@ -97,8 +105,8 @@ def get_name_puzzle_conditions(
     run_block = run_block_generator
     flags = get_flags_for_height_and_constants(height, constants)
 
-    if mempool_mode:
-        flags = flags | MEMPOOL_MODE
+#    if mempool_mode:
+#        flags = flags | MEMPOOL_MODE
 
     if height >= constants.HARD_FORK_FIX_HEIGHT:
         run_block = run_block_generator2
