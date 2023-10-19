@@ -271,7 +271,7 @@ class _AssertRuntime:
             print(results.block(label=self.label))
 
         if self.record_property is not None:
-            self.record_property("duration", results.duration)
+            self.record_property(self.label, results.duration)
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
