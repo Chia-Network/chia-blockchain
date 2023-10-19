@@ -1,0 +1,17 @@
+; This file is what the first form the CAT takes, and then it gets immediately eve spent out of here.
+; This allows the coin to move into its real state already having been eve spent and validated to not be a fake CAT.
+; The trick is that we won't know what the real state puzzlehash reveal is, but we will know what this is.
+; Mint into this, eve spend out of this
+(mod (
+    NEW_PUZZLE_HASH  ; this is the CAT inner_puzzle
+    my_amount
+    tail_reveal
+    tail_solution
+  )
+  (include condition_codes.clib)
+  (list
+    (list CREATE_COIN NEW_PUZZLE_HASH my_amount (list NEW_PUZZLE_HASH))
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN 0 -113 tail_reveal tail_solution)  ; this is secure because anything but the real values won't work
+  )
+)
