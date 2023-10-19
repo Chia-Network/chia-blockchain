@@ -169,7 +169,7 @@ async def test_nft_offer_sell_nft(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_did_nft_for_xch, DEFAULT_TX_CONFIG, {}, fee=maker_fee
     )
     assert success is True
@@ -312,7 +312,7 @@ async def test_nft_offer_request_nft(
 
     offer_dict = {nft_to_request_asset_id: 1, wallet_maker.id(): -xch_offered}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_dict, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -466,7 +466,7 @@ async def test_nft_offer_sell_did_to_did(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_did_nft_for_xch, DEFAULT_TX_CONFIG, {}, fee=maker_fee
     )
     assert success is True
@@ -650,7 +650,7 @@ async def test_nft_offer_sell_nft_for_cat(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_did_nft_for_xch, DEFAULT_TX_CONFIG, {}, fee=maker_fee
     )
 
@@ -842,7 +842,7 @@ async def test_nft_offer_request_nft_for_cat(
 
     offer_dict = {nft_to_request_asset_id: 1, cat_wallet_maker.id(): -cats_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_dict, DEFAULT_TX_CONFIG, driver_dict, fee=maker_fee
     )
     assert success is True
@@ -976,7 +976,7 @@ async def test_nft_offer_sell_cancel(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_did_nft_for_xch, DEFAULT_TX_CONFIG, {}, fee=maker_fee
     )
 
@@ -1097,7 +1097,7 @@ async def test_nft_offer_sell_cancel_in_batch(
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         offer_did_nft_for_xch, DEFAULT_TX_CONFIG, {}, fee=maker_fee
     )
 
@@ -1362,7 +1362,7 @@ async def test_complex_nft_offer(
         ),
     }
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         complex_nft_offer, DEFAULT_TX_CONFIG, driver_dict=driver_dict, fee=FEE
     )
     assert error is None
@@ -1475,7 +1475,7 @@ async def test_complex_nft_offer(
         ),
     }
 
-    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
         complex_nft_offer, DEFAULT_TX_CONFIG, driver_dict=driver_dict, fee=uint64(0)
     )
     assert error is None
