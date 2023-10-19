@@ -1,0 +1,288 @@
+; This code is the "voting mode" for a DAO CAT.
+; The coin can be spent from this state to vote on a proposal or claim a dividend.
+; It locks the CAT in while it has active votes/dividends going on.
+; Once a vote or dividend closes, then the coin can spend itself to remove that coin from the "active list"
+; If the "active list" is empty the coin can leave the voting mode
+
+(mod (
+    ; this is the first curry
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_PUZHASH
+    DAO_FINISHED_STATE_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL_HASH
+    ; this is the second curry
+    SELF_HASH  ; this is the self_hash Optimization
+    ACTIVE_VOTES  ; "active votes" list
+    INNERPUZ
+    ; this is the solution
+    my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    inner_solution
+    my_amount
+    new_proposal_vote_id_or_removal_id  ; removal_id is a list of removal_ids
+    proposal_innerpuzhash  ; list of singleton innerpuzhashes which should match the order of the new_proposal_vote_id list
+    vote_info
+    vote_amount
+    my_inner_puzhash
+    new_innerpuzhash  ; only include this if we're changing owners - secured because coin is still made from inner_puz
+  )
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun calculate_finished_state (singleton_struct dao_finished_state)
+    (puzzle-hash-of-curried-function dao_finished_state
+      (sha256 ONE dao_finished_state)
+      (sha256tree singleton_struct)
+    )
+  )
+
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL_HASH INNERPUZHASH)
+    (puzzle-hash-of-curried-function CAT_MOD_HASH
+      INNERPUZHASH
+      (sha256 ONE CAT_TAIL_HASH)
+      (sha256 ONE CAT_MOD_HASH)
+    )
+  )
+
+  ; loop through conditions and check that they aren't trying to create anything they shouldn't
+  (defun check_conditions (conditions vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change)
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
+            (if (= (f (r (f conditions))) vote_added_puzhash)
+                (if seen_vote  ; assert we haven't already made a coin with the new vote included
+                    (x)
+                    (if (= (f (r (r (f conditions)))) my_amount)  ; we vote with all our value
+                        (if seen_change  ; assert that we haven't already recreated ourself in some fashion
+                            (x)
+                            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 1))
+                        )
+                        (if (= (f (r (r (f conditions)))) vote_amount)  ; we vote with part of our power
+                            (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash 1 seen_change))
+                            (x)
+                        )
+                    )
+                )
+                (if (all
+                      (= (f (r (f conditions))) my_inner_puzhash)
+                      (not seen_change)
+                      (= (f (r (r (f conditions)))) (- my_amount vote_amount))
+                    )  ; we recreate ourselves with unused voting power
+                    (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote 1))
+                    (x)
+                )
+            )
+            (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
+                (if (= (f (r (f conditions))) message)
+                    (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
+                    (x)
+                )
+                (c (f conditions) (check_conditions (r conditions) vote_added_puzhash my_amount message vote_amount my_inner_puzhash seen_vote seen_change))
+            )
+        )
+        (if (all seen_vote seen_change)  ; check all value is accounted for
+            ()
+            (x)
+        )
+    )
+  )
+
+  ; go through our list of active votes and check that we aren't revoting
+  (defun check_not_previously_voted (
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      INNERPUZ
+      my_id
+      new_vote_id
+      active_votes
+      proposal_innerpuzhash
+    )
+    (if active_votes
+        (if (= new_vote_id (f active_votes))  ; check new vote id is not equal to an existent vote id
+            (x)
+            (check_not_previously_voted
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
+              INNERPUZ
+              my_id
+              new_vote_id
+              (r active_votes)
+              proposal_innerpuzhash
+            )
+        )
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (calculate_singleton_puzzle_hash
+              (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH))
+              proposal_innerpuzhash
+            )
+            my_id
+          )
+        )
+    )
+  )
+
+
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+    (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+      inner_puzzle_hash
+      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun calculate_lockup_puzzlehash (
+      SELF_HASH
+      active_votes
+      innerpuzhash
+    )
+    (puzzle-hash-of-curried-function SELF_HASH
+      innerpuzhash
+      (sha256tree active_votes)
+      (sha256 ONE SELF_HASH)
+    )
+  )
+
+  (defun for_every_removal_id (
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      SELF_HASH
+      DAO_FINISHED_STATE_MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH
+      ACTIVE_VOTES
+      INNERPUZ
+      removal_ids
+      my_amount
+      unused_votes
+    )
+    (if removal_ids
+        (c
+          (list
+            ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
+            (sha256
+              (calculate_singleton_puzzle_hash
+                (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
+                (calculate_finished_state
+                  (c SINGLETON_MOD_HASH (c (f removal_ids) SINGLETON_LAUNCHER_PUZHASH))
+                  DAO_FINISHED_STATE_MOD_HASH
+                )
+              )
+              0
+            )
+          )
+          (for_every_removal_id
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
+            SELF_HASH
+            DAO_FINISHED_STATE_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            ACTIVE_VOTES
+            INNERPUZ
+            (r removal_ids)
+            my_amount
+            (c (f removal_ids) unused_votes)
+          )
+        )
+        (list
+          (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
+          (list
+            CREATE_COIN  ; recreate self with the finished proposal ID removed
+            (calculate_lockup_puzzlehash
+              SELF_HASH
+              (remove_list_one_entries_from_list_two unused_votes ACTIVE_VOTES)
+              (sha256tree INNERPUZ)
+            )
+            my_amount
+          )
+        )
+    )
+  )
+
+  (defun remove_list_one_entries_from_list_two (list_one list_two)
+    (if list_one
+        (remove_item_from_list (f list_one) (remove_list_one_entries_from_list_two (r list_one) list_two))
+        list_two
+    )
+  )
+
+  (defun remove_item_from_list (item list_one)
+    (if list_one
+        (if (= (f list_one) item)
+            (r list_one)  ; assuming there are no duplicates
+            (c (f list_one) (remove_item_from_list item (r list_one)))
+        )
+        ()  ; item was never in list_one, return list_two entirely
+    )
+  )
+
+
+  ; main
+  (if my_id
+      (c (list ASSERT_MY_PUZZLEHASH (wrap_in_cat_layer CAT_MOD_HASH CAT_TAIL_HASH my_inner_puzhash))
+        (c
+          (list ASSERT_MY_AMOUNT my_amount)
+          (c
+            (list ASSERT_MY_COIN_ID my_id)
+            (c
+              (if new_proposal_vote_id_or_removal_id
+                  (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
+                    SINGLETON_MOD_HASH
+                    SINGLETON_LAUNCHER_PUZHASH
+                    INNERPUZ
+                    my_id
+                    new_proposal_vote_id_or_removal_id
+                    ACTIVE_VOTES
+                    proposal_innerpuzhash
+                  )
+                  (list REMARK)
+              )
+
+              ; loop over conditions and check that we aren't trying to leave voting state
+              (check_conditions
+                (a INNERPUZ inner_solution)
+                (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
+                  SELF_HASH
+                  (if new_proposal_vote_id_or_removal_id (c new_proposal_vote_id_or_removal_id ACTIVE_VOTES) ACTIVE_VOTES)
+                  (if new_innerpuzhash new_innerpuzhash (sha256tree INNERPUZ))
+                )
+                my_amount
+                ; TODO: add namespace to this announcement to allow announcements from the innerpuz
+                (sha256tree (list new_proposal_vote_id_or_removal_id vote_amount vote_info my_id))
+                vote_amount
+                my_inner_puzhash
+                0
+                0
+              )
+            )
+          )
+        )
+      )
+
+      ; return to return_address or remove something from active list - check if our locked list is empty
+      (if ACTIVE_VOTES
+          (for_every_removal_id  ; locked list is not empty, so we must be trying to remove something from it
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
+            SELF_HASH
+            DAO_FINISHED_STATE_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL_HASH
+            ACTIVE_VOTES
+            INNERPUZ
+            new_proposal_vote_id_or_removal_id
+            my_amount
+            ()
+          )
+          (a INNERPUZ inner_solution)
+      )
+  )
+)
