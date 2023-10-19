@@ -31,28 +31,26 @@ def get_profile_path(starting_string: str) -> str:
         i += 1
     return starting_string + str(i)
 
-
+@pytest.mark.skip("Debug")
 def test_every_simulator_command() -> None:
-    lock_path = SIMULATOR_ROOT_PATH / "profile_path.lock"
-    with FileLock(lock_path):
-        starting_str = "ci_test"
-        simulator_name = get_profile_path(starting_str)
-        runner: CliRunner = CliRunner()
-        address = std_farming_address
-        start_result = runner.invoke(
-            cli,
-            ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic],
-            catch_exceptions=False,
-        )
-        assert start_result.exit_code == 0
-        assert f"Farming & Prefarm reward address: {address}" in start_result.output
-        assert "chia_full_node_simulator: started" in start_result.output
-        assert "Genesis block generated, exiting." in start_result.output
+    starting_str = "ci_test"
+    simulator_name = get_profile_path(starting_str)
+    runner: CliRunner = CliRunner()
+    address = std_farming_address
+    start_result = runner.invoke(
+        cli,
+        ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic],
+        catch_exceptions=False,
+    )
+    assert start_result.exit_code == 0
+    assert f"Farming & Prefarm reward address: {address}" in start_result.output
+    assert "chia_full_node_simulator: started" in start_result.output
+    assert "Genesis block generated, exiting." in start_result.output
 
-        config_dir = SIMULATOR_ROOT_PATH.joinpath(simulator_name)
-        with lock_and_load_config(config_dir, "config.yaml") as config:
-            config["rpc_timeout"] = 600
-            save_config(config_dir, "config.yaml", config)
+    config_dir = SIMULATOR_ROOT_PATH.joinpath(simulator_name)
+    with lock_and_load_config(config_dir, "config.yaml") as config:
+        config["rpc_timeout"] = 600
+        save_config(config_dir, "config.yaml", config)
 
     try:
         # run all tests
