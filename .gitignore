@@ -305,3 +305,6 @@ tags
 # Ignore the binaries that are pulled for the installer
 /bladebit/
 /madmax/
+
+# Sandbox/playground
+.sandbox/
