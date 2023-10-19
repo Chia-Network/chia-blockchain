@@ -300,8 +300,8 @@ class BenchmarkRunner:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
         kwargs.setdefault("record_property", self.record_property)
-        if self.label is not None:
-            kwargs.setdefault("label", self.label)
+        # if self.label is not None:
+        #     kwargs.setdefault("label", "only")
         return _AssertRuntime(*args, **kwargs)
 
 

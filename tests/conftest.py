@@ -96,11 +96,21 @@ def benchmark_runner_overhead_fixture() -> float:
     )
 
 
+@pytest.fixture(
+    name="benchmark_repeat",
+    params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(3)],
+    autouse=True,
+)
+def benchmark_repeat(request: SubRequest) -> int:
+    return request.param
+
+
 @pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(
     request: SubRequest,
     benchmark_runner_overhead: float,
     record_property: Callable[[str, object], None],
+    # benchmark_repeat: int,
 ) -> BenchmarkRunner:
     label = request.node.name
     return BenchmarkRunner(
@@ -576,7 +586,8 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAn
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+# TODO: consider...
+@pytest_asyncio.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
