@@ -29,7 +29,7 @@ def compute_spend_hints_and_additions(
 
     hinted_coins: Dict[bytes32, HintedCoin] = {}
     for condition in result_program.as_iter():
-        if cost > max_cost:  # pragma: no cover
+        if cost > max_cost:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_spend_hints_and_additions() for CoinSpend")
         atoms = condition.as_iter()
         op = next(atoms).atom
@@ -55,8 +55,8 @@ def compute_spend_hints_and_additions(
             condition.at("rrr") != Program.to(None)  # There's more than two arguments
             and condition.at("rrrf").atom is None  # The 3rd argument is a cons
         ):
-            potential_hint: bytes = condition.at("rrrff").atom
-            if len(potential_hint) == 32:
+            potential_hint: Optional[bytes] = condition.at("rrrff").atom
+            if potential_hint is not None and len(potential_hint) == 32:
                 hint = bytes32(potential_hint)
         hinted_coins[bytes32(coin.name())] = HintedCoin(coin, hint)
 
