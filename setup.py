@@ -44,7 +44,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build==0.10.0",
+    "build==1.0.3",
     "coverage==7.3.0",
     "diff-cover==7.7.0",
     "pre-commit==3.4.0",
