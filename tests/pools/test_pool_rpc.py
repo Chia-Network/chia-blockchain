@@ -1011,7 +1011,4 @@ class TestPoolWalletRpc:
         # Eventually, leaves pool
         is_farming = await status_is_farming_to_pool()
         if not is_farming:
-            if was_farming:
-                raise RuntimeError("Was farming before")
-            else:
-                raise RuntimeError("Was not farming before")
+            assert was_farming
