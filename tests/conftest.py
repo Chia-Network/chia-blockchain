@@ -11,7 +11,7 @@ import random
 import sysconfig
 import tempfile
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
 import pytest
@@ -97,9 +97,17 @@ def benchmark_runner_overhead_fixture() -> float:
 
 
 @pytest.fixture(name="benchmark_runner")
-def benchmark_runner_fixture(request: SubRequest, benchmark_runner_overhead: float) -> BenchmarkRunner:
+def benchmark_runner_fixture(
+    request: SubRequest,
+    benchmark_runner_overhead: float,
+    record_property: Callable[[str, object], None],
+) -> BenchmarkRunner:
     label = request.node.name
-    return BenchmarkRunner(label=label, overhead=benchmark_runner_overhead)
+    return BenchmarkRunner(
+        label=label,
+        overhead=benchmark_runner_overhead,
+        record_property=record_property,
+    )
 
 
 @pytest.fixture(name="node_name_for_file")

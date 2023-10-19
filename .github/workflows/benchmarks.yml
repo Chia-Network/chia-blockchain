@@ -93,4 +93,16 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.xml tests
+
+      - name: Format JUnit data and prepare results
+        run: |
+          sudo snap install yq
+          yq --inplace junit-data/benchmarks.xml
+
+      - name: Publish JUnit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*
+          if-no-files-found: error

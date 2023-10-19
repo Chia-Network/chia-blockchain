@@ -233,6 +233,7 @@ class _AssertRuntime:
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
     enable_assertion: bool = True
+    record_property: Optional[Callable[[str, object], None]] = None
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
@@ -269,6 +270,9 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
+        if self.record_property is not None:
+            self.record_property("duration", results.duration)
+
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
             assert runtime.duration < self.seconds, results.message()
@@ -280,11 +284,13 @@ class BenchmarkRunner:
     enable_assertion: bool = True
     label: Optional[str] = None
     overhead: Optional[float] = None
+    record_property: Optional[Callable[[str, object], None]] = None
 
     @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
+        kwargs.setdefault("record_property", self.record_property)
         if self.label is not None:
             kwargs.setdefault("label", self.label)
         return _AssertRuntime(*args, **kwargs)
