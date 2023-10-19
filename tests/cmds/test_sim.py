@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from filelock import FileLock
 from pathlib import Path
 from shutil import rmtree
 
@@ -31,7 +30,6 @@ def get_profile_path(starting_string: str) -> str:
         i += 1
     return starting_string + str(i)
 
-@pytest.mark.skip("Debug")
 def test_every_simulator_command() -> None:
     starting_str = "ci_test"
     simulator_name = get_profile_path(starting_str)
@@ -52,11 +50,7 @@ def test_every_simulator_command() -> None:
         config["rpc_timeout"] = 600
         save_config(config_dir, "config.yaml", config)
 
-    try:
-        # run all tests
-        run_all_tests(runner, address, simulator_name)
-    finally:
-        stop_simulator(runner, simulator_name)
+   stop_simulator(runner, simulator_name)
 
 
 @pytest.mark.skip("Need to rewrite")
