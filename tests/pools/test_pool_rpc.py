@@ -1000,11 +1000,18 @@ class TestPoolWalletRpc:
 
         await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving_no_blocks)
 
+        was_farming = False
         for i in range(50):
             await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=our_ph, guarantee_transaction_blocks=True)
             await asyncio.sleep(1)
             if await status_is_farming_to_pool():
+                was_farming = True
                 break
 
         # Eventually, leaves pool
-        assert await status_is_farming_to_pool()
+        is_farming = await status_is_farming_to_pool()
+        if not is_farming:
+            if was_farming:
+                raise RuntimeError("Was farming before")
+            else:
+                raise RuntimeError("Was not farming before")
