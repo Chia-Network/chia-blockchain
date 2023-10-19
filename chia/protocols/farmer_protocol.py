@@ -5,6 +5,7 @@ from typing import Optional
 
 from chia_rs import G2Element
 
+from chia.types.blockchain_format.foliage import FoliageBlockData
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,6 +43,7 @@ class DeclareProofOfSpace(Streamable):
     farmer_puzzle_hash: bytes32
     pool_target: Optional[PoolTarget]
     pool_signature: Optional[G2Element]
+    include_foliage_block_data: Optional[bool]
 
 
 @streamable
@@ -50,6 +52,7 @@ class RequestSignedValues(Streamable):
     quality_string: bytes32
     foliage_block_data_hash: bytes32
     foliage_transaction_block_hash: bytes32
+    foliage_block_data: Optional[FoliageBlockData]
 
 
 @streamable
