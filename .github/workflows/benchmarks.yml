@@ -95,9 +95,10 @@ jobs:
         run: |
           pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml tests
 
-#      - name: Format JUnit data and prepare results
-#        if: always()
-#        run: |
+      - name: Format JUnit data and prepare results
+        if: always()
+        run: |
+          cp junit-data/benchmarks.raw.xml junit-data/benchmarks.xml
 #          apt-get update
 #          apt-get install --yes snapd
 #          snap install yq
@@ -110,3 +111,7 @@ jobs:
           name: junit-data
           path: junit-data/*
           if-no-files-found: error
+
+      - name: Add benchmark results to workflow summary
+        run: |
+          python -m tests.process_benchmarks --xml junit-data/benchmarks.xml --link-prefix ${{ event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator #L >> "$GITHUB_STEP_SUMMARY"

@@ -7,6 +7,7 @@ import functools
 import gc
 import logging
 import os
+import pathlib
 import subprocess
 import sys
 from concurrent.futures import Future
@@ -21,6 +22,7 @@ import pytest
 from chia_rs import Coin
 from typing_extensions import Protocol, final
 
+import chia
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -271,7 +273,14 @@ class _AssertRuntime:
             print(results.block(label=self.label))
 
         if self.record_property is not None:
-            self.record_property(self.label, results.duration)
+            self.record_property(f"duration:{self.label}", results.duration)
+
+            # TODO: just don't combine yet?
+            path_str, _, line = results.entry_line.partition(":")
+            relative_path_str = pathlib.Path(path_str).relative_to(pathlib.Path(chia.__file__).parent.parent).as_posix()
+
+            self.record_property(f"path:{self.label}", relative_path_str)
+            self.record_property(f"line:{self.label}", line)
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
