@@ -5,6 +5,7 @@ import json
 import logging
 import time
 import traceback
+from dataclasses import dataclass
 from math import floor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -14,10 +15,12 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
 from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.harvester_protocol import HarvesterFeeInfo, RespondHarvesterHandshake
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
     ErrorResponse,
@@ -164,6 +167,9 @@ class Farmer:
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
+        # The harvester will give us this info during handshake if we connect to a fee-based harvester
+        self.harvester_fee_info_map: Dict[WSChiaConnection, HarvesterFeeInfo] = {}
+
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
@@ -262,7 +268,7 @@ class Farmer:
 
         async def handshake_task() -> None:
             # Wait until the task in `Farmer._start` is done so that we have keys available for the handshake. Bail out
-            # early if we need to shut down or if the harvester is not longer connected.
+            # early if we need to shut down or if the harvester is no longer connected.
             while not self.started and not self._shut_down and peer in self.server.get_connections():
                 await asyncio.sleep(1)
 
@@ -281,9 +287,26 @@ class Farmer:
                 self.get_public_keys(),
                 self.pool_public_keys,
             )
-            msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
-            await peer.send_message(msg)
+
+            response: Optional[RespondHarvesterHandshake] = await self.server.call_api_of_specific(
+                                                                HarvesterAPI.harvester_handshake,
+                                                                handshake, peer.peer_node_id)
             self.harvester_handshake_task = None
+            if response is not None:
+                handshake_error = None
+                if not isinstance(response, RespondHarvesterHandshake):
+                    handshake_error = f"Unexpected response {response}"
+                if response.fee_info.fee_rate < 0.0 or response.fee_info.fee_rate > 1.0:
+                    handshake_error = f"Invalid fee_rate {response.fee_info.fee_rate}"
+
+                if handshake_error is not None:
+                    self.log.error(f"Disconnecting harvester {peer.peer_node_id} during handshake: {handshake_error}")
+
+                    # TODO: Check how to properly disconnect harvester.
+                    peer.close()
+                    await peer.wait_until_closed()
+                else:
+                    self.harvester_fee_info_map[peer] = response.fee_info
 
         if peer.connection_type is NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)

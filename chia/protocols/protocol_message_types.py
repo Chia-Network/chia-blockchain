@@ -114,4 +114,7 @@ class ProtocolMessageTypes(Enum):
     request_fee_estimates = 89
     respond_fee_estimates = 90
 
+    # Third-party harvester services
+    respond_harvester_handshake = 100
+
     error = 255
