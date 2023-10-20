@@ -170,10 +170,9 @@ def main(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
-        output.write("| Test | Line | Mean | Max | Limit | Percent | |\n")
-        output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
+        output.write("| Test | | Mean | Max | Limit | Percent |\n")
+        output.write("| --- | --- | --- | --- | --- | --- |\n")
         for result in results:
-            link_text = result.link(prefix="", line_separator=":")
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
 
             durations_mean = mean(result.durations)
@@ -195,13 +194,12 @@ def main(
             test_path_str = ".".join(result.test_path[1:])
 
             output.write(
-                f"| `{test_path_str}`"
-                + f" | [`{link_text}`]({link_url})"
+                f"| [`{test_path_str}`]({link_url})"
+                + f" | {marker}"
                 + f" | {mean_str}"
                 + f" | {max_str}"
                 + f" | {limit_str}"
                 + f" | {percent_str}"
-                + f" | {marker}"
                 + " |\n"
             )
 
