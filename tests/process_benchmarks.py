@@ -97,7 +97,6 @@ def sub(matchobj: re.Match[str]) -> str:
 )
 @click.option(
     "--randomoji/--determimoji",
-    default=True,
     help="🍿",
     show_default=True,
 )
