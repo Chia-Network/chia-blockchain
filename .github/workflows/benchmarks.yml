@@ -103,7 +103,7 @@ jobs:
       - name: Format JUnit data and prepare results
         if: always()
         run: |
-          yq junit-data/benchmarks.raw.xml junit-data/benchmarks.xml
+          yq junit-data/benchmarks.raw.xml > junit-data/benchmarks.xml
 
       - name: Publish JUnit results
         if: always()
