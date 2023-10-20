@@ -170,8 +170,8 @@ def main(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
-        output.write("| Line | Mean | Max | Limit | Percent | |\n")
-        output.write("| --- | --- | --- | --- | --- | --- |\n")
+        output.write("| Test | Line | Mean | Max | Limit | Percent | |\n")
+        output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in results:
             link_text = result.link(prefix="", line_separator=":")
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
@@ -192,8 +192,17 @@ def main(
                 marker = "🍋"
             percent_str = f"{percent:.0f} %"
 
+            test_path_str = ".".join(result.test_path[1:])
+
             output.write(
-                f"| [{link_text}]({link_url}) | {mean_str} | {max_str} | {limit_str} | {percent_str} | {marker} |\n"
+                f"| `{test_path_str}`"
+                + f" | [`{link_text}`]({link_url})"
+                + f" | {mean_str}"
+                + f" | {max_str}"
+                + f" | {limit_str}"
+                + f" | {percent_str}"
+                + f" | {marker}"
+                + " |\n"
             )
 
 
