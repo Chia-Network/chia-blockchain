@@ -103,11 +103,7 @@ jobs:
       - name: Format JUnit data and prepare results
         if: always()
         run: |
-          cp junit-data/benchmarks.raw.xml junit-data/benchmarks.xml
-#          apt-get update
-#          apt-get install --yes snapd
-#          snap install yq
-#          yq --inplace junit-data/benchmarks.xml
+          yq junit-data/benchmarks.raw.xml junit-data/benchmarks.xml
 
       - name: Publish JUnit results
         if: always()
