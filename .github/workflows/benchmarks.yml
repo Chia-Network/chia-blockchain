@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         configuration:
-          - selected-mode: ${{ inputs.mode }}
+          - selected-mode: ${{ inputs.mode != '' && inputs.mode || 'standard' }}
             modes:
               standard:
                 job-timeout: 30
