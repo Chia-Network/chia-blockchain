@@ -27,7 +27,7 @@ jobs:
     name: Benchmarks
     runs-on: benchmark
     container:
-      image: ubuntu:22.04
+      image: chianetwork/ubuntu-22.04-builder:latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -41,13 +41,6 @@ jobs:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
 
-      - name: Set up container
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          apt-get update
-          apt-get install -y lsb-release git sudo
-
       - name: Add safe git directory
         uses: Chia-Network/actions/git-mark-workspace-safe@main
 
@@ -55,11 +48,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Python environment
-        uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Get pip cache dir
         id: pip-cache
