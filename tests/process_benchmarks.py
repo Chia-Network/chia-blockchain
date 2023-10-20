@@ -211,12 +211,12 @@ def main(
 
             test_link_text: str
             if result.label == "":
-                test_link_text = f"{test_path_str}"
+                test_link_text = f"`{test_path_str}`"
             else:
-                test_link_text = f"{test_path_str} - {result.label}"
+                test_link_text = f"`{test_path_str}` - {result.label}"
 
             output.write(
-                f"| [`{test_link_text}`]({link_url})"
+                f"| [{test_link_text}]({link_url})"
                 + f" | {marker}"
                 + f" | {mean_str}"
                 + f" | {max_str}"

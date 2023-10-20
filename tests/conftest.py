@@ -602,7 +602,6 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAn
         yield _
 
 
-# TODO: consider...
 @pytest_asyncio.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
