@@ -10,9 +10,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 $extras = @("upnp")
+$blspy = $False
 if ($d)
 {
     $extras += "dev"
+    $blspy = $True
 }
 
 $editable = $True
@@ -116,6 +118,11 @@ if (-not $editable)
     .venv/Scripts/python -m pip install --no-deps .
 }
 
+
+if ($blspy)
+{
+    venv\scripts\pip install $editable_cli .\blspy-stubs
+}
 
 if ($p)
 {

@@ -4,21 +4,30 @@ import dataclasses
 import logging
 import sys
 import time
+import types
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pytest
 from blspy import PrivateKey
 
+from chia.protocols import wallet_protocol
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.outbound_message import Message, make_msg
 from chia.simulator.block_tools import test_constants
 from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import Self, api_request
 from chia.util.config import load_config
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.errors import Err
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import Balance, WalletNode
 from tests.conftest import ConsensusMode
 from tests.util.misc import CoinGenerator
@@ -495,3 +504,78 @@ async def test_add_states_from_peer_untrusted_shutdown(
     with caplog.at_level(logging.INFO):
         assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
         assert "Terminating receipt and validation due to shut down request" in caplog.text
+
+
+@pytest.mark.limit_consensus_modes(reason="consensus rules irrelevant")
+@pytest.mark.asyncio
+async def test_transaction_send_cache(
+    self_hostname: str, simulator_and_wallet: SimulatorsAndWallets, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    The purpose of this test is to test that calling _resend_queue on the wallet node does not result in resending a
+    spend to a peer that has already recieved that spend and is currently processing it. It also tests that once we
+    have heard that the peer is done processing the spend, we _do_ properly resend it.
+    """
+    [full_node_api], [(wallet_node, wallet_server)], _ = simulator_and_wallet
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    await full_node_api.farm_rewards_to_wallet(1, wallet)
+
+    # Replacing the normal logic a full node has for processing transactions with a function that just logs what it gets
+    logged_spends = []
+
+    @api_request()
+    async def send_transaction(
+        self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
+    ) -> Optional[Message]:
+        logged_spends.append(request.transaction.name())
+        return None
+
+    assert full_node_api.full_node._server is not None
+    monkeypatch.setattr(
+        full_node_api.full_node._server.get_connections()[0].api,
+        "send_transaction",
+        types.MethodType(send_transaction, full_node_api.full_node._server.get_connections()[0].api),
+    )
+
+    # Generate the transaction
+    [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
+    await wallet.wallet_state_manager.add_pending_transaction(tx)
+
+    # Make sure it is sent to the peer
+    await wallet_node._resend_queue()
+
+    def logged_spends_len() -> int:
+        return len(logged_spends)
+
+    await time_out_assert(5, logged_spends_len, 1)
+
+    # Make sure queue processing again does not result in another spend
+    await wallet_node._resend_queue()
+    with pytest.raises(AssertionError):
+        await time_out_assert(5, logged_spends_len, 2)
+
+    # Tell the wallet that we recieved the spend (but failed to process it so it should send again)
+    msg: Message = make_msg(
+        ProtocolMessageTypes.transaction_ack,
+        wallet_protocol.TransactionAck(tx.name, uint8(MempoolInclusionStatus.FAILED), Err.GENERATOR_RUNTIME_ERROR.name),
+    )
+    assert simulator_and_wallet[1][0][0]._server is not None
+    await simulator_and_wallet[1][0][0]._server.get_connections()[0].incoming_queue.put(msg)
+
+    # Make sure the cache is emptied
+    def check_wallet_cache_empty() -> bool:
+        return wallet_node._tx_messages_in_progress == {}
+
+    await time_out_assert(5, check_wallet_cache_empty, True)
+
+    # Re-process the queue again and this time it should result in a resend
+    await wallet_node._resend_queue()
+    await time_out_assert(5, logged_spends_len, 2)
+    assert logged_spends == [tx.name, tx.name]
+    await time_out_assert(5, check_wallet_cache_empty, False)
+
+    # Disconnect from the peer to make sure their entry in the cache is also deleted
+    await simulator_and_wallet[1][0][0]._server.get_connections()[0].close(120)
+    await time_out_assert(5, check_wallet_cache_empty, True)

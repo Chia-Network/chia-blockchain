@@ -883,3 +883,34 @@ async def test_valid_times_migration() -> None:
         rec = await store.get_transaction_record(old_record.name)
         assert rec is not None
         assert rec.valid_times == ConditionValidTimes()
+
+
+@pytest.mark.asyncio
+async def test_large_tx_record_query() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletTransactionStore.create(db_wrapper)
+
+        for _ in range(0, db_wrapper.host_parameter_limit + 1):
+            await store.add_transaction_record(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(1000000000),
+                    to_puzzle_hash=bytes32([0] * 32),
+                    amount=uint64(0),
+                    fee_amount=uint64(0),
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[],
+                    removals=[],
+                    wallet_id=uint32(1),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=bytes32.secret(),
+                    memos=[],
+                    valid_times=ConditionValidTimes(),
+                )
+            )
+
+        assert len(await store.get_all_transactions_for_wallet(1)) == db_wrapper.host_parameter_limit + 1
