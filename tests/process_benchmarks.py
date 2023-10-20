@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -94,8 +95,20 @@ def sub(matchobj: re.Match[str]) -> str:
     help="Highlight results with maximums within this percent of the limit",
     show_default=True,
 )
+@click.option(
+    "--randomoji/--determimoji",
+    default=True,
+    help="🍿",
+    show_default=True,
+)
 def main(
-    xml_file: TextIO, link_prefix: str, link_line_separator: str, output: TextIO, markdown: bool, percent_margin: int
+    xml_file: TextIO,
+    link_prefix: str,
+    link_line_separator: str,
+    output: TextIO,
+    markdown: bool,
+    percent_margin: int,
+    randomoji: bool,
 ) -> None:
     tree = lxml.etree.parse(xml_file)
     root = tree.getroot()
@@ -179,11 +192,20 @@ def main(
             limit_str = f"{result.limit:.3f} s"
 
             percent = 100 * durations_max / result.limit
-            marker: str = "🫛"
             if percent >= 100:
-                marker = "🍄"
+                # intentionally biasing towards 🍄
+                choices = "🍄🍄🍎🍅"  # 🌶️🍉🍒🍓
             elif percent >= (100 - percent_margin):
-                marker = "🍋"
+                choices = "🍋🍌"  # 🍍🌽
+            else:
+                choices = "🫛🍈🍏🍐🥝🥒🥬🥦"
+
+            marker: str
+            if randomoji:
+                marker = random.choice(choices)
+            else:
+                marker = choices[0]
+
             percent_str = f"{percent:.0f} %"
 
             test_path_str = ".".join(result.test_path[1:])
