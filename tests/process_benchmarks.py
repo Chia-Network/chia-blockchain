@@ -170,8 +170,8 @@ def main(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
-        output.write("| Line | Mean | Max | Limit | Percent |\n")
-        output.write("| --- | --- | --- | --- | --- |\n")
+        output.write("| Line | Mean | Max | Limit | Percent | |\n")
+        output.write("| --- | --- | --- | --- | --- | --- |\n")
         for result in results:
             link_text = result.link(prefix="", line_separator=":")
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
@@ -184,12 +184,17 @@ def main(
 
             limit_str = f"{result.limit:.3f} s"
 
-            # TODO: remove 3x
-            percent = 100 * 3 * durations_max / result.limit
-            over = percent > (100 - percent_margin)
-            percent_str = f"{percent:.0f} % {'🔴' if over else ''}"
+            percent = 100 * durations_max / result.limit
+            marker: str = ""
+            if percent >= 100:
+                marker = "🍄"
+            elif percent >= (100 - percent_margin):
+                marker = "🍋"
+            percent_str = f"{percent:.0f} %"
 
-            output.write(f"| [{link_text}]({link_url}) | {mean_str} | {max_str} | {limit_str} | {percent_str} |\n")
+            output.write(
+                f"| [{link_text}]({link_url}) | {mean_str} | {max_str} | {limit_str} | {percent_str} | {marker} |\n"
+            )
 
 
 if __name__ == "__main__":
