@@ -130,8 +130,6 @@ class TestPerformance:
                     break
 
         log.warning(f"Num Tx: {num_tx}")
-        pr.create_stats()
-        pr.dump_stats("./mempool-benchmark.pstats")
 
         # Create an unfinished block
         peak = full_node_1.full_node.blockchain.get_peak()
@@ -174,15 +172,9 @@ class TestPerformance:
 
         log.warning(f"Res: {res}")
 
-        pr.create_stats()
-        pr.dump_stats("./unfinished-benchmark.pstats")
-
         with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)
 
         log.warning(f"Res: {res}")
-
-        pr.create_stats()
-        pr.dump_stats("./full-block-benchmark.pstats")
