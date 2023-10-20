@@ -170,7 +170,7 @@ def main(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
-        output.write("| Test | | Mean | Max | Limit | Percent |\n")
+        output.write("| Test | 🍿 | Mean | Max | Limit | Percent |\n")
         output.write("| --- | --- | --- | --- | --- | --- |\n")
         for result in results:
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
@@ -184,7 +184,7 @@ def main(
             limit_str = f"{result.limit:.3f} s"
 
             percent = 100 * durations_max / result.limit
-            marker: str = ""
+            marker: str = "🫛"
             if percent >= 100:
                 marker = "🍄"
             elif percent >= (100 - percent_margin):
