@@ -96,21 +96,12 @@ def benchmark_runner_overhead_fixture() -> float:
     )
 
 
-# @pytest.fixture(
-#     name="benchmark_repeat",
-#     params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(3)],
-#     autouse=True,
-# )
-# def benchmark_repeat(request: SubRequest) -> int:
-#     return request.param
-
-
 @pytest.fixture(name="benchmark_runner")
 def benchmark_runner_fixture(
     request: SubRequest,
     benchmark_runner_overhead: float,
     record_property: Callable[[str, object], None],
-    # benchmark_repeat: int,
+    benchmark_repeat: int,
 ) -> BenchmarkRunner:
     label = request.node.name
     return BenchmarkRunner(
@@ -376,8 +367,33 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_addoption(parser: pytest.Parser):
+    group = parser.getgroup("chia")
+    group.addoption("--benchmark-repeats", action="store", default=1, type=int)
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+    benchmark_repeats = config.getoption("--benchmark-repeats")
+    if benchmark_repeats != 1:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+            params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(benchmark_repeats)],
+        )
+        def benchmark_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+    else:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+        )
+        def benchmark_repeat_fixture() -> int:
+            return 1
+
+    globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
