@@ -1,7 +1,6 @@
 # flake8: noqa: F811, F401
 from __future__ import annotations
 
-import cProfile
 import dataclasses
 import logging
 import random
@@ -116,9 +115,6 @@ class TestPerformance:
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())
 
-        pr = cProfile.Profile()
-        pr.enable()
-
         with benchmark_runner.assert_runtime(seconds=0.0055, label=f"{request.node.name} - mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
@@ -173,9 +169,6 @@ class TestPerformance:
             [],
         )
 
-        pr = cProfile.Profile()
-        pr.enable()
-
         with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
             res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
 
@@ -183,9 +176,6 @@ class TestPerformance:
 
         pr.create_stats()
         pr.dump_stats("./unfinished-benchmark.pstats")
-
-        pr = cProfile.Profile()
-        pr.enable()
 
         with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
             # No transactions generator, the full node already cached it from the unfinished block
