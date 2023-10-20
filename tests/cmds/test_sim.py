@@ -30,7 +30,6 @@ def get_profile_path(starting_string: str) -> str:
         i += 1
     return starting_string + str(i)
 
-@pytest.mark.skip("Debug")
 def test_every_simulator_command() -> None:
     starting_str = "ci_test"
     simulator_name = get_profile_path(starting_str)
