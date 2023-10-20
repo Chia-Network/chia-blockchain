@@ -42,7 +42,7 @@ jobs:
       matrix:
         configuration:
           - selected-mode: ${{ inputs.mode }}
-          - modes:
+            modes:
               standard:
                 job-timeout: 30
                 pytest-repeat: ""
