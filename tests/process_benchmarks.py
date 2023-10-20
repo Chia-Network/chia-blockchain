@@ -105,11 +105,6 @@ def main(
 
     cases_by_test_path: defaultdict[Tuple[str, ...], List[lxml.etree.Element]] = defaultdict(list)
     for case in benchmarks.findall("testcase"):
-        failure = case.find("failure")
-        if failure is not None:
-            # TODO: let's get all the data, just dealing with this later
-            continue
-
         raw_name = case.attrib["name"]
         name = re.sub(r"(?P<start>[-\[])benchmark_repeat\d{3}(?P<end>[-\])])", sub, raw_name)
         # TODO: seems to duplicate the class and function name, though not the parametrizations
