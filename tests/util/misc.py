@@ -281,6 +281,7 @@ class _AssertRuntime:
 
             self.record_property(f"path:{self.label}", relative_path_str)
             self.record_property(f"line:{self.label}", line)
+            self.record_property(f"limit:{self.label}", self.seconds)
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True

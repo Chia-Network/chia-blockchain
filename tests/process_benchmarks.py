@@ -20,6 +20,7 @@ class Result:
     label: str
     line: int = field(compare=False)
     durations: Tuple[float, ...] = field(compare=False)
+    limit: float = field(compare=False)
 
     def marshal(self) -> Dict[str, Any]:
         return {
@@ -53,7 +54,7 @@ def sub(matchobj: re.Match[str]) -> str:
     return result
 
 
-@click.command
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "--xml",
     "xml_file",
@@ -61,13 +62,41 @@ def sub(matchobj: re.Match[str]) -> str:
     type=click.File(),
     help="The benchmarks JUnit XML results file",
 )
-@click.option("--link-prefix", default="", help="Prefix for output links such as for web links instead of IDE links")
+@click.option(
+    "--link-prefix",
+    default="",
+    help="Prefix for output links such as for web links instead of IDE links",
+    show_default=True,
+)
 @click.option(
     "--link-line-separator",
     default=":",
-    help="Such as : for local links and #L on GitHub",
+    help="The separator between the path and the line number, such as : for local links and #L on GitHub",
+    show_default=True,
 )
-def main(xml_file: TextIO, link_prefix: str, link_line_separator: str) -> None:
+@click.option(
+    "--output",
+    default="-",
+    type=click.File(mode="w", encoding="utf-8", lazy=True, atomic=True),
+    help="Output file, - for stdout",
+    show_default=True,
+)
+# TODO: anything but this pattern for output types
+@click.option(
+    "--markdown/--no-markdown",
+    help="Use markdown as output format",
+    show_default=True,
+)
+@click.option(
+    "--percent-margin",
+    default=15,
+    type=int,
+    help="Highlight results with maximums within this percent of the limit",
+    show_default=True,
+)
+def main(
+    xml_file: TextIO, link_prefix: str, link_line_separator: str, output: TextIO, markdown: bool, percent_margin: int
+) -> None:
     tree = lxml.etree.parse(xml_file)
     root = tree.getroot()
     benchmarks = root.find("testsuite[@name='benchmarks']")
@@ -118,6 +147,12 @@ def main(xml_file: TextIO, link_prefix: str, link_line_separator: str) -> None:
                 int(property.attrib["value"]) for property in a_case.xpath(query.format(label=label, property="line"))
             ]
 
+            limit: float
+            [limit] = [
+                float(property.attrib["value"])
+                for property in a_case.xpath(query.format(label=label, property="limit"))
+            ]
+
             results.append(
                 Result(
                     file_path=file_path,
@@ -125,11 +160,36 @@ def main(xml_file: TextIO, link_prefix: str, link_line_separator: str) -> None:
                     line=line,
                     label=label,
                     durations=tuple(durations),
+                    limit=limit,
                 )
             )
 
-    for result in results:
-        print(result.link(prefix=link_prefix, line_separator=link_line_separator), json.dumps(result.marshal()))
+    if not markdown:
+        for result in results:
+            link = result.link(prefix=link_prefix, line_separator=link_line_separator)
+            dumped = json.dumps(result.marshal())
+            output.write(f"{link} {dumped}\n")
+    else:
+        output.write("| Line | Mean | Max | Limit | Percent |\n")
+        output.write("| --- | --- | --- | --- | --- |\n")
+        for result in results:
+            link_text = result.link(prefix="", line_separator=":")
+            link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
+
+            durations_mean = mean(result.durations)
+            mean_str = f"{durations_mean:.3f} s"
+
+            durations_max = max(result.durations)
+            max_str = f"{durations_max:.3f} s"
+
+            limit_str = f"{result.limit:.3f} s"
+
+            # TODO: remove 3x
+            percent = 100 * 3 * durations_max / result.limit
+            over = percent > (100 - percent_margin)
+            percent_str = f"{percent:.0f} % {'🔴' if over else ''}"
+
+            output.write(f"| [{link_text}]({link_url}) | {mean_str} | {max_str} | {limit_str} | {percent_str} |\n")
 
 
 if __name__ == "__main__":

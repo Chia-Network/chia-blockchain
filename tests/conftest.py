@@ -96,13 +96,13 @@ def benchmark_runner_overhead_fixture() -> float:
     )
 
 
-@pytest.fixture(
-    name="benchmark_repeat",
-    params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(3)],
-    autouse=True,
-)
-def benchmark_repeat(request: SubRequest) -> int:
-    return request.param
+# @pytest.fixture(
+#     name="benchmark_repeat",
+#     params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(3)],
+#     autouse=True,
+# )
+# def benchmark_repeat(request: SubRequest) -> int:
+#     return request.param
 
 
 @pytest.fixture(name="benchmark_runner")
