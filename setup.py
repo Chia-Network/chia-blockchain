@@ -15,7 +15,7 @@ dependencies = [
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
-    "chia_rs==0.2.11",
+    "chia_rs==0.2.13",
     "clvm-tools-rs==0.1.38",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.5",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks

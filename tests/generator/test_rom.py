@@ -12,7 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle_conditions import ELIGIBLE_FOR_DEDUP, Spend
+from chia.types.spend_bundle_conditions import Spend
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
@@ -155,7 +155,7 @@ class TestROM:
             agg_sig_puzzle_amount=[],
             agg_sig_parent_amount=[],
             agg_sig_parent_puzzle=[],
-            flags=ELIGIBLE_FOR_DEDUP,
+            flags=0,
         )
 
         assert npc_result.conds.spends == [spend]
