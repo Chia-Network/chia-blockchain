@@ -6,7 +6,6 @@ from typing import Dict, List, Optional
 from chia_rs import (
     AGG_SIG_ARGS,
     ALLOW_BACKREFS,
-    ENABLE_ASSERT_BEFORE,
     ENABLE_BLS_OPS,
     ENABLE_BLS_OPS_OUTSIDE_GUARD,
     ENABLE_FIXED_DIV,
@@ -45,7 +44,7 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_ASSERT_BEFORE
+    flags = 0
 
     if height >= constants.SOFT_FORK2_HEIGHT:
         flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
