@@ -341,6 +341,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -370,6 +372,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -397,8 +401,10 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "pool_errors_24h": [],
                     "valid_partials_since_start": 0,
                     "valid_partials_24h": [],
-                    "invalid_partials_since_start": 1,
-                    "invalid_partials_24h": [1],
+                    "invalid_partials_since_start": 0,
+                    "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 1,
+                    "insufficient_partials_24h": [1],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -428,6 +434,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -457,6 +465,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 1,
                     "invalid_partials_24h": [1],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -486,6 +496,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 0,
                     "invalid_partials_24h": [],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 1,
@@ -515,6 +527,8 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                     "valid_partials_24h": [],
                     "invalid_partials_since_start": 1,
                     "invalid_partials_24h": [1],
+                    "insufficient_partials_since_start": 0,
+                    "insufficient_partials_24h": [],
                     "stale_partials_since_start": 0,
                     "stale_partials_24h": [],
                     "missing_partials_since_start": 0,
@@ -578,6 +592,8 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
         "valid_partials_24h": [],
         "invalid_partials_since_start": 0,
         "invalid_partials_24h": [],
+        "insufficient_partials_since_start": 0,
+        "insufficient_partials_24h": [],
         "stale_partials_since_start": 0,
         "stale_partials_24h": [],
         "missing_partials_since_start": 0,
@@ -619,6 +635,8 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     assert_stats_24h("valid_partials_24h")
     assert_stats_since_start("invalid_partials_since_start")
     assert_stats_24h("invalid_partials_24h")
+    assert_stats_since_start("insufficient_partials_since_start")
+    assert_stats_24h("insufficient_partials_24h")
     assert_stats_since_start("stale_partials_since_start")
     assert_stats_24h("stale_partials_24h")
     assert_stats_since_start("missing_partials_since_start")

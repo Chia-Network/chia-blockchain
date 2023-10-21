@@ -194,7 +194,7 @@ class FarmerAPI:
                     increment_pool_stats(
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
-                        "invalid_partials",
+                        "insufficient_partials",
                         time.time(),
                     )
                     self.farmer.state_changed(
