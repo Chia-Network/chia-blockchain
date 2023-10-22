@@ -393,12 +393,12 @@ class TaskReferencer:
     # TODO: should we collect and maybe track results
     _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
 
-    async def add(self, coroutine: Coroutine[Any, Any, object]) -> None:
+    async def add(self, coroutine: Coroutine[Any, Any, object], log: logging.Logger) -> None:
         self._tasks.append(asyncio.create_task(coroutine))
 
         for task in self._tasks:
             if task.done():
-                await self._wait_one(task=task)
+                await self._wait_one(task=task, log=log)
 
         self._tasks = [task for task in self._tasks if not task.done()]
 
@@ -407,10 +407,16 @@ class TaskReferencer:
             with log_exceptions(log=log, consume=True, message=f"{type(self).__name__}: failed while cancelling task"):
                 task.cancel()
 
-    async def wait(self) -> None:
+    async def wait(self, log: logging.Logger) -> None:
         for task in self._tasks:
-            await self._wait_one(task=task)
+            await self._wait_one(task=task, log=log)
 
-    async def _wait_one(self, task: asyncio.Task[object]) -> None:
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+    async def _wait_one(self, task: asyncio.Task[object], log: logging.Logger) -> None:
+        with log_exceptions(
+            log=log,
+            consume=True,
+            message=f"{type(self).__name__}: exception from task",
+            show_traceback=True,
+        ):
+            with contextlib.suppress(asyncio.CancelledError):
+                await task

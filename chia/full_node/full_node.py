@@ -702,7 +702,7 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            await self._sync_tasks.add(coroutine=self._sync())
+            await self._sync_tasks.add(coroutine=self._sync(), log=self.log)
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -871,7 +871,7 @@ class FullNode:
             await self.compact_vdf_sem.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        await self._sync_tasks.wait()
+        await self._sync_tasks.wait(log=self.log)
 
     async def _sync(self) -> None:
         """
