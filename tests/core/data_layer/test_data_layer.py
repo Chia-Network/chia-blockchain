@@ -122,11 +122,13 @@ async def test_plugin_requests_use_custom_headers(
         headers={header_key: header_value},
     )
 
+    async def wallet_rpc_init() -> WalletRpcClient:
+        return None  # type: ignore[return-value]
+
     data_layer = DataLayer.create(
         config=config["data_layer"],
         root_path=tmp_chia_root,
-        # not presently used for this test
-        wallet_rpc_init=None,  # type: ignore[arg-type]
+        wallet_rpc_init=wallet_rpc_init(),
         downloaders=[plugin_remote],
         uploaders=[plugin_remote],
     )
