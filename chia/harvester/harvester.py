@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import concurrent
+import contextlib
 import dataclasses
 import logging
 import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
@@ -44,6 +45,11 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Harvester", None)
+
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path
@@ -122,6 +128,17 @@ class Harvester:
             raise
 
         self.plot_sync_sender = Sender(self.plot_manager, self._mode)
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        try:
+            await self._start()
+            yield
+        except:  # noqa E722
+            self._close()
+            raise
+        finally:
+            await self._await_closed()
 
     async def _start(self) -> None:
         self._refresh_lock = asyncio.Lock()

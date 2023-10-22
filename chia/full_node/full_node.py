@@ -11,7 +11,22 @@ import time
 import traceback
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    final,
+)
 
 from blspy import AugSchemeMPL
 
@@ -100,6 +115,11 @@ class WalletUpdate:
 @final
 @dataclasses.dataclass
 class FullNode:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("FullNode", None)
+
     root_path: Path
     config: Dict[str, Any]
     constants: ConsensusConstants
@@ -178,6 +198,17 @@ class FullNode:
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
         )
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        try:
+            await self._start()
+            yield
+        except:  # noqa E722
+            self._close()
+            raise
+        finally:
+            await self._await_closed()
 
     @property
     def block_store(self) -> BlockStore:

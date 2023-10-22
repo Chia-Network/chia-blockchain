@@ -10,7 +10,21 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, Dict, List, Optional, Set, Tuple, Union, cast, final
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    final,
+)
 
 import aiohttp
 
@@ -78,6 +92,11 @@ async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Di
 @final
 @dataclasses.dataclass
 class DataLayer:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
+
     db_path: Path
     config: Dict[str, Any]
     root_path: Path
