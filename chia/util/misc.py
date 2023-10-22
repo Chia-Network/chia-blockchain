@@ -390,30 +390,33 @@ async def log_after(
 
 @dataclasses.dataclass
 class TaskReferencer:
+    log: logging.Logger
     # TODO: should we collect and maybe track results
     _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
 
-    async def add(self, coroutine: Coroutine[Any, Any, object], log: logging.Logger) -> None:
+    async def add(self, coroutine: Coroutine[Any, Any, object]) -> None:
         self._tasks.append(asyncio.create_task(coroutine))
 
         for task in self._tasks:
             if task.done():
-                await self._wait_one(task=task, log=log)
+                await self._wait_one(task=task)
 
         self._tasks = [task for task in self._tasks if not task.done()]
 
-    def cancel(self, log: logging.Logger) -> None:
+    def cancel(self) -> None:
         for task in self._tasks:
-            with log_exceptions(log=log, consume=True, message=f"{type(self).__name__}: failed while cancelling task"):
+            with log_exceptions(
+                log=self.log, consume=True, message=f"{type(self).__name__}: failed while cancelling task"
+            ):
                 task.cancel()
 
-    async def wait(self, log: logging.Logger) -> None:
+    async def wait(self) -> None:
         for task in self._tasks:
-            await self._wait_one(task=task, log=log)
+            await self._wait_one(task=task)
 
-    async def _wait_one(self, task: asyncio.Task[object], log: logging.Logger) -> None:
+    async def _wait_one(self, task: asyncio.Task[object]) -> None:
         with log_exceptions(
-            log=log,
+            log=self.log,
             consume=True,
             message=f"{type(self).__name__}: exception from task",
             show_traceback=True,

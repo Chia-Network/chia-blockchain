@@ -108,6 +108,7 @@ class FullNode:
     log: logging.Logger
     db_path: Path
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
+    _sync_tasks: TaskReferencer
     _segment_task: Optional[asyncio.Task[None]] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
@@ -125,7 +126,6 @@ class FullNode:
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
-    _sync_tasks: TaskReferencer = dataclasses.field(default_factory=TaskReferencer)
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
@@ -168,15 +168,18 @@ class FullNode:
         db_path = path_from_root(root_path, db_path_replaced)
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        log = logging.getLogger(name)
+
         return cls(
             root_path=root_path,
             config=config,
             constants=consensus_constants,
             signage_point_times=[time.time() for _ in range(consensus_constants.NUM_SPS_SUB_SLOT)],
             full_node_store=FullNodeStore(consensus_constants),
-            log=logging.getLogger(name),
+            log=log,
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
+            _sync_tasks=TaskReferencer(log=log),
         )
 
     @property
@@ -702,7 +705,7 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            await self._sync_tasks.add(coroutine=self._sync(), log=self.log)
+            await self._sync_tasks.add(coroutine=self._sync())
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -859,7 +862,7 @@ class FullNode:
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
         cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        self._sync_tasks.cancel(log=self.log)
+        self._sync_tasks.cancel()
 
     async def _await_closed(self) -> None:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
@@ -871,7 +874,7 @@ class FullNode:
             await self.compact_vdf_sem.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        await self._sync_tasks.wait(log=self.log)
+        await self._sync_tasks.wait()
 
     async def _sync(self) -> None:
         """
