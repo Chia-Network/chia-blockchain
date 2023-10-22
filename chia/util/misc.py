@@ -18,6 +18,7 @@ from typing import (
     AsyncIterator,
     Callable,
     Collection,
+    Coroutine,
     Dict,
     Generic,
     Iterator,
@@ -385,3 +386,31 @@ async def log_after(
     finally:
         task.cancel()
         # not awaiting due to problematic cancellation handling, logging in the task instead
+
+
+@dataclasses.dataclass
+class TaskReferencer:
+    # TODO: should we collect and maybe track results
+    _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
+
+    async def add(self, coroutine: Coroutine[Any, Any, object]) -> None:
+        self._tasks.append(asyncio.create_task(coroutine))
+
+        for task in self._tasks:
+            if task.done():
+                await self._wait_one(task=task)
+
+        self._tasks = [task for task in self._tasks if not task.done()]
+
+    def cancel(self, log: logging.Logger) -> None:
+        for task in self._tasks:
+            with log_exceptions(log=log, consume=True, message=f"{type(self).__name__}: failed while cancelling task"):
+                task.cancel()
+
+    async def wait(self) -> None:
+        for task in self._tasks:
+            await self._wait_one(task=task)
+
+    async def _wait_one(self, task: asyncio.Task[object]) -> None:
+        with contextlib.suppress(asyncio.CancelledError):
+            await task

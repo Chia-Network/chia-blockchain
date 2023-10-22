@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import dataclasses
 import logging
 import multiprocessing
@@ -75,7 +74,7 @@ from chia.util.errors import ConsensusError, Err, TimestampError, ValidationErro
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import log_filter
+from chia.util.misc import TaskReferencer, log_filter
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -126,7 +125,7 @@ class FullNode:
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
-    _sync_task: Optional[asyncio.Task[None]] = None
+    _sync_tasks: TaskReferencer = dataclasses.field(default_factory=TaskReferencer)
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
@@ -703,13 +702,7 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            if self._sync_task is not None:
-                done = self._sync_task.done()
-                if not done:
-                    self.log.warning(
-                        f"{log_filter} overwriting FullNode._sync_task that is not done: {self._sync_task}"
-                    )
-            self._sync_task = asyncio.create_task(self._sync())
+            await self._sync_tasks.add(coroutine=self._sync())
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -866,7 +859,7 @@ class FullNode:
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
         cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        cancel_task_safe(task=self._sync_task, log=self.log)
+        self._sync_tasks.cancel(log=self.log)
 
     async def _await_closed(self) -> None:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
@@ -878,9 +871,7 @@ class FullNode:
             await self.compact_vdf_sem.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        if self._sync_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sync_task
+        await self._sync_tasks.wait()
 
     async def _sync(self) -> None:
         """
