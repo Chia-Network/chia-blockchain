@@ -44,7 +44,7 @@ async def start_harvester_service(
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
     harvester_service.reconnect_retry_seconds = 1
-    await harvester_service.start()
+    await harvester_service._start()
     harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
     harvester.plot_manager.stop_refreshing()
 

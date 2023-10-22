@@ -245,7 +245,7 @@ async def create_test_runner(
     farmer_service: Service[Farmer, FarmerAPI],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> TestRunner:
-    await farmer_service.start()
+    await farmer_service._start()
     farmer: Farmer = farmer_service._node
     assert len(farmer.plot_sync_receivers) == 0
     harvesters: List[Harvester] = [

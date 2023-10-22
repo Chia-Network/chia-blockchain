@@ -86,12 +86,8 @@ async def init_data_layer_service(
     service = create_data_layer_service(
         root_path=bt.root_path, config=config, wallet_service=wallet_service, downloaders=[], uploaders=[]
     )
-    await service.start()
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @contextlib.asynccontextmanager

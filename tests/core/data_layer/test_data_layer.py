@@ -44,12 +44,9 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
         downloaders=[],
         uploaders=[],
     )
-    try:
-        assert not log_path.exists()
-        await data_layer._start()
-    finally:
-        data_layer._close()
-        await data_layer._await_closed()
+    assert not log_path.exists()
+    async with data_layer.manage():
+        pass
 
     if enable:
         assert log_path.is_file()

@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import logging.config
 import os
 import signal
 from pathlib import Path
 from types import FrameType
-from typing import Any, Awaitable, Callable, Coroutine, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
@@ -176,7 +191,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 
-    async def start(self) -> None:
+    async def _start(self) -> None:
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return None
@@ -219,7 +234,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self.self_hostname,
                 self.daemon_port,
                 uint16(rpc_port),
-                self.stop,
+                self._stop,
                 self.root_path,
                 self.config,
                 self._connect_to_daemon,
@@ -230,15 +245,26 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
                 try:
-                    await self.start()
+                    await self._start()
                 except:  # noqa E722
-                    self.stop()
+                    self._stop()
                     raise
                 finally:
-                    await self.wait_closed()
+                    await self._wait_closed()
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
+
+    @contextlib.asynccontextmanager
+    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+        # TODO: should we really allow not starting?
+        try:
+            if start:
+                await self._start()
+            yield
+        finally:
+            self._stop()
+            await self._wait_closed()
 
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
@@ -276,9 +302,9 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         if ignore:
             return
 
-        self.stop()
+        self._stop()
 
-    def stop(self) -> None:
+    def _stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
             self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
@@ -302,7 +328,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self._log.info("Closing RPC server")
                 self.rpc_server.close()
 
-    async def wait_closed(self) -> None:
+    async def _wait_closed(self) -> None:
         await self._is_stopping.wait()
 
         self._log.info("Waiting for socket to be closed (if opened)")

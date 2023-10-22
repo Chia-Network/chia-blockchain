@@ -183,6 +183,7 @@ class DataLayer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
+        await self._start()
         try:
             yield
         finally:

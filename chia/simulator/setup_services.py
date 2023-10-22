@@ -172,33 +172,29 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
-        if not reuse_db and db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-            # 3.11 switched to using functools.lru_cache for the statement cache.
-            # See #87028. This introduces a reference cycle involving the connection
-            # object, so the connection object no longer gets immediately
-            # deallocated, not until, for example, gc.collect() is called to break
-            # the cycle.
-            gc.collect()
-            for _ in range(10):
-                try:
-                    db_path.unlink()
-                    break
-                except PermissionError as e:
-                    print(f"db_path.unlink(): {e}")
-                    time.sleep(0.1)
-                    # filesystem operations are async on windows
-                    # [WinError 32] The process cannot access the file because it is
-                    # being used by another process
-                    pass
+    if not reuse_db and db_path.exists():
+        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+
+        # 3.11 switched to using functools.lru_cache for the statement cache.
+        # See #87028. This introduces a reference cycle involving the connection
+        # object, so the connection object no longer gets immediately
+        # deallocated, not until, for example, gc.collect() is called to break
+        # the cycle.
+        gc.collect()
+        for _ in range(10):
+            try:
+                db_path.unlink()
+                break
+            except PermissionError as e:
+                print(f"db_path.unlink(): {e}")
+                time.sleep(0.1)
+                # filesystem operations are async on windows
+                # [WinError 32] The process cannot access the file because it is
+                # being used by another process
+                pass
 
 
 @asynccontextmanager
@@ -228,16 +224,11 @@ async def setup_crawler(
         updated_constants,
         connect_to_daemon=False,
     )
-    await service.start()
+    async with service.manage():
+        if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
+            service._node.state_changed_callback = lambda x, y: None
 
-    if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.
-        service._node.state_changed_callback = lambda x, y: None
-
-    try:
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -323,34 +314,30 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        await service.start()
-
-        try:
+        async with service.manage():
             yield service
-        finally:
-            service.stop()
-            await service.wait_closed()
-            if db_path.exists():
-                # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-                # 3.11 switched to using functools.lru_cache for the statement cache.
-                # See #87028. This introduces a reference cycle involving the connection
-                # object, so the connection object no longer gets immediately
-                # deallocated, not until, for example, gc.collect() is called to break
-                # the cycle.
-                gc.collect()
-                for _ in range(10):
-                    try:
-                        db_path.unlink()
-                        break
-                    except PermissionError as e:
-                        print(f"db_path.unlink(): {e}")
-                        time.sleep(0.1)
-                        # filesystem operations are async on windows
-                        # [WinError 32] The process cannot access the file because it is
-                        # being used by another process
-                        pass
-            keychain.delete_all_keys()
+        if db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+
+            # 3.11 switched to using functools.lru_cache for the statement cache.
+            # See #87028. This introduces a reference cycle involving the connection
+            # object, so the connection object no longer gets immediately
+            # deallocated, not until, for example, gc.collect() is called to break
+            # the cycle.
+            gc.collect()
+            for _ in range(10):
+                try:
+                    db_path.unlink()
+                    break
+                except PermissionError as e:
+                    print(f"db_path.unlink(): {e}")
+                    time.sleep(0.1)
+                    # filesystem operations are async on windows
+                    # [WinError 32] The process cannot access the file because it is
+                    # being used by another process
+                    pass
+        keychain.delete_all_keys()
 
 
 @asynccontextmanager
@@ -379,14 +366,8 @@ async def setup_harvester(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -428,14 +409,8 @@ async def setup_farmer(
         connect_to_daemon=False,
     )
 
-    if start_service:
-        await service.start()
-
-    try:
+    async with service.manage(start=start_service):
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -447,13 +422,8 @@ async def setup_introducer(bt: BlockTools, port: int) -> AsyncGenerator[Service[
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()
 
 
 @asynccontextmanager
@@ -548,10 +518,5 @@ async def setup_timelord(
         connect_to_daemon=False,
     )
 
-    await service.start()
-
-    try:
+    async with service.manage():
         yield service
-    finally:
-        service.stop()
-        await service.wait_closed()

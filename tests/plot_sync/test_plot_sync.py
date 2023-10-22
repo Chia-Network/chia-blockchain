@@ -309,7 +309,7 @@ async def environment(
     harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer_service.reconnect_retry_seconds = 1
     farmer: Farmer = farmer_service._node
-    await farmer_service.start()
+    await farmer_service._start()
     harvesters: List[Harvester] = [
         await start_harvester_service(service, farmer_service) for service in harvester_services
     ]
@@ -506,8 +506,8 @@ async def test_harvester_restart(environment: Environment) -> None:
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
     # Stop the harvester and make sure the receiver gets dropped on the farmer and refreshing gets stopped
-    env.harvester_services[0].stop()
-    await env.harvester_services[0].wait_closed()
+    env.harvester_services[0]._stop()
+    await env.harvester_services[0]._wait_closed()
     assert len(env.farmer.plot_sync_receivers) == 1
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[0].plot_manager.needs_refresh()
@@ -535,13 +535,13 @@ async def test_farmer_restart(environment: Environment) -> None:
     for i in range(0, len(env.harvesters)):
         last_sync_ids.append(env.harvesters[i].plot_sync_sender._last_sync_id)
     # Stop the farmer and make sure both receivers get dropped and refreshing gets stopped on the harvesters
-    env.farmer_service.stop()
-    await env.farmer_service.wait_closed()
+    env.farmer_service._stop()
+    await env.farmer_service._wait_closed()
     assert len(env.farmer.plot_sync_receivers) == 0
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[1].plot_manager._refreshing_enabled
     # Start the farmer, wait for the handshake and make sure the receivers come back
-    await env.farmer_service.start()
+    await env.farmer_service._start()
     await time_out_assert(5, env.handshake_done, True, 0)
     await time_out_assert(5, env.handshake_done, True, 1)
     assert len(env.farmer.plot_sync_receivers) == 2
