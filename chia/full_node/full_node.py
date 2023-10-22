@@ -201,13 +201,11 @@ class FullNode:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
+        await self._start()
         try:
-            await self._start()
             yield
-        except:  # noqa E722
-            self._close()
-            raise
         finally:
+            self._close()
             await self._await_closed()
 
     @property
