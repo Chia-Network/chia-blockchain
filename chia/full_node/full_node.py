@@ -355,6 +355,7 @@ class FullNode:
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self._transaction_queue = TransactionQueue(1000, self.log)
+        # TODO: review task handling
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
@@ -399,6 +400,7 @@ class FullNode:
             if "sanitize_weight_proof_only" in self.config:
                 sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
             assert self.config["target_uncompact_proofs"] != 0
+            # TODO: review task handling
             self.uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(
                     self.config["send_uncompact_interval"],
@@ -535,6 +537,7 @@ class FullNode:
                 self._segment_task.cancel()
             except Exception as e:
                 self.log.warning(f"failed to cancel segment task {e}")
+            # TODO: review task handling
             self._segment_task = None
 
         try:

@@ -230,6 +230,7 @@ class DBWrapper2:
                 consume=True,
             ):
                 await self._monitor_task
+                # TODO: review task handling (race?)
                 self._monitor_task = None
 
     def _next_savepoint(self) -> str:

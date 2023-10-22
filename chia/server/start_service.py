@@ -204,6 +204,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         except ValueError:
             pass
 
+        # TODO: review task handling
         self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
 
         self._log.info(
@@ -211,6 +212,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
             f"at port {self._advertised_port}"
         )
 
+        # TODO: review task handling
         self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info

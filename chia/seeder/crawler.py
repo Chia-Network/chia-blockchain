@@ -138,6 +138,7 @@ class Crawler:
         self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
         # Bootstrap the initial peers
         await self.load_bootstrap_peers()
+        # TODO: review task handling
         self.crawl_task = asyncio.create_task(self.crawl())
 
     async def load_bootstrap_peers(self) -> None:

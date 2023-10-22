@@ -82,6 +82,7 @@ class BetaMetricsLogger:
         if self.task is not None:
             raise RuntimeError("Already started")
         self.stop_task = False
+        # TODO: review task handling
         self.task = asyncio.create_task(self.run())
 
     async def stop_logging(self) -> None:
@@ -91,6 +92,7 @@ class BetaMetricsLogger:
 
         self.stop_task = True
         await self.task
+        # TODO: review task handling (race with a startup assignment)
         self.task = None
 
     async def run(self) -> None:

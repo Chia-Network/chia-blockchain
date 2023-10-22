@@ -98,6 +98,7 @@ class KeychainProxy(DaemonProxy):
             raise KeychainProxyConnectionTimeout()
 
     async def start(self) -> None:
+        # TODO: review task handling
         self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 

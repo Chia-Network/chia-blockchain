@@ -31,6 +31,7 @@ class Introducer:
         self.log = logging.getLogger(__name__)
 
     async def _start(self):
+        # TODO: review task handling
         self._vetting_task = asyncio.create_task(self._vetting_loop())
 
     def _close(self):

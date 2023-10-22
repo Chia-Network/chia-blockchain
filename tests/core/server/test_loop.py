@@ -122,6 +122,7 @@ class ServeInThread:
             asyncio.set_event_loop_policy(original_event_loop_policy)
 
     async def main(self) -> None:
+        # TODO: review task handling
         self.server_task = asyncio.create_task(
             serve.async_main(
                 out_path=self.out_path,

@@ -128,4 +128,5 @@ class LimitedSemaphore:
                 consume=True,
             ):
                 await self._monitor_task
+                # TODO: review task handling (race?)
                 self._monitor_task = None

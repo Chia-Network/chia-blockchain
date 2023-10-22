@@ -407,6 +407,7 @@ class RpcServer:
                 self.client_session = None
                 await asyncio.sleep(2)
 
+        # TODO: review task handling
         self.daemon_connection_task = asyncio.create_task(inner())
 
 

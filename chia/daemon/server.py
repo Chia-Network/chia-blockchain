@@ -360,6 +360,7 @@ class WebSocketServer:
                     self.remove_connection(connection)
                     await connection.close()
         if restart is True:
+            # TODO: review task handling
             self.ping_job = asyncio.create_task(self.ping_task())
 
     async def handle_message(
