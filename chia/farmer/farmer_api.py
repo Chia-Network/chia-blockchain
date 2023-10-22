@@ -341,6 +341,19 @@ class FarmerAPI:
                                             "stale_partials",
                                             time.time(),
                                         )
+                                    elif pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
+                                        self.farmer.log.error(
+                                            "Partial not good enough, forcing pool farmer update to "
+                                            "get our current difficulty."
+                                        )
+                                        increment_pool_stats(
+                                            self.farmer.pool_state,
+                                            p2_singleton_puzzle_hash,
+                                            "insufficient_partials",
+                                            time.time(),
+                                        )
+                                        pool_state_dict["next_farmer_update"] = 0
+                                        await self.farmer.update_pool_state()
                                     else:
                                         increment_pool_stats(
                                             self.farmer.pool_state,
@@ -348,14 +361,6 @@ class FarmerAPI:
                                             "invalid_partials",
                                             time.time(),
                                         )
-
-                                    if pool_response["error_code"] == PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value:
-                                        self.farmer.log.error(
-                                            "Partial not good enough, forcing pool farmer update to "
-                                            "get our current difficulty."
-                                        )
-                                        pool_state_dict["next_farmer_update"] = 0
-                                        await self.farmer.update_pool_state()
                                 else:
                                     increment_pool_stats(
                                         self.farmer.pool_state,
