@@ -654,9 +654,8 @@ def match_treasury_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             if mod == DAO_TREASURY_MOD:
                 return curried_args.first().as_iter()  # type: ignore[no-any-return]
     except ValueError:  # pragma: no cover
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
     return None
 
 
@@ -674,9 +673,8 @@ def match_proposal_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             ret = chain(c_a.as_iter(), curried_args.as_iter())
             return ret
     except ValueError:
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
     return None
 
 
@@ -692,9 +690,8 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
             if mod == DAO_FINISHED_STATE:
                 return curried_args.as_iter()  # type: ignore[no-any-return]
     except ValueError:  # pragma: no cover
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
     return None
 
 
@@ -726,9 +723,8 @@ def match_funding_puzzle(
                 if cond.at("rrrff") in fund_puzhashes:
                     return True
     except (ValueError, EvalError):
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
     return None
 
 
@@ -741,9 +737,8 @@ def match_dao_cat_puzzle(uncurried: UncurriedPuzzle) -> Optional[Iterator[Progra
                 dao_cat_args: Iterator[Program] = Program.to(arg_list).as_iter()
                 return dao_cat_args
     except ValueError:
-        import traceback
-
-        print(f"exception: {traceback.format_exc()}")
+        # We just pass here to prevent spamming logs with error messages when WSM checks incoming coins
+        pass
     return None
 
 
