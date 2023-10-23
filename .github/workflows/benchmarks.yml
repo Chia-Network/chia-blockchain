@@ -39,7 +39,7 @@ jobs:
       - name: Calculate timeout
         id: timeout
         run: |
-          echo "timeout=$(( ${{ inputs.repeats }} * 15 ))" >> "$GITHUB_OUTPUT"
+          echo "timeout=$(( ${{ inputs.repeats }} * 20 ))" >> "$GITHUB_OUTPUT"
 
   build:
     name: Benchmarks
