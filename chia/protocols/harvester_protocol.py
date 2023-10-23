@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from chia_rs import G1Element, G2Element
+from chia.types.blockchain_format.foliage import FoliageBlockData
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -33,27 +34,6 @@ class HarvesterHandshake(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class HarvesterFeeInfo(Streamable):
-    """
-    Used when connected to a third-party Harvester that provides specialized harvesting
-    services in exchange for a fee.
-    Which is said to be a percentage of the farmer reward.
-    """
-    fee_rate: float # Must be >= 0 and <= 1
-    fee_reward_puzzle_hash: bytes32
-
-    def __str__(self) -> str:
-        return f"HarvesterFeeInfo: fee_rate: {self.fee_rate}, fee_reward_puzzle_hash: {self.fee_reward_puzzle_hash.hex()}"
-
-
-@streamable
-@dataclass(frozen=True)
-class RespondHarvesterHandshake(Streamable):
-    fee_info: Optional[HarvesterFeeInfo]
-
-
-@streamable
-@dataclass(frozen=True)
 class NewSignagePointHarvester(Streamable):
     challenge_hash: bytes32
     difficulty: uint64
@@ -72,6 +52,7 @@ class NewProofOfSpace(Streamable):
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
+    farmer_reward_address_override: Optional[bytes32]
 
 
 @streamable
@@ -81,7 +62,7 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
-
+    foliage_block_data: Optional[Tuple[uint8, FoliageBlockData]]
 
 @streamable
 @dataclass(frozen=True)
@@ -92,6 +73,7 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
+    farmer_reward_address_override: Optional[bytes32]
 
 
 @streamable
