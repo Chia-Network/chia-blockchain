@@ -493,7 +493,8 @@ class DAOWallet:
                 break
 
             children_state_list: List[CoinState] = [child for child in children if child.coin.amount % 2 == 1]
-            if len(children_state_list) == 0:  # pragma: no cover
+            # ensure children_state_list has only one odd amount coin (the treasury)
+            if (len(children_state_list) == 0) or (len(children_state_list) > 1):  # pragma: no cover
                 raise RuntimeError("Could not retrieve child_state")
             children_state = children_state_list[0]
             assert children_state is not None
