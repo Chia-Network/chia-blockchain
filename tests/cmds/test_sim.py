@@ -35,7 +35,6 @@ def test_every_simulator_command() -> None:
     simulator_name = get_profile_path(starting_str)
     runner: CliRunner = CliRunner()
     address = std_farming_address
-    return
     start_result = runner.invoke(
         cli,
         ["dev", "sim", "-n", simulator_name, "create", "-bm", mnemonic],
