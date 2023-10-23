@@ -434,7 +434,7 @@ class FullNodeDiscovery:
                 await asyncio.sleep(connect_peer_interval)
 
                 # prune completed connect tasks
-                self.pending_task = set(filter(lambda t: not t.done(), self.pending_tasks))
+                self.pending_tasks = set(filter(lambda t: not t.done(), self.pending_tasks))
 
             except Exception as e:
                 self.log.error(f"Exception in create outbound connections: {e}")
