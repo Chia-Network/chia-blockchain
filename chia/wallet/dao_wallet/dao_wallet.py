@@ -507,6 +507,9 @@ class DAOWallet:
         if parent_parent_coin is None:  # pragma: no cover
             raise RuntimeError("could not get parent_parent_coin of %s", children)
 
+        # ensure the child coin is unspent to prevent untrusted nodes sending false coin states
+        assert children_state.spent_height is None
+
         # get lineage proof of parent spend, and also current innerpuz
         assert children_state.created_height
         parent_spend = await fetch_coin_spend(children_state.created_height, parent_parent_coin, peer)
