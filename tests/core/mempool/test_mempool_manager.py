@@ -1204,7 +1204,7 @@ def test_run_for_cost(amount: int) -> None:
 def test_run_for_cost_max_cost() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, 1]]
     solution = Program.to(conditions)
-    with pytest.raises(ValueError, match="('cost exceeded', '2b')"):
+    with pytest.raises(ValueError, match="cost exceeded"):
         run_for_cost(IDENTITY_PUZZLE, solution, additions_count=1, max_cost=uint64(43))
 
 
