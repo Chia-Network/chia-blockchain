@@ -25,7 +25,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, UnknownCondition
+from chia.wallet.conditions import Condition, UnknownCondition, parse_timelock_info
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -314,7 +314,7 @@ class DataLayerWallet:
         )
         announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
         announcement = Announcement(launcher_coin.name(), announcement_message)
-        create_launcher_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [create_launcher_tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(1),
             puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
             tx_config=tx_config,
@@ -355,6 +355,7 @@ class DataLayerWallet:
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
             name=full_spend.name(),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
@@ -384,7 +385,7 @@ class DataLayerWallet:
         tx_config: TXConfig,
         coin_announcement: bool = True,
     ) -> TransactionRecord:
-        chia_tx = await self.standard_wallet.generate_signed_transaction(
+        [chia_tx] = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
             puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash),
             tx_config=tx_config,
@@ -608,6 +609,7 @@ class DataLayerWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=singleton_record.coin_id,
+            valid_times=parse_timelock_info(extra_conditions),
         )
         assert dl_tx.spend_bundle is not None
         if fee > 0:
@@ -749,7 +751,7 @@ class DataLayerWallet:
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
-        create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [create_mirror_tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount=amount,
             puzzle_hash=create_mirror_puzzle().get_tree_hash(),
             tx_config=tx_config,
@@ -759,7 +761,7 @@ class DataLayerWallet:
             ignore_max_send_amount=False,
             extra_conditions=extra_conditions,
         )
-        assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
+        assert create_mirror_tx_record.spend_bundle is not None
         return [create_mirror_tx_record]
 
     async def delete_mirror(
@@ -822,11 +824,12 @@ class DataLayerWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=mirror_bundle.name(),
+                valid_times=parse_timelock_info(extra_conditions),
             )
         ]
 
         if excess_fee > 0:
-            chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+            [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
                 uint64(1),
                 new_puzhash,
                 tx_config,
@@ -1167,6 +1170,7 @@ class DataLayerWallet:
         solver: Solver,
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Offer:
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
@@ -1196,8 +1200,10 @@ class DataLayerWallet:
                 sign=False,
                 add_pending_singleton=False,
                 announce_new_state=True,
+                extra_conditions=extra_conditions,
             )
             fee_left_to_pay = uint64(0)
+            extra_conditions = tuple()
 
             assert txs[0].spend_bundle is not None
             dl_spend: CoinSpend = next(

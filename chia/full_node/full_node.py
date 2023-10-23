@@ -11,7 +11,7 @@ import time
 import traceback
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, final
 
 from blspy import AugSchemeMPL
 
@@ -35,7 +35,7 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions
-from chia.full_node.sync_store import SyncStore
+from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
@@ -74,6 +74,7 @@ from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -88,45 +89,62 @@ class PeakPostProcessingResult:
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
+@dataclasses.dataclass(frozen=True)
+class WalletUpdate:
+    fork_height: uint32
+    peak: Peak
+    coin_records: List[CoinRecord]
+    hints: Dict[bytes32, bytes32]
+
+
+@final
+@dataclasses.dataclass
 class FullNode:
-    _segment_task: Optional[asyncio.Task[None]]
-    initialized: bool
     root_path: Path
     config: Dict[str, Any]
-    _server: Optional[ChiaServer]
-    _shut_down: bool
     constants: ConsensusConstants
-    pow_creation: Dict[bytes32, asyncio.Event]
-    state_changed_callback: Optional[StateChangedProtocol] = None
-    full_node_peers: Optional[FullNodePeers]
-    sync_store: SyncStore
     signage_point_times: List[float]
     full_node_store: FullNodeStore
-    uncompact_task: Optional[asyncio.Task[None]]
-    compact_vdf_requests: Set[bytes32]
     log: logging.Logger
-    multiprocessing_context: Optional[BaseContext]
-    _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
-    subscriptions: PeerSubscriptions
-    _transaction_queue_task: Optional[asyncio.Task[None]]
-    simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
-    _sync_task: Optional[asyncio.Task[None]]
-    _transaction_queue: Optional[TransactionQueue]
-    _compact_vdf_sem: Optional[LimitedSemaphore]
-    _new_peak_sem: Optional[LimitedSemaphore]
-    _add_transaction_semaphore: Optional[asyncio.Semaphore]
-    _db_wrapper: Optional[DBWrapper2]
-    _hint_store: Optional[HintStore]
-    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
-    _block_store: Optional[BlockStore]
-    _coin_store: Optional[CoinStore]
-    _mempool_manager: Optional[MempoolManager]
-    _init_weight_proof: Optional[asyncio.Task[None]]
-    _blockchain: Optional[Blockchain]
-    _timelord_lock: Optional[asyncio.Lock]
-    weight_proof_handler: Optional[WeightProofHandler]
-    bad_peak_cache: Dict[bytes32, uint32]  # hashes of peaks that failed long sync on chip13 Validation
+    wallet_sync_queue: asyncio.Queue[WalletUpdate]
+    _segment_task: Optional[asyncio.Task[None]] = None
+    initialized: bool = False
+    _server: Optional[ChiaServer] = None
+    _shut_down: bool = False
+    pow_creation: Dict[bytes32, asyncio.Event] = dataclasses.field(default_factory=dict)
+    state_changed_callback: Optional[StateChangedProtocol] = None
+    full_node_peers: Optional[FullNodePeers] = None
+    sync_store: SyncStore = dataclasses.field(default_factory=SyncStore)
+    uncompact_task: Optional[asyncio.Task[None]] = None
+    compact_vdf_requests: Set[bytes32] = dataclasses.field(default_factory=set)
+    # TODO: Logging isn't setup yet so the log entries related to parsing the
+    #       config would end up on stdout if handled here.
+    multiprocessing_context: Optional[BaseContext] = None
+    _ui_tasks: Set[asyncio.Task[None]] = dataclasses.field(default_factory=set)
+    subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
+    _transaction_queue_task: Optional[asyncio.Task[None]] = None
+    simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
+    _sync_task: Optional[asyncio.Task[None]] = None
+    _transaction_queue: Optional[TransactionQueue] = None
+    _compact_vdf_sem: Optional[LimitedSemaphore] = None
+    _new_peak_sem: Optional[LimitedSemaphore] = None
+    _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
+    _db_wrapper: Optional[DBWrapper2] = None
+    _hint_store: Optional[HintStore] = None
+    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = dataclasses.field(
+        default_factory=list
+    )
+    _block_store: Optional[BlockStore] = None
+    _coin_store: Optional[CoinStore] = None
+    _mempool_manager: Optional[MempoolManager] = None
+    _init_weight_proof: Optional[asyncio.Task[None]] = None
+    _blockchain: Optional[Blockchain] = None
+    _timelord_lock: Optional[asyncio.Lock] = None
+    weight_proof_handler: Optional[WeightProofHandler] = None
+    # hashes of peaks that failed long sync on chip13 Validation
+    bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
+    wallet_sync_task: Optional[asyncio.Task[None]] = None
 
     @property
     def server(self) -> ChiaServer:
@@ -137,59 +155,29 @@ class FullNode:
 
         return self._server
 
-    def __init__(
-        self,
+    @classmethod
+    async def create(
+        cls,
         config: Dict[str, Any],
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = __name__,
-    ) -> None:
-        self._segment_task = None
-        self.initialized = False
-        self.root_path = root_path
-        self.config = config
-        self._server = None
-        self._shut_down = False  # Set to true to close all infinite loops
-        self.constants = consensus_constants
-        self.pow_creation = {}
-        self.state_changed_callback = None
-        self.full_node_peers = None
-        self.sync_store = SyncStore()
-        self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
-        self.full_node_store = FullNodeStore(self.constants)
-        self.uncompact_task = None
-        self.compact_vdf_requests = set()
-        self.log = logging.getLogger(name)
-
-        # TODO: Logging isn't setup yet so the log entries related to parsing the
-        #       config would end up on stdout if handled here.
-        self.multiprocessing_context = None
-
-        self._ui_tasks = set()
-
+    ) -> FullNode:
+        # NOTE: async to force the queue creation to occur when an event loop is available
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
-        self.db_path = path_from_root(root_path, db_path_replaced)
-        self.subscriptions = PeerSubscriptions()
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._transaction_queue_task = None
-        self.simulator_transaction_callback = None
+        db_path = path_from_root(root_path, db_path_replaced)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self._sync_task = None
-        self._transaction_queue = None
-        self._compact_vdf_sem = None
-        self._new_peak_sem = None
-        self._add_transaction_semaphore = None
-        self._db_wrapper = None
-        self._hint_store = None
-        self.transaction_responses = []
-        self._block_store = None
-        self._coin_store = None
-        self._mempool_manager = None
-        self._init_weight_proof = None
-        self._blockchain = None
-        self._timelord_lock = None
-        self.weight_proof_handler = None
-        self.bad_peak_cache = {}
+        return cls(
+            root_path=root_path,
+            config=config,
+            constants=consensus_constants,
+            signage_point_times=[time.time() for _ in range(consensus_constants.NUM_SPS_SUB_SLOT)],
+            full_node_store=FullNodeStore(consensus_constants),
+            log=logging.getLogger(name),
+            db_path=db_path,
+            wallet_sync_queue=asyncio.Queue(),
+        )
 
     @property
     def block_store(self) -> BlockStore:
@@ -414,6 +402,9 @@ class FullNode:
                     sanitize_weight_proof_only,
                 )
             )
+        if self.wallet_sync_task is None or self.wallet_sync_task.done():
+            self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
@@ -514,10 +505,7 @@ class FullNode:
         """
         # Don't trigger multiple batch syncs to the same peer
 
-        if (
-            peer.peer_node_id in self.sync_store.backtrack_syncing
-            and self.sync_store.backtrack_syncing[peer.peer_node_id] > 0
-        ):
+        if self.sync_store.is_backtrack_syncing(node_id=peer.peer_node_id):
             return True  # Don't batch sync, we are already in progress of a backtrack sync
         if peer.peer_node_id in self.sync_store.batch_syncing:
             return True  # Don't trigger a long sync
@@ -598,9 +586,7 @@ class FullNode:
             True iff we found the fork point, and we do not need to long sync.
         """
         try:
-            if peer.peer_node_id not in self.sync_store.backtrack_syncing:
-                self.sync_store.backtrack_syncing[peer.peer_node_id] = 0
-            self.sync_store.backtrack_syncing[peer.peer_node_id] += 1
+            self.sync_store.increment_backtrack_syncing(node_id=peer.peer_node_id)
 
             unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(target_unf_hash)
             curr_height: int = target_height
@@ -629,10 +615,10 @@ class FullNode:
                 for block in reversed(blocks):
                     await self.add_block(block, peer)
         except (asyncio.CancelledError, Exception):
-            self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
+            self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
             raise
 
-        self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
+        self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
         return found_fork_point
 
     async def _refresh_ui_connections(self, sleep_before: float = 0) -> None:
@@ -871,6 +857,7 @@ class FullNode:
             self.uncompact_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
+        cancel_task_safe(task=self.wallet_sync_task, log=self.log)
         cancel_task_safe(task=self._sync_task, log=self.log)
 
     async def _await_closed(self) -> None:
@@ -1094,14 +1081,12 @@ class FullNode:
                     advanced_peak = True
                     assert peak is not None
                     # Hints must be added to the DB. The other post-processing tasks are not required when syncing
-                    hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
+                    hints_to_add, _ = get_hints_and_subscription_coin_ids(
                         state_change_summary,
                         self.subscriptions.has_coin_subscription,
                         self.subscriptions.has_ph_subscription,
                     )
                     await self.hint_store.add_hints(hints_to_add)
-                    await self.update_wallets(state_change_summary, hints_to_add, lookup_coin_ids)
-                await self.send_peak_to_wallets()
                 self.blockchain.clean_block_record(end_height - self.constants.BLOCKS_CACHE_SIZE)
 
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
@@ -1110,22 +1095,11 @@ class FullNode:
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue_input))
         validate_task = asyncio.Task(validate_block_batches(batch_queue_input))
         try:
-            await asyncio.gather(fetch_task, validate_task)
-        except Exception as e:
+            with log_exceptions(log=self.log, message="sync from fork point failed"):
+                await asyncio.gather(fetch_task, validate_task)
+        except Exception:
             assert validate_task.done()
             fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
-            self.log.error(f"sync from fork point failed err: {e}")
-
-    async def send_peak_to_wallets(self) -> None:
-        peak = self.blockchain.get_peak()
-        assert peak is not None
-        msg = make_msg(
-            ProtocolMessageTypes.new_peak_wallet,
-            wallet_protocol.NewPeakWallet(
-                peak.header_hash, peak.height, peak.weight, uint32(max(peak.height - 1, uint32(0)))
-            ),
-        )
-        await self.server.send_to_all([msg], NodeType.WALLET)
 
     def get_peers_with_peak(self, peak_hash: bytes32) -> List[WSChiaConnection]:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
@@ -1134,52 +1108,52 @@ class FullNode:
             return []
         return [c for c in self.server.all_connections.values() if c.peer_node_id in peer_ids]
 
-    async def update_wallets(
-        self,
-        state_change_summary: StateChangeSummary,
-        hints: List[Tuple[bytes32, bytes]],
-        lookup_coin_ids: List[bytes32],
-    ) -> None:
-        # Looks up coin records in DB for the coins that wallets are interested in
-        new_states: List[CoinRecord] = await self.coin_store.get_coin_records(lookup_coin_ids)
+    async def _wallets_sync_task_handler(self) -> None:
+        while not self._shut_down:
+            try:
+                wallet_update = await self.wallet_sync_queue.get()
+                await self.update_wallets(wallet_update)
+            except Exception:
+                self.log.exception("Wallet sync task failure")
+                continue
 
-        # Re-arrange to a map, and filter out any non-ph sized hint
-        coin_id_to_ph_hint: Dict[bytes32, bytes32] = {
-            coin_id: bytes32(hint) for coin_id, hint in hints if len(hint) == 32
-        }
-
+    async def update_wallets(self, wallet_update: WalletUpdate) -> None:
+        self.log.debug(
+            f"update_wallets - fork_height: {wallet_update.fork_height}, peak_height: {wallet_update.peak.height}"
+        )
         changes_for_peer: Dict[bytes32, Set[CoinState]] = {}
-        for coin_record in state_change_summary.rolled_back_records + new_states:
-            cr_name: bytes32 = coin_record.name
-
-            for peer in self.subscriptions.peers_for_coin_id(cr_name):
-                if peer not in changes_for_peer:
-                    changes_for_peer[peer] = set()
-                changes_for_peer[peer].add(coin_record.coin_state)
-
-            for peer in self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash):
-                if peer not in changes_for_peer:
-                    changes_for_peer[peer] = set()
-                changes_for_peer[peer].add(coin_record.coin_state)
-
-            if cr_name in coin_id_to_ph_hint:
-                for peer in self.subscriptions.peers_for_puzzle_hash(coin_id_to_ph_hint[cr_name]):
-                    if peer not in changes_for_peer:
-                        changes_for_peer[peer] = set()
-                    changes_for_peer[peer].add(coin_record.coin_state)
+        for coin_record in wallet_update.coin_records:
+            coin_id = coin_record.name
+            subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
+            subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash))
+            hint = wallet_update.hints.get(coin_id)
+            if hint is not None:
+                subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(hint))
+            for peer in subscribed_peers:
+                changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
 
         for peer, changes in changes_for_peer.items():
-            if peer not in self.server.all_connections:
-                continue
-            ws_peer: WSChiaConnection = self.server.all_connections[peer]
-            state = CoinStateUpdate(
-                state_change_summary.peak.height,
-                state_change_summary.fork_height,
-                state_change_summary.peak.header_hash,
-                list(changes),
-            )
-            msg = make_msg(ProtocolMessageTypes.coin_state_update, state)
-            await ws_peer.send_message(msg)
+            connection = self.server.all_connections.get(peer)
+            if connection is not None:
+                state = CoinStateUpdate(
+                    wallet_update.peak.height,
+                    wallet_update.fork_height,
+                    wallet_update.peak.header_hash,
+                    list(changes),
+                )
+                await connection.send_message(make_msg(ProtocolMessageTypes.coin_state_update, state))
+
+        # Tell wallets about the new peak
+        new_peak_message = make_msg(
+            ProtocolMessageTypes.new_peak_wallet,
+            wallet_protocol.NewPeakWallet(
+                wallet_update.peak.header_hash,
+                wallet_update.peak.height,
+                wallet_update.peak.weight,
+                wallet_update.fork_height,
+            ),
+        )
+        await self.server.send_to_all([new_peak_message], NodeType.WALLET)
 
     async def add_block_batch(
         self,
@@ -1274,8 +1248,6 @@ class FullNode:
             return None
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-            await self.sync_store.clear_sync_info()
-
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
@@ -1541,18 +1513,26 @@ class FullNode:
             else:
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-        # Tell wallets about the new peak
-        msg = make_msg(
-            ProtocolMessageTypes.new_peak_wallet,
-            wallet_protocol.NewPeakWallet(
-                record.header_hash,
-                record.height,
-                record.weight,
-                state_change_summary.fork_height,
-            ),
+        coin_hints: Dict[bytes32, bytes32] = {
+            coin_id: bytes32(hint) for coin_id, hint in ppp_result.hints if len(hint) == 32
+        }
+
+        peak = Peak(
+            state_change_summary.peak.header_hash, state_change_summary.peak.height, state_change_summary.peak.weight
         )
-        await self.update_wallets(state_change_summary, ppp_result.hints, ppp_result.lookup_coin_ids)
-        await self.server.send_to_all([msg], NodeType.WALLET)
+
+        # Looks up coin records in DB for the coins that wallets are interested in
+        new_states = await self.coin_store.get_coin_records(ppp_result.lookup_coin_ids)
+
+        await self.wallet_sync_queue.put(
+            WalletUpdate(
+                state_change_summary.fork_height,
+                peak,
+                state_change_summary.rolled_back_records + new_states,
+                coin_hints,
+            )
+        )
+
         self._state_changed("new_peak")
 
     async def add_block(
@@ -1726,8 +1706,6 @@ class FullNode:
         clear_height = uint32(max(0, peak.height - 50))
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
-        if peak.height % 1000 == 0 and not self.sync_store.get_sync_mode():
-            await self.sync_store.clear_sync_info()  # Occasionally clear sync peer info
 
         state_changed_data: Dict[str, Any] = {
             "transaction_block": False,

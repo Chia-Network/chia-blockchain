@@ -11,11 +11,12 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend, compute_additions_with_cost
+from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
+from chia.wallet.conditions import Condition, ConditionValidTimes, parse_conditions_non_consensus, parse_timelock_info
 from chia.wallet.outer_puzzles import (
     construct_puzzle,
     create_asset_id,
@@ -28,6 +29,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
+from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
@@ -75,8 +77,10 @@ class Offer:
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
     _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _hints: Dict[bytes32, bytes32] = field(init=False)
     _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
     _final_spend_bundle: Optional[SpendBundle] = field(init=False)
+    _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -135,19 +139,59 @@ class Offer:
 
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
+        hints: Dict[bytes32, bytes32] = {}
         max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
             try:
-                coins, cost = compute_additions_with_cost(cs)
+                hinted_coins, cost = compute_spend_hints_and_additions(cs)
                 max_cost -= cost
-                adds[cs.coin] = coins
+                adds[cs.coin] = [hc.coin for hc in hinted_coins.values()]
+                hints = {**hints, **{id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None}}
             except Exception:
                 continue
             if max_cost < 0:
                 raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_additions for CoinSpend")
         object.__setattr__(self, "_additions", adds)
+        object.__setattr__(self, "_hints", hints)
+        object.__setattr__(self, "_conditions", None)
+
+    def conditions(self) -> Dict[Coin, List[Condition]]:
+        if self._conditions is None:
+            conditions: Dict[Coin, List[Condition]] = {}
+            max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            for cs in self._bundle.coin_spends:
+                try:
+                    cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
+                    max_cost -= cost
+                    conditions[cs.coin] = parse_conditions_non_consensus(conds.as_iter())
+                except Exception:  # pragma: no cover
+                    continue
+                if max_cost < 0:  # pragma: no cover
+                    raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "computing conditions for CoinSpend")
+            object.__setattr__(self, "_conditions", conditions)
+        assert self._conditions is not None, "self._conditions is None"
+        return self._conditions
+
+    def valid_times(self) -> Dict[Coin, ConditionValidTimes]:
+        return {coin: parse_timelock_info(conditions) for coin, conditions in self.conditions().items()}
+
+    def absolute_valid_times_ban_relatives(self) -> ConditionValidTimes:
+        valid_times: ConditionValidTimes = parse_timelock_info(
+            [c for conditions in self.conditions().values() for c in conditions]
+        )
+        if (
+            valid_times.max_secs_after_created is not None
+            or valid_times.min_secs_since_created is not None
+            or valid_times.max_blocks_after_created is not None
+            or valid_times.min_blocks_since_created is not None
+        ):
+            raise ValueError("Offers with relative timelocks are not currently supported")
+        return valid_times
+
+    def hints(self) -> Dict[bytes32, bytes32]:
+        return self._hints
 
     def additions(self) -> List[Coin]:
         return [c for additions in self._additions.values() for c in additions]
@@ -270,7 +314,7 @@ class Offer:
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]]]:
+    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]], ConditionValidTimes]:
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
 
@@ -287,7 +331,12 @@ class Offer:
         for key, value in self.driver_dict.items():
             driver_dict[key.hex()] = value.info
 
-        return keys_to_strings(offered_amounts), keys_to_strings(requested_amounts), driver_dict
+        return (
+            keys_to_strings(offered_amounts),
+            keys_to_strings(requested_amounts),
+            driver_dict,
+            self.absolute_valid_times_ban_relatives(),
+        )
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends

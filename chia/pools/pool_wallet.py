@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
+from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_puzzles import (
-    SINGLETON_LAUNCHER,
     create_absorb_spend,
     create_full_puzzle,
     create_pooling_inner_puzzle,
@@ -42,11 +42,10 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.sign_coin_spends import sign_coin_spends
@@ -57,6 +56,9 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 @final
@@ -72,7 +74,7 @@ class PoolWallet:
     MAXIMUM_RELATIVE_LOCK_HEIGHT = 1000
     DEFAULT_MAX_CLAIM_SPENDS = 100
 
-    wallet_state_manager: Any
+    wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
     standard_wallet: Wallet
@@ -460,6 +462,7 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            valid_times=parse_timelock_info(extra_conditions),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
         p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
@@ -481,15 +484,22 @@ class PoolWallet:
     async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
         async def pk_to_sk(pk: G1Element) -> PrivateKey:
             s = find_owner_sk([self.wallet_state_manager.private_key], pk)
-            if s is None:
+            if s is None:  # pragma: no cover
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
+                private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
+                if private_key is None:
+                    raise ValueError(f"No private key for pubkey: {pk}")
+                return private_key
             else:
                 # Note that pool_wallet_index may be from another wallet than self.wallet_id
                 owner_sk, pool_wallet_index = s
-            if owner_sk is None:
+            if owner_sk is None:  # pragma: no cover
+                # TODO: this code is dead, per hinting at least
                 # No pool wallet transactions _should_ hit this, but it can't hurt to have a backstop
-                return self.wallet_state_manager.get_private_key_for_pubkey(pk)  # pragma: no cover
+                private_key = await self.wallet_state_manager.get_private_key_for_pubkey(pk)
+                if private_key is None:
+                    raise ValueError(f"No private key for pubkey: {pk}")
+                return private_key
             return owner_sk
 
         return await sign_coin_spends(
@@ -507,7 +517,7 @@ class PoolWallet:
         tx_config: TXConfig,
         coin_announcements: Optional[Set[Announcement]] = None,
     ) -> TransactionRecord:
-        fee_tx = await self.standard_wallet.generate_signed_transaction(
+        [fee_tx] = await self.standard_wallet.generate_signed_transaction(
             uint64(0),
             (await self.standard_wallet.get_new_puzzlehash()),
             tx_config,
@@ -632,6 +642,7 @@ class PoolWallet:
             memos=[],
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
+            valid_times=ConditionValidTimes(),
         )
 
         await self.publish_transactions(tx_record, fee_tx)
@@ -696,7 +707,7 @@ class PoolWallet:
         announcement_message = Program.to([puzzle_hash, amount, pool_state_bytes]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        create_launcher_tx_record: Optional[TransactionRecord] = await standard_wallet.generate_signed_transaction(
+        [create_launcher_tx_record] = await standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -708,7 +719,7 @@ class PoolWallet:
             origin_id=launcher_parent.name(),
             extra_conditions=extra_conditions,
         )
-        assert create_launcher_tx_record is not None and create_launcher_tx_record.spend_bundle is not None
+        assert create_launcher_tx_record.spend_bundle is not None
 
         genesis_launcher_solution: Program = Program.to([puzzle_hash, amount, pool_state_bytes])
 
@@ -825,9 +836,7 @@ class PoolWallet:
             self.log.info(f"Bad max_spends_in_tx value of {max_spends_in_tx}. Set to {self.DEFAULT_MAX_CLAIM_SPENDS}.")
             max_spends_in_tx = self.DEFAULT_MAX_CLAIM_SPENDS
 
-        unspent_coin_records: List[CoinRecord] = list(
-            await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
-        )
+        unspent_coin_records = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.wallet_id)
         if len(unspent_coin_records) == 0:
             raise ValueError("Nothing to claim, no transactions to p2_singleton_puzzle_hash")
         farming_rewards: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_farming_rewards()
@@ -913,12 +922,13 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=full_spend.name(),
+            valid_times=ConditionValidTimes(),
         )
 
         await self.publish_transactions(absorb_transaction, fee_tx)
         return absorb_transaction, fee_tx
 
-    async def new_peak(self, peak_height: uint64) -> None:
+    async def new_peak(self, peak_height: uint32) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
 
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()

@@ -1,0 +1,35 @@
+; This code is the end state of a proposal or a dividend.
+; It is an oracle which simply recreates itself and emits an announcement that it has concluded operation
+
+(mod (SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH my_amount)
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+  (include *standard-cl-21*)
+
+  (defun wrap_in_singleton (SINGLETON_STRUCT my_inner_puzhash)
+    (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+      my_inner_puzhash
+      (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+  (defun recreate_self (SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH)
+    (puzzle-hash-of-curried-function DAO_FINISHED_STATE_MOD_HASH
+      (sha256 ONE DAO_FINISHED_STATE_MOD_HASH)
+      (sha256tree SINGLETON_STRUCT)
+    )
+  )
+
+
+  (let
+    (
+      (my_inner_puzhash (recreate_self SINGLETON_STRUCT DAO_FINISHED_STATE_MOD_HASH))
+    )
+    (list
+      (list ASSERT_MY_PUZZLEHASH (wrap_in_singleton SINGLETON_STRUCT my_inner_puzhash))
+      (list ASSERT_MY_AMOUNT my_amount)
+      (list CREATE_COIN my_inner_puzhash my_amount)
+      (list CREATE_PUZZLE_ANNOUNCEMENT 0)
+    )
+  )
+)

@@ -36,6 +36,7 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
+from tests.conftest import ConsensusMode
 
 
 class TestCATWallet:
@@ -58,7 +59,7 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -80,6 +81,7 @@ class TestCATWallet:
                 {"identifier": "genesis_by_id"},
                 uint64(100),
                 DEFAULT_TX_CONFIG,
+                fee=uint64(10),
             )
             # The next 2 lines are basically a noop, it just adds test coverage
             cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
@@ -92,6 +94,9 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - 110)
+        await time_out_assert(20, wallet.get_spendable_balance, funds - 110)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - 110)
 
         # Test migration
         all_lineage = await cat_wallet.lineage_store.get_all_lineage_proofs()
@@ -124,7 +129,7 @@ class TestCATWallet:
         ph = await wallet.get_new_puzzlehash()
         wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -184,8 +189,8 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -297,8 +302,8 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -401,7 +406,7 @@ class TestCATWallet:
             wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -462,8 +467,8 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -519,7 +524,7 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
-        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+        [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, cc2_ph, DEFAULT_TX_CONFIG, 0
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
@@ -563,9 +568,9 @@ class TestCATWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await wallet_server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await wallet_server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -666,10 +671,8 @@ class TestCATWallet:
                 assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
                 assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.asyncio
     async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
@@ -687,8 +690,8 @@ class TestCATWallet:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -780,14 +783,9 @@ class TestCATWallet:
                 DEFAULT_TX_CONFIG,
             )
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
-    @pytest.mark.parametrize(
-        "autodiscovery",
-        [True, False],
-    )
+    @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
+    @pytest.mark.parametrize("trusted", [True, False])
+    @pytest.mark.parametrize("autodiscovery", [True, False])
     @pytest.mark.asyncio
     async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
@@ -808,8 +806,8 @@ class TestCATWallet:
             wallet_node_2.config["trusted_peers"] = {}
         wallet_node.config["automatically_add_unknown_cats"] = autodiscovery
         wallet_node_2.config["automatically_add_unknown_cats"] = autodiscovery
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -935,7 +933,7 @@ class TestCATWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server.get_port())), None)
         await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
 

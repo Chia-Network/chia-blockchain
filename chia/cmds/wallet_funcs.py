@@ -95,6 +95,7 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:  # pragma: no cover
         WalletType.POOLING_WALLET,
         WalletType.DATA_LAYER,
         WalletType.VC,
+        WalletType.DAO,
     }:
         mojo_per_unit = units["chia"]
     elif wallet_type in {WalletType.CAT, WalletType.CRCAT}:
@@ -264,7 +265,7 @@ async def send(
     address: str,
     override: bool,
     min_coin_amount: str,
-    max_coin_amount: str,
+    max_coin_amount: Optional[str],
     excluded_coin_ids: Sequence[str],
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
@@ -613,7 +614,7 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
     if summaries:
         print("Summary:")
         offer = Offer.from_bytes(record.offer)
-        offered, requested, _ = offer.summary()
+        offered, requested, _, _ = offer.summary()
         outbound_balances: Dict[str, int] = offer.get_pending_amounts()
         fees: Decimal = Decimal(offer.fees())
         cat_name_resolver = wallet_client.cat_asset_id_to_name
@@ -701,7 +702,7 @@ async def take_offer(
             print("Please enter a valid offer file or hex blob")
             return
 
-        offered, requested, _ = offer.summary()
+        offered, requested, _, _ = offer.summary()
         cat_name_resolver = wallet_client.cat_asset_id_to_name
         network_xch = AddressType.XCH.hrp(config).upper()
         print("Summary:")
@@ -877,6 +878,10 @@ async def print_balances(
                     my_did = get_did_response["did_id"]
                     if my_did is not None and len(my_did) > 0:
                         print(f"{indent}{'-DID ID:'.ljust(ljust)} {my_did}")
+                elif typ == WalletType.DAO:
+                    get_id_response = await wallet_client.dao_get_treasury_id(wallet_id)
+                    treasury_id = get_id_response["treasury_id"][2:]
+                    print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
                 print(f"{indent}{'-Wallet ID:'.ljust(ljust)} {wallet_id}")

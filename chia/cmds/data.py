@@ -109,15 +109,17 @@ def create_fee_option() -> Callable[[FC], FC]:
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
+@click.option("--verbose", is_flag=True, help="Enable verbose output.")
 @options.create_fingerprint()
 def create_data_store(
     data_rpc_port: int,
     fee: Optional[str],
+    verbose: bool,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import create_data_store_cmd
 
-    run(create_data_store_cmd(data_rpc_port, fee, fingerprint=fingerprint))
+    run(create_data_store_cmd(data_rpc_port, fee, verbose, fingerprint=fingerprint))
 
 
 @data_cmd.command("get_value", help="Get the value for a given key and store")
@@ -253,14 +255,16 @@ def remove_subscription(
 @create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
+@click.option("--retain", is_flag=True, help="Retain .dat files")
 def unsubscribe(
     id: str,
     data_rpc_port: int,
     fingerprint: Optional[int],
+    retain: bool,
 ) -> None:
     from chia.cmds.data_funcs import unsubscribe_cmd
 
-    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint))
+    run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, retain=retain))
 
 
 @data_cmd.command(
@@ -311,14 +315,14 @@ def get_root_history(
     help="Specify if already existing files need to be overwritten by this command",
 )
 @click.option(
-    "-f", "--foldername", type=str, help="If specified, use a non-default folder to write the files", required=False
+    "-d", "--directory", type=str, help="If specified, use a non-default directory to write the files", required=False
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
     ids: Optional[str],
     overwrite: bool,
-    foldername: Optional[str],
+    directory: Optional[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -329,7 +333,7 @@ def add_missing_files(
             rpc_port=data_rpc_port,
             ids=None if ids is None else json.loads(ids),
             overwrite=overwrite,
-            foldername=None if foldername is None else Path(foldername),
+            foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
         )
     )

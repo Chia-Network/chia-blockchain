@@ -1241,7 +1241,7 @@ def validate_recent_blocks(
             if not adjusted:
                 assert prev_block_record is not None
                 prev_block_record = dataclasses.replace(
-                    prev_block_record, deficit=deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                    prev_block_record, deficit=uint8(deficit % constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK)
                 )
                 sub_blocks.add_block_record(prev_block_record)
                 adjusted = True
@@ -1618,7 +1618,7 @@ def _validate_vdf_batch(
 ) -> bool:
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
         vdf = VDFProof.from_bytes(vdf_proof_bytes)
-        class_group = ClassgroupElement.from_bytes(class_group_bytes)
+        class_group = ClassgroupElement.create(class_group_bytes)
         vdf_info = VDFInfo.from_bytes(info)
         if not vdf.is_valid(constants, class_group, vdf_info):
             return False

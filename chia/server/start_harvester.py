@@ -15,6 +15,7 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -46,13 +47,12 @@ def create_harvester_service(
         node=harvester,
         peer_api=peer_api,
         node_type=NodeType.HARVESTER,
-        advertised_port=service_config["port"],
+        advertised_port=None,
         service_name=SERVICE_NAME,
         connect_peers=set() if farmer_peer is None else {farmer_peer},
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
-        listen=False,
     )
 
 
@@ -64,8 +64,9 @@ async def async_main() -> int:
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     farmer_peer = UnresolvedPeerInfo(service_config["farmer_peer"]["host"], service_config["farmer_peer"]["port"])
     service = create_harvester_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS, farmer_peer)
-    await service.setup_process_global_state()
-    await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return 0
 

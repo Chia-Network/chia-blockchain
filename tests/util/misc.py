@@ -5,16 +5,17 @@ import dataclasses
 import enum
 import functools
 import gc
-import math
+import logging
 import os
 import subprocess
+import sys
 from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Type, Union
 
 import pytest
 from chia_rs import Coin
@@ -37,7 +38,9 @@ class GcMode(enum.Enum):
 
 @contextlib.contextmanager
 def manage_gc(mode: GcMode) -> Iterator[None]:
-    if mode == GcMode.precollect:
+    if mode == GcMode.nothing:
+        yield
+    elif mode == GcMode.precollect:
         gc.collect()
         yield
     elif mode == GcMode.disable:
@@ -69,7 +72,7 @@ class RuntimeResults:
     end: float
     duration: float
     entry_line: str
-    overhead: float
+    overhead: Optional[float]
 
     def block(self, label: str = "") -> str:
         # The entry line is reported starting at the beginning of the line to trigger
@@ -80,7 +83,7 @@ class RuntimeResults:
             Measuring runtime: {label}
             {self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
             """
         )
 
@@ -92,13 +95,13 @@ class AssertRuntimeResults:
     end: float
     duration: float
     entry_line: str
-    overhead: float
+    overhead: Optional[float]
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: float
+        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: Optional[float]
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -119,7 +122,7 @@ class AssertRuntimeResults:
             Asserting maximum duration: {label}
             {self.entry_line}
                 run time: {self.duration}
-                overhead: {self.overhead}
+                overhead: {self.overhead if self.overhead is not None else "not measured"}
                  allowed: {self.limit}
                  percent: {self.percent_str()}
             """
@@ -162,18 +165,10 @@ def measure_runtime(
     label: str = "",
     clock: Callable[[], float] = thread_time,
     gc_mode: GcMode = GcMode.disable,
-    calibrate: bool = True,
+    overhead: Optional[float] = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
     entry_line = caller_file_and_line()
-
-    def manager_maker() -> contextlib.AbstractContextManager[Future[RuntimeResults]]:
-        return measure_runtime(clock=clock, gc_mode=gc_mode, calibrate=False, print_results=False)
-
-    if calibrate:
-        overhead = measure_overhead(manager_maker=manager_maker)
-    else:
-        overhead = 0
 
     results_future: Future[RuntimeResults] = Future()
 
@@ -186,7 +181,8 @@ def measure_runtime(
             end = clock()
 
             duration = end - start
-            duration -= overhead
+            if overhead is not None:
+                duration -= overhead
 
             results = RuntimeResults(
                 start=start,
@@ -230,25 +226,19 @@ class _AssertRuntime:
     label: str = ""
     clock: Callable[[], float] = thread_time
     gc_mode: GcMode = GcMode.disable
-    calibrate: bool = True
     print: bool = True
-    overhead: float = 0
+    overhead: Optional[float] = None
     entry_line: Optional[str] = None
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
+    enable_assertion: bool = True
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
         self.entry_line = caller_file_and_line()
-        if self.calibrate:
-
-            def manager_maker() -> contextlib.AbstractContextManager[Future[AssertRuntimeResults]]:
-                return dataclasses.replace(self, seconds=math.inf, calibrate=False, print=False)
-
-            self.overhead = measure_overhead(manager_maker=manager_maker)
 
         self.runtime_manager = measure_runtime(
-            clock=self.clock, gc_mode=self.gc_mode, calibrate=False, print_results=False
+            clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
         )
         self.runtime_results_callable = self.runtime_manager.__enter__()
         self.results_callable: Future[AssertRuntimeResults] = Future()
@@ -279,15 +269,25 @@ class _AssertRuntime:
         if self.print:
             print(results.block(label=self.label))
 
-        if exc_type is None:
+        if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
             assert runtime.duration < self.seconds, results.message()
 
 
-# Related to the comment above about needing a class vs. using the context manager
-# decorator, this is just here to retain the function-style naming as the public
-# interface.  Hopefully we can switch away from the class at some point.
-assert_runtime = _AssertRuntime
+@final
+@dataclasses.dataclass
+class BenchmarkRunner:
+    enable_assertion: bool = True
+    label: Optional[str] = None
+    overhead: Optional[float] = None
+
+    @functools.wraps(_AssertRuntime)
+    def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", self.enable_assertion)
+        kwargs.setdefault("overhead", self.overhead)
+        if self.label is not None:
+            kwargs.setdefault("label", self.label)
+        return _AssertRuntime(*args, **kwargs)
 
 
 @contextlib.contextmanager
@@ -346,7 +346,7 @@ class CoinGenerator:
 
     def _get_hash(self) -> bytes32:
         self._seed += 1
-        return std_hash(self._seed)
+        return std_hash(self._seed.to_bytes(length=32, byteorder="big"))
 
     def _get_amount(self) -> uint64:
         self._seed += 1
@@ -367,3 +367,18 @@ def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
     else:
         memos = []
     return [ConditionOpcode.CREATE_COIN, hinted_coin.coin.puzzle_hash, hinted_coin.coin.amount, memos]
+
+
+def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
+    logger = logging.getLogger()
+    logger.setLevel(level=logging.DEBUG)
+    stream_handler = logging.StreamHandler(stream=file)
+    log_date_format = "%Y-%m-%dT%H:%M:%S"
+    file_log_formatter = logging.Formatter(
+        fmt="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt=log_date_format,
+    )
+    stream_handler.setFormatter(file_log_formatter)
+    logger.addHandler(hdlr=stream_handler)
+
+    return logger

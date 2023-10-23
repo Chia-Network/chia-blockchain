@@ -42,7 +42,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import Err, ValidationError
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
@@ -1436,7 +1436,7 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
-        tx = await wallet.generate_signed_transaction(
+        [tx] = await wallet.generate_signed_transaction(
             uint64(200), phs[0], DEFAULT_TX_CONFIG, primaries=other_recipients
         )
         assert tx.spend_bundle is not None
@@ -1449,13 +1449,13 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
 
     [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet
     server = full_node_api.full_node.server
-    await wallet_server.start_client(PeerInfo(self_hostname, uint16(server._port)), None)
+    await wallet_server.start_client(PeerInfo(self_hostname, server.get_port()), None)
     wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
 
     # Make sure spending AB then BC would generate a conflict for the latter
-    tx_a = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[0].coin})
-    tx_b = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[1].coin})
-    tx_c = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[2].coin})
+    [tx_a] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[0].coin})
+    [tx_b] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[1].coin})
+    [tx_c] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[2].coin})
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
@@ -1469,7 +1469,7 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     # Make sure DE and EF would aggregate on E when E is eligible for deduplication
 
     # Create a coin with the identity puzzle hash
-    tx = await wallet.generate_signed_transaction(
+    [tx] = await wallet.generate_signed_transaction(
         uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, coins={coins[3].coin}
     )
     assert tx.spend_bundle is not None
@@ -1493,7 +1493,7 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     message = b"Identical spend aggregation test"
     e_announcement = Announcement(e_coin_id, message)
     # Create transactions D and F that consume an announcement created by E
-    tx_d = await wallet.generate_signed_transaction(
+    [tx_d] = await wallet.generate_signed_transaction(
         uint64(100),
         ph,
         DEFAULT_TX_CONFIG,
@@ -1501,7 +1501,7 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
         coins={coins[4].coin},
         coin_announcements_to_consume={e_announcement},
     )
-    tx_f = await wallet.generate_signed_transaction(
+    [tx_f] = await wallet.generate_signed_transaction(
         uint64(150),
         ph,
         DEFAULT_TX_CONFIG,
@@ -1534,7 +1534,7 @@ async def test_identical_spend_aggregation_e2e(simulator_and_wallet: SimulatorsA
     sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
     g_coin = coins[6].coin
     g_coin_id = g_coin.name()
-    tx_g = await wallet.generate_signed_transaction(
+    [tx_g] = await wallet.generate_signed_transaction(
         uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, coin_announcements_to_consume={e_announcement}
     )
     assert tx_g.spend_bundle is not None
