@@ -230,13 +230,16 @@ class Farmer:
             # succeeds or until we need to shut down.
             while not self._shut_down:
                 if await self.setup_keys():
+                    # TODO: review task handling
                     self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+                    # TODO: review task handling
                     self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
                     self.started = True
                     return
                 await asyncio.sleep(1)
 
+        # TODO: review task handling
         asyncio.create_task(start_task())
 
     def _close(self) -> None:
@@ -268,11 +271,13 @@ class Farmer:
 
             if self._shut_down:
                 log.debug("handshake_task: shutdown")
+                # TODO: review task handling
                 self.harvester_handshake_task = None
                 return
 
             if peer not in self.server.get_connections():
                 log.debug("handshake_task: disconnected")
+                # TODO: review task handling
                 self.harvester_handshake_task = None
                 return
 
@@ -283,10 +288,12 @@ class Farmer:
             )
             msg = make_msg(ProtocolMessageTypes.harvester_handshake, handshake)
             await peer.send_message(msg)
+            # TODO: review task handling
             self.harvester_handshake_task = None
 
         if peer.connection_type is NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
+            # TODO: review task handling
             self.harvester_handshake_task = asyncio.create_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:

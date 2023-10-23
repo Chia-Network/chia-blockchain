@@ -18,6 +18,7 @@ from chia.util.errors import Err
 from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
+from chia.util.misc import log_filter
 
 log = logging.getLogger(__name__)
 
@@ -422,16 +423,26 @@ class BlockStore:
         """
 
         ret: Dict[bytes32, BlockRecord] = {}
+        log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - before .reader_no_transaction()")
         async with self.db_wrapper.reader_no_transaction() as conn:
+            log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - inside .reader_no_transaction() success")
+            log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - before conn.execute()")
             async with conn.execute(
                 "SELECT header_hash,block_record " "FROM full_blocks " "WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
-                for row in await cursor.fetchall():
+                log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - inside conn.execute() success")
+                log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - before cursor.fetchall()")
+                for i, row in enumerate(await cursor.fetchall()):
+                    if i == 0:
+                        log.info(
+                            f"{log_filter} ._sync() - .get_block_records_in_range() - inside cursor.fetchall() success"
+                        )
                     header_hash = bytes32(row[0])
                     block_record = BlockRecord.from_bytes(row[1])
                     ret[header_hash] = block_record
 
+        log.info(f"{log_filter} ._sync() - .get_block_records_in_range() - all done")
         return ret
 
     async def get_block_bytes_in_range(

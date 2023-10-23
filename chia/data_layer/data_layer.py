@@ -191,6 +191,7 @@ class DataLayer:
         self._data_store = await DataStore.create(database=self.db_path, sql_log_path=sql_log_path)
         self._wallet_rpc = await self.wallet_rpc_init
 
+        # TODO: review task handling
         self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
 
     def _close(self) -> None:

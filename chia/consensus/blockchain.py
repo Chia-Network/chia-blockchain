@@ -5,6 +5,8 @@ import dataclasses
 import enum
 import logging
 import multiprocessing
+
+# import random
 import traceback
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
@@ -132,7 +134,7 @@ class Blockchain(BlockchainInterface):
         self = Blockchain()
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority)
+        self.priority_mutex = PriorityMutex.create(priority_type=BlockchainMutexPriority, log=log)
         self.compact_proof_lock = asyncio.Lock()
         if single_threaded:
             self.pool = InlineExecutor()
@@ -263,6 +265,10 @@ class Blockchain(BlockchainInterface):
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
+
+        # failure_percent = 2
+        # if random.choices(population=[True, False], weights=[failure_percent, 100 - failure_percent])[0]:
+        #     return AddBlockResult.INVALID_BLOCK, Err.PRETEND_FAILURE, None
 
         block_record = block_to_block_record(
             self.constants,

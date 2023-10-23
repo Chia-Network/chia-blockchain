@@ -82,7 +82,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self._node_type = node_type
         self._service_name = service_name
         self.rpc_server: Optional[RpcServer] = None
-        self._rpc_close_task: Optional[asyncio.Task[None]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
@@ -204,6 +203,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         except ValueError:
             pass
 
+        # TODO: review task handling
         self._connect_peers_task = asyncio.create_task(self._connect_peers_task_handler())
 
         self._log.info(
@@ -211,7 +211,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
             f"at port {self._advertised_port}"
         )
 
-        self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
             self.rpc_server = await start_rpc_server(

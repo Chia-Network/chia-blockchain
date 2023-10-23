@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import logging
 import sqlite3
 import sys
 from datetime import datetime
@@ -11,6 +12,9 @@ from typing import Any, AsyncIterator, Dict, Iterable, Optional, TextIO, Type, U
 
 import aiosqlite
 from typing_extensions import final
+
+from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import log_after, log_filter
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
@@ -107,6 +111,9 @@ class DBWrapper2:
     _current_writer: Optional[asyncio.Task[object]]
     _savepoint_name: int
     _log_file: Optional[TextIO]
+    _log: Optional[logging.Logger]
+    _peak_available_readers_size_since_last_check: int
+    _monitor_task: Optional[asyncio.Task[None]] = None
 
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
@@ -120,6 +127,7 @@ class DBWrapper2:
         connection: aiosqlite.Connection,
         db_version: int = 1,
         log_file: Optional[TextIO] = None,
+        log: Optional[logging.Logger] = None,
     ) -> None:
         self._read_connections = asyncio.Queue()
         self._write_connection = connection
@@ -131,6 +139,8 @@ class DBWrapper2:
         self._savepoint_name = 0
         self._log_file = log_file
         self.host_parameter_limit = get_host_parameter_limit()
+        self._log = log
+        self._peak_available_readers_size_since_last_check = 0
 
     @classmethod
     async def create(
@@ -145,6 +155,7 @@ class DBWrapper2:
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
         row_factory: Optional[Type[aiosqlite.Row]] = None,
+        log: Optional[logging.Logger] = None,
     ) -> DBWrapper2:
         if log_path is None:
             log_file = None
@@ -160,7 +171,10 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
+        self = cls(connection=write_connection, log=log, db_version=db_version, log_file=log_file)
+
+        if log is not None:
+            self._monitor_task = asyncio.create_task(self.monitor())
 
         for index in range(reader_count):
             read_connection = await _create_connection(
@@ -174,6 +188,30 @@ class DBWrapper2:
 
         return self
 
+    async def monitor(self) -> None:
+        assert self._log is not None
+
+        with contextlib.suppress(asyncio.CancelledError):
+            while True:
+                with log_exceptions(
+                    log=self._log,
+                    message=f"{log_filter} {type(self).__name__}: unhandled exception while monitoring: ",
+                    consume=True,
+                ):
+                    await asyncio.sleep(10)
+
+                    peak_available_readers_count = self._peak_available_readers_size_since_last_check
+                    self._peak_available_readers_size_since_last_check = 0
+
+                    self._log.info(
+                        "\n".join(
+                            [
+                                f"{log_filter} {type(self).__name__} monitor:",
+                                f"peak available readers count: {peak_available_readers_count}",
+                            ]
+                        )
+                    )
+
     async def close(self) -> None:
         try:
             while self._num_read_connections > 0:
@@ -183,6 +221,17 @@ class DBWrapper2:
         finally:
             if self._log_file is not None:
                 self._log_file.close()
+
+        if self._monitor_task is not None and self._log is not None:
+            self._monitor_task.cancel()
+            with log_exceptions(
+                log=self._log,
+                message=f"{log_filter} {type(self).__name__}: unhandled exception while closing: ",
+                consume=True,
+            ):
+                await self._monitor_task
+                # TODO: review task handling (race?)
+                self._monitor_task = None
 
     def _next_savepoint(self) -> str:
         name = f"s{self._savepoint_name}"
@@ -227,7 +276,13 @@ class DBWrapper2:
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
-                    yield self._write_connection
+                    # TODO: lazy and not configurable since we presently have just one use, kinda
+                    async with log_after(
+                        message=f"{log_filter} {type(self).__name__} (reader) held",
+                        delay=15,
+                        log=self._log,
+                    ):
+                        yield self._write_connection
                 finally:
                     self._current_writer = None
 
@@ -251,7 +306,13 @@ class DBWrapper2:
             async with self._savepoint_ctx():
                 self._current_writer = task
                 try:
-                    yield self._write_connection
+                    # TODO: lazy and not configurable since we presently have just one use, kinda
+                    async with log_after(
+                        message=f"{log_filter} {type(self).__name__} (writer) held",
+                        delay=15,
+                        log=self._log,
+                    ):
+                        yield self._write_connection
                 finally:
                     self._current_writer = None
 
@@ -292,12 +353,33 @@ class DBWrapper2:
         if task in self._in_use:
             yield self._in_use[task]
         else:
-            c = await self._read_connections.get()
-            try:
-                # record our connection in this dict to allow nested calls in
-                # the same task to use the same connection
-                self._in_use[task] = c
-                yield c
-            finally:
-                del self._in_use[task]
-                self._read_connections.put_nowait(c)
+            async with log_after(
+                message=f"{log_filter} {type(self).__name__} (reader) waiting for read connection",
+                delay=15,
+                log=self._log,
+            ):
+                try:
+                    c = await self._read_connections.get()
+                except asyncio.CancelledError:
+                    if self._log is not None:
+                        self._log.info(
+                            f"{log_filter} Cancelled while waiting for a read connection (not _necessarily_ bad)"
+                        )
+            # TODO: lazy and not configurable since we presently have just one use, kinda
+            async with log_after(
+                message=f"{log_filter} {type(self).__name__} (reader)",
+                delay=15,
+                log=self._log,
+            ):
+                try:
+                    # record our connection in this dict to allow nested calls in
+                    # the same task to use the same connection
+                    self._in_use[task] = c
+                    yield c
+                finally:
+                    del self._in_use[task]
+                    self._read_connections.put_nowait(c)
+
+                    self._peak_available_readers_size_since_last_check = max(
+                        self._read_connections.qsize(), self._peak_available_readers_size_since_last_check
+                    )

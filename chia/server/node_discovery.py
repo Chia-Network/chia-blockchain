@@ -122,8 +122,11 @@ class FullNodeDiscovery:
 
     async def start_tasks(self) -> None:
         random = Random()
+        # TODO: review task handling
         self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
+        # TODO: review task handling
         self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
+        # TODO: review task handling
         self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
 
     async def _close_common(self) -> None:
@@ -434,6 +437,7 @@ class FullNodeDiscovery:
                 await asyncio.sleep(connect_peer_interval)
 
                 # prune completed connect tasks
+                # TODO: review task handling
                 self.pending_task = set(filter(lambda t: not t.done(), self.pending_tasks))
 
             except Exception as e:
@@ -554,7 +558,9 @@ class FullNodePeers(FullNodeDiscovery):
     async def start(self) -> None:
         await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
+        # TODO: review task handling
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
+        # TODO: review task handling
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 

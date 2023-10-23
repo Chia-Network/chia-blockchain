@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import dataclasses
 import logging
 import multiprocessing
@@ -75,6 +74,7 @@ from chia.util.errors import ConsensusError, Err, TimestampError, ValidationErro
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import TaskReferencer, log_filter
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.safe_cancel_task import cancel_task_safe
@@ -108,6 +108,7 @@ class FullNode:
     log: logging.Logger
     db_path: Path
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
+    _sync_tasks: TaskReferencer
     _segment_task: Optional[asyncio.Task[None]] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
@@ -125,7 +126,6 @@ class FullNode:
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
-    _sync_task: Optional[asyncio.Task[None]] = None
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
@@ -168,15 +168,18 @@ class FullNode:
         db_path = path_from_root(root_path, db_path_replaced)
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        log = logging.getLogger(name)
+
         return cls(
             root_path=root_path,
             config=config,
             constants=consensus_constants,
             signage_point_times=[time.time() for _ in range(consensus_constants.NUM_SPS_SUB_SLOT)],
             full_node_store=FullNodeStore(consensus_constants),
-            log=logging.getLogger(name),
+            log=log,
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
+            _sync_tasks=TaskReferencer(log=log),
         )
 
     @property
@@ -279,7 +282,7 @@ class FullNode:
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
+        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20, log=self.log)
 
         # These many respond_transaction tasks can be active at any point in time
         self._add_transaction_semaphore = asyncio.Semaphore(200)
@@ -304,6 +307,7 @@ class FullNode:
             reader_count=4,
             log_path=sql_log_path,
             synchronous=db_sync,
+            log=self.log,
         )
 
         if self.db_wrapper.db_version != 2:
@@ -351,6 +355,7 @@ class FullNode:
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self._transaction_queue = TransactionQueue(1000, self.log)
+        # TODO: review task handling
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
@@ -395,6 +400,7 @@ class FullNode:
             if "sanitize_weight_proof_only" in self.config:
                 sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
             assert self.config["target_uncompact_proofs"] != 0
+            # TODO: review task handling
             self.uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(
                     self.config["send_uncompact_interval"],
@@ -531,6 +537,7 @@ class FullNode:
                 self._segment_task.cancel()
             except Exception as e:
                 self.log.warning(f"failed to cancel segment task {e}")
+            # TODO: review task handling
             self._segment_task = None
 
         try:
@@ -701,7 +708,7 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
-            self._sync_task = asyncio.create_task(self._sync())
+            await self._sync_tasks.add(coroutine=self._sync())
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -858,17 +865,19 @@ class FullNode:
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
         cancel_task_safe(task=self.wallet_sync_task, log=self.log)
-        cancel_task_safe(task=self._sync_task, log=self.log)
+        self._sync_tasks.cancel()
 
     async def _await_closed(self) -> None:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
             cancel_task_safe(task, self.log)
         await self.db_wrapper.close()
+        if self._new_peak_sem is not None:
+            await self.new_peak_sem.close()
+        if self._compact_vdf_sem is not None:
+            await self.compact_vdf_sem.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        if self._sync_task is not None:
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._sync_task
+        await self._sync_tasks.wait()
 
     async def _sync(self) -> None:
         """
@@ -935,13 +944,40 @@ class FullNode:
                         target_peak.header_hash, peers[i].peer_node_id, target_peak.weight, target_peak.height, False
                     )
             # TODO: disconnect from peer which gave us the heaviest_peak, if nobody has the peak
-            fork_point, summaries = await self.request_validate_wp(
-                target_peak.header_hash, target_peak.height, target_peak.weight
-            )
+            self.log.info(f"{log_filter} ._sync() - before .request_validate_wp()")
+            try:
+                fork_point, summaries = await self.request_validate_wp(
+                    target_peak.header_hash, target_peak.height, target_peak.weight
+                )
+            except BaseException:
+                self.log.exception(f"{log_filter} ._sync() - after .request_validate_wp() failure")
+                raise
+            self.log.info(f"{log_filter} ._sync() - after .request_validate_wp() success")
             # Ensures that the fork point does not change
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
-                await self.blockchain.warmup(fork_point)
-                await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
+            self.log.info(f"{log_filter} ._sync() - before waiting on priority mutex")
+            try:
+                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                    self.log.info(f"{log_filter} ._sync() - inside priority mutex success")
+                    self.log.info(f"{log_filter} ._sync() - before .warmup()")
+                    try:
+                        await self.blockchain.warmup(fork_point)
+                    except BaseException:
+                        self.log.exception(f"{log_filter} ._sync() - after .warmup() failure")
+                        raise
+                    self.log.info(f"{log_filter} ._sync() - after .warmup() success")
+                    self.log.info(f"{log_filter} ._sync() - before .sync_from_fork_point()")
+                    try:
+                        await self.sync_from_fork_point(
+                            fork_point, target_peak.height, target_peak.header_hash, summaries
+                        )
+                    except BaseException:
+                        self.log.exception(f"{log_filter} ._sync() - after .sync_from_fork_point() failure")
+                        raise
+                    self.log.info(f"{log_filter} ._sync() - after .sync_from_fork_point() success")
+            except BaseException:
+                self.log.exception(f"{log_filter} ._sync() - after mutex/warmup/sync failure")
+                raise
+            self.log.info(f"{log_filter} ._sync() - after mutex/warmup/sync success")
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -1014,6 +1050,7 @@ class FullNode:
         summaries: List[SubEpochSummary],
     ) -> None:
         buffer_size = 4
+        self.log.info(f"{log_filter} ._sync() - .sync_from_fork_point() - just getting started")
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak: List[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
         fork_point_height = await check_fork_next_block(

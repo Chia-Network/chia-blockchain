@@ -36,10 +36,13 @@ class RequestNotCompleteError(Exception):
     pass
 
 
+log = logging.getLogger(__name__)
+
+
 class TestPriorityMutex:
     @pytest.mark.asyncio
     async def test_priority_mutex(self) -> None:
-        mutex = PriorityMutex.create(priority_type=MutexPriority)
+        mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
         async def slow_func() -> None:
             for i in range(100):
@@ -196,7 +199,7 @@ def test_comparisons_fail_for_incomplete_requests(
 
 @pytest.mark.asyncio
 async def test_reacquisition_fails() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
     request = Request(id="again!", priority=MutexPriority.low)
     event = asyncio.Event()
     event.set()
@@ -253,7 +256,7 @@ async def test_reacquisition_fails() -> None:
 )
 @pytest.mark.asyncio
 async def test_order(case: OrderCase) -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -277,7 +280,7 @@ def expected_acquisition_order(requests: List[Request]) -> List[Request]:
 
 @pytest.mark.asyncio
 async def test_sequential_acquisitions() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -292,7 +295,7 @@ async def test_sequential_acquisitions() -> None:
 
 @pytest.mark.asyncio
 async def test_nested_acquisition_raises() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     async with mutex.acquire(priority=MutexPriority.high):
         with pytest.raises(NestedLockUnsupportedError):
@@ -308,7 +311,7 @@ async def to_be_cancelled(mutex: PriorityMutex[MutexPriority]) -> None:
 
 @pytest.mark.asyncio
 async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     with pytest.raises(AssertionError):
         await to_be_cancelled(mutex=mutex)
@@ -316,7 +319,7 @@ async def test_to_be_cancelled_fails_if_not_cancelled() -> None:
 
 @pytest.mark.asyncio
 async def test_cancellation_while_waiting() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     random_instance = random.Random()
     random_instance.seed(a=0, version=2)
@@ -358,7 +361,7 @@ async def test_cancellation_while_waiting() -> None:
 @pytest.mark.parametrize(argnames="seed", argvalues=range(100), ids=lambda seed: f"random seed {seed}")
 @pytest.mark.asyncio
 async def test_retains_request_order_for_matching_priority(seed: int) -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     random_instance = random.Random()
     random_instance.seed(a=seed, version=2)
@@ -451,7 +454,7 @@ async def create_acquire_tasks_in_controlled_order(
 
 @pytest.mark.asyncio
 async def test_multiple_tasks_track_active_task_accurately() -> None:
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     other_task_allow_release_event = asyncio.Event()
 
@@ -477,7 +480,7 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
 @pytest.mark.asyncio
 async def test_no_task_fails_as_expected(monkeypatch: pytest.MonkeyPatch) -> None:
     """Note that this case is not expected to be possible in reality"""
-    mutex = PriorityMutex.create(priority_type=MutexPriority)
+    mutex = PriorityMutex.create(priority_type=MutexPriority, log=log)
 
     with pytest.raises(Exception, match="unable to check current task, got: None"):
         with monkeypatch.context() as monkeypatch_context:

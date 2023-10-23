@@ -4,15 +4,21 @@ import asyncio
 import contextlib
 import dataclasses
 import functools
+import io
+import logging
 import signal
 import sys
+import time
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from types import FrameType
 from typing import (
     Any,
     AsyncIterator,
+    Callable,
     Collection,
+    Coroutine,
     Dict,
     Generic,
     Iterator,
@@ -28,6 +34,7 @@ from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.log_exceptions import log_exceptions
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 T = TypeVar("T")
@@ -280,3 +287,139 @@ class SignalHandlers:
         self.setup_sync_signal_handler(
             handler=functools.partial(self.threadsafe_sync_signal_handler_for_async, handler=handler)
         )
+
+
+async def _log_after_monitor(
+    monitored_task: asyncio.Task[object],
+    message: str,
+    entry_stack_string: str,
+    delay: float,
+    log: logging.Logger,
+    period: float = 5,
+    level: int = logging.WARNING,
+    clock: Callable[[], float] = time.monotonic,
+    decimal_places: int = 0,
+) -> None:
+    # this timing isn't strict so drift is acceptable
+    with log_exceptions(
+        log=log,
+        consume=True,
+        message=f"{log_filter} Caught exception in log_after monitor task",
+        exceptions_to_process=BaseException,
+    ):
+        with contextlib.suppress(asyncio.CancelledError):
+            start = clock()
+            delay_string = f"{delay:.{decimal_places}f}"
+
+            await asyncio.sleep(delay)
+
+            while True:
+                now = clock()
+                duration = now - start
+                duration_string = f"{duration:.{decimal_places}f}"
+
+                sio = io.StringIO()
+                monitored_task.print_stack(file=sio)
+                stack_string = sio.getvalue()
+
+                complete_message = "\n".join(
+                    [
+                        f"{log_filter} activity exceeded limit of {delay_string}s ({duration_string}s): {message}",
+                        "entered via:",
+                        entry_stack_string,
+                        f"monitoring task presently at: {monitored_task}",
+                        stack_string,
+                    ],
+                )
+                log.log(level, complete_message)
+
+                await asyncio.sleep(period)
+
+
+log_filter = "oodIXIboo"
+
+
+@contextlib.asynccontextmanager
+async def log_after(
+    message: str,
+    delay: float,
+    # TODO: should this be optional in a 'real' implementation?
+    log: Optional[logging.Logger],
+    period: float = 5,
+    level: int = logging.WARNING,
+    clock: Callable[[], float] = time.monotonic,
+) -> AsyncIterator[None]:
+    if log is None:
+        yield
+        return
+
+    stack = traceback.extract_stack()
+    for index, frame in enumerate(reversed(stack)):
+        if index == 0:
+            continue
+
+        if frame.filename != contextlib.__file__:
+            break
+    else:
+        raise Exception(f"{log_filter} did not find wanted frame")
+
+    entry_stack_string = "".join(traceback.format_list(stack[:-index]))
+
+    current_task = asyncio.current_task()
+    assert current_task is not None, "async def, must be in a task"
+
+    task = asyncio.create_task(
+        _log_after_monitor(
+            monitored_task=current_task,
+            entry_stack_string=entry_stack_string,
+            message=message,
+            delay=delay,
+            log=log,
+            period=period,
+            level=level,
+            clock=clock,
+        )
+    )
+
+    try:
+        yield
+    finally:
+        task.cancel()
+        # not awaiting due to problematic cancellation handling, logging in the task instead
+
+
+@dataclasses.dataclass
+class TaskReferencer:
+    log: logging.Logger
+    # TODO: should we collect and maybe track results
+    _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
+
+    async def add(self, coroutine: Coroutine[Any, Any, object]) -> None:
+        self._tasks.append(asyncio.create_task(coroutine))
+
+        for task in self._tasks:
+            if task.done():
+                await self._wait_one(task=task)
+
+        self._tasks = [task for task in self._tasks if not task.done()]
+
+    def cancel(self) -> None:
+        for task in self._tasks:
+            with log_exceptions(
+                log=self.log, consume=True, message=f"{type(self).__name__}: failed while cancelling task"
+            ):
+                task.cancel()
+
+    async def wait(self) -> None:
+        for task in self._tasks:
+            await self._wait_one(task=task)
+
+    async def _wait_one(self, task: asyncio.Task[object]) -> None:
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message=f"{type(self).__name__}: exception from task",
+            show_traceback=True,
+        ):
+            with contextlib.suppress(asyncio.CancelledError):
+                await task

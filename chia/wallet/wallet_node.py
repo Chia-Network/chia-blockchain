@@ -402,7 +402,9 @@ class WalletNode:
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
+        # TODO: review task handling
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
+        # TODO: review task handling
         self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
@@ -1176,6 +1178,7 @@ class WalletNode:
         self.log.info("Secondary peer syncing")
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
         # that no recent transactions are being hidden.
+        # TODO: review task handling
         self._secondary_peer_sync_task = asyncio.create_task(
             self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
         )
