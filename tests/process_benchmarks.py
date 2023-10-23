@@ -179,19 +179,22 @@ def main(
     else:
         output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")
         output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
-        for result in results:
+        for result in sorted(results):
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
 
-            durations_mean = mean(result.durations)
-            mean_str = f"{durations_mean:.3f} s"
+            mean_str = "-"
+            three_sigma_str = "-"
+            if len(result.durations) > 1:
+                durations_mean = mean(result.durations)
+                mean_str = f"{durations_mean:.3f} s"
+
+                try:
+                    three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
+                except StatisticsError:
+                    pass
 
             durations_max = max(result.durations)
             max_str = f"{durations_max:.3f} s"
-
-            try:
-                three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
-            except StatisticsError:
-                three_sigma_str = "-"
 
             limit_str = f"{result.limit:.3f} s"
 
