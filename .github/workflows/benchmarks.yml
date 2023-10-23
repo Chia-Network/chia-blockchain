@@ -33,13 +33,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      repeats: ${{ steps.repeats.outputs.repeats }}
       timeout: ${{ steps.timeout.outputs.timeout }}
 
     steps:
+      - name: Calculate repeats
+        id: repeats
+        run: |
+          echo "repeats=${{ inputs.repeats != '' && inputs.repeats || 1 }} >> "$GITHUB_OUTPUT"
       - name: Calculate timeout
         id: timeout
         run: |
-          echo "timeout=$(( ${{ inputs.repeats }} * 20 ))" >> "$GITHUB_OUTPUT"
+          echo "timeout=$(( ${{ steps.repeats.outputs.repeats }} * 20 ))" >> "$GITHUB_OUTPUT"
 
   build:
     name: Benchmarks
@@ -101,7 +106,7 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ inputs.repeats }} tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} tests
 
       - name: Format JUnit data and prepare results
         if: always()
