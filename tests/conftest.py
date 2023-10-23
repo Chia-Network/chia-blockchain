@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import functools
+import math
 import multiprocessing
 import os
 import random
@@ -62,7 +64,7 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.simulation.test_simulation import test_constants_modified
-from tests.util.misc import BenchmarkRunner
+from tests.util.misc import BenchmarkRunner, GcMode, _AssertRuntime, measure_overhead
 
 multiprocessing.set_start_method("spawn")
 
@@ -81,10 +83,23 @@ def seeded_random_fixture() -> random.Random:
     return seeded_random
 
 
+@pytest.fixture(name="benchmark_runner_overhead", scope="session")
+def benchmark_runner_overhead_fixture() -> float:
+    return measure_overhead(
+        manager_maker=functools.partial(
+            _AssertRuntime,
+            gc_mode=GcMode.nothing,
+            seconds=math.inf,
+            print=False,
+        ),
+        cycles=100,
+    )
+
+
 @pytest.fixture(name="benchmark_runner")
-def benchmark_runner_fixture(request: SubRequest) -> BenchmarkRunner:
+def benchmark_runner_fixture(request: SubRequest, benchmark_runner_overhead: float) -> BenchmarkRunner:
     label = request.node.name
-    return BenchmarkRunner(label=label)
+    return BenchmarkRunner(label=label, overhead=benchmark_runner_overhead)
 
 
 @pytest.fixture(name="node_name_for_file")

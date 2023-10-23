@@ -51,8 +51,8 @@ class TestMempoolPerformance:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        for block in blocks:
-            await full_node_api_1.full_node.add_block(block)
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+        await full_node_api_1.full_node.add_block_batch(blocks, peer, None)
 
         await wallet_server.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
@@ -62,7 +62,6 @@ class TestMempoolPerformance:
 
         [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
 
-        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         assert big_transaction.spend_bundle
         await full_node_api_1.respond_transaction(
             full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
@@ -72,13 +71,7 @@ class TestMempoolPerformance:
             await con.close()
 
         blocks = bt.get_consecutive_blocks(3, blocks)
-        await full_node_api_1.full_node.add_block(blocks[-3])
 
-        for idx, block in enumerate(blocks):
-            if idx >= len(blocks) - 3:
-                duration = 0.15
-            else:
-                duration = 0.001
-
-            with benchmark_runner.assert_runtime(seconds=duration):
+        with benchmark_runner.assert_runtime(seconds=0.45):
+            for block in blocks[-3:]:
                 await full_node_api_1.full_node.add_block(block)

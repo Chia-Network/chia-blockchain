@@ -21,7 +21,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.misc import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import Condition, ConditionValidTimes, UnknownCondition, parse_timelock_info
@@ -44,7 +44,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import (
     CRCATMetadata,
     CRCATVersion,
     ProofsChecker,
-    construct_cr_layer,
+    construct_cr_layer_hash,
     construct_pending_approval_state,
 )
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -212,7 +212,9 @@ class CRCATWallet(CATWallet):
         try:
             new_cr_cats: List[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
             hint_dict = {
-                id: hc.hint for id, hc in compute_spend_hints_and_additions(coin_spend).items() if hc.hint is not None
+                id: hc.hint
+                for id, hc in compute_spend_hints_and_additions(coin_spend)[0].items()
+                if hc.hint is not None
             }
             cr_cat: CRCAT = list(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))[0]
             if (
@@ -871,28 +873,41 @@ class CRCATWallet(CATWallet):
         This matches coins that are either CRCATs with the hint as the inner puzzle, or CRCATs in the pending approval
         state that will come to us once claimed.
         """
-        return (
-            construct_cat_puzzle(
-                CAT_MOD,
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
-                    hint,  # type: ignore
-                ),
-            ).get_tree_hash_precalc(hint)
-            == coin.puzzle_hash
-            or construct_cat_puzzle(
-                CAT_MOD,
-                self.info.limitations_program_hash,
-                construct_cr_layer(
-                    self.info.authorized_providers,
-                    self.info.proofs_checker.as_program(),
-                    construct_pending_approval_state(hint, uint64(coin.amount)),
-                ),
-            ).get_tree_hash()
-            == coin.puzzle_hash
+        authorized_providers_hash: bytes32 = Program.to(self.info.authorized_providers).get_tree_hash()
+        proofs_checker_hash: bytes32 = self.info.proofs_checker.as_program().get_tree_hash()
+        hint_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            hint,
         )
+        if (
+            construct_cat_puzzle(
+                Program.to(CAT_MOD_HASH),
+                self.info.limitations_program_hash,
+                hint_inner_hash,  # type: ignore
+                mod_code_hash=CAT_MOD_HASH_HASH,
+            ).get_tree_hash_precalc(hint, CAT_MOD_HASH, CAT_MOD_HASH_HASH, hint_inner_hash)
+            == coin.puzzle_hash
+        ):
+            return True
+
+        pending_approval_inner_hash: bytes32 = construct_cr_layer_hash(
+            authorized_providers_hash,
+            proofs_checker_hash,
+            construct_pending_approval_state(hint, uint64(coin.amount)).get_tree_hash(),
+        )
+        if (
+            construct_cat_puzzle(
+                Program.to(CAT_MOD_HASH),
+                self.info.limitations_program_hash,
+                pending_approval_inner_hash,  # type: ignore
+                mod_code_hash=CAT_MOD_HASH_HASH,
+            ).get_tree_hash_precalc(CAT_MOD_HASH, CAT_MOD_HASH_HASH, pending_approval_inner_hash)
+            == coin.puzzle_hash
+        ):
+            return True
+        else:
+            return False
 
 
 if TYPE_CHECKING:

@@ -1054,7 +1054,7 @@ class WalletStateManager:
         :param fork_height: Current block height
         :return: Wallet ID & Wallet Type
         """
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
@@ -1161,7 +1161,7 @@ class WalletStateManager:
         inner_puzzle_hash = parent_data.p2_puzzle.get_tree_hash()
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
@@ -1358,7 +1358,7 @@ class WalletStateManager:
     async def get_dao_wallet_from_coinspend_hint(
         self, coin_spend: CoinSpend, coin_state: CoinState
     ) -> Optional[WalletIdentifier]:
-        hinted_coin = compute_spend_hints_and_additions(coin_spend)[coin_state.coin.name()]
+        hinted_coin = compute_spend_hints_and_additions(coin_spend)[0][coin_state.coin.name()]
         if hinted_coin:
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DAO.value:

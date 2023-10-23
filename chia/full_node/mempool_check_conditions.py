@@ -45,10 +45,10 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = ENABLE_ASSERT_BEFORE
 
     if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | ENABLE_ASSERT_BEFORE | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+        flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK3_HEIGHT:
         # the soft-fork initiated with 2.0. To activate end of October 2023

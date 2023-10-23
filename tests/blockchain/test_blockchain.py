@@ -60,7 +60,7 @@ from tests.conftest import ConsensusMode
 from tests.util.blockchain import create_blockchain
 
 log = logging.getLogger(__name__)
-bad_element = ClassgroupElement.from_bytes(b"\x00")
+bad_element = ClassgroupElement.create(b"\x00")
 
 
 @asynccontextmanager
