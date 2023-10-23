@@ -53,7 +53,7 @@ jobs:
       - setup
     container:
       image: chianetwork/ubuntu-22.04-builder:latest
-    timeout-minutes: ${{ needs.setup.outputs.timeout }}
+    timeout-minutes: ${{ fromJSON(needs.setup.outputs.timeout) }}
     strategy:
       fail-fast: false
       matrix:
