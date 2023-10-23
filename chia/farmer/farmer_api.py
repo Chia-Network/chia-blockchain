@@ -520,11 +520,19 @@ class FarmerAPI:
         (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
             full_node_request.quality_string
         ]
+
+        foliage_block_data_for_harvester = None
+        if full_node_request.foliage_block_data is not None:
+            # NOTE: The index provided here must match the message index
+            #       where foliage_block_data_hash is specified above
+            foliage_block_data_for_harvester = [0, full_node_request.foliage_block_data]
+
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
             [full_node_request.foliage_block_data_hash, full_node_request.foliage_transaction_block_hash],
+            foliage_block_data_for_harvester
         )
 
         response = await self.farmer.server.call_api_of_specific(HarvesterAPI.request_signatures, request, node_id)
@@ -688,6 +696,7 @@ class FarmerAPI:
                         self.farmer.farmer_target,
                         pool_target,
                         pool_target_signature,
+                        response.farmer_reward_address_override is not None
                     )
         else:
             # This is a response with block signatures

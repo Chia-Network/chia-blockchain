@@ -13,7 +13,7 @@ from chia.harvester.harvester import Harvester
 from chia.plotting.util import PlotInfo, parse_plot_info
 from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
-from chia.protocols.harvester_protocol import Plot, PlotSyncResponse, RespondHarvesterHandshake
+from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
@@ -43,7 +43,7 @@ class HarvesterAPI:
     @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
-    ) -> Optional[RespondHarvesterHandshake]:
+    ) -> None:
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
