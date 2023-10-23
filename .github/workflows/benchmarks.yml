@@ -40,7 +40,7 @@ jobs:
       - name: Calculate repeats
         id: repeats
         run: |
-          echo "repeats=${{ inputs.repeats != '' && inputs.repeats || 1 }} >> "$GITHUB_OUTPUT"
+          echo "repeats=${{ inputs.repeats != '' && inputs.repeats || 1 }}" >> "$GITHUB_OUTPUT"
       - name: Calculate timeout
         id: timeout
         run: |
