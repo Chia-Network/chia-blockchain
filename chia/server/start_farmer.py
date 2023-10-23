@@ -5,7 +5,7 @@ import sys
 from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
@@ -37,14 +37,15 @@ def create_farmer_service(
     fnp = service_config.get("full_node_peer")
     connect_peers = set() if fnp is None else {UnresolvedPeerInfo(fnp["host"], fnp["port"])}
 
-    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
+    network_id = service_config["selected_network"]
+    overrides = service_config["network_overrides"]["constants"][network_id]
+    update_testnet_overrides(network_id, overrides)
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
     farmer = Farmer(
         root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
     )
     peer_api = FarmerAPI(farmer)
-    network_id = service_config["selected_network"]
     rpc_info: Optional[RpcInfo] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FarmerRpcApi, service_config["rpc_port"])

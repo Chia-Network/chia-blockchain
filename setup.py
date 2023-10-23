@@ -9,14 +9,14 @@ dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.0.0",
     "blspy==2.0.2",  # Signature library
-    "boto3==1.28.25",  # AWS S3 for DL s3 plugin
+    "boto3==1.28.65",  # AWS S3 for DL s3 plugin
     "chiavdf==1.0.11",  # timelord and vdf verification
     "chiabip158==1.3",  # bip158-style wallet filters
     "chiapos==2.0.3",  # proof of space
     "clvm==0.9.8",
     "clvm_tools==0.4.6",  # Currying, Program.to, other conveniences
     "chia_rs==0.2.11",
-    "clvm-tools-rs==0.1.34",  # Rust implementation of clvm_tools' compiler
+    "clvm-tools-rs==0.1.38",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.5",  # HTTP server for full node rpc
     "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.2",  # Binary data management library
@@ -44,12 +44,12 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build==0.10.0",
+    "build==1.0.3",
     "coverage==7.3.0",
     "diff-cover==7.7.0",
     "pre-commit==3.4.0",
     "py3createtorrent==1.1.0",
-    "pylint==2.17.5",
+    "pylint==3.0.1",
     "pytest==7.4.0",
     "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
@@ -65,7 +65,6 @@ dev_dependencies = [
     "pyinstaller==5.13.0",
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
-    "types-pkg_resources==0.1.3",
     "types-pyyaml==6.0.12.11",
     "types-setuptools==68.0.0.3",
 ]
