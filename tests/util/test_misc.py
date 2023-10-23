@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from typing import List
+import contextlib
+from typing import Iterator, List
 
 import pytest
 
 from chia.util.errors import InvalidPathError
-from chia.util.misc import format_bytes, format_minutes, to_batches, validate_directory_writable
+from chia.util.misc import (
+    SplitManager,
+    format_bytes,
+    format_minutes,
+    split_manager,
+    to_batches,
+    validate_directory_writable,
+)
 
 
 class TestMisc:
@@ -113,3 +121,91 @@ def test_invalid_batch_sizes() -> None:
 def test_invalid_input_type() -> None:
     with pytest.raises(ValueError, match="Unsupported type"):
         next(to_batches(dict({1: 2}), 1))
+
+
+@contextlib.contextmanager
+def a_manager(y: List[str]) -> Iterator[None]:
+    y.append("entered")
+    yield
+    y.append("exited")
+
+
+def test_split_manager_class_works() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=a_manager(y=x))
+    assert x == []
+
+    split.enter()
+    assert x == ["entered"]
+
+    split.exit()
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_function_exits_if_needed() -> None:
+    x: List[str] = []
+
+    with split_manager(manager=a_manager(y=x)) as split:
+        assert x == []
+
+        split.enter()
+        assert x == ["entered"]
+
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_function_skips_if_not_needed() -> None:
+    x: List[str] = []
+
+    with split_manager(manager=a_manager(y=x)) as split:
+        assert x == []
+
+        split.enter()
+        assert x == ["entered"]
+
+        split.exit()
+        assert x == ["entered", "exited"]
+
+    assert x == ["entered", "exited"]
+
+
+def test_split_manager_raises_on_second_entry() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=a_manager(y=x))
+    split.enter()
+
+    with pytest.raises(Exception, match="^already entered$"):
+        split.enter()
+
+
+def test_split_manager_raises_on_second_entry_after_exiting() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=a_manager(y=x))
+    split.enter()
+    split.exit()
+
+    with pytest.raises(Exception, match="^already entered, already exited$"):
+        split.enter()
+
+
+def test_split_manager_raises_on_second_exit() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=a_manager(y=x))
+    split.enter()
+    split.exit()
+
+    with pytest.raises(Exception, match="^already exited$"):
+        split.exit()
+
+
+def test_split_manager_raises_on_exit_without_entry() -> None:
+    x: List[str] = []
+
+    split = SplitManager(manager=a_manager(y=x))
+
+    with pytest.raises(Exception, match="^not yet entered$"):
+        split.exit()

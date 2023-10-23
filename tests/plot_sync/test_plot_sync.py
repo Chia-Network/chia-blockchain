@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -281,7 +282,7 @@ async def environment(
     farmer_two_harvester_not_started: Tuple[
         List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
     ],
-) -> Environment:
+) -> AsyncIterator[Environment]:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
 
@@ -309,36 +310,38 @@ async def environment(
     harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer_service.reconnect_retry_seconds = 1
     farmer: Farmer = farmer_service._node
-    await farmer_service._start()
-    harvesters: List[Harvester] = [
-        await start_harvester_service(service, farmer_service) for service in harvester_services
-    ]
-    for harvester in harvesters:
-        # Remove default plot directory for this tests
-        with lock_and_load_config(harvester.root_path, "config.yaml") as config:
-            config["harvester"]["plot_directories"] = []
-            save_config(harvester.root_path, "config.yaml", config)
-        harvester.plot_manager.set_public_keys(
-            bt.plot_manager.farmer_public_keys.copy(), bt.plot_manager.pool_public_keys.copy()
-        )
+    async with farmer_service.manage():
+        async with contextlib.AsyncExitStack() as async_exit_stack:
+            harvesters: List[Harvester] = [
+                await async_exit_stack.enter_async_context(start_harvester_service(service, farmer_service))
+                for service in harvester_services
+            ]
+            for harvester in harvesters:
+                # Remove default plot directory for this tests
+                with lock_and_load_config(harvester.root_path, "config.yaml") as config:
+                    config["harvester"]["plot_directories"] = []
+                    save_config(harvester.root_path, "config.yaml", config)
+                harvester.plot_manager.set_public_keys(
+                    bt.plot_manager.farmer_public_keys.copy(), bt.plot_manager.pool_public_keys.copy()
+                )
 
-    assert len(farmer.plot_sync_receivers) == 2
+            assert len(farmer.plot_sync_receivers) == 2
 
-    return Environment(
-        tmp_path,
-        harvester_services,
-        farmer_service,
-        harvesters,
-        farmer,
-        directories[0],
-        directories[1],
-        directories[2],
-        directories[3],
-        dir_invalid,
-        dir_keys_missing,
-        dir_duplicates,
-        [ExpectedResult() for _ in harvesters],
-    )
+            yield Environment(
+                tmp_path,
+                harvester_services,
+                farmer_service,
+                harvesters,
+                farmer,
+                directories[0],
+                directories[1],
+                directories[2],
+                directories[3],
+                dir_invalid,
+                dir_keys_missing,
+                dir_duplicates,
+                [ExpectedResult() for _ in harvesters],
+            )
 
 
 @pytest.mark.asyncio
@@ -512,18 +515,18 @@ async def test_harvester_restart(environment: Environment) -> None:
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[0].plot_manager.needs_refresh()
     # Start the harvester, wait for the handshake and make sure the receiver comes back
-    await start_harvester_service(env.harvester_services[0], env.farmer_service)
-    await time_out_assert(5, env.handshake_done, True, 0)
-    assert len(env.farmer.plot_sync_receivers) == 2
-    # Remove the duplicates dir to avoid conflicts with the original plots
-    env.remove_directory(0, env.dir_duplicates)
-    # Reset the expected data for harvester 0 and re-add all directories because of the restart
-    env.expected[0] = ExpectedResult()
-    env.add_all_directories(0)
-    # Run the refresh two times and make sure everything recovers and stays recovered after harvester restart
-    await env.run_sync_test()
-    env.add_directory(0, env.dir_duplicates, State.duplicates)
-    await env.run_sync_test()
+    async with start_harvester_service(env.harvester_services[0], env.farmer_service):
+        await time_out_assert(5, env.handshake_done, True, 0)
+        assert len(env.farmer.plot_sync_receivers) == 2
+        # Remove the duplicates dir to avoid conflicts with the original plots
+        env.remove_directory(0, env.dir_duplicates)
+        # Reset the expected data for harvester 0 and re-add all directories because of the restart
+        env.expected[0] = ExpectedResult()
+        env.add_all_directories(0)
+        # Run the refresh two times and make sure everything recovers and stays recovered after harvester restart
+        await env.run_sync_test()
+        env.add_directory(0, env.dir_duplicates, State.duplicates)
+        await env.run_sync_test()
 
 
 @pytest.mark.asyncio

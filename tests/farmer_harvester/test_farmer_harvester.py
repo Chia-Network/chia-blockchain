@@ -27,6 +27,7 @@ from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
+from chia.util.misc import split_async_manager
 from tests.conftest import HarvesterFarmerEnvironment
 
 
@@ -99,40 +100,42 @@ async def test_harvester_handshake(
     # Handshake task and plot manager thread should not be running yet
     assert farmer.harvester_handshake_task is None
     assert harvester.plot_manager._refresh_thread is None
-    # Start both services and wait a bit
-    await farmer_service._start()
-    await harvester_service._start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
-    # Handshake task should be started but the handshake should not be done
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    # Stop the harvester service and wait for the farmer to lose the connection
-    harvester_service._stop()
-    await harvester_service._wait_closed()
-    await time_out_assert(10, farmer_has_connections, False)
-    assert not await handshake_done()
-    # Handshake task should be stopped again
-    await time_out_assert(5, handshake_task_active, False)
-    await asyncio.sleep(1)
-    assert harvester.plot_manager._refresh_thread is None
-    assert len(harvester.plot_manager.farmer_public_keys) == 0
-    # Re-start the harvester and make sure the handshake task gets started but the handshake still doesn't go through
-    await harvester_service._start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    # Stop the farmer and make sure the handshake_task doesn't block the shutdown
-    farmer_service._stop()
-    await farmer_service._wait_closed()
-    await time_out_assert(5, handshake_task_active, False)
-    # Re-start the farmer and make sure the handshake task succeeds if a key get added to the keychain
-    await farmer_service._start()
-    await time_out_assert(5, handshake_task_active, True)
-    assert not await handshake_done()
-    bt.local_keychain.add_private_key(generate_mnemonic())
-    await time_out_assert(5, farmer_is_started, True, farmer)
-    await time_out_assert(5, handshake_task_active, False)
-    await time_out_assert(5, handshake_done, True)
+    async with split_async_manager(manager=harvester_service.manage()) as split_harvester_manager:
+        # Start both services and wait a bit
+        async with farmer_service.manage():
+            async with harvester_service.manage():
+                harvester_service.add_peer(
+                    UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+                )
+                # Handshake task should be started but the handshake should not be done
+                await time_out_assert(5, handshake_task_active, True)
+                assert not await handshake_done()
+            # wait for the farmer to lose the connection
+            await time_out_assert(10, farmer_has_connections, False)
+            assert not await handshake_done()
+            # Handshake task should be stopped again
+            await time_out_assert(5, handshake_task_active, False)
+            await asyncio.sleep(1)
+            assert harvester.plot_manager._refresh_thread is None
+            assert len(harvester.plot_manager.farmer_public_keys) == 0
+            # Re-start the harvester and make sure the handshake task gets started but
+            # the handshake still doesn't go through
+            await split_harvester_manager.enter()
+            harvester_service.add_peer(
+                UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+            )
+            await time_out_assert(5, handshake_task_active, True)
+            assert not await handshake_done()
+        # make sure the handshake_task doesn't block the shutdown
+        await time_out_assert(5, handshake_task_active, False)
+        # Re-start the farmer and make sure the handshake task succeeds if a key get added to the keychain
+        async with farmer_service.manage():
+            await time_out_assert(5, handshake_task_active, True)
+            assert not await handshake_done()
+            bt.local_keychain.add_private_key(generate_mnemonic())
+            await time_out_assert(5, farmer_is_started, True, farmer)
+            await time_out_assert(5, handshake_task_active, False)
+            await time_out_assert(5, handshake_done, True)
 
 
 @pytest.mark.asyncio

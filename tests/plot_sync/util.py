@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
@@ -37,25 +38,28 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
     return PlotSyncIdentifier(uint64(int(time.time())), current_sync_id, message_id)
 
 
+@contextlib.asynccontextmanager
 async def start_harvester_service(
     harvester_service: Service[Harvester, HarvesterAPI], farmer_service: Service[Farmer, FarmerAPI]
-) -> Harvester:
+) -> AsyncIterator[Harvester]:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
     harvester_service.reconnect_retry_seconds = 1
-    await harvester_service._start()
-    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
-    harvester.plot_manager.stop_refreshing()
+    async with harvester_service.manage():
+        harvester_service.add_peer(
+            UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port())
+        )
+        harvester.plot_manager.stop_refreshing()
 
-    assert harvester.plot_sync_sender._sync_id == 0
-    assert harvester.plot_sync_sender._next_message_id == 0
-    assert harvester.plot_sync_sender._last_sync_id == 0
-    assert harvester.plot_sync_sender._messages == []
+        assert harvester.plot_sync_sender._sync_id == 0
+        assert harvester.plot_sync_sender._next_message_id == 0
+        assert harvester.plot_sync_sender._last_sync_id == 0
+        assert harvester.plot_sync_sender._messages == []
 
-    def wait_for_farmer_connection(plot_sync_sender: Sender) -> bool:
-        return plot_sync_sender._connection is not None
+        def wait_for_farmer_connection(plot_sync_sender: Sender) -> bool:
+            return plot_sync_sender._connection is not None
 
-    await time_out_assert(10, wait_for_farmer_connection, True, harvester.plot_sync_sender)
+        await time_out_assert(10, wait_for_farmer_connection, True, harvester.plot_sync_sender)
 
-    return harvester
+        yield harvester

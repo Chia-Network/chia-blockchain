@@ -244,12 +244,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
     async def run(self) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
-                try:
-                    await self._start()
-                except:  # noqa E722
-                    self._stop()
-                    raise
-                finally:
+                async with self.manage():
                     await self._wait_closed()
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
