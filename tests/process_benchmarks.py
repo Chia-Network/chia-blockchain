@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from statistics import mean
+from statistics import StatisticsError, mean, stdev
 from typing import Any, Dict, List, Set, TextIO, Tuple, final
 
 import click
@@ -177,8 +177,8 @@ def main(
             dumped = json.dumps(result.marshal())
             output.write(f"{link} {dumped}\n")
     else:
-        output.write("| Test | 🍿 | Mean | Max | Limit | Percent |\n")
-        output.write("| --- | --- | --- | --- | --- | --- |\n")
+        output.write("| Test | 🍿 | Mean | Max | 3σ | Limit | Percent |\n")
+        output.write("| --- | --- | --- | --- | --- | --- | --- |\n")
         for result in results:
             link_url = result.link(prefix=link_prefix, line_separator=link_line_separator)
 
@@ -187,6 +187,11 @@ def main(
 
             durations_max = max(result.durations)
             max_str = f"{durations_max:.3f} s"
+
+            try:
+                three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
+            except StatisticsError:
+                three_sigma_str = "-"
 
             limit_str = f"{result.limit:.3f} s"
 
@@ -220,6 +225,7 @@ def main(
                 + f" | {marker}"
                 + f" | {mean_str}"
                 + f" | {max_str}"
+                + f" | {three_sigma_str}"
                 + f" | {limit_str}"
                 + f" | {percent_str}"
                 + " |\n"
