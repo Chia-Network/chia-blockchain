@@ -127,7 +127,6 @@ class WebServer:
         await self.runner.cleanup()
 
     def close(self) -> None:
-        # TODO: review task handling
         self._close_task = asyncio.create_task(self._close())
 
     async def await_closed(self) -> None:

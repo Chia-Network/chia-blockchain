@@ -619,7 +619,6 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
-        # TODO: review task handling
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
         if self.webserver is not None:
             self.webserver.close()
@@ -627,7 +626,6 @@ class ChiaServer:
         self.shut_down_event.set()
         if self.gc_task is not None:
             self.gc_task.cancel()
-            # TODO: review task handling
             self.gc_task = None
 
     async def await_closed(self) -> None:

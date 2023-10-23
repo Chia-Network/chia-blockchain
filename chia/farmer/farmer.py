@@ -239,6 +239,7 @@ class Farmer:
                     return
                 await asyncio.sleep(1)
 
+        # TODO: review task handling
         asyncio.create_task(start_task())
 
     def _close(self) -> None:
