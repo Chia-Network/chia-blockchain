@@ -3,13 +3,10 @@ name: ⚡️ Benchmarks
 on:
  workflow_dispatch:
     inputs:
-      mode:
-        description: "Mode to run the benchmarks in"
-        type: choice
-        default: standard
-        options:
-          - standard
-          - repeat
+      repeats:
+        description: "The number of times to execute each benchmark"
+        type: int
+        default: 1
  push:
    paths-ignore:
        - '**.md'
@@ -31,24 +28,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      timeout: ${{ steps.timeout.outputs.timeout }}
+
+    steps:
+      - name: Calculate timeout
+        id: timeout
+        run: |
+          echo "timeout=$(( ${{ inputs.repeats }} * 15 ))" >> "$GITHUB_OUTPUT"
+
   build:
     name: Benchmarks
     runs-on: benchmark
+    needs:
+      - setup
     container:
       image: chianetwork/ubuntu-22.04-builder:latest
-    timeout-minutes: ${{ matrix.configuration.modes[matrix.configuration.selected-mode].job-timeout }}
+    timeout-minutes: ${{ needs.setup.outputs.timeout }}
     strategy:
       fail-fast: false
       matrix:
-        configuration:
-          - selected-mode: ${{ inputs.mode != '' && inputs.mode || 'standard' }}
-            modes:
-              standard:
-                job-timeout: 30
-                pytest-repeat: ""
-              repeat:
-                job-timeout: 60
-                pytest-repeat: "--benchmark-repeats 4"
         python-version: [ "3.10" ]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
@@ -98,7 +101,7 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml ${{ matrix.configuration.modes[matrix.configuration.selected-mode].pytest-repeat }} tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ inputs.repeats }} tests
 
       - name: Format JUnit data and prepare results
         if: always()
@@ -117,8 +120,3 @@ jobs:
         if: always()
         run: |
           python -m tests.process_benchmarks --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Fail on non-standard run to avoid merging
-        if: matrix.configuration.selected-mode != 'standard'
-        run: |
-          false
