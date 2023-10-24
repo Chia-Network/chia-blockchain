@@ -2222,7 +2222,7 @@ class WalletStateManager:
                     and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)
                 ):
                     coins_removed = tx.spend_bundle.removals()
-                    trade_coins_removed = set([])
+                    trade_coins_removed = set()
                     trades = []
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)
@@ -2421,9 +2421,7 @@ class WalletStateManager:
         # but the coin_cache keeps all wallet_ids for each puzzle hash
         for puzzle_hash in puzzle_hashes:
             if puzzle_hash in self.interested_coin_cache:
-                wallet_ids_to_add = list(
-                    set([w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]])
-                )
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[puzzle_hash]})
                 self.interested_coin_cache[puzzle_hash].extend(wallet_ids_to_add)
             else:
                 self.interested_coin_cache[puzzle_hash] = list(set(wallet_ids))
@@ -2437,7 +2435,7 @@ class WalletStateManager:
         for coin_id in coin_ids:
             if coin_id in self.interested_coin_cache:
                 # prevent repeated wallet_ids from appearing in the coin cache
-                wallet_ids_to_add = list(set([w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]]))
+                wallet_ids_to_add = list({w for w in wallet_ids if w not in self.interested_coin_cache[coin_id]})
                 self.interested_coin_cache[coin_id].extend(wallet_ids_to_add)
             else:
                 self.interested_coin_cache[coin_id] = list(set(wallet_ids))

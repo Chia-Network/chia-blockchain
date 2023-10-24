@@ -38,7 +38,7 @@ from tests.cmds.wallet.test_consts import (
 
 test_offer_file_path: Path = Path("tests") / "cmds" / "wallet" / "test_offer.toffer"
 test_offer_file_name: str = str(test_offer_file_path)
-test_offer_file_bech32: str = open(test_offer_file_name, "r").read()
+test_offer_file_bech32: str = open(test_offer_file_name).read()
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
 test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
 

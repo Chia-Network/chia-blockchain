@@ -46,7 +46,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "build==1.0.3",
     "coverage==7.3.0",
-    "diff-cover==7.7.0",
+    "diff-cover==8.0.0",
     "pre-commit==3.4.0",
     "py3createtorrent==1.1.0",
     "pylint==3.0.1",
@@ -56,6 +56,7 @@ dev_dependencies = [
     "pytest-mock==3.11.1",
     "pytest-monitor==1.6.6; sys_platform == 'linux'",
     "pytest-xdist==3.3.1",
+    "pyupgrade==3.15.0",
     "twine==4.0.2",
     "isort==5.12.0",
     "flake8==6.1.0",
@@ -65,7 +66,7 @@ dev_dependencies = [
     "pyinstaller==5.13.0",
     "types-aiofiles==23.2.0.0",
     "types-cryptography==3.3.23.2",
-    "types-pyyaml==6.0.12.11",
+    "types-pyyaml==6.0.12.12",
     "types-setuptools==68.0.0.3",
 ]
 

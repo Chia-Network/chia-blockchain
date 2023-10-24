@@ -177,9 +177,9 @@ seeder:
       private_key: "config/ssl/crawler/private_crawler.key"
 
 harvester:
-  farmer_peer:
-    host: *self_hostname
-    port: 8447
+  farmer_peers:
+    - host: *self_hostname
+      port: 8447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -238,10 +238,10 @@ pool:
 farmer:
   # The farmer server (if run) will run on this port
   port: 8447
-  # The farmer will attempt to connect to this full node and harvester
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  # The farmer will attempt to connect to these full nodes
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
 
   pool_public_keys: []
 
@@ -283,9 +283,9 @@ timelord:
       - 127.0.0.1
     ips_estimate:
       - 150000
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -520,9 +520,9 @@ wallet:
 
   dns_servers: *dns_servers
 
-  full_node_peer:
-    host: *self_hostname
-    port: 8444
+  full_node_peers:
+    - host: *self_hostname
+      port: 8444
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
   # The length of NFT ID prefix will be used as hash index

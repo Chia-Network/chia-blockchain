@@ -24,7 +24,7 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement(bytes100(data))
 
     @staticmethod
-    def get_default_element() -> "ClassgroupElement":
+    def get_default_element() -> ClassgroupElement:
         # Bit 3 in the first byte of serialized compressed form indicates if
         # it's the default generator element.
         return ClassgroupElement.create(b"\x08")

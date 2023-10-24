@@ -768,7 +768,7 @@ class NFTWallet:
 
         innersol: Program = self.standard_wallet.make_solution(
             primaries=payments,
-            coin_announcements=None if announcement_to_make is None else set((announcement_to_make,)),
+            coin_announcements=None if announcement_to_make is None else {announcement_to_make},
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
             conditions=extra_conditions,

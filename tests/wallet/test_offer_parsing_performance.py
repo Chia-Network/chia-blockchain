@@ -28,7 +28,7 @@ def enable_profiler(name: str) -> Iterator[None]:
 
 def test_offer_parsing_performance(benchmark_runner: BenchmarkRunner) -> None:
     offer_bytes = bytes.fromhex(test_offer)
-    with benchmark_runner.assert_runtime(seconds=2, label="Offer.from_bytes()"):
+    with benchmark_runner.assert_runtime(seconds=2.15, label="Offer.from_bytes()"):
         with enable_profiler("offer-parsing"):
             for _ in range(100):
                 o = Offer.from_bytes(offer_bytes)

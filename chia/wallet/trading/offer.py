@@ -59,7 +59,7 @@ class NotarizedPayment(Payment):
     nonce: bytes32 = ZERO_32
 
     @classmethod
-    def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> "NotarizedPayment":
+    def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
         with_opcode: Program = Program.to((51, condition))  # Gotta do this because the super class is expecting it
         p = Payment.from_condition(with_opcode)
         puzzle_hash, amount, memos = tuple(p.as_condition_args())

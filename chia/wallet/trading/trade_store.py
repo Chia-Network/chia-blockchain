@@ -86,7 +86,7 @@ class TradeStore:
     @classmethod
     async def create(
         cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
-    ) -> "TradeStore":
+    ) -> TradeStore:
         self = cls()
 
         if name:
@@ -99,20 +99,18 @@ class TradeStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS trade_records("
-                    " trade_record blob,"
-                    " trade_id text PRIMARY KEY,"
-                    " status int,"
-                    " confirmed_at_index int,"
-                    " created_at_time bigint,"
-                    " sent int,"
-                    " is_my_offer tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS trade_records("
+                " trade_record blob,"
+                " trade_id text PRIMARY KEY,"
+                " status int,"
+                " confirmed_at_index int,"
+                " created_at_time bigint,"
+                " sent int,"
+                " is_my_offer tinyint)"
             )
 
             await conn.execute(
-                ("CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)")
+                "CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(trade_id blob, coin_id blob)"
             )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on coin_of_interest_to_trade_record(trade_id)"

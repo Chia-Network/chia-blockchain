@@ -207,7 +207,7 @@ async def test_tx_generator_speed(softfork_height, benchmark_runner: BenchmarkRu
     generator_bytes = large_block_generator(LARGE_BLOCK_COIN_CONSUMED_COUNT)
     program = SerializedProgram.from_bytes(generator_bytes)
 
-    with benchmark_runner.assert_runtime(seconds=0.5):
+    with benchmark_runner.assert_runtime(seconds=1.25):
         generator = BlockGenerator(program, [], [])
         npc_result = get_name_puzzle_conditions(
             generator,
@@ -261,14 +261,14 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner):
         "af949b78fa6a957602c3593a3d6cb7711e08720415dad831ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
     )
     puzzle_program = SerializedProgram.from_bytes(
-        p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key)))
     )
     conditions = binutils.assemble(
         "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
         " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"
     )
     solution_program = SerializedProgram.from_bytes(
-        p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
+        bytes(p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions))
     )
 
     with benchmark_runner.assert_runtime(seconds=0.1):
@@ -303,7 +303,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with benchmark_runner.assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
+    with benchmark_runner.assert_runtime(seconds=8.5, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)

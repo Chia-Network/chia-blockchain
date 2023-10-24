@@ -12,9 +12,8 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
-from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.misc import SignalHandlers
 
@@ -34,10 +33,6 @@ def create_timelord_service(
     connect_to_daemon: bool = True,
 ) -> Service[Timelord, TimelordAPI]:
     service_config = config[SERVICE_NAME]
-
-    connect_peers = {
-        UnresolvedPeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])
-    }
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
@@ -57,7 +52,7 @@ def create_timelord_service(
         node_type=NodeType.TIMELORD,
         advertised_port=None,
         service_name=SERVICE_NAME,
-        connect_peers=connect_peers,
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
