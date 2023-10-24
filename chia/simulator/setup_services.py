@@ -27,6 +27,7 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
+from chia.server.outbound_message import NodeType
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
@@ -46,7 +47,7 @@ from chia.timelord.timelord_launcher import VDFClientProcessMgr, find_vdf_client
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config, set_peer_info
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
@@ -309,11 +310,16 @@ async def setup_wallet_node(
             service_config["introducer_peer"] = None
 
         if full_node_port is not None:
-            service_config["full_node_peer"] = {}
-            service_config["full_node_peer"]["host"] = self_hostname
-            service_config["full_node_peer"]["port"] = full_node_port
+            service_config.pop("full_node_peer", None)
+            service_config["full_node_peers"] = [
+                {
+                    "host": self_hostname,
+                    "port": full_node_port,
+                },
+            ]
         else:
-            del service_config["full_node_peer"]
+            service_config.pop("full_node_peer", None)
+            service_config.pop("full_node_peers", None)
 
         service = create_wallet_service(
             local_bt.root_path,
@@ -375,7 +381,7 @@ async def setup_harvester(
         root_path,
         config,
         consensus_constants,
-        farmer_peer=farmer_peer,
+        farmer_peers={farmer_peer} if farmer_peer is not None else set(),
         connect_to_daemon=False,
     )
 
@@ -414,10 +420,16 @@ async def setup_farmer(
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
-        service_config["full_node_peer"]["host"] = self_hostname
-        service_config["full_node_peer"]["port"] = full_node_port
+        service_config.pop("full_node_peer", None)
+        service_config["full_node_peers"] = [
+            {
+                "host": self_hostname,
+                "port": full_node_port,
+            },
+        ]
     else:
-        del service_config["full_node_peer"]
+        service_config.pop("full_node_peer", None)
+        service_config.pop("full_node_peers", None)
 
     service = create_farmer_service(
         root_path,
@@ -534,7 +546,7 @@ async def setup_timelord(
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[Service[Timelord, TimelordAPI], None]:
     service_config = config["timelord"]
-    service_config["full_node_peer"]["port"] = full_node_port
+    set_peer_info(service_config, peer_type=NodeType.FULL_NODE, peer_port=full_node_port)
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
     service_config["vdf_server"]["port"] = vdf_port

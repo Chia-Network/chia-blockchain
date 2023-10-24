@@ -78,7 +78,7 @@ class ConsensusConstants:
     PLOT_FILTER_64_HEIGHT: uint32
     PLOT_FILTER_32_HEIGHT: uint32
 
-    def replace_str_to_bytes(self, **changes: Any) -> "ConsensusConstants":
+    def replace_str_to_bytes(self, **changes: Any) -> ConsensusConstants:
         """
         Overrides str (hex) values with bytes.
         """

@@ -290,7 +290,7 @@ class TestDLWallet:
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
                 DEFAULT_TX_CONFIG,
-                coins=set([txs[0].spend_bundle.removals()[0]]),
+                coins={txs[0].spend_bundle.removals()[0]},
                 fee=uint64(1999999999999),
             )
 
