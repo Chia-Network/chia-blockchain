@@ -846,7 +846,6 @@ class CATWallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
-
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:
