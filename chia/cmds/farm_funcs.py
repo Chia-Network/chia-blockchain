@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -10,6 +12,7 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import CliRpcConnectionError
 from chia.util.misc import format_bytes, format_minutes
 from chia.util.network import is_localhost
 
@@ -74,10 +77,8 @@ async def challenges(farmer_rpc_port: Optional[int], limit: int) -> None:
 
     for signage_point in signage_points:
         print(
-            (
-                f"Hash: {signage_point['signage_point']['challenge_hash']} "
-                f"Index: {signage_point['signage_point']['signage_point_index']}"
-            )
+            f"Hash: {signage_point['signage_point']['challenge_hash']} "
+            f"Index: {signage_point['signage_point']['signage_point_index']}"
         )
 
 
@@ -89,15 +90,26 @@ async def summary(
     root_path: Path = DEFAULT_ROOT_PATH,
 ) -> None:
     harvesters_summary = await get_harvesters_summary(farmer_rpc_port, root_path)
-    blockchain_state = await get_blockchain_state(rpc_port, root_path)
+    blockchain_state = None
+    try:
+        blockchain_state = await get_blockchain_state(rpc_port, root_path)
+    except CliRpcConnectionError:
+        pass
+    except Exception:
+        print("Error while trying to get blockchain state!", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+
     farmer_running = False if harvesters_summary is None else True  # harvesters uses farmer rpc too
 
     wallet_not_ready: bool = False
     amounts = None
     try:
         amounts = await get_wallets_stats(wallet_rpc_port, root_path)
-    except Exception:
+    except CliRpcConnectionError:
         wallet_not_ready = True
+    except Exception:
+        print("Error while trying to get wallet stats!", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
     wallet_not_running: bool = True if amounts is None else False
 
     print("Farming status: ", end="")

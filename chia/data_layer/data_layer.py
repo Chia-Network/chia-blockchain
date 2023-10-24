@@ -644,11 +644,13 @@ class DataLayer:
                 root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
                 filenames.append(get_full_tree_filename(tree_id, root_hash, root.generation))
                 filenames.append(get_delta_filename(tree_id, root_hash, root.generation))
+        # stop tracking first, then unsubscribe from the data store
+        await self.wallet_rpc.dl_stop_tracking(tree_id)
         async with self.subscription_lock:
             await self.data_store.unsubscribe(tree_id)
             if not retain_data:
                 await self.data_store.delete_store_data(tree_id)
-        await self.wallet_rpc.dl_stop_tracking(tree_id)
+
         self.log.info(f"Unsubscribed to {tree_id}")
         for filename in filenames:
             file_path = self.server_files_location.joinpath(filename)
@@ -713,7 +715,7 @@ class DataLayer:
 
             # Subscribe to all local tree_ids that we can find on chain.
             local_tree_ids = await self.data_store.get_tree_ids()
-            subscription_tree_ids = set(subscription.tree_id for subscription in subscriptions)
+            subscription_tree_ids = {subscription.tree_id for subscription in subscriptions}
             for local_id in local_tree_ids:
                 if local_id not in subscription_tree_ids:
                     try:

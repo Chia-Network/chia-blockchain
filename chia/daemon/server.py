@@ -173,7 +173,7 @@ class WebSocketServer:
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
-        self.log.info("Starting Daemon Server")
+        self.log.info(f"Starting Daemon Server ({self.self_hostname}:{self.daemon_port})")
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
@@ -790,7 +790,7 @@ class WebSocketServer:
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
     def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
@@ -875,6 +875,8 @@ class WebSocketServer:
             device_index = request.get("device", None)
             t1 = request.get("t", None)  # Temp directory
             t2 = request.get("t2", None)  # Temp2 directory
+            disk_128 = request.get("disk_128", False)
+            disk_16 = request.get("disk_16", False)
 
             if device_index is not None and str(device_index).isdigit():
                 command_args.append("--device")
@@ -885,6 +887,10 @@ class WebSocketServer:
             if t2 is not None:
                 command_args.append("-2")
                 command_args.append(t2)
+            if disk_128:
+                command_args.append("--disk-128")
+            if disk_16:
+                command_args.append("--disk-16")
             return command_args
 
         # if plot_type == "diskplot"
@@ -1073,7 +1079,7 @@ class WebSocketServer:
 
             self._post_process_plotting_job(config)
 
-        except (subprocess.SubprocessError, IOError):
+        except (subprocess.SubprocessError, OSError):
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
@@ -1234,7 +1240,7 @@ class WebSocketServer:
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
-            except (subprocess.SubprocessError, IOError):
+            except (subprocess.SubprocessError, OSError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 

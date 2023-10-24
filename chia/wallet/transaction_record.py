@@ -24,7 +24,7 @@ minimum_send_attempts = 6
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
     item: T
-    transaction_records: List["TransactionRecord"]
+    transaction_records: List[TransactionRecord]
 
 
 @streamable

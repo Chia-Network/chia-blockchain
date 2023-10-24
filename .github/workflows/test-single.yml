@@ -74,15 +74,15 @@ jobs:
             apt: '3.9'
             install_sh: '3.9'
             matrix: '3.9'
+            exclude_from:
+              limited: True
+              main: True
           - name: '3.10'
             file_name: '3.10'
             action: '3.10'
             apt: '3.10'
             install_sh: '3.10'
             matrix: '3.10'
-            exclude_from:
-              limited: True
-              main: True
           - name: '3.11'
             file_name: '3.11'
             action: '3.11'
@@ -113,7 +113,7 @@ jobs:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       CHIA_SIMULATOR_ROOT: ${{ github.workspace }}/.chia/simulator
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
-      BLOCKS_AND_PLOTS_VERSION: 0.32.0
+      BLOCKS_AND_PLOTS_VERSION: 0.33.0
 
     steps:
       - name: Configure git
@@ -121,7 +121,7 @@ jobs:
           git config --global core.autocrlf false
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

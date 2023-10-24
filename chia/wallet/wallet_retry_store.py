@@ -17,7 +17,7 @@ class WalletRetryStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> "WalletRetryStore":
+    async def create(cls, db_wrapper: DBWrapper2) -> WalletRetryStore:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:

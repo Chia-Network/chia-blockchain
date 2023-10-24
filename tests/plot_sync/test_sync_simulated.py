@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import random
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pytest
@@ -78,8 +78,8 @@ class TestData:
 
         removed_paths: List[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
         invalid_dict: Dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
-        keys_missing_set: Set[Path] = set([p.prover.get_filename() for p in self.keys_missing])
-        duplicates_set: Set[str] = set([p.prover.get_filename() for p in self.duplicates])
+        keys_missing_set: Set[Path] = {p.prover.get_filename() for p in self.keys_missing}
+        duplicates_set: Set[str] = {p.prover.get_filename() for p in self.duplicates}
 
         # Inject invalid plots into `PlotManager` of the harvester so that the callback calls below can use them
         # to sync them to the farmer.
@@ -259,7 +259,7 @@ async def create_test_runner(
     return TestRunner(harvesters, farmer, event_loop)
 
 
-def create_example_plots(count: int) -> List[PlotInfo]:
+def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotInfo]:
     @dataclass
     class DiskProver:
         file_name: str
@@ -280,7 +280,7 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
     return [
         PlotInfo(
-            prover=DiskProver(f"{x}", bytes32(token_bytes(32)), 25 + x % 26),
+            prover=DiskProver(f"{x}", bytes32.random(seeded_random), 25 + x % 26),
             pool_public_key=None,
             pool_contract_puzzle_hash=None,
             plot_public_key=G1Element(),
@@ -297,11 +297,12 @@ async def test_sync_simulated(
         List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools
     ],
     event_loop: asyncio.events.AbstractEventLoop,
+    seeded_random: random.Random,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
     farmer: Farmer = farmer_service._node
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
-    plots = create_example_plots(31000)
+    plots = create_example_plots(31000, seeded_random=seeded_random)
 
     await test_runner.run(
         0, loaded=plots[0:10000], removed=[], invalid=[], keys_missing=[], duplicates=plots[0:1000], initial=True
@@ -379,12 +380,13 @@ async def test_farmer_error_simulation(
     ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
+    seeded_random: random.Random,
 ) -> None:
     Constants.message_timeout = 5
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
     batch_size = test_runner.test_data[0].harvester.plot_manager.refresh_parameter.batch_size
-    plots = create_example_plots(batch_size + 3)
+    plots = create_example_plots(batch_size + 3, seeded_random=seeded_random)
     receiver = test_runner.test_data[0].plot_sync_receiver
     receiver.simulate_error = simulate_error  # type: ignore[attr-defined]
     await test_runner.run(
@@ -406,12 +408,13 @@ async def test_sync_reset_cases(
     ],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
+    seeded_random: random.Random,
 ) -> None:
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
     test_data: TestData = test_runner.test_data[0]
     plot_manager: PlotManager = test_data.harvester.plot_manager
-    plots = create_example_plots(30)
+    plots = create_example_plots(30, seeded_random=seeded_random)
     # Inject some data into `PlotManager` of the harvester so that we can validate the reset worked and triggered a
     # fresh sync of all available data of the plot manager
     for plot_info in plots[0:10]:
@@ -424,7 +427,7 @@ async def test_sync_reset_cases(
     started_sync_id: uint64 = uint64(0)
 
     plot_manager.failed_to_open_filenames = {p.prover.get_filename(): 0 for p in test_data.invalid}
-    plot_manager.no_key_filenames = set([p.prover.get_filename() for p in test_data.keys_missing])
+    plot_manager.no_key_filenames = {p.prover.get_filename() for p in test_data.keys_missing}
 
     async def wait_for_reset() -> bool:
         assert started_sync_id != 0

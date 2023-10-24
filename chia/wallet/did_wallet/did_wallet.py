@@ -5,7 +5,6 @@ import json
 import logging
 import re
 import time
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -17,15 +16,16 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.did_wallet.did_info import DIDCoinData, DIDInfo
-from chia.wallet.did_wallet.did_wallet_puzzles import uncurry_innerpuz
+from chia.wallet.did_wallet.did_wallet_puzzles import match_did_puzzle, uncurry_innerpuz
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -41,12 +41,13 @@ from chia.wallet.singleton import (
     get_inner_puzzle_from_singleton,
 )
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import CHIP_0002_SIGN_MESSAGE_PREFIX, Wallet
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -234,7 +235,7 @@ class DIDWallet:
             None,
             None,
             False,
-            json.dumps(did_wallet_puzzles.program_to_metadata(metadata)),
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(metadata)),
         )
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
@@ -343,22 +344,39 @@ class DIDWallet:
     # We can improve this interface by passing in the CoinSpend, as well
     # We need to change DID Wallet coin_added to expect p2 spends as well as recovery spends,
     # or only call it in the recovery spend case
-    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, coin_data: Optional[DIDCoinData]):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection, parent_coin_data: Optional[DIDCoinData]):
         """Notification from wallet state manager that wallet has been received."""
-        # TODO Use coin_data instead of calling peer API
         parent = self.get_parent_for_coin(coin)
-        if parent is None:
-            # this is the first time we received it, check it's a DID coin
+        if parent_coin_data is not None:
+            assert isinstance(parent_coin_data, DIDCoinData)
+            did_data: DIDCoinData = parent_coin_data
+        else:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            response = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            parent_innerpuz = get_inner_puzzle_from_singleton(response.puzzle_reveal.to_program())
+            coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
+            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal.to_program())
+            did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+            assert did_curried_args is not None
+            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+            did_data = DIDCoinData(
+                p2_puzzle,
+                recovery_list_hash.atom,
+                uint16(num_verification.as_int()),
+                singleton_struct,
+                metadata,
+                get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal.to_program()),
+                parent_state,
+            )
+        if parent is None:
+            # this is the first time we received it, check it's a DID coin
+
+            parent_innerpuz = did_data.inner_puzzle
             if parent_innerpuz:
                 parent_info = LineageProof(
-                    parent_state.coin.parent_coin_info,
+                    did_data.coin_state.coin.parent_coin_info,
                     parent_innerpuz.get_tree_hash(),
-                    uint64(parent_state.coin.amount),
+                    uint64(did_data.coin_state.coin.amount),
                 )
 
                 await self.add_parent(coin.parent_coin_info, parent_info)
@@ -376,7 +394,6 @@ class DIDWallet:
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
-
         new_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
@@ -387,7 +404,7 @@ class DIDWallet:
             None,
             None,
             False,
-            self.did_info.metadata,
+            json.dumps(did_wallet_puzzles.did_program_to_metadata(did_data.metadata)),
         )
         await self.save_info(new_info)
 
@@ -616,7 +633,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -713,7 +730,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -729,7 +746,7 @@ class DIDWallet:
         coin_announcements_to_assert: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_assert: Optional[Set[Announcement]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ):
+    ) -> TransactionRecord:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -784,7 +801,26 @@ class DIDWallet:
         )
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
-        return await self.sign(unsigned_spend_bundle)
+        signed_spend_bundle: SpendBundle = await self.sign(unsigned_spend_bundle)
+        return TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=p2_ph,
+            amount=uint64(coin.amount),
+            fee_amount=uint64(0),
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=signed_spend_bundle,
+            additions=signed_spend_bundle.additions(),
+            removals=[coin],
+            wallet_id=self.id(),
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=signed_spend_bundle.name(),
+            memos=list(compute_memos(signed_spend_bundle).items()),
+            valid_times=parse_timelock_info(extra_conditions),
+        )
 
     # This is used to cash out, or update the id_list
     async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig):
@@ -834,7 +870,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=ConditionValidTimes(),
         )
@@ -916,7 +952,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -1045,7 +1081,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=ConditionValidTimes(),
         )
@@ -1151,7 +1187,7 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: str, is_hex: bool = False) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, mode: SigningMode) -> Tuple[G1Element, G2Element]:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
@@ -1161,11 +1197,15 @@ class DIDWallet:
             private = await self.wallet_state_manager.get_private_key(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            if is_hex:
-                puzzle: Program = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
+            if mode == SigningMode.CHIP_0002_HEX_INPUT:
+                hex_message: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message))).get_tree_hash()
+            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT:
+                hex_message = bytes(message, "utf-8")
+            elif mode == SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT:
+                hex_message = bytes.fromhex(message)
             else:
-                puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
+                hex_message = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message)).get_tree_hash()
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, hex_message)
         else:
             raise ValueError("Invalid inner DID puzzle.")
 
@@ -1220,7 +1260,7 @@ class DIDWallet:
         announcement_message = Program.to([did_puzzle_hash, amount, bytes(0x80)]).get_tree_hash()
         announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
 
-        tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+        [tx_record] = await self.standard_wallet.generate_signed_transaction(
             amount,
             genesis_launcher_puz.get_tree_hash(),
             tx_config,
@@ -1250,7 +1290,7 @@ class DIDWallet:
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
 
-        if tx_record is None or tx_record.spend_bundle is None:
+        if tx_record.spend_bundle is None:
             return None
 
         # Only want to save this information if the transaction is valid
@@ -1287,7 +1327,7 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )

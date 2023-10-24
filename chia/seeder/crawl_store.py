@@ -10,7 +10,7 @@ from typing import Dict, List
 import aiosqlite
 
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 
@@ -30,34 +30,30 @@ class CrawlStore:
         self = cls(connection)
 
         await self.crawl_db.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS peer_records("
-                " peer_id text PRIMARY KEY,"
-                " ip_address text,"
-                " port bigint,"
-                " connected int,"
-                " last_try_timestamp bigint,"
-                " try_count bigint,"
-                " connected_timestamp bigint,"
-                " added_timestamp bigint,"
-                " best_timestamp bigint,"
-                " version text,"
-                " handshake_time text"
-                " tls_version text)"
-            )
+            "CREATE TABLE IF NOT EXISTS peer_records("
+            " peer_id text PRIMARY KEY,"
+            " ip_address text,"
+            " port bigint,"
+            " connected int,"
+            " last_try_timestamp bigint,"
+            " try_count bigint,"
+            " connected_timestamp bigint,"
+            " added_timestamp bigint,"
+            " best_timestamp bigint,"
+            " version text,"
+            " handshake_time text"
+            " tls_version text)"
         )
         await self.crawl_db.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS peer_reliability("
-                " peer_id text PRIMARY KEY,"
-                " ignore_till int, ban_till int,"
-                " stat_2h_w real, stat_2h_c real, stat_2h_r real,"
-                " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
-                " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
-                " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
-                " stat_1m_w real, stat_1m_c real, stat_1m_r real,"
-                " tries int, successes int)"
-            )
+            "CREATE TABLE IF NOT EXISTS peer_reliability("
+            " peer_id text PRIMARY KEY,"
+            " ignore_till int, ban_till int,"
+            " stat_2h_w real, stat_2h_c real, stat_2h_r real,"
+            " stat_8h_w real, stat_8h_c real, stat_8h_r real,"
+            " stat_1d_w real, stat_1d_c real, stat_1d_r real,"
+            " stat_1w_w real, stat_1w_c real, stat_1w_r real,"
+            " stat_1m_w real, stat_1m_c real, stat_1m_r real,"
+            " tries int, successes int)"
         )
 
         try:
@@ -65,7 +61,7 @@ class CrawlStore:
         except aiosqlite.OperationalError:
             pass  # ignore what is likely Duplicate column error
 
-        await self.crawl_db.execute(("CREATE TABLE IF NOT EXISTS good_peers(ip text)"))
+        await self.crawl_db.execute("CREATE TABLE IF NOT EXISTS good_peers(ip text)")
 
         await self.crawl_db.execute("CREATE INDEX IF NOT EXISTS ip_address on peer_records(ip_address)")
 
@@ -149,7 +145,7 @@ class CrawlStore:
         age_timestamp = int(max(peer.last_try_timestamp, peer.connected_timestamp))
         if age_timestamp == 0:
             age_timestamp = now - 1000
-        replaced = replace(peer, try_count=peer.try_count + 1, last_try_timestamp=now)
+        replaced = replace(peer, try_count=uint32(peer.try_count + 1), last_try_timestamp=now)
         reliability = await self.get_peer_reliability(peer.peer_id)
         if reliability is None:
             reliability = PeerReliability(peer.peer_id)

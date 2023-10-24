@@ -8,7 +8,7 @@ import aiohttp
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.json_util import obj_to_response
-from chia.wallet.conditions import Condition, conditions_from_json_dicts
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
 
 log = logging.getLogger(__name__)
@@ -68,6 +68,16 @@ def tx_endpoint(
         extra_conditions: Tuple[Condition, ...] = tuple()
         if "extra_conditions" in request:
             extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
+        extra_conditions = (*extra_conditions, *ConditionValidTimes.from_json_dict(request).to_conditions())
+
+        valid_times: ConditionValidTimes = parse_timelock_info(extra_conditions)
+        if (
+            valid_times.max_secs_after_created is not None
+            or valid_times.min_secs_since_created is not None
+            or valid_times.max_blocks_after_created is not None
+            or valid_times.min_blocks_since_created is not None
+        ):
+            raise ValueError("Relative timelocks are not currently supported in the RPC")
 
         return await func(self, request, *args, tx_config=tx_config, extra_conditions=extra_conditions, **kwargs)
 

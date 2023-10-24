@@ -39,6 +39,7 @@ class SerializedProgram:
     @classmethod
     def from_bytes(cls: Type[SerializedProgram], blob: bytes) -> SerializedProgram:
         ret = SerializedProgram()
+        assert serialized_length(blob) == len(blob)
         ret._buf = bytes(blob)
         return ret
 
@@ -65,7 +66,7 @@ class SerializedProgram:
         return bytes(self).hex()
 
     def __repr__(self) -> str:
-        return "%s(%s)" % (self.__class__.__name__, str(self))
+        return f"{self.__class__.__name__}({str(self)})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SerializedProgram):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import random
 import time
-from secrets import token_bytes
 
 import pytest
 from blspy import G2Element
@@ -20,16 +20,19 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
 from tests.util.db_connection import DBConnection
 
-coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12311))
-coin_2 = Coin(coin_1.parent_coin_info, token_bytes(32), uint64(12312))
-coin_3 = Coin(coin_1.parent_coin_info, token_bytes(32), uint64(12313))
+module_seeded_random = random.Random()
+module_seeded_random.seed(a=0, version=2)
+
+coin_1 = Coin(bytes32.random(module_seeded_random), bytes32.random(module_seeded_random), uint64(12311))
+coin_2 = Coin(coin_1.parent_coin_info, bytes32.random(module_seeded_random), uint64(12312))
+coin_3 = Coin(coin_1.parent_coin_info, bytes32.random(module_seeded_random), uint64(12313))
 record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 record_3 = WalletCoinRecord(coin_3, uint32(6), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
 
 
 @pytest.mark.asyncio
-async def test_get_coins_of_interest_with_trade_statuses() -> None:
+async def test_get_coins_of_interest_with_trade_statuses(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         coin_store = await WalletCoinStore.create(db_wrapper)
         trade_store = await TradeStore.create(db_wrapper)
@@ -37,7 +40,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
         await coin_store.add_coin_record(record_2)
         await coin_store.add_coin_record(record_3)
 
-        tr1_name: bytes32 = bytes32(token_bytes(32))
+        tr1_name: bytes32 = bytes32.random(seeded_random)
         tr1 = TradeRecord(
             confirmed_at_index=uint32(0),
             accepted_at_time=None,
@@ -52,9 +55,9 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             sent_to=[],
             valid_times=ConditionValidTimes(),
         )
-        await trade_store.add_trade_record(tr1, offer_name=bytes32(token_bytes(32)))
+        await trade_store.add_trade_record(tr1, offer_name=bytes32.random(seeded_random))
 
-        tr2_name: bytes32 = bytes32(token_bytes(32))
+        tr2_name: bytes32 = bytes32.random(seeded_random)
         tr2 = TradeRecord(
             confirmed_at_index=uint32(0),
             accepted_at_time=None,
@@ -69,7 +72,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             sent_to=[],
             valid_times=ConditionValidTimes(),
         )
-        await trade_store.add_trade_record(tr2, offer_name=bytes32(token_bytes(32)))
+        await trade_store.add_trade_record(tr2, offer_name=bytes32.random(seeded_random))
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == {
             coin_1.name(),
@@ -94,7 +97,7 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             sent_to=[],
             valid_times=ConditionValidTimes(),
         )
-        await trade_store.add_trade_record(tr2_1, offer_name=bytes32(token_bytes(32)))
+        await trade_store.add_trade_record(tr2_1, offer_name=bytes32.random(seeded_random))
 
         assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == {
             coin_2.name()
@@ -119,16 +122,14 @@ async def test_valid_times_migration() -> None:
     async with DBConnection(1) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS trade_records("
-                    " trade_record blob,"
-                    " trade_id text PRIMARY KEY,"
-                    " status int,"
-                    " confirmed_at_index int,"
-                    " created_at_time bigint,"
-                    " sent int,"
-                    " is_my_offer tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS trade_records("
+                " trade_record blob,"
+                " trade_id text PRIMARY KEY,"
+                " status int,"
+                " confirmed_at_index int,"
+                " created_at_time bigint,"
+                " sent int,"
+                " is_my_offer tinyint)"
             )
 
         fake_offer = Offer({}, SpendBundle([], G2Element()), {})
@@ -168,3 +169,31 @@ async def test_valid_times_migration() -> None:
         rec = await trade_store.get_trade_record(old_record.trade_id)
         assert rec is not None
         assert rec.valid_times == ConditionValidTimes()
+
+
+@pytest.mark.asyncio
+async def test_large_trade_record_query() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await TradeStore.create(db_wrapper)
+
+        for _ in range(0, db_wrapper.host_parameter_limit + 1):
+            offer_name = bytes32.secret()
+            await store.add_trade_record(
+                TradeRecord(
+                    confirmed_at_index=uint32(0),
+                    accepted_at_time=None,
+                    created_at_time=uint64(1000000),
+                    is_my_offer=True,
+                    sent=uint32(0),
+                    offer=b"",
+                    taken_offer=None,
+                    coins_of_interest=[],
+                    trade_id=offer_name,
+                    status=uint32(TradeStatus.PENDING_ACCEPT.value),
+                    sent_to=[],
+                    valid_times=ConditionValidTimes(),
+                ),
+                offer_name,
+            )
+
+        assert len(await store.get_all_trades()) == db_wrapper.host_parameter_limit + 1

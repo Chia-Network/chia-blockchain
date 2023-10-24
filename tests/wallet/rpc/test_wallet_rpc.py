@@ -4,8 +4,8 @@ import asyncio
 import dataclasses
 import json
 import logging
+import random
 from operator import attrgetter
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
@@ -42,6 +42,7 @@ from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.conditions import ConditionValidTimes, Remark
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -176,32 +177,26 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    client = await WalletRpcClient.create(
+    async with WalletRpcClient.create_as_context(
         hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
-    )
-    client_2 = await WalletRpcClient.create(
-        hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
-    )
-    client_node = await FullNodeRpcClient.create(
-        hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
-    )
+    ) as client:
+        async with WalletRpcClient.create_as_context(
+            hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
+        ) as client_2:
+            async with FullNodeRpcClient.create_as_context(
+                hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            ) as client_node:
+                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
+                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
 
-    wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
-    wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
-    node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
-
-    yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
-
-    # Checks that the RPC manages to stop the node
-    client.close()
-    client_2.close()
-    client_node.close()
-    await client.await_closed()
-    await client_2.await_closed()
-    await client_node.await_closed()
+                yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:
@@ -317,6 +312,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
             excluded_coin_amounts=[uint64(250000000000)],
             excluded_coin_ids=[bytes32([0] * 32)],
         ),
+        extra_conditions=(Remark(Program.to(("test", None))),),
     )
     transaction_id = tx.name
 
@@ -422,7 +418,7 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    tx = await wallet.generate_signed_transaction(
+    [tx] = await wallet.generate_signed_transaction(
         amount=uint64(5),
         puzzle_hash=bytes32([0] * 32),
         tx_config=DEFAULT_TX_CONFIG,
@@ -1148,7 +1144,18 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert id == offer.name()
     id, advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert id == offer.name()
-    assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert summary == {
+        "offered": {"xch": 5},
+        "requested": {cat_asset_id.hex(): 1},
+        "infos": driver_dict,
+        "fees": 1,
+        "valid_times": {
+            "max_height": None,
+            "max_time": None,
+            "min_height": None,
+            "min_time": None,
+        },
+    }
     assert advanced_summary == summary
 
     id, valid = await wallet_1_rpc.check_offer_validity(offer)
@@ -1298,6 +1305,14 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len([o for o in await wallet_1_rpc.get_all_offers() if o.status == TradeStatus.PENDING_ACCEPT.value]) == 0
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
 
+    with pytest.raises(ValueError, match="not currently supported"):
+        await wallet_1_rpc.create_offer_for_ids(
+            {uint32(1): -5, cat_asset_id.hex(): 1},
+            DEFAULT_TX_CONFIG,
+            driver_dict=driver_dict,
+            timelock_info=ConditionValidTimes(min_secs_since_created=uint64(1)),
+        )
+
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.asyncio
@@ -1331,23 +1346,23 @@ async def test_get_coin_records_by_names(wallet_rpc_environment: WalletRpcTestEn
     assert await client.get_coin_records_by_names([]) == []
     # 2. All coins
     rpc_result = await client.get_coin_records_by_names(coin_ids + coin_ids_unspent)
-    assert set(record.coin for record in rpc_result) == {*coins, *coins_unspent}
+    assert {record.coin for record in rpc_result} == {*coins, *coins_unspent}
     # 3. All spent coins
     rpc_result = await client.get_coin_records_by_names(coin_ids, include_spent_coins=True)
-    assert set(record.coin for record in rpc_result) == coins
+    assert {record.coin for record in rpc_result} == coins
     # 4. All unspent coins
     rpc_result = await client.get_coin_records_by_names(coin_ids_unspent, include_spent_coins=False)
-    assert set(record.coin for record in rpc_result) == coins_unspent
+    assert {record.coin for record in rpc_result} == coins_unspent
     # 5. Filter start/end height
     filter_records = result.records[:10]
     assert len(filter_records) == 10
     filter_coin_ids = [record.name() for record in filter_records]
-    filter_coins = set(record.coin for record in filter_records)
+    filter_coins = {record.coin for record in filter_records}
     min_height = min(record.confirmed_block_height for record in filter_records)
     max_height = max(record.confirmed_block_height for record in filter_records)
     assert min_height != max_height
     rpc_result = await client.get_coin_records_by_names(filter_coin_ids, start_height=min_height, end_height=max_height)
-    assert set(record.coin for record in rpc_result) == filter_coins
+    assert {record.coin for record in rpc_result} == filter_coins
     # 8. Test the failure case
     with pytest.raises(ValueError, match="not found"):
         await client.get_coin_records_by_names(coin_ids, include_spent_coins=False)
@@ -1880,7 +1895,10 @@ async def test_get_coin_records_rpc(wallet_rpc_environment: WalletRpcTestEnviron
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.asyncio
-async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_get_coin_records_rpc_limits(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+    seeded_random: random.Random,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
@@ -1896,8 +1914,10 @@ async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTest
     max_coins = api.max_get_coin_records_limit * 10
     coin_records = [
         WalletCoinRecord(
-            Coin(token_bytes(32), token_bytes(32), uint64.from_bytes(token_bytes(8))),
-            uint32(uint32.from_bytes(token_bytes(4))),
+            Coin(
+                bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(seeded_random.randrange(2**64))
+            ),
+            uint32(seeded_random.randrange(2**32)),
             uint32(0),
             False,
             False,
@@ -1951,16 +1971,19 @@ async def test_get_coin_records_rpc_limits(wallet_rpc_environment: WalletRpcTest
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="save time")
 @pytest.mark.asyncio
-async def test_get_coin_records_rpc_failures(wallet_rpc_environment: WalletRpcTestEnvironment) -> None:
+async def test_get_coin_records_rpc_failures(
+    wallet_rpc_environment: WalletRpcTestEnvironment,
+    seeded_random: random.Random,
+) -> None:
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     client: WalletRpcClient = env.wallet_1.rpc_client
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
     api = cast(WalletRpcApi, rpc_server.rpc_api)
 
-    too_many_hashes = [bytes32(token_bytes(32)) for _ in range(api.max_get_coin_records_filter_items + 1)]
+    too_many_hashes = [bytes32.random(seeded_random) for _ in range(api.max_get_coin_records_filter_items + 1)]
     too_many_amounts = [
-        uint64(uint64.from_bytes(token_bytes(8))) for _ in range(api.max_get_coin_records_filter_items + 1)
+        uint64(uint64(seeded_random.randrange(2**64))) for _ in range(api.max_get_coin_records_filter_items + 1)
     ]
     # Run requests which exceeds the allowed limit and contain too much filter items
     for name, request in {

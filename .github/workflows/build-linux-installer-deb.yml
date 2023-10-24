@@ -39,24 +39,23 @@ permissions:
 
 jobs:
   build:
-    name: Linux ${{ matrix.os.arch }} DEB Installer
+    name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
     container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: 120
+    outputs:
+      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
-      max-parallel: 4
       matrix:
         python-version: ["3.10"]
         os:
           - runs-on: ubuntu-latest
             arch: amd64
-            glue-name: "build-amd64-deb"
             madmax-suffix: "x86-64"
             bladebit-suffix: "ubuntu-x86-64.tar.gz"
           - runs-on: [Linux, ARM64]
             arch: arm64
-            glue-name: "build-arm64-deb"
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
 
@@ -67,7 +66,7 @@ jobs:
       uses: Chia-Network/actions/git-mark-workspace-safe@main
 
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         submodules: recursive
@@ -83,15 +82,16 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check tag type
-      id: check_tag_type
       shell: bash
       run: |
         REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
         REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
         if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
-          echo "TAG_TYPE=beta" >> "$GITHUB_OUTPUT"
+          echo "TAG_TYPE=beta"
+          echo "TAG_TYPE=beta" >> "$GITHUB_ENV"
         elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
-          echo "TAG_TYPE=rc" >> "$GITHUB_OUTPUT"
+          echo "TAG_TYPE=rc"
+          echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
         fi
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
@@ -103,22 +103,6 @@ jobs:
         pip3 install setuptools_scm
         echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
         deactivate
-
-    - name: Test for secrets access
-      id: check_secrets
-      shell: bash
-      run: |
-        unset HAS_AWS_SECRET
-        unset HAS_GLUE_SECRET
-
-        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
-
-        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
-        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
-      env:
-        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
     - name: Get latest madmax plotter
       env:
@@ -142,7 +126,7 @@ jobs:
         LATEST_RC=$(gh api repos/Chia-Network/bladebit/releases --jq 'map(select(.prerelease) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-rc[0-9]+$"))) | first | .tag_name')
 
         # Compare the versions and choose the newest that matches the requirements
-        if [[ "$TAG_TYPE" == "beta" || -z "${{ github.event.release.tag_name }}" ]]; then
+        if [[ "$TAG_TYPE" == "beta" || -z "$TAG_TYPE" ]]; then
           # For beta or dev builds (indicated by the absence of a tag), use the latest version available
           LATEST_VERSION=$(printf "%s\n%s\n%s\n" "$LATEST_RELEASE" "$LATEST_BETA" "$LATEST_RC" | sed '/-/!s/$/_/' | sort -V | sed 's/_$//' | tail -n 1)
         elif [[ "$TAG_TYPE" == "rc" ]]; then
@@ -171,6 +155,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         development: true
+        constraints-file-artifact-name: constraints-file-${{ matrix.os.arch }}
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -211,17 +196,88 @@ jobs:
         name: chia-installers-linux-deb-${{ matrix.os.arch }}
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+  publish:
+    name: Publish ${{ matrix.os.arch }}
+    runs-on: ${{ matrix.os.runs-on }}
+    needs:
+    - build
+    container: chianetwork/ubuntu-20.04-builder:latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+        os:
+          - runs-on: ubuntu-latest
+            arch: amd64
+            glue-name: "build-amd64-deb"
+          - runs-on: [Linux, ARM64]
+            arch: arm64
+            glue-name: "build-arm64-deb"
+
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - uses: chia-network/actions/create-venv@main
+      id: create-venv
+
+    - uses: chia-network/actions/activate-venv@main
+      with:
+        directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
+
+    - name: Download constraints file
+      uses: actions/download-artifact@v3
+      with:
+        name: constraints-file-${{ matrix.os.arch }}
+        path: venv
+
+    - name: Install utilities
+      run: |
+        pip install --constraint venv/constraints.txt py3createtorrent
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      with:
+        name: chia-installers-linux-deb-${{ matrix.os.arch }}
+        path: build_scripts/final_installer/
+
+    - name: Set Env
+      uses: Chia-Network/actions/setjobenv@main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Test for secrets access
+      id: check_secrets
+      shell: bash
+      run: |
+        unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
+
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
+
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
+      env:
+        AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
+
     - name: Configure AWS credentials
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
         aws-region: us-west-2
 
     - name: Upload to s3
       if: steps.check_secrets.outputs.HAS_AWS_SECRET
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
@@ -231,8 +287,6 @@ jobs:
 
     - name: Create Checksums
       if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ls "$GITHUB_WORKSPACE"/build_scripts/final_installer/
         sha256sum "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb > "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256
@@ -242,7 +296,6 @@ jobs:
     - name: Create .deb torrent
       if: env.FULL_RELEASE == 'true'
       env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb -o "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb
@@ -251,8 +304,6 @@ jobs:
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb s3://download.chia.net/latest-dev/chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb.sha256
@@ -261,8 +312,6 @@ jobs:
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-      env:
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb s3://download.chia.net/install/
         aws s3 cp "$GITHUB_WORKSPACE"/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_${{ matrix.os.arch }}.deb.sha256 s3://download.chia.net/install/
@@ -275,7 +324,6 @@ jobs:
       if: env.RELEASE == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         gh release upload \
           $RELEASE_TAG \
@@ -292,6 +340,71 @@ jobs:
       run: |
         curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
 
-    - name: Remove working files to exclude from cache
+  test:
+    name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    needs:
+    - build
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - runs-on:
+            arm: [linux, arm64]
+            intel: [ubuntu-latest]
+        distribution:
+        - name: debian:bullseye
+          type: debian
+          # https://packages.debian.org/bullseye/python/python3 (3.9)
+          url: "docker://debian:bullseye"
+        - name: debian:bookworm
+          type: debian
+          # https://packages.debian.org/bookworm/python/python3 (3.11)
+          url: "docker://debian:bookworm"
+        - name: ubuntu:focal (20.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
+          url: "docker://ubuntu:focal"
+        - name: ubuntu:jammy (22.04)
+          type: ubuntu
+          # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
+          url: "docker://ubuntu:jammy"
+        mode:
+        - name: GUI
+          file: chia-blockchain_*.deb
+        - name: CLI
+          file: chia-blockchain-cli_*.deb
+        arch:
+        - name: ARM64
+          matrix: arm
+          artifact-name: arm64
+        - name: Intel
+          matrix: intel
+          artifact-name: amd64
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
+    - name: Download packages
+      uses: actions/download-artifact@v3
+      id: download
+      with:
+        name: chia-installers-linux-deb-${{ matrix.arch.artifact-name }}
+        path: packages
+
+    - name: Update apt repos
       run: |
-        rm -rf ./chia-blockchain-gui/packages/gui/daemon
+        apt-get update --yes
+
+    - name: Install package
+      run: |
+        ls -l "${{ steps.download.outputs.download-path }}"
+        apt-get install --yes "${{ steps.download.outputs.download-path }}"/${{ matrix.mode.file }}
+
+    - name: Run chia version
+      run: |
+        chia version

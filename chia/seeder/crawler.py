@@ -48,7 +48,7 @@ class Crawler:
     minimum_version_count: int = 0
     peers_retrieved: List[RespondPeers] = field(default_factory=list)
     host_to_version: Dict[str, str] = field(default_factory=dict)
-    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(lambda: 0))
+    versions: Dict[str, int] = field(default_factory=lambda: defaultdict(int))
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
@@ -256,7 +256,7 @@ class Crawler:
                     for host, timestamp in self.best_timestamp_per_peer.items()
                     if timestamp >= now - 5 * 24 * 3600
                 }
-                self.versions = defaultdict(lambda: 0)
+                self.versions = defaultdict(int)
                 for host, version in self.host_to_version.items():
                     self.versions[version] += 1
 

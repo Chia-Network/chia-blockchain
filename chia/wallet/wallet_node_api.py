@@ -97,6 +97,12 @@ class WalletNodeAPI:
         async with self.wallet_node.wallet_state_manager.lock:
             assert peer.peer_node_id is not None
             name = peer.peer_node_id.hex()
+            if peer.peer_node_id in self.wallet_node._tx_messages_in_progress:
+                self.wallet_node._tx_messages_in_progress[peer.peer_node_id] = [
+                    txid for txid in self.wallet_node._tx_messages_in_progress[peer.peer_node_id] if txid != ack.txid
+                ]
+                if self.wallet_node._tx_messages_in_progress[peer.peer_node_id] == []:
+                    del self.wallet_node._tx_messages_in_progress[peer.peer_node_id]
             status = MempoolInclusionStatus(ack.status)
             try:
                 wallet_state_manager = self.wallet_node.wallet_state_manager

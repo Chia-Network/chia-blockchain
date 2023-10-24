@@ -15,7 +15,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm
 from tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTimestamp
 
@@ -358,7 +358,7 @@ def claim_p2_singleton(
         SerializedProgram.from_program(p2_singleton_puzzle),
         p2_singleton_solution,
     )
-    expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, bytes(b"$")).name()
+    expected_p2_singleton_announcement = Announcement(p2_singleton_coin_name, b"$").name()
     singleton_conditions = [
         Program.to([ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, p2_singleton_coin_name]),
         Program.to([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, 1]),
@@ -401,10 +401,10 @@ def spend_coin_to_singleton(
     farmed_coin_amount = 100000
     metadata = [("foo", "bar")]
 
-    now = CoinTimestamp(10012300, 1)
+    now = CoinTimestamp(10012300, uint32(1))
     farmed_coin = coin_store.farm_coin(ANYONE_CAN_SPEND_PUZZLE.get_tree_hash(), now, amount=farmed_coin_amount)
     now.seconds += 500
-    now.height += 1
+    now.height = uint32(now.height + 1)
 
     launcher_amount: uint64 = uint64(1)
     launcher_puzzle = LAUNCHER_PUZZLE

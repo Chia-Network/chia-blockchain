@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.block_store import BlockRecordDB
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.config import load_config
@@ -103,7 +103,7 @@ def validate_v2(in_path: Path, *, validate_blocks: bool) -> None:
 
                 if validate_blocks:
                     block = FullBlock.from_bytes(zstd.decompress(row[4]))
-                    block_record: BlockRecordDB = BlockRecordDB.from_bytes(row[5])
+                    block_record = BlockRecord.from_bytes(row[5])
                     actual_header_hash = block.header_hash
                     actual_prev_hash = block.prev_header_hash
                     if actual_header_hash != hh:

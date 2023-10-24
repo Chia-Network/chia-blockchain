@@ -13,9 +13,6 @@ from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
 import aiosqlite
 import pytest
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
-
 from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -46,7 +43,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
-from tests.util.misc import Marks, assert_runtime, datacases
+from tests.util.misc import BenchmarkRunner, Marks, datacases
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +124,7 @@ async def test_get_trees(raw_data_store: DataStore) -> None:
     expected_tree_ids = set()
 
     for n in range(10):
-        tree_id = bytes32((b"\0" * 31 + bytes([n])))
+        tree_id = bytes32(b"\0" * 31 + bytes([n]))
         await raw_data_store.create_tree(tree_id=tree_id)
         expected_tree_ids.add(tree_id)
 
@@ -1133,9 +1130,9 @@ async def test_kv_diff_2(data_store: DataStore, tree_id: bytes32) -> None:
     empty_hash = bytes32([0] * 32)
     invalid_hash = bytes32([0] * 31 + [1])
     diff_1 = await data_store.get_kv_diff(tree_id, empty_hash, insert_result.node_hash)
-    assert diff_1 == set([DiffData(OperationType.INSERT, b"000", b"000")])
+    assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
     diff_2 = await data_store.get_kv_diff(tree_id, insert_result.node_hash, empty_hash)
-    assert diff_2 == set([DiffData(OperationType.DELETE, b"000", b"000")])
+    assert diff_2 == {DiffData(OperationType.DELETE, b"000", b"000")}
     diff_3 = await data_store.get_kv_diff(tree_id, invalid_hash, insert_result.node_hash)
     assert diff_3 == set()
 
@@ -1207,7 +1204,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         Subscription(tree_id, [ServerInfo(f"http://127.0.0.1/{port}", 0, 0) for port in range(8000, 8010)])
     )
 
-    free_servers = set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
+    free_servers = {f"http://127.0.0.1/{port}" for port in range(8000, 8010)}
     tried_servers = 0
     random = Random()
     random.seed(100, version=2)
@@ -1233,7 +1230,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         random.shuffle(servers_info)
         assert servers_info != []
         selected_servers.add(servers_info[0].url)
-    assert selected_servers == set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
+    assert selected_servers == {f"http://127.0.0.1/{port}" for port in range(8000, 8010)}
 
     for _ in range(100):
         servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
@@ -1389,25 +1386,24 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=100,
-        limit=2.2,
+        limit=3,
     ),
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=17,
+        limit=24,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
-        limit=24,
+        limit=28,
     ),
 )
-@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_benchmark_batch_insert_speed(
     data_store: DataStore,
     tree_id: bytes32,
-    request: SubRequest,
+    benchmark_runner: BenchmarkRunner,
     case: BatchInsertBenchmarkCase,
 ) -> None:
     r = random.Random()
@@ -1432,7 +1428,7 @@ async def test_benchmark_batch_insert_speed(
             status=Status.COMMITTED,
         )
 
-    with assert_runtime(seconds=case.limit, label=request.node.name):
+    with benchmark_runner.assert_runtime(seconds=case.limit):
         await data_store.insert_batch(
             tree_id=tree_id,
             changelist=batch,

@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 import traceback
-from secrets import token_bytes
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -90,7 +89,7 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> "CATWallet":
+    ) -> CATWallet:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
@@ -169,7 +168,7 @@ class CATWallet:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32(token_bytes()),
+            name=bytes32.secret(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )
@@ -583,7 +582,7 @@ class CATWallet:
                 tx_config.coin_selection_config,
             )
             origin_id = list(chia_coins)[0].name()
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,
@@ -601,7 +600,7 @@ class CATWallet:
             )
             origin_id = list(chia_coins)[0].name()
             selected_amount = sum([c.amount for c in chia_coins])
-            chia_tx = await self.standard_wallet.generate_signed_transaction(
+            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
                 tx_config,
@@ -814,7 +813,7 @@ class CATWallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
-                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
+                raise ValueError(f" Insufficient funds. Your max amount is {max_send} mojos in a single transaction.")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
@@ -871,7 +870,6 @@ class CATWallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
-
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

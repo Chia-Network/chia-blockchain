@@ -83,6 +83,7 @@ class TradeManager:
     wallet_state_manager: Any
     log: logging.Logger
     trade_store: TradeStore
+    most_recently_deserialized_trade: Optional[Tuple[bytes32, Offer]]
 
     @staticmethod
     async def create(
@@ -98,6 +99,7 @@ class TradeManager:
 
         self.wallet_state_manager = wallet_state_manager
         self.trade_store = await TradeStore.create(db_wrapper)
+        self.most_recently_deserialized_trade = None
         return self
 
     async def get_offers_with_status(self, status: TradeStatus) -> List[TradeRecord]:
@@ -142,7 +144,14 @@ class TradeManager:
         if coin_state.spent_height is None:
             self.log.error(f"Coin: {coin_state.coin}, has not been spent so trade can remain valid")
         # Then let's filter the offer into coins that WE offered
-        offer = Offer.from_bytes(trade.offer)
+        if (
+            self.most_recently_deserialized_trade is not None
+            and trade.trade_id == self.most_recently_deserialized_trade[0]
+        ):
+            offer = self.most_recently_deserialized_trade[1]
+        else:
+            offer = Offer.from_bytes(trade.offer)
+            self.most_recently_deserialized_trade = (trade.trade_id, offer)
         primary_coin_ids = [c.name() for c in offer.removals()]
         # TODO: Add `WalletCoinStore.get_coins`.
         result = await self.wallet_state_manager.coin_store.get_coin_records(
@@ -276,7 +285,7 @@ class TradeManager:
                         selected_coins.add(coin)
                     else:
                         selected_coins = {coin}
-                    tx: TransactionRecord = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
                         new_ph,
                         tx_config.override(
@@ -348,7 +357,7 @@ class TradeManager:
         await self.trade_store.add_trade_record(trade, offer_name)
 
         # We want to subscribe to the coin IDs of all coins that are not the ephemeral offer coins
-        offered_coins: Set[Coin] = set([value for values in offer.get_offered_coins().values() for value in values])
+        offered_coins: Set[Coin] = {value for values in offer.get_offered_coins().values() for value in values}
         non_offer_additions: Set[Coin] = set(offer.additions()) ^ offered_coins
         non_offer_removals: Set[Coin] = set(offer.removals()) ^ offered_coins
         await self.wallet_state_manager.add_interested_coin_ids(
@@ -506,7 +515,12 @@ class TradeManager:
             )
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints, driver_dict, tx_config, solver, fee
+                offer_dict_no_ints,
+                driver_dict,
+                tx_config,
+                solver,
+                fee,
+                extra_conditions,
             )
 
             if potential_special_offer is not None:
@@ -530,7 +544,7 @@ class TradeManager:
                     wallet = await self.wallet_state_manager.get_wallet_for_asset_id(id.hex())
                 # This should probably not switch on whether or not we're spending XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
-                    tx = await wallet.generate_signed_transaction(
+                    [tx] = await wallet.generate_signed_transaction(
                         abs(offer_dict[id]),
                         Offer.ph(),
                         tx_config,
@@ -608,18 +622,24 @@ class TradeManager:
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
             final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            hint_dict: Dict[bytes32, bytes32] = {}
+            additions_dict: Dict[bytes32, Coin] = {}
+            for hinted_coins, _ in (
+                compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends
+            ):
+                hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
+                additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+            all_additions: List[Coin] = list(a for a in additions_dict.values())
         else:
             final_spend_bundle = offer._bundle
+            hint_dict = offer.hints()
+            all_additions = offer.additions()
 
         settlement_coins: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
         settlement_coin_ids: List[bytes32] = [c.name() for c in settlement_coins]
-        hint_dict: Dict[bytes32, bytes32] = {}
-        additions_dict: Dict[bytes32, Coin] = {}
-        for hinted_coins in (compute_spend_hints_and_additions(spend) for spend in final_spend_bundle.coin_spends):
-            hint_dict.update({id: hc.hint for id, hc in hinted_coins.items() if hc.hint is not None})
-            additions_dict.update({id: hc.coin for id, hc in hinted_coins.items()})
+
         removals: List[Coin] = final_spend_bundle.removals()
-        additions: List[Coin] = list(a for a in additions_dict.values() if a not in removals)
+        additions: List[Coin] = list(a for a in all_additions if a not in removals)
         valid_times: ConditionValidTimes = parse_timelock_info(
             parse_conditions_non_consensus(
                 condition
@@ -822,6 +842,7 @@ class TradeManager:
         tx_config: TXConfig,
         solver: Solver,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
             if (
@@ -831,7 +852,7 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, tx_config, fee, extra_conditions
                 )
             elif (
                 puzzle_info.check_type(
@@ -843,7 +864,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, tx_config, fee, extra_conditions
                 )
         return None
 
@@ -880,8 +901,24 @@ class TradeManager:
             ):
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
-        offered, requested, infos = offer.summary()
-        return {"offered": offered, "requested": requested, "fees": offer.fees(), "infos": infos}
+        offered, requested, infos, valid_times = offer.summary()
+        return {
+            "offered": offered,
+            "requested": requested,
+            "fees": offer.fees(),
+            "infos": infos,
+            "valid_times": {
+                k: v
+                for k, v in valid_times.to_json_dict().items()
+                if k
+                not in (
+                    "max_secs_after_created",
+                    "min_secs_since_created",
+                    "max_blocks_after_created",
+                    "min_blocks_since_created",
+                )
+            },
+        }
 
     async def check_for_final_modifications(
         self, offer: Offer, solver: Solver, tx_config: TXConfig

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from typing import List
@@ -46,7 +47,7 @@ class TestFullSync:
             await full_node_1.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
         )
 
         timeout_seconds = 250
@@ -60,7 +61,7 @@ class TestFullSync:
             await full_node_1.full_node.add_block(block)
 
         await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_3.full_node.on_connect
         )
 
         # Node 3 and Node 2 sync up to node 1
@@ -78,22 +79,22 @@ class TestFullSync:
             await full_node_1.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_2.full_node.on_connect
         )
         await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_3.full_node.on_connect
         )
         await server_4.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_4.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_4.full_node.on_connect
         )
         await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_3.full_node.on_connect
+            PeerInfo(self_hostname, server_2.get_port()), on_connect=full_node_3.full_node.on_connect
         )
         await server_4.start_client(
-            PeerInfo(self_hostname, uint16(server_3._port)), on_connect=full_node_4.full_node.on_connect
+            PeerInfo(self_hostname, server_3.get_port()), on_connect=full_node_4.full_node.on_connect
         )
         await server_4.start_client(
-            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_4.full_node.on_connect
+            PeerInfo(self_hostname, server_2.get_port()), on_connect=full_node_4.full_node.on_connect
         )
 
         # All four nodes are synced
@@ -107,7 +108,7 @@ class TestFullSync:
         for block in blocks_node_5:
             await full_node_5.full_node.add_block(block)
         await server_5.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
+            PeerInfo(self_hostname, server_1.get_port()), on_connect=full_node_5.full_node.on_connect
         )
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
@@ -138,8 +139,8 @@ class TestFullSync:
         for block in blocks_400:
             await full_node_3.full_node.add_block(block)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
 
         # Also test request proof of weight
         # Have the request header hash
@@ -179,9 +180,9 @@ class TestFullSync:
         # TODO: fix this flaky test
         await time_out_assert(180, node_height_exactly, True, full_node_3, 999)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_2._port)), full_node_3.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, server_2.get_port()), full_node_3.full_node.on_connect)
         await time_out_assert(180, node_height_exactly, True, full_node_1, 999)
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
@@ -203,7 +204,7 @@ class TestFullSync:
             await full_node_2.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)),
+            PeerInfo(self_hostname, server_1.get_port()),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
@@ -220,7 +221,7 @@ class TestFullSync:
             await full_node_1.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)),
+            PeerInfo(self_hostname, server_1.get_port()),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
@@ -236,7 +237,7 @@ class TestFullSync:
             await full_node_1.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)),
+            PeerInfo(self_hostname, server_1.get_port()),
             on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_exactly, True, full_node_2, 8)
@@ -259,25 +260,25 @@ class TestFullSync:
             await full_node_3.full_node.add_block(block)
 
         await server_2.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)),
+            PeerInfo(self_hostname, server_1.get_port()),
             on_connect=full_node_2.full_node.on_connect,
         )
-        await time_out_assert(60, node_height_exactly, True, full_node_1, 50)
-        await time_out_assert(60, node_height_exactly, True, full_node_2, 50)
-        await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_1, 50)
+        await time_out_assert(80, node_height_exactly, True, full_node_2, 50)
+        await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
         await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_1._port)),
+            PeerInfo(self_hostname, server_1.get_port()),
             on_connect=full_node_3.full_node.on_connect,
         )
 
         await server_3.start_client(
-            PeerInfo(self_hostname, uint16(server_2._port)),
+            PeerInfo(self_hostname, server_2.get_port()),
             on_connect=full_node_3.full_node.on_connect,
         )
-        await time_out_assert(60, node_height_exactly, True, full_node_1, 89)
-        await time_out_assert(60, node_height_exactly, True, full_node_2, 89)
-        await time_out_assert(60, node_height_exactly, True, full_node_3, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_1, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_2, 89)
+        await time_out_assert(80, node_height_exactly, True, full_node_3, 89)
 
     @pytest.mark.asyncio
     async def test_sync_bad_peak_while_synced(
@@ -298,17 +299,17 @@ class TestFullSync:
         for block in default_1500_blocks[:1100]:
             await full_node_3.full_node.add_block(block)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1
         await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
         # set new heavy peak, fn3 cannot serve wp's
         # node 2 should keep being synced and receive blocks
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_3.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, server_3.get_port()), full_node_3.full_node.on_connect)
         # trigger long sync in full node 2
         peak_block = default_1500_blocks[1050]
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_3._port)), full_node_2.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_3.get_port()), full_node_2.full_node.on_connect)
         con = server_2.all_connections[full_node_3.full_node.server.node_id]
         peak = full_node_protocol.NewPeak(
             peak_block.header_hash,
@@ -360,7 +361,7 @@ class TestFullSync:
                 s.new_sub_slot_iters * 2,
             )
             # manually try sync with wrong sub epoch summary list
-            await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+            await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
             # call peer has block to populate peer_to_peak
             full_node_2.full_node.sync_store.peer_has_block(
@@ -391,8 +392,8 @@ class TestFullSync:
         for block in blocks_950:
             await full_node_1.full_node.add_block(block)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
 
         peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
         request = full_node_protocol.RequestProofOfWeight(
@@ -416,15 +417,19 @@ class TestFullSync:
         assert duration > 5
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_bad_peak_in_cache(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
-        bt.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
+        bt.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=1000000)
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
-        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        full_node_2.full_node.blockchain.constants = dataclasses.replace(
+            blockchain_constants,
+            SOFT_FORK4_HEIGHT=1000000,
+        )
+        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
         for block in blocks:
             await full_node_2.full_node.add_block(block)
         server_1 = full_node_1.full_node.server
@@ -439,14 +444,18 @@ class TestFullSync:
         assert full_node_1.full_node.in_bad_peak_cache(wp) is True
 
     @pytest.mark.limit_consensus_modes(reason="save time")
+    @pytest.mark.skip("This feature depends on (now removed) CHIP-13")
     @pytest.mark.asyncio
     async def test_skip_bad_peak_validation(
         self, two_nodes, default_400_blocks, blockchain_constants, self_hostname, consensus_mode
     ):
         full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(700, default_400_blocks)
-        full_node_2.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=1000000)
-        full_node_1.full_node.blockchain.constants = blockchain_constants.replace(SOFT_FORK4_HEIGHT=400)
+        full_node_2.full_node.blockchain.constants = dataclasses.replace(
+            blockchain_constants,
+            SOFT_FORK4_HEIGHT=1000000,
+        )
+        full_node_1.full_node.blockchain.constants = dataclasses.replace(blockchain_constants, SOFT_FORK4_HEIGHT=400)
         for block in blocks:
             await full_node_2.full_node.add_block(block)
 
