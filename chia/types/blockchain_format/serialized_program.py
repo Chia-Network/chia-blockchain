@@ -39,6 +39,7 @@ class SerializedProgram:
     @classmethod
     def from_bytes(cls: Type[SerializedProgram], blob: bytes) -> SerializedProgram:
         ret = SerializedProgram()
+        assert serialized_length(blob) == len(blob)
         ret._buf = bytes(blob)
         return ret
 

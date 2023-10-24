@@ -300,7 +300,7 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
     blocks = bt.get_consecutive_blocks(10)
 
     def generator(i: int) -> SerializedProgram:
-        return SerializedProgram.from_bytes(int_to_bytes(i))
+        return SerializedProgram.from_bytes(int_to_bytes(i + 1))
 
     async with DBConnection(db_version) as db_wrapper:
         store = await BlockStore.create(db_wrapper, use_cache=use_cache)
