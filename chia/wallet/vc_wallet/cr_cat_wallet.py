@@ -82,7 +82,7 @@ class CRCATWallet(CATWallet):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> "CATWallet":  # pragma: no cover
+    ) -> CATWallet:  # pragma: no cover
         raise NotImplementedError("create_new_cat_wallet is a legacy method and is not available on CR-CAT wallets")
 
     @staticmethod
@@ -597,7 +597,7 @@ class CRCATWallet(CATWallet):
                 vc.launcher_id,
                 tx_config,
                 puzzle_announcements=set(vc_announcements_to_make),
-                coin_announcements_to_consume=set((*expected_announcements, announcement)),
+                coin_announcements_to_consume={*expected_announcements, announcement},
             )
         else:
             vc_txs = []
@@ -793,7 +793,7 @@ class CRCATWallet(CATWallet):
                 fee,
                 uint64(0),
                 tx_config,
-                announcements_to_assert=set(Announcement(coin.name(), nonce) for coin in coins.union({vc.coin})),
+                announcements_to_assert={Announcement(coin.name(), nonce) for coin in coins.union({vc.coin})},
             )
             if chia_tx.spend_bundle is None:
                 raise RuntimeError("Did not get spendbundle for fee transaction")  # pragma: no cover
@@ -805,7 +805,7 @@ class CRCATWallet(CATWallet):
         vc_txs: List[TransactionRecord] = await vc_wallet.generate_signed_transaction(
             vc.launcher_id,
             tx_config,
-            puzzle_announcements=set(crcat.expected_announcement() for crcat, _ in crcats_and_puzhashes),
+            puzzle_announcements={crcat.expected_announcement() for crcat, _ in crcats_and_puzhashes},
             coin_announcements={nonce},
             coin_announcements_to_consume=set(expected_announcements),
             extra_conditions=extra_conditions,

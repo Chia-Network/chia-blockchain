@@ -435,7 +435,7 @@ class CRCAT:
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
         conditions: Optional[Iterable[Program]] = None,
-    ) -> Tuple[List[Announcement], CoinSpend, List["CRCAT"]]:
+    ) -> Tuple[List[Announcement], CoinSpend, List[CRCAT]]:
         """
         Spend a CR-CAT.
 

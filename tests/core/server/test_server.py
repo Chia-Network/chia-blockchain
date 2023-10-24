@@ -37,7 +37,7 @@ class TestAPI:
     # API call from FullNodeAPI
     @api_request()
     async def request_transaction(self, request: RequestTransaction) -> None:
-        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", bytes(b"ab"))
+        raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
 
 
 @pytest.mark.asyncio
@@ -137,7 +137,7 @@ async def test_error_response(
         error = ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, error_message)
         assert f"ApiError: {error} from {wallet_connection.peer_node_id}, {wallet_connection.peer_info}" in caplog.text
         if test_version >= error_response_version:
-            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, bytes(b"ab"))
+            assert response == Error(int16(Err.NO_TRANSACTIONS_WHILE_SYNCING.value), error_message, b"ab")
             assert "Request timeout:" not in caplog.text
         else:
             assert response is None

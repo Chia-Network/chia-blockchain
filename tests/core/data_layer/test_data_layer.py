@@ -139,5 +139,5 @@ async def test_plugin_requests_use_custom_headers(
         await data_layer.get_uploaders(tree_id=bytes32([0] * 32))
         await data_layer.check_plugins()
 
-    header_values = set(request.headers.get(header_key) for request in recording_web_server.requests)
+    header_values = {request.headers.get(header_key) for request in recording_web_server.requests}
     assert header_values == {header_value}

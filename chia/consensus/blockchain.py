@@ -123,7 +123,7 @@ class Blockchain(BlockchainInterface):
         multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
-    ) -> "Blockchain":
+    ) -> Blockchain:
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,

@@ -63,7 +63,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         assert len(await client.get_unfinished_block_headers()) == 0
-        assert len((await client.get_block_records(0, 100))) == 0
+        assert len(await client.get_block_records(0, 100)) == 0
         for block in blocks:
             if is_overflow_block(bt.constants, block.reward_chain_block.signage_point_index):
                 finished_ss = block.finished_sub_slots[:-1]
@@ -94,7 +94,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert (await client.get_block_record_by_height(2)).header_hash == blocks[2].header_hash
 
-        assert len((await client.get_block_records(0, 100))) == num_blocks * 2
+        assert len(await client.get_block_records(0, 100)) == num_blocks * 2
 
         assert (await client.get_block_record_by_height(100)) is None
 

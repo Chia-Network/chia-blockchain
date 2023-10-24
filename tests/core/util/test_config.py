@@ -171,7 +171,7 @@ class TestConfig:
         expected_content: str = initial_config_file("config.yaml")
         assert len(expected_content) > 0
 
-        with open(config_file_path, "r") as f:
+        with open(config_file_path) as f:
             actual_content: str = f.read()
             # Expect: config.yaml contents are seeded with initial contents
             assert actual_content == expected_content
@@ -197,7 +197,7 @@ class TestConfig:
         expected_content: str = initial_config_file("config.yaml")
         assert len(expected_content) > 0
 
-        with open(config_file_path, "r") as f:
+        with open(config_file_path) as f:
             actual_content: str = f.read()
             # Expect: config.yaml contents are overwritten with initial contents
             assert actual_content == expected_content

@@ -122,16 +122,14 @@ async def test_valid_times_migration() -> None:
     async with DBConnection(1) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS trade_records("
-                    " trade_record blob,"
-                    " trade_id text PRIMARY KEY,"
-                    " status int,"
-                    " confirmed_at_index int,"
-                    " created_at_time bigint,"
-                    " sent int,"
-                    " is_my_offer tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS trade_records("
+                " trade_record blob,"
+                " trade_id text PRIMARY KEY,"
+                " status int,"
+                " confirmed_at_index int,"
+                " created_at_time bigint,"
+                " sent int,"
+                " is_my_offer tinyint)"
             )
 
         fake_offer = Offer({}, SpendBundle([], G2Element()), {})

@@ -89,7 +89,7 @@ class CATWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> "CATWallet":
+    ) -> CATWallet:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)

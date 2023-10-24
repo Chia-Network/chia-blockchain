@@ -690,7 +690,7 @@ async def take_offer(
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
             filepath = pathlib.Path(file)
-            with open(filepath, "r") as ffile:
+            with open(filepath) as ffile:
                 offer_hex: str = ffile.read()
                 ffile.close()
         else:

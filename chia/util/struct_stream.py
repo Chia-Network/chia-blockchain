@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import BinaryIO, ClassVar, SupportsInt, Type, TypeVar, Union
+from typing import BinaryIO, ClassVar, SupportsIndex, SupportsInt, Type, TypeVar, Union
 
-from typing_extensions import Protocol, SupportsIndex
+from typing_extensions import Protocol
 
 _T_StructStream = TypeVar("_T_StructStream", bound="StructStream")
 
