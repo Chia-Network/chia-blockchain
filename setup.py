@@ -49,7 +49,7 @@ dev_dependencies = [
     "diff-cover==8.0.0",
     "pre-commit==3.4.0",
     "py3createtorrent==1.1.0",
-    "pylint==3.0.1",
+    "pylint==3.0.2",
     "pytest==7.4.0",
     "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
