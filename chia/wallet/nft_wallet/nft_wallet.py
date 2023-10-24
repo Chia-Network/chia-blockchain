@@ -1259,7 +1259,7 @@ class NFTWallet:
         did_lineage_parent: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         """
         Minting NFTs from the DID linked wallet, also used for bulk minting NFTs.
         - The DID is spent along with an intermediate launcher puzzle which
@@ -1529,7 +1529,9 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
-        return total_spend
+
+        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
+        return [tx_record]
 
     async def mint_from_xch(
         self,
@@ -1542,7 +1544,7 @@ class NFTWallet:
         xch_change_ph: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> List[TransactionRecord]:
         """
         Minting NFTs from a single XCH spend using intermediate launcher puzzle
         :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
@@ -1731,7 +1733,8 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
-        return total_spend
+        tx_record: TransactionRecord = dataclasses.replace(eve_txs[0], spend_bundle=total_spend)
+        return [tx_record]
 
     async def select_coins(
         self,
