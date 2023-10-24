@@ -109,6 +109,8 @@ class FullNode:
     db_path: Path
     wallet_sync_queue: asyncio.Queue[WalletUpdate]
     _sync_tasks: TaskReferencer
+    fetch_tasks: TaskReferencer
+    validate_tasks: TaskReferencer
     _segment_task: Optional[asyncio.Task[None]] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
@@ -180,6 +182,8 @@ class FullNode:
             db_path=db_path,
             wallet_sync_queue=asyncio.Queue(),
             _sync_tasks=TaskReferencer(log=log),
+            fetch_tasks=TaskReferencer(log=log),
+            validate_tasks=TaskReferencer(log=log),
         )
 
     @property
@@ -866,6 +870,8 @@ class FullNode:
             self._transaction_queue_task.cancel()
         cancel_task_safe(task=self.wallet_sync_task, log=self.log)
         self._sync_tasks.cancel()
+        self.fetch_tasks.cancel()
+        self.validate_tasks.cancel()
 
     async def _await_closed(self) -> None:
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
@@ -878,6 +884,8 @@ class FullNode:
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
         await self._sync_tasks.wait()
+        await self.fetch_tasks.wait()
+        await self.validate_tasks.wait()
 
     async def _sync(self) -> None:
         """
@@ -1129,8 +1137,8 @@ class FullNode:
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
             maxsize=buffer_size
         )
-        fetch_task = asyncio.Task(fetch_block_batches(batch_queue_input))
-        validate_task = asyncio.Task(validate_block_batches(batch_queue_input))
+        fetch_task = await self.fetch_tasks.add(fetch_block_batches(batch_queue_input))
+        validate_task = await self.validate_tasks.add(validate_block_batches(batch_queue_input))
         try:
             with log_exceptions(log=self.log, message="sync from fork point failed"):
                 await asyncio.gather(fetch_task, validate_task)

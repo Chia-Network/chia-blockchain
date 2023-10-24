@@ -394,14 +394,17 @@ class TaskReferencer:
     # TODO: should we collect and maybe track results
     _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
 
-    async def add(self, coroutine: Coroutine[Any, Any, object]) -> None:
-        self._tasks.append(asyncio.create_task(coroutine))
+    async def add(self, coroutine: Coroutine[Any, Any, object]) -> asyncio.Task[object]:
+        task = asyncio.create_task(coroutine)
+        self._tasks.append(task)
 
         for task in self._tasks:
             if task.done():
                 await self._wait_one(task=task)
 
         self._tasks = [task for task in self._tasks if not task.done()]
+
+        return task
 
     def cancel(self) -> None:
         for task in self._tasks:
