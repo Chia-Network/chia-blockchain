@@ -379,7 +379,8 @@ class FullNode:
                 f" {peak.height}, "
                 f"time taken: {int(time_taken)}s"
             )
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+            # TODO: review hang time
+            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
                 pending_tx = await self.mempool_manager.new_peak(peak, None)
             assert len(pending_tx) == 0  # no pending transactions when starting up
 
@@ -540,7 +541,8 @@ class FullNode:
                 response = await peer.call_api(FullNodeAPI.request_blocks, request)
                 if not response:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
-                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+                # TODO: review hang time
+                async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
                     state_change_summary: Optional[StateChangeSummary]
                     success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer, None)
                     if not success:
@@ -939,7 +941,8 @@ class FullNode:
                 target_peak.header_hash, target_peak.height, target_peak.weight
             )
             # Ensures that the fork point does not change
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+            # TODO: review hang time
+            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
                 await self.blockchain.warmup(fork_point)
                 await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
         except asyncio.CancelledError:
@@ -1247,7 +1250,8 @@ class FullNode:
         if self._server is None:
             return None
 
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        # TODO: review hang time
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
@@ -1605,7 +1609,8 @@ class FullNode:
                 return await self.add_block(new_block, peer)
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        # TODO: review hang time
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
             # After acquiring the lock, check again, because another asyncio thread might have added it
             if self.blockchain.contains_block(header_hash):
                 return None
@@ -1805,7 +1810,8 @@ class FullNode:
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
 
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        # TODO: review hang time
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
             start_header_time = time.time()
             _, header_error = await self.blockchain.validate_unfinished_block_header(block)
             if header_error is not None:
@@ -1844,7 +1850,8 @@ class FullNode:
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
 
-        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
+        # TODO: review hang time
+        async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high, hang_time=15):
             # TODO: pre-validate VDFs outside of lock
             validation_start = time.time()
             validate_result = await self.blockchain.validate_unfinished_block(block, npc_result)
@@ -2180,7 +2187,8 @@ class FullNode:
             except Exception:
                 self.mempool_manager.remove_seen(spend_name)
                 raise
-            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
+            # TODO: review hang time
+            async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low, hang_time=15):
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
