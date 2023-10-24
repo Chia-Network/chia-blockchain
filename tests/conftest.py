@@ -368,8 +368,15 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
 
 
 def pytest_addoption(parser: pytest.Parser):
+    default_repeats = 1
     group = parser.getgroup("chia")
-    group.addoption("--benchmark-repeats", action="store", default=1, type=int)
+    group.addoption(
+        "--benchmark-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each benchmark, default {default_repeats}.",
+    )
 
 
 def pytest_configure(config):
