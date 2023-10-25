@@ -203,7 +203,7 @@ async def test_cat_trades(
         await time_out_assert_not_none(5, full_node.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
     else:
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
@@ -218,7 +218,7 @@ async def test_cat_trades(
                 )
 
         async with wallet_node_taker.wallet_state_manager.lock:
-            new_cat_wallet_taker = await CATWallet.create_new_cat_wallet(
+            new_cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_taker.wallet_state_manager,
                 wallet_taker,
                 {"identifier": "genesis_by_id"},
@@ -760,7 +760,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
@@ -887,7 +887,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
@@ -942,7 +942,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
@@ -1006,7 +1006,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
@@ -1066,7 +1066,7 @@ class TestCATTrades:
         xch_to_cat_amount = uint64(100)
 
         async with wallet_node_maker.wallet_state_manager.lock:
-            cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+            cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
                 wallet_node_maker.wallet_state_manager,
                 wallet_maker,
                 {"identifier": "genesis_by_id"},
