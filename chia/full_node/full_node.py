@@ -701,11 +701,11 @@ class FullNode:
 
             # Ensure we are only syncing once and not double calling this method
             if self.sync_store.get_sync_mode():
-                return
+                return None
 
             if self.sync_store.get_long_sync():
                 self.log.debug("already in long sync")
-                return
+                return None
 
             self.sync_store.set_long_sync(True)
             self.log.debug("long sync started")
