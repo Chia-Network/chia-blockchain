@@ -6,24 +6,37 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from chia_rs import G1Element
+from chia_rs import G1Element, G2Element, AugSchemeMPL
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
-from chia.plotting.util import PlotsRefreshParameter
+from chia.farmer.farmer_api import FarmerAPI
+from chia.full_node.full_node import FullNode
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
+from chia.plotting.util import PlotsRefreshParameter, PlotInfo, parse_plot_info
 from chia.protocols import farmer_protocol, harvester_protocol
+from chia.protocols.farmer_protocol import NewSignagePoint
+from chia.protocols.harvester_protocol import RespondSignatures
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.aliases import FarmerService, HarvesterService
+from chia.types.blockchain_format.proof_of_space import generate_plot_public_key, ProofOfSpace, calculate_pos_challenge
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
+from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
 from chia.util.misc import split_async_manager
+from chia.wallet.derive_keys import master_sk_to_local_sk
+from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node_api import WalletNodeAPI
 from tests.conftest import HarvesterFarmerEnvironment
 from tests.util.time_out_assert import time_out_assert
 
@@ -288,3 +301,139 @@ async def test_harvester_has_no_server(
     harvester_server = harvesters[0]._server
 
     assert harvester_server.webserver is None
+
+@pytest.mark.asyncio
+async def test_farmer_handles_farmer_reward_address_overwrite(
+    caplog: pytest.LogCaptureFixture,
+    # harvester_farmer_environment
+    farmer_one_harvester_zero_bits_plot_filter
+
+    # farmer_one_harvester_simulator_wallet: Tuple[
+    #     Service[Harvester, HarvesterAPI],
+    #     Service[Farmer, FarmerAPI],
+    #     Service[FullNode, FullNodeSimulator],
+    #     Service[WalletNode, WalletNodeAPI],
+    #     BlockTools,
+    # ]
+) -> None:
+
+    def log_is_ready() -> bool:
+        return len(caplog.text) > 0
+
+    def is_peer_connected(server: ChiaServer, peer_id: bytes32):
+        return peer_id in server.all_connections
+
+    async def wait_until_peer_connected(server: ChiaServer, peer_id: bytes32):
+        while not is_peer_connected(server, peer_id):
+            await asyncio.sleep(1)
+
+    # farmer_service, _ , harvester_service, _, bt = harvester_farmer_environment
+    # [harvester_service], farmer_service, bt = farmer_one_harvester_zero_bits_plot_filter
+    harvester_service, farmer_service, bt = farmer_one_harvester_zero_bits_plot_filter
+
+    # harvester_service, farmer_service, full_node_service, _, bt = farmer_one_harvester_simulator_wallet
+    farmer: Farmer = farmer_service._node
+    harvester: Harvester = harvester_service._node
+
+    # Connect farmer to full node
+    # farmer_service.add_peer(UnresolvedPeerInfo(str(full_node_service.self_hostname), full_node_service._server.get_port()))
+    # farmer_service.add_peer(UnresolvedPeerInfo(str(harvester_service.self_hostname), harvester_service._server.get_port()))
+    harvester_service.add_peer(UnresolvedPeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
+
+    plot: PlotInfo = next(iter(bt.plot_manager.plots.values()))
+
+    plot_id_bytes = bytes32(plot.prover.get_id())
+    plot_id: str = plot_id_bytes.hex()
+
+    challenge_chain_sp = plot_id_bytes
+    reward_chain_sp = bytes32(b"2" * 32)
+
+    vdf_challenge_hash: bytes32 #= bytes32(bytes.fromhex('2000000000000000000000000000000000000000000000000000000000000000'))
+    pos_challenge: bytes32 #= calculate_pos_challenge(plot_id_bytes, vdf_challenge_hash, challenge_chain_sp)
+
+    challenge_seed: uint32 = 1
+    while True:
+        try:
+            seed_bytes = challenge_seed.to_bytes(4, 'little') + bytes(28)
+            vdf_challenge_hash = bytes32.from_bytes(seed_bytes)
+            pos_challenge = calculate_pos_challenge(plot_id_bytes, vdf_challenge_hash, challenge_chain_sp)
+            _ = plot.prover.get_full_proof(pos_challenge, 0)
+            break
+        except RuntimeError:
+            challenge_seed += 1
+            continue
+
+    # Ensure the proof of space exists given the challenge
+    pospace = plot.prover.get_full_proof(pos_challenge, 0)
+
+    # Look up local_sk from plot to save locked memory
+    (
+        pool_public_key_or_puzzle_hash,
+        farmer_public_key,
+        local_master_sk,
+    ) = parse_plot_info(plot.prover.get_memo())
+    local_sk = master_sk_to_local_sk(local_master_sk)
+
+    if isinstance(pool_public_key_or_puzzle_hash, G1Element):
+        include_taproot = False
+    else:
+        assert isinstance(pool_public_key_or_puzzle_hash, bytes32)
+        include_taproot = True
+
+    agg_pk = generate_plot_public_key(local_sk.get_g1(), farmer_public_key, include_taproot)
+
+    # Sign messages
+    messages_to_sign = [challenge_chain_sp, reward_chain_sp]
+    signatures: List[Tuple[bytes32, G2Element]] = []
+    for message in messages_to_sign:
+        signature: G2Element = AugSchemeMPL.sign(local_sk, message, agg_pk)
+        signatures.append((message, signature))
+
+    # Add the fake SP to the farmer
+    farmer.sps[challenge_chain_sp] = [NewSignagePoint(
+        challenge_hash=vdf_challenge_hash,
+        challenge_chain_sp=challenge_chain_sp,
+        reward_chain_sp=reward_chain_sp,
+        difficulty=1,
+        sub_slot_iters=1,
+        signage_point_index=0,
+        peak_height=100
+    )]
+
+    # Add fake proof of space
+    farmer.proofs_of_space[challenge_chain_sp] = [(plot_id, ProofOfSpace(
+        challenge=pos_challenge,
+        pool_public_key=pool_public_key_or_puzzle_hash,
+        pool_contract_puzzle_hash=None,
+        plot_public_key=plot.plot_public_key,
+        size=uint8(plot.prover.get_size()),
+        proof=pospace
+    ))]
+
+    # Send a signature response message from the harvester
+    # with an overwritten farmer reward address
+    farmer_reward_address = decode_puzzle_hash('xch1uf48n3f50xrs7zds0uek9wp9wmyza6crnex6rw8kwm3jnm39y82q5mvps6')
+
+    response_signatures = RespondSignatures(
+        plot_identifier=plot_id,
+        challenge_hash=vdf_challenge_hash,
+        sp_hash=challenge_chain_sp,
+        local_pk=local_sk.get_g1(),
+        farmer_pk=farmer_public_key,
+        message_signatures=signatures,
+        farmer_reward_address_overwrite=farmer_reward_address
+    )
+
+    # send message to farmer
+    msg = make_msg(ProtocolMessageTypes.respond_signatures, response_signatures)
+
+    # Make sure the peers are connected to each other
+    await wait_until_peer_connected(farmer.server, harvester.server.node_id)
+
+    await harvester.server.send_to_all([msg], NodeType.FARMER)
+
+    await time_out_assert(555, log_is_ready)
+
+    # # We fail the sps record check
+    expected_error = f"Do not have challenge hash {pos_challenge}"
+    assert expected_error in caplog.text

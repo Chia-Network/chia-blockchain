@@ -73,7 +73,7 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
-    farmer_reward_address_override: Optional[bytes32]
+    farmer_reward_address_overwrite: Optional[bytes32]
 
 
 @streamable
