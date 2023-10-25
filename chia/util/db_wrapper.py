@@ -174,6 +174,7 @@ class DBWrapper2:
         self = cls(connection=write_connection, log=log, db_version=db_version, log_file=log_file)
 
         if log is not None:
+            # TODO: review task handling
             self._monitor_task = asyncio.create_task(self.monitor())
 
         for index in range(reader_count):
@@ -365,6 +366,7 @@ class DBWrapper2:
                         self._log.info(
                             f"{log_filter} Cancelled while waiting for a read connection (not _necessarily_ bad)"
                         )
+                    raise
             # TODO: lazy and not configurable since we presently have just one use, kinda
             async with log_after(
                 message=f"{log_filter} {type(self).__name__} (reader)",

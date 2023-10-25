@@ -76,6 +76,7 @@ async def test_one_peer_and_await(seeded_random: random.Random) -> None:
             assert list_txs[i - 20] == resulting_txs[i]
 
     # now we validate that the pop command is blocking
+    # TODO: review task handling
     task = asyncio.create_task(transaction_queue.pop())
     with pytest.raises(asyncio.InvalidStateError):  # task is not done, so we expect an error when getting result
         task.result()

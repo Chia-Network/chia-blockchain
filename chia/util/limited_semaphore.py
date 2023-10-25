@@ -59,6 +59,7 @@ class LimitedSemaphore:
             _name=name,
         )
         if self.log is not None:
+            # TODO: review task handling
             self._monitor_task = asyncio.create_task(self.monitor())
         return self
 

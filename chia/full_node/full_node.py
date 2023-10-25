@@ -111,6 +111,7 @@ class FullNode:
     _sync_tasks: TaskReferencer
     fetch_tasks: TaskReferencer
     validate_tasks: TaskReferencer
+    handle_transaction_tasks: TaskReferencer
     _segment_task: Optional[asyncio.Task[None]] = None
     initialized: bool = False
     _server: Optional[ChiaServer] = None
@@ -184,6 +185,7 @@ class FullNode:
             _sync_tasks=TaskReferencer(log=log),
             fetch_tasks=TaskReferencer(log=log),
             validate_tasks=TaskReferencer(log=log),
+            handle_transaction_tasks=TaskReferencer(log=log),
         )
 
     @property
@@ -363,12 +365,15 @@ class FullNode:
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
+        # TODO: review task handling
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
+            # TODO: review task handling
             asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
         if self.config.get("enable_memory_profiler", False):
+            # TODO: review task handling
             asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
 
         time_taken = time.time() - start_time
@@ -417,6 +422,7 @@ class FullNode:
 
         self.initialized = True
         if self.full_node_peers is not None:
+            # TODO: review task handling
             asyncio.create_task(self.full_node_peers.start())
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry) -> None:
@@ -443,7 +449,8 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))
+            # TODO: review task handling
+            await self.handle_transaction_tasks.add(coroutine=self._handle_one_transaction(item))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -799,6 +806,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
+            # TODO: review task handling
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
         if self.initialized is False:
@@ -863,6 +871,7 @@ class FullNode:
             self.mempool_manager.shut_down()
 
         if self.full_node_peers is not None:
+            # TODO: review task handling
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()

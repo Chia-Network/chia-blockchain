@@ -5,6 +5,7 @@ import collections
 import contextlib
 import dataclasses
 import logging
+import traceback
 from enum import IntEnum
 from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
 
@@ -71,7 +72,7 @@ class PriorityMutex(Generic[_T_Priority]):
                     message=f"{log_filter} {type(self).__name__}: unhandled exception while monitoring: ",
                     consume=True,
                 ):
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(2)
 
                     self._log.info(
                         "\n".join(
@@ -88,40 +89,86 @@ class PriorityMutex(Generic[_T_Priority]):
         self,
         priority: _T_Priority,
     ) -> AsyncIterator[None]:
+        stack = "\n".join(traceback.format_stack())
         task = asyncio.current_task()
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() entered: {task}\n\n{stack}")
         if task is None:
             raise Exception(f"unable to check current task, got: {task!r}")
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) task is not None")
         if self._active is not None and self._active.task is task:
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) nested, raising")
             raise NestedLockUnsupportedError()
 
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) creating element")
         element = _Element(task=task)
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) element created: {element}")
 
         deque = self._deques[priority]
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) selected deque")
         deque.append(element)
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) appended element")
         try:
             if self._active is None:
+                self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) nothing active")
                 self._active = element
+                self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) set self to active")
             else:
+                self._log.info(
+                    f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()})"
+                    + f" waiting on existing active element: {self._active}"
+                )
                 await element.ready_event.wait()
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) entering log_after()")
             # TODO: lazy and not configurable since we presently have just one use, kinda
             async with log_after(
                 message=f"{log_filter} {type(self).__name__} held by {task}",
                 delay=15,
                 log=self._log,
             ):
+                self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) yielding")
                 yield
+                self._log.info(
+                    f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) after yield, no exception"
+                )
         finally:
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) finally")
             # another element might be active if the wait is cancelled
             if self._active is element:
+                self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) deactivating")
                 self._active = None
+                self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) deactivated")
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) about to remove")
             deque.remove(element)
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) removed")
 
             if self._active is None:
+                self._log.info(
+                    f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()})"
+                    + " nothing active, looking for something"
+                )
                 for deque in self._deques.values():
+                    self._log.info(
+                        f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()})"
+                        + f" checking deque length: {len(deque)}"
+                    )
                     if len(deque) == 0:
+                        self._log.info(
+                            f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) skipping empty deque",
+                        )
                         continue
 
+                    self._log.info(
+                        f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) getting element 0"
+                    )
                     element = deque[0]
+                    self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) got: {element}")
                     self._active = element
+                    self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) set active")
                     element.ready_event.set()
+                    self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) set event")
                     break
+                self._log.info(
+                    f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) end of if active is none"
+                )
+            self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) end of finally")
+        self._log.info(f"{log_filter} {type(self).__name__}.acquire() ({task.get_name()}) end of method")

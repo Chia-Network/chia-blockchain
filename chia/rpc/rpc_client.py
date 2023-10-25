@@ -109,6 +109,7 @@ class RpcClient:
         return await self.fetch("healthz", {})
 
     def close(self) -> None:
+        # TODO: review task handling
         self.closing_task = asyncio.create_task(self.session.close())
 
     async def await_closed(self) -> None:

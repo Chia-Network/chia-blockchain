@@ -28,7 +28,9 @@ async def test_stuff() -> None:
     waiting_events = [asyncio.Event() for _ in range(waiting_limit)]
     failed_events = [asyncio.Event() for _ in range(beyond_limit)]
 
+    # TODO: review task handling
     entered_tasks = [asyncio.create_task(acquire(entered_event=event)) for event in entered_events]
+    # TODO: review task handling
     waiting_tasks = [asyncio.create_task(acquire(entered_event=event)) for event in waiting_events]
 
     await asyncio.gather(*(event.wait() for event in entered_events))
@@ -37,6 +39,7 @@ async def test_stuff() -> None:
 
     assert semaphore._available_count == 0
 
+    # TODO: review task handling
     failure_tasks = [asyncio.create_task(acquire()) for _ in range(beyond_limit)]
 
     failure_results = await asyncio.gather(*failure_tasks, return_exceptions=True)

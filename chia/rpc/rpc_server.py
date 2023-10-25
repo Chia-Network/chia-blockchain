@@ -238,6 +238,7 @@ class RpcServer:
     def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
+        # TODO: review task handling
         asyncio.create_task(self._state_changed(change, change_data))
 
     @property

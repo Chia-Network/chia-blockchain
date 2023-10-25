@@ -497,6 +497,7 @@ class ChiaServer:
                 connection_type_str = connection.connection_type.name.lower()
             self.log.info(f"Connected with {connection_type_str} {target_node}")
             if is_feeler:
+                # TODO: review task handling
                 asyncio.create_task(connection.close())
             return True
         except client_exceptions.ClientConnectorError as e:
@@ -619,6 +620,7 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
+        # TODO: review task handling
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
         if self.webserver is not None:
             self.webserver.close()

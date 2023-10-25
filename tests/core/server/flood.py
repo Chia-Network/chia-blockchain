@@ -61,6 +61,7 @@ async def main() -> None:
 
         task.cancel()
 
+    # TODO: review task handling
     file_task = asyncio.create_task(dun())
 
     with out_path.open(mode="w") as file:
@@ -71,6 +72,7 @@ async def main() -> None:
                 *[tcp_echo_client(task_counter="{}".format(i), logger=logger) for i in range(0, NUM_CLIENTS)]
             )
 
+        # TODO: review task handling
         task = asyncio.create_task(f())
         try:
             await task

@@ -614,6 +614,7 @@ class WeightProofHandler:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
+                # TODO: review task handling
                 task = asyncio.create_task(
                     validate_weight_proof_inner(
                         self.constants,

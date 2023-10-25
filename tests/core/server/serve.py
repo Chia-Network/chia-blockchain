@@ -87,6 +87,7 @@ async def async_main(
 
                 thread_end_event.set()
 
+            # TODO: review task handling
             file_task = asyncio.create_task(dun())
 
         loop = asyncio.get_event_loop()

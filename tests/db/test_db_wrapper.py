@@ -117,6 +117,7 @@ async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetR
 
             tasks = []
             for index in range(concurrent_task_count):
+                # TODO: review task handling
                 task = asyncio.create_task(increment_counter(db_wrapper))
                 tasks.append(task)
 
@@ -261,6 +262,7 @@ async def test_only_transactioned_reader_ignores_writer(transactioned: bool) -> 
         async with get_reader() as reader:
             assert await query_value(connection=reader) == 0
 
+            # TODO: review task handling
             task = asyncio.create_task(write())
             await writer_committed.wait()
 
@@ -340,6 +342,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
             tasks = []
             values: List[int] = []
             for index in range(concurrent_task_count):
+                # TODO: review task handling
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 
@@ -369,10 +372,13 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
             tasks = []
             values: List[int] = []
             for index in range(concurrent_task_count):
+                # TODO: review task handling
                 task = asyncio.create_task(increment_counter(db_wrapper))
                 tasks.append(task)
+                # TODO: review task handling
                 task = asyncio.create_task(decrement_counter(db_wrapper))
                 tasks.append(task)
+                # TODO: review task handling
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
 

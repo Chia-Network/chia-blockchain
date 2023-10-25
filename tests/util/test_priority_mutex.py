@@ -67,9 +67,11 @@ class TestPriorityMutex:
                 log.warning(f"Spend {time.time() - t1} waiting for low {i}")
                 await kind_of_slow_func()
 
+        # TODO: review task handling
         h = asyncio.create_task(do_high())
         l_tasks = []
         for i in range(50):
+            # TODO: review task handling
             l_tasks.append(asyncio.create_task(do_low(i)))
 
         winner = None
@@ -336,12 +338,15 @@ async def test_cancellation_while_waiting() -> None:
         async with mutex.acquire(priority=MutexPriority.high):
             pass
 
+    # TODO: review task handling
     block_task = asyncio.create_task(block())
     await blocker_acquired_event.wait()
 
+    # TODO: review task handling
     cancel_task = asyncio.create_task(to_be_cancelled(mutex=mutex))
     await wait_queued(mutex=mutex, task=cancel_task)
 
+    # TODO: review task handling
     queued_after_task = asyncio.create_task(queued_after())
     await wait_queued(mutex=mutex, task=queued_after_task)
 
@@ -443,6 +448,7 @@ async def create_acquire_tasks_in_controlled_order(
     release_event = asyncio.Event()
 
     for request in requests:
+        # TODO: review task handling
         task = asyncio.create_task(request.acquire(mutex=mutex, wait_for=release_event))
         tasks.append(task)
         await wait_queued(mutex=mutex, task=task)
@@ -463,6 +469,7 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
             await other_task_allow_release_event.wait()
 
     async with mutex.acquire(priority=MutexPriority.high):
+        # TODO: review task handling
         other_task = asyncio.create_task(other_task_function())
         await wait_queued(mutex=mutex, task=other_task)
 
@@ -470,6 +477,7 @@ async def test_multiple_tasks_track_active_task_accurately() -> None:
         async with mutex.acquire(priority=MutexPriority.high):
             pass
 
+    # TODO: review task handling
     another_task = asyncio.create_task(another_task_function())
     await wait_queued(mutex=mutex, task=another_task)
     other_task_allow_release_event.set()

@@ -215,6 +215,7 @@ class FullNodeAPI:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
+            # TODO: review task handling
             fetch_task = asyncio.create_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
@@ -440,6 +441,7 @@ class FullNodeAPI:
             if block_hash in self.full_node.full_node_store.requesting_unfinished_blocks:
                 self.full_node.full_node_store.requesting_unfinished_blocks.remove(block_hash)
 
+        # TODO: review task handling
         asyncio.create_task(eventually_clear())
 
         return msg

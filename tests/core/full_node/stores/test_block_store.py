@@ -152,11 +152,13 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
             rand_i = random.randint(0, 9)
             if random.random() < 0.5:
                 tasks.append(
+                    # TODO: review task handling
                     asyncio.create_task(
                         store.add_full_block(blocks[rand_i].header_hash, blocks[rand_i], block_records[rand_i])
                     )
                 )
             if random.random() < 0.5:
+                # TODO: review task handling
                 tasks.append(asyncio.create_task(store.get_full_block(blocks[rand_i].header_hash)))
         await asyncio.gather(*tasks)
 

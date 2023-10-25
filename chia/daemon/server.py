@@ -687,6 +687,7 @@ class WebSocketServer:
                 await websocket.close()
 
     def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
+        # TODO: review task handling
         asyncio.create_task(self._keyring_status_changed(keyring_status, destination))
 
     def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
@@ -746,6 +747,7 @@ class WebSocketServer:
                 await websocket.close()
 
     def state_changed(self, service: str, message: Dict[str, Any]):
+        # TODO: review task handling
         asyncio.create_task(self._state_changed(service, message))
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
@@ -1014,6 +1016,7 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
+            # TODO: review task handling
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
     def _post_process_plotting_job(self, job: Dict[str, Any]):
@@ -1149,6 +1152,7 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
+                # TODO: review task handling
                 loop.create_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")

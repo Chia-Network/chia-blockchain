@@ -20,6 +20,7 @@ T = TypeVar("T")
 
 async def begin_task(coro: Coroutine[Any, Any, T]) -> Task[T]:
     """Awaitable function that adds a coroutine to the event loop and sets it running."""
+    # TODO: review task handling
     task = create_task(coro)
     await sleep(0)
 

@@ -373,9 +373,11 @@ class WalletNode:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
+                # TODO: review task handling
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
         if self.config.get("enable_memory_profiler", False):
+            # TODO: review task handling
             asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
@@ -464,6 +466,7 @@ class WalletNode:
     def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
+        # TODO: review task handling
         asyncio.create_task(self._resend_queue())
 
     async def _resend_queue(self) -> None:
@@ -667,6 +670,7 @@ class WalletNode:
                 default_port,
                 self.log,
             )
+            # TODO: review task handling
             asyncio.create_task(self.wallet_peers.start())
 
     def on_disconnect(self, peer: WSChiaConnection) -> None:
@@ -940,6 +944,7 @@ class WalletNode:
                             self.log.info("Terminating receipt and validation due to shut down request")
                             await asyncio.gather(*all_tasks)
                             return False
+                    # TODO: review task handling
                     all_tasks.append(asyncio.create_task(validate_and_add(batch.entries, idx)))
             idx += len(batch.entries)
 

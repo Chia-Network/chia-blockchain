@@ -80,6 +80,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
+        # TODO: review task handling
         asyncio.create_task(self.handler(dns_request, addr))
 
     async def respond(self) -> None:
@@ -192,6 +193,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
                     f"closing connection after dns replies are sent."
                 )
+            # TODO: review task handling
             asyncio.create_task(self.wait_for_futures())
             return True  # Keep connection open, until the futures are done.
         log.info(f"Received early EOF from {self.peer_info}, closing connection.")

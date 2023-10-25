@@ -193,6 +193,7 @@ class Crawler:
                         total_nodes += 1
                         if peer.ip_address not in tried_nodes:
                             tried_nodes.add(peer.ip_address)
+                        # TODO: review task handling
                         task = asyncio.create_task(self.connect_task(peer))
                         tasks.add(task)
                         if len(tasks) >= 250:

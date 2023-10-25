@@ -241,6 +241,7 @@ class SignalHandlers:
     ) -> None:
         self.remove_done_handlers()
 
+        # TODO: review task handling
         task = asyncio.create_task(
             handler(signal_=signal_, stack_frame=stack_frame, loop=loop),
         )
@@ -324,10 +325,13 @@ async def _log_after_monitor(
 
                 complete_message = "\n".join(
                     [
-                        f"{log_filter} activity exceeded limit of {delay_string}s ({duration_string}s): {message}",
+                        (
+                            f"{log_filter} log_after(): activity exceeded limit of"
+                            + f" {delay_string}s ({duration_string}s): {message}"
+                        ),
                         "entered via:",
                         entry_stack_string,
-                        f"monitoring task presently at: {monitored_task}",
+                        f"monitored task presently at: {monitored_task}",
                         stack_string,
                     ],
                 )
@@ -368,6 +372,7 @@ async def log_after(
     current_task = asyncio.current_task()
     assert current_task is not None, "async def, must be in a task"
 
+    # TODO: review task handling
     task = asyncio.create_task(
         _log_after_monitor(
             monitored_task=current_task,
@@ -382,6 +387,16 @@ async def log_after(
     )
 
     try:
+        delay_string = f"{delay:.0f}"
+        complete_message = "\n".join(
+            [
+                f"{log_filter} log_after(): entering monitored zone with limit of {delay_string}s: {message}",
+                f"task: {current_task}",
+                "entered via:",
+                entry_stack_string,
+            ],
+        )
+        log.log(level, complete_message)
         yield
     finally:
         task.cancel()
@@ -395,6 +410,7 @@ class TaskReferencer:
     _tasks: List[asyncio.Task[object]] = dataclasses.field(default_factory=list)
 
     async def add(self, coroutine: Coroutine[Any, Any, object]) -> asyncio.Task[object]:
+        # TODO: review task handling
         task = asyncio.create_task(coroutine)
         self._tasks.append(task)
 
