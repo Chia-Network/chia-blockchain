@@ -699,6 +699,17 @@ class FullNode:
                 if await self.short_sync_batch(peer, uint32(max(curr_peak_height - 6, 0)), request.height):
                     return None
 
+            # Ensure we are only syncing once and not double calling this method
+            if self.sync_store.get_sync_mode():
+                return
+
+            if self.sync_store.get_long_sync():
+                self.log.debug("already in long sync")
+                return
+
+            self.sync_store.set_long_sync(True)
+            self.log.debug("long sync started")
+
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
             self._sync_task = asyncio.create_task(self._sync())
@@ -880,16 +891,6 @@ class FullNode:
             - Download blocks in batch (and in parallel) and verify them one at a time
             - Disconnect peers that provide invalid blocks or don't have the blocks
         """
-        # Ensure we are only syncing once and not double calling this method
-        if self.sync_store.get_sync_mode():
-            return None
-
-        if self.sync_store.get_long_sync():
-            self.log.debug("already in long sync")
-            return None
-
-        self.sync_store.set_long_sync(True)
-        self.log.debug("long sync started")
         try:
             self.log.info("Starting to perform sync.")
             self.log.info("Waiting to receive peaks from peers.")
