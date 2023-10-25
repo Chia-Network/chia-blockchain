@@ -691,7 +691,7 @@ class WalletRpcApi:
                     if not push:
                         raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
                     async with self.service.wallet_state_manager.lock:
-                        cat_wallet: CATWallet = await CATWallet.create_new_cat_wallet(
+                        cat_wallet, txs = await CATWallet.create_new_cat_wallet(
                             wallet_state_manager,
                             main_wallet,
                             {"identifier": "genesis_by_id"},
@@ -702,7 +702,12 @@ class WalletRpcApi:
                         )
                         asset_id = cat_wallet.get_asset_id()
                     self.service.wallet_state_manager.state_changed("wallet_created")
-                    return {"type": cat_wallet.type(), "asset_id": asset_id, "wallet_id": cat_wallet.id()}
+                    return {
+                        "type": cat_wallet.type(),
+                        "asset_id": asset_id,
+                        "wallet_id": cat_wallet.id(),
+                        "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+                    }
                 else:
                     raise ValueError(
                         "Support for this RPC mode has been dropped."

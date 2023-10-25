@@ -585,7 +585,7 @@ async def test_nft_offer_nft_for_cat(
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
     async with wallet_node_0.wallet_state_manager.lock:
-        cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_maker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
             {"identifier": "genesis_by_id"},
@@ -597,7 +597,7 @@ async def test_nft_offer_nft_for_cat(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
     async with wallet_node_1.wallet_state_manager.lock:
-        cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
+        cat_wallet_taker, _ = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
             {"identifier": "genesis_by_id"},
