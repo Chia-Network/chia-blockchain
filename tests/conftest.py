@@ -1107,3 +1107,25 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
     """Populated with a payload containing 0 keys using the default passphrase."""
     with TempKeyring(populate=True) as keyring:
         yield keyring
+
+@pytest_asyncio.fixture(scope="function")
+async def farmer_one_harvester_zero_bits_plot_filter(
+    tmp_path: Path, get_b_tools: BlockTools, get_temp_keyring: Keychain
+) -> AsyncIterator[Tuple[Service[Harvester, HarvesterAPI], Service[Farmer, FarmerAPI], BlockTools]]:
+
+    zero_bit_plot_filter_consts = dataclasses.replace(
+        test_constants_modified,
+        NUMBER_ZERO_BITS_PLOT_FILTER=0
+    )
+    # bt = await get_b_tools(get_temp_keyring)
+    # new_config = bt._config
+    bt = await create_block_tools_async(zero_bit_plot_filter_consts, keychain=get_temp_keyring)
+    # get_b_tools.change_config({'NUMBER_ZERO_BITS_PLOT_FILTER': 0})
+    # bt = await create_block_tools_async(dataclasses.replace(test_constants, NUMBER_ZERO_BITS_PLOT_FILTER=0),
+    #                                     keychain=get_temp_keyring)
+    # bt =
+    # [harvester_service], framer_service, rbt =\
+    async with setup_farmer_multi_harvester(bt, 1, tmp_path, bt.constants, start_services=True) as r:
+        [harvester_service], framer_service, rbt = r
+        yield [harvester_service, framer_service, rbt]
+

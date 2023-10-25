@@ -685,6 +685,11 @@ class FarmerAPI:
                         pool_target = None
                         pool_target_signature = None
 
+                    harvester_overwrote_reward_address = response.farmer_reward_address_overwrite is not None
+                    farmer_reward_address = self.farmer.farmer_target
+                    if harvester_overwrote_reward_address:
+                        farmer_reward_address = response.farmer_reward_address_overwrite
+
                     return farmer_protocol.DeclareProofOfSpace(
                         response.challenge_hash,
                         challenge_chain_sp,
@@ -693,10 +698,10 @@ class FarmerAPI:
                         pospace,
                         agg_sig_cc_sp,
                         agg_sig_rc_sp,
-                        self.farmer.farmer_target,
+                        farmer_reward_address,
                         pool_target,
                         pool_target_signature,
-                        response.farmer_reward_address_override is not None
+                        harvester_overwrote_reward_address
                     )
         else:
             # This is a response with block signatures
