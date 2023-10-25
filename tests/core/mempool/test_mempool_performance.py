@@ -1,22 +1,27 @@
 from __future__ import annotations
 
+from typing import List
+
 import pytest
 
 from chia.protocols import full_node_protocol
+from chia.simulator.setup_nodes import SimulatorsAndWallets
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
 from tests.util.misc import BenchmarkRunner
 
 
-async def wallet_height_at_least(wallet_node, h):
+async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
     height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
     return height == h
 
 
-async def wallet_balance_at_least(wallet_node: WalletNode, balance):
+async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> bool:
     b = await wallet_node.wallet_state_manager.get_confirmed_balance_for_wallet(1)
     return b >= balance
 
@@ -24,8 +29,11 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance):
 @pytest.mark.limit_consensus_modes(reason="benchmark")
 @pytest.mark.asyncio
 async def test_mempool_update_performance(
-    wallet_nodes_mempool_perf, default_400_blocks, self_hostname, benchmark_runner: BenchmarkRunner
-):
+    wallet_nodes_mempool_perf: SimulatorsAndWallets,
+    default_400_blocks: List[FullBlock],
+    self_hostname: str,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
     blocks = default_400_blocks
     full_nodes, wallets, bt = wallet_nodes_mempool_perf
     wallet_node = wallets[0][0]
@@ -42,13 +50,13 @@ async def test_mempool_update_performance(
 
     await wallet_server.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
     await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
-    send_amount = 40000000000000
-    fee_amount = 2213
+    send_amount = uint64(40000000000000)
+    fee_amount = uint64(2213)
     await time_out_assert(60, wallet_balance_at_least, True, wallet_node, send_amount + fee_amount)
 
     [big_transaction] = await wallet.generate_signed_transaction(send_amount, ph, DEFAULT_TX_CONFIG, fee_amount)
 
-    assert big_transaction.spend_bundle
+    assert big_transaction.spend_bundle is not None
     await full_node_api_1.respond_transaction(
         full_node_protocol.RespondTransaction(big_transaction.spend_bundle), peer, test=True
     )
