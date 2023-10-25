@@ -401,7 +401,7 @@ class TestFullNodeBlockCompression:
         else:
             assert template is not None
         if test_reorgs:
-            reog_blocks = bt.get_consecutive_blocks(14)
+            reog_blocks: List[FullBlock] = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block)
@@ -490,10 +490,10 @@ class TestFullNodeProtocol:
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
-        for block in bt.get_consecutive_blocks(30):
+        for block in bt.get_consecutive_blocks(30, block_list_input=blocks):
             await full_node_1.full_node.add_block(block, peer)
 
-        assert full_node_1.full_node.blockchain.get_peak().height == 29
+        assert full_node_1.full_node.blockchain.get_peak().height == 30
 
     @pytest.mark.asyncio
     async def test_respond_end_of_sub_slot(self, wallet_nodes, self_hostname):

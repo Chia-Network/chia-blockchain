@@ -3196,7 +3196,7 @@ class TestReorgs:
         assert b.get_peak().height == 14
 
         # Reorg to alternate chain that is 1 height longer
-        blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
+        blocks_reorg_chain = bt.get_consecutive_blocks(15, [blocks[0]], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             if reorg_block.height < 15:
                 await _validate_and_add_block_multi_result(
@@ -3380,6 +3380,7 @@ async def test_reorg_new_ref(empty_blockchain, bt):
         else:
             expected = AddBlockResult.NEW_PEAK
             fork_point_with_peak = uint32(1)
+        log.info(f"check block {block.height}")
         await _validate_and_add_block(b, block, expected_result=expected, fork_point_with_peak=fork_point_with_peak)
     assert b.get_peak().height == 20
 
@@ -3430,7 +3431,7 @@ async def test_reorg_stale_fork_height(empty_blockchain, bt):
 
     # fake the fork_height to make every new block look like a reorg
     for block in blocks[5:]:
-        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_point_with_peak=2)
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK, fork_point_with_peak=uint32(2))
     assert b.get_peak().height == 13
 
 
@@ -3585,12 +3586,14 @@ async def test_reorg_flip_flop(empty_blockchain, bt):
         fork_height = 2 if counter > 3 else None
 
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block1], {}, validate_signatures=False
+            [block1], {}, validate_signatures=False, fork_height=fork_height
         )
         result, err, _ = await b.add_block(block1, preval[0], fork_point_with_peak=fork_height)
         assert not err
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block2], {}, validate_signatures=False
+            [block2],
+            {},
+            validate_signatures=False,
         )
         result, err, _ = await b.add_block(block2, preval[0], fork_point_with_peak=fork_height)
         assert not err

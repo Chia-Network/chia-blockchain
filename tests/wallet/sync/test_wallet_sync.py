@@ -291,7 +291,7 @@ class TestWalletSync:
 
     @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
+    async def test_long_sync_wallet(self, two_wallet_nodes, default_400_blocks, bt, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -311,8 +311,9 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
 
+        reorg_blocks = bt.get_consecutive_blocks(num_blocks=400, block_list_input=default_400_blocks[:10])
         # Tests a long reorg
-        for block in default_1000_blocks:
+        for block in reorg_blocks:
             await full_node_api.full_node.add_block(block)
 
         for wallet_node, wallet_server in wallets:
@@ -321,20 +322,20 @@ class TestWalletSync:
             log.info(
                 f"wallet node height is {await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()}"
             )
-            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
+            await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(reorg_blocks) - 1)
 
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
 
         # Tests a short reorg
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
+        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=reorg_blocks[:-5])
 
         for i in range(len(blocks_reorg) - num_blocks - 10, len(blocks_reorg)):
             await full_node_api.full_node.add_block(blocks_reorg[i])
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(
-                600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
+                600, wallet_height_at_least, True, wallet_node, len(reorg_blocks) + num_blocks - 5 - 1
             )
 
     @pytest.mark.limit_consensus_modes(reason="save time")

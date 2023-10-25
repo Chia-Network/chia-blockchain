@@ -14,7 +14,7 @@ def find_fork_point_in_chain(
 ) -> int:
     """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)
-    Returns -1 if chains have no common ancestor
+    Returns 0 if chains have no common ancestor
     * assumes the fork point is loaded in blocks
     """
     while block_2.height > 0 or block_1.height > 0:
@@ -30,6 +30,5 @@ def find_fork_point_in_chain(
     if block_2 != block_1:
         # All blocks are different
         return -1
-
     # First block is the same
     return 0
