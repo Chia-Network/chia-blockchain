@@ -115,7 +115,7 @@ class TestPerformance:
             spend_bundles.append(spend_bundle)
             spend_bundle_ids.append(spend_bundle.get_hash())
 
-        with benchmark_runner.assert_runtime(seconds=0.0055, label=f"{request.node.name} - mempool"):
+        with benchmark_runner.assert_runtime(seconds=0.0055, label="mempool"):
             num_tx: int = 0
             for spend_bundle, spend_bundle_id in zip(spend_bundles, spend_bundle_ids):
                 num_tx += 1
@@ -167,12 +167,12 @@ class TestPerformance:
             [],
         )
 
-        with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - unfinished"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label="unfinished"):
             res = await full_node_1.respond_unfinished_block(fnp.RespondUnfinishedBlock(unfinished), fake_peer)
 
         log.warning(f"Res: {res}")
 
-        with benchmark_runner.assert_runtime(seconds=0.1, label=f"{request.node.name} - full block"):
+        with benchmark_runner.assert_runtime(seconds=0.1, label="full block"):
             # No transactions generator, the full node already cached it from the unfinished block
             block_small = dataclasses.replace(block, transactions_generator=None)
             res = await full_node_1.full_node.add_block(block_small)

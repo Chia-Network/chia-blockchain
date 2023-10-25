@@ -2,6 +2,11 @@ name: ⚡️ Benchmarks
 
 on:
  workflow_dispatch:
+    inputs:
+      repeats:
+        description: "The number of times to execute each benchmark"
+        type: int
+        default: 1
  push:
    paths-ignore:
        - '**.md'
@@ -23,12 +28,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      repeats: ${{ steps.repeats.outputs.repeats }}
+      timeout: ${{ steps.timeout.outputs.timeout }}
+
+    steps:
+      - name: Calculate repeats
+        id: repeats
+        run: |
+          echo "repeats=${{ inputs.repeats != '' && inputs.repeats || 1 }}" >> "$GITHUB_OUTPUT"
+      - name: Calculate timeout
+        id: timeout
+        run: |
+          echo "timeout=$(( ${{ steps.repeats.outputs.repeats }} * 20 ))" >> "$GITHUB_OUTPUT"
+
   build:
     name: Benchmarks
     runs-on: benchmark
+    needs:
+      - setup
     container:
       image: chianetwork/ubuntu-22.04-builder:latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ fromJSON(needs.setup.outputs.timeout) }}
     strategy:
       fail-fast: false
       matrix:
@@ -81,4 +106,22 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark tests
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} tests
+
+      - name: Format JUnit data and prepare results
+        if: always()
+        run: |
+          yq junit-data/benchmarks.raw.xml > junit-data/benchmarks.xml
+
+      - name: Publish JUnit results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-data
+          path: junit-data/*
+          if-no-files-found: error
+
+      - name: Add benchmark results to workflow summary
+        if: always()
+        run: |
+          python -m tests.process_benchmarks --xml junit-data/benchmarks.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"

@@ -303,7 +303,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with benchmark_runner.assert_runtime(seconds=8.5, label="get_puzzle_and_solution_for_coin"):
+    with benchmark_runner.assert_runtime(seconds=8.5):
         for i in range(3):
             for c in spends:
                 spend_info = get_puzzle_and_solution_for_coin(generator, c, 0, test_constants)
