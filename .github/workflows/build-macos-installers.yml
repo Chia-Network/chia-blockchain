@@ -453,4 +453,4 @@ jobs:
     - name: Detach .dmg
       if: always()
       run: |
-        hdiutil detach "/Volumes/Chia "*
+        hdiutil detach -force "/Volumes/Chia "*
