@@ -290,7 +290,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     assert LARGE_BLOCK.transactions_generator is not None
     # first, list all spent coins in the block
     cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, [DESERIALIZE_MOD, []]
     )
 
     coin_spends = result.first()
