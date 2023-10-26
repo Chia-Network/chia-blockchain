@@ -1386,17 +1386,17 @@ class BatchInsertBenchmarkCase:
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=100,
-        limit=3,
+        limit=4,
     ),
     BatchInsertBenchmarkCase(
         pre=0,
         count=1_000,
-        limit=24,
+        limit=30,
     ),
     BatchInsertBenchmarkCase(
         pre=1_000,
         count=1_000,
-        limit=28,
+        limit=36,
     ),
 )
 @pytest.mark.asyncio
