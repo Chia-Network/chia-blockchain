@@ -710,7 +710,7 @@ class VerifiedCredential(Streamable):
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
         new_proof_provider: Optional[bytes32] = None,
-    ) -> Tuple[Optional[bytes32], CoinSpend, "VerifiedCredential"]:
+    ) -> Tuple[Optional[bytes32], CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -806,7 +806,7 @@ class VerifiedCredential(Streamable):
 
     def _next_vc(
         self, next_inner_puzzle_hash: bytes32, new_proof_hash: Optional[bytes32], next_amount: uint64
-    ) -> "VerifiedCredential":
+    ) -> VerifiedCredential:
         """
         Private method that creates the next VC class instance.
         """

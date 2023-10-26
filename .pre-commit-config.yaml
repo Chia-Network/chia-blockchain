@@ -15,6 +15,13 @@ repos:
         pass_filenames: false
 -   repo: local
     hooks:
+    -   id: pyupgrade
+        name: pyupgrade
+        entry: ./activated.py pyupgrade --py38-plus --keep-runtime-typing
+        language: system
+        types: [python]
+-   repo: local
+    hooks:
     -   id: black
         name: black
         entry: ./activated.py black

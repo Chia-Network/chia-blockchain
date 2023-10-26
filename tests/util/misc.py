@@ -7,6 +7,7 @@ import functools
 import gc
 import logging
 import os
+import pathlib
 import subprocess
 import sys
 from concurrent.futures import Future
@@ -15,12 +16,13 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Type, Union
+from typing import Any, Callable, Collection, Iterator, List, Optional, TextIO, Tuple, Type, Union
 
 import pytest
 from chia_rs import Coin
 from typing_extensions import Protocol, final
 
+import chia
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -61,9 +63,9 @@ def manage_gc(mode: GcMode) -> Iterator[None]:
                 gc.disable()
 
 
-def caller_file_and_line(distance: int = 1) -> str:
+def caller_file_and_line(distance: int = 1) -> Tuple[str, int]:
     caller = getframeinfo(stack()[distance + 1][0])
-    return f"{caller.filename}:{caller.lineno}"
+    return caller.filename, caller.lineno
 
 
 @dataclasses.dataclass(frozen=True)
@@ -71,7 +73,8 @@ class RuntimeResults:
     start: float
     end: float
     duration: float
-    entry_line: str
+    entry_file: str
+    entry_line: int
     overhead: Optional[float]
 
     def block(self, label: str = "") -> str:
@@ -94,14 +97,15 @@ class AssertRuntimeResults:
     start: float
     end: float
     duration: float
-    entry_line: str
+    entry_file: str
+    entry_line: int
     overhead: Optional[float]
     limit: float
     ratio: float
 
     @classmethod
     def from_runtime_results(
-        cls, results: RuntimeResults, limit: float, entry_line: str, overhead: Optional[float]
+        cls, results: RuntimeResults, limit: float, entry_file: str, entry_line: int, overhead: Optional[float]
     ) -> AssertRuntimeResults:
         return cls(
             start=results.start,
@@ -109,6 +113,7 @@ class AssertRuntimeResults:
             duration=results.duration,
             limit=limit,
             ratio=results.duration / limit,
+            entry_file=entry_file,
             entry_line=entry_line,
             overhead=overhead,
         )
@@ -120,7 +125,7 @@ class AssertRuntimeResults:
         return dedent(
             f"""\
             Asserting maximum duration: {label}
-            {self.entry_line}
+            {self.entry_file}:{self.entry_line}
                 run time: {self.duration}
                 overhead: {self.overhead if self.overhead is not None else "not measured"}
                  allowed: {self.limit}
@@ -168,7 +173,7 @@ def measure_runtime(
     overhead: Optional[float] = None,
     print_results: bool = True,
 ) -> Iterator[Future[RuntimeResults]]:
-    entry_line = caller_file_and_line()
+    entry_file, entry_line = caller_file_and_line()
 
     results_future: Future[RuntimeResults] = Future()
 
@@ -188,6 +193,7 @@ def measure_runtime(
                 start=start,
                 end=end,
                 duration=duration,
+                entry_file=entry_file,
                 entry_line=entry_line,
                 overhead=overhead,
             )
@@ -228,14 +234,16 @@ class _AssertRuntime:
     gc_mode: GcMode = GcMode.disable
     print: bool = True
     overhead: Optional[float] = None
-    entry_line: Optional[str] = None
+    entry_file: Optional[str] = None
+    entry_line: Optional[int] = None
     _results: Optional[AssertRuntimeResults] = None
     runtime_manager: Optional[contextlib.AbstractContextManager[Future[RuntimeResults]]] = None
     runtime_results_callable: Optional[Future[RuntimeResults]] = None
     enable_assertion: bool = True
+    record_property: Optional[Callable[[str, object], None]] = None
 
     def __enter__(self) -> Future[AssertRuntimeResults]:
-        self.entry_line = caller_file_and_line()
+        self.entry_file, self.entry_line = caller_file_and_line()
 
         self.runtime_manager = measure_runtime(
             clock=self.clock, gc_mode=self.gc_mode, overhead=self.overhead, print_results=False
@@ -251,7 +259,12 @@ class _AssertRuntime:
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        if self.entry_line is None or self.runtime_manager is None or self.runtime_results_callable is None:
+        if (
+            self.entry_file is None
+            or self.entry_line is None
+            or self.runtime_manager is None
+            or self.runtime_results_callable is None
+        ):
             raise Exception("Context manager must be entered before exiting")
 
         self.runtime_manager.__exit__(exc_type, exc, traceback)
@@ -260,6 +273,7 @@ class _AssertRuntime:
         results = AssertRuntimeResults.from_runtime_results(
             results=runtime,
             limit=self.seconds,
+            entry_file=self.entry_file,
             entry_line=self.entry_line,
             overhead=self.overhead,
         )
@@ -268,6 +282,17 @@ class _AssertRuntime:
 
         if self.print:
             print(results.block(label=self.label))
+
+        if self.record_property is not None:
+            self.record_property(f"duration:{self.label}", results.duration)
+
+            relative_path_str = (
+                pathlib.Path(results.entry_file).relative_to(pathlib.Path(chia.__file__).parent.parent).as_posix()
+            )
+
+            self.record_property(f"path:{self.label}", relative_path_str)
+            self.record_property(f"line:{self.label}", results.entry_line)
+            self.record_property(f"limit:{self.label}", self.seconds)
 
         if exc_type is None and self.enable_assertion:
             __tracebackhide__ = True
@@ -280,13 +305,13 @@ class BenchmarkRunner:
     enable_assertion: bool = True
     label: Optional[str] = None
     overhead: Optional[float] = None
+    record_property: Optional[Callable[[str, object], None]] = None
 
     @functools.wraps(_AssertRuntime)
     def assert_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
         kwargs.setdefault("enable_assertion", self.enable_assertion)
         kwargs.setdefault("overhead", self.overhead)
-        if self.label is not None:
-            kwargs.setdefault("label", self.label)
+        kwargs.setdefault("record_property", self.record_property)
         return _AssertRuntime(*args, **kwargs)
 
 

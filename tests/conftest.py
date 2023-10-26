@@ -11,7 +11,7 @@ import random
 import sysconfig
 import tempfile
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
+from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
 import pytest
@@ -97,9 +97,18 @@ def benchmark_runner_overhead_fixture() -> float:
 
 
 @pytest.fixture(name="benchmark_runner")
-def benchmark_runner_fixture(request: SubRequest, benchmark_runner_overhead: float) -> BenchmarkRunner:
+def benchmark_runner_fixture(
+    request: SubRequest,
+    benchmark_runner_overhead: float,
+    record_property: Callable[[str, object], None],
+    benchmark_repeat: int,
+) -> BenchmarkRunner:
     label = request.node.name
-    return BenchmarkRunner(label=label, overhead=benchmark_runner_overhead)
+    return BenchmarkRunner(
+        label=label,
+        overhead=benchmark_runner_overhead,
+        record_property=record_property,
+    )
 
 
 @pytest.fixture(name="node_name_for_file")
@@ -358,8 +367,40 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
         raise excinfo.value
 
 
+def pytest_addoption(parser: pytest.Parser):
+    default_repeats = 1
+    group = parser.getgroup("chia")
+    group.addoption(
+        "--benchmark-repeats",
+        action="store",
+        default=default_repeats,
+        type=int,
+        help=f"The number of times to run each benchmark, default {default_repeats}.",
+    )
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "benchmark: automatically assigned by the benchmark_runner fixture")
+
+    benchmark_repeats = config.getoption("--benchmark-repeats")
+    if benchmark_repeats != 1:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+            params=[pytest.param(repeat, id=f"benchmark_repeat{repeat:03d}") for repeat in range(benchmark_repeats)],
+        )
+        def benchmark_repeat_fixture(request: SubRequest) -> int:
+            return request.param
+
+    else:
+
+        @pytest.fixture(
+            name="benchmark_repeat",
+        )
+        def benchmark_repeat_fixture() -> int:
+            return 1
+
+    globals()[benchmark_repeat_fixture.__name__] = benchmark_repeat_fixture
 
 
 def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
@@ -568,7 +609,7 @@ async def two_nodes_two_wallets_with_same_keys(bt) -> AsyncIterator[SimulatorsAn
         yield _
 
 
-@pytest_asyncio.fixture(scope="module")
+@pytest_asyncio.fixture
 async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
