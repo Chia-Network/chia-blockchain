@@ -38,7 +38,7 @@ async def test_mempool_update_performance(
     ph = await wallet.get_new_puzzlehash()
 
     peer = await connect_and_get_peer(server_1, server_2, self_hostname)
-    await full_node_api_1.full_node.add_block_batch(blocks, peer, None)
+    await full_node_api_1.full_node.add_block_batch(blocks, peer.get_peer_logging(), None)
 
     await wallet_server.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
     await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
