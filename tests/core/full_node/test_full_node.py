@@ -2164,6 +2164,8 @@ async def test_long_reorg(
     blocks = default_10000_blocks[:1600]
 
     if light_blocks:
+        # if the blocks have lighter weight, we need more height to compensate,
+        # to force a reorg
         reorg_blocks = test_long_reorg_blocks_light[:1650]
     else:
         reorg_blocks = test_long_reorg_blocks[:1200]
@@ -2182,6 +2184,9 @@ async def test_long_reorg(
     assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
     assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
 
+    # one aspect of this test is to make sure we can reorg blocks that are
+    # not in the cache. We need to explicitly prune the cache to get that
+    # effect.
     node.full_node.blockchain.clean_block_records()
 
     fork_info: Optional[ForkInfo] = None
@@ -2200,6 +2205,9 @@ async def test_long_reorg(
     chain_2_weight = peak.weight
     chain_2_peak = peak.header_hash
 
+    # if the reorg chain has lighter blocks, once we've re-orged onto it, we
+    # have a greater block height. If the reorg chain has heavier blocks, we
+    # end up with a lower height than the original chain (but greater weight)
     if light_blocks:
         assert peak.height > chain_1_height
     else:
@@ -2277,6 +2285,9 @@ async def test_long_reorg_nodes(
 
     await connect_and_get_peer(server_1, server_2, self_hostname)
 
+    # TODO: There appears to be an issue where the node with the lighter chain
+    # fails to initiate the reorg until there's a new block farmed onto the
+    # heavier chain.
     await full_node_2.full_node.add_block(reorg_blocks[-1])
 
     def check_nodes_in_sync():

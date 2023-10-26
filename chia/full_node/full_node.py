@@ -1109,6 +1109,10 @@ class FullNode:
                     extending_main_chain: bool = peak is None or (
                         peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
                     )
+                    # if we're simply extending the main chain, it's important
+                    # *not* to pass in a ForkInfo object, as it can potentially
+                    # accrue a large state (with no value, since we can validate
+                    # against the CoinStore)
                     if not extending_main_chain:
                         if fork_point_height == 0:
                             fork_info = ForkInfo(-1, -1, bytes32([0] * 32))

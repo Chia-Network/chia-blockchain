@@ -3188,6 +3188,9 @@ class TestReorgs:
         assert reorg_blocks[num_blocks_chain_2_start - 1] == default_10000_blocks[num_blocks_chain_2_start - 1]
         assert reorg_blocks[num_blocks_chain_2_start] != default_10000_blocks[num_blocks_chain_2_start]
 
+        # one aspect of this test is to make sure we can reorg blocks that are
+        # not in the cache. We need to explicitly prune the cache to get that
+        # effect.
         b.clean_block_records()
 
         first_peak = b.get_peak()
