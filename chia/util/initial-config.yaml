@@ -571,7 +571,7 @@ wallet:
   dns_servers: *dns_servers
 
   full_node_peers:
-    - host: *self_hostname
+    - host: chia-cadt-demo.chiamanaged.com
       port: 58444
   # The path of NFT off-chain metadata cache
   nft_metadata_cache_path: "nft_cache"
