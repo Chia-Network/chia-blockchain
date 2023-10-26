@@ -59,6 +59,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
@@ -534,6 +535,7 @@ class FullNode:
             self._segment_task = None
 
         try:
+            peer_info = peer.get_peer_logging()
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -542,7 +544,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer, None)
+                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, None)
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1066,7 +1068,7 @@ class FullNode:
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
                 success, state_change_summary, err = await self.add_block_batch(
-                    blocks, peer, None if advanced_peak else uint32(fork_point_height), summaries
+                    blocks, peer.get_peer_logging(), None if advanced_peak else uint32(fork_point_height), summaries
                 )
                 if success is False:
                     await peer.close(600)
@@ -1158,7 +1160,7 @@ class FullNode:
     async def add_block_batch(
         self,
         all_blocks: List[FullBlock],
-        peer: WSChiaConnection,
+        peer_info: PeerInfo,
         fork_point: Optional[uint32],
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
@@ -1189,9 +1191,7 @@ class FullNode:
         )
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
-                self.log.error(
-                    f"Invalid block from peer: {peer.get_peer_logging()} {Err(pre_validation_results[i].error)}"
-                )
+                self.log.error(f"Invalid block from peer: {peer_info} {Err(pre_validation_results[i].error)}")
                 return False, None, Err(pre_validation_results[i].error)
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
@@ -1221,7 +1221,7 @@ class FullNode:
                     )
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
-                    self.log.error(f"Error: {error}, Invalid block from peer: {peer.get_peer_logging()} ")
+                    self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
             block_record = self.blockchain.block_record(block.header_hash)
             if block_record.sub_epoch_summary_included is not None:
