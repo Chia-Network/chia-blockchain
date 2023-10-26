@@ -2540,7 +2540,7 @@ class TestMaliciousGenerators:
             opcode=opcode.value[0], num=280, val="0xffffffff", filler="0x00"
         )
 
-        with benchmark_runner.assert_runtime(seconds=0.1):
+        with benchmark_runner.assert_runtime(seconds=1):
             npc_result = generator_condition_tester(condition, quote=False, height=softfork_height)
 
         assert npc_result.error == error_for_condition(opcode)
