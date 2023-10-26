@@ -65,7 +65,6 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
-from tests.plot_sync.util import get_dummy_connection
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -125,17 +124,13 @@ async def test_sync_no_farmer(
 
     # full node 1 has the complete chain
     for block_batch in to_batches(blocks, 64):
-        await full_node_1.full_node.add_block_batch(
-            block_batch.entries, get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random)), None
-        )
+        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
 
     target_peak = full_node_1.full_node.blockchain.get_peak()
 
     # full node 2 is behind by 800 blocks
     for block_batch in to_batches(blocks[:-800], 64):
-        await full_node_2.full_node.add_block_batch(
-            block_batch.entries, get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random)), None
-        )
+        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
 
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)

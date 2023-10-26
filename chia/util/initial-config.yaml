@@ -411,6 +411,10 @@ full_node:
   # timeout for weight proof request
   weight_proof_timeout: &weight_proof_timeout 360
 
+  # when the full node enters sync-mode, we wait until we have collected peaks
+  # from at least 3 peers, or until we've waitied this many seconds
+  max_sync_wait: 30
+
   # when enabled, the full node will print a pstats profile to the root_dir/profile every second
   # analyze with chia/utils/profiler.py
   enable_profiler: False
