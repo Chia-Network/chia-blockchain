@@ -72,6 +72,6 @@ class TestMempoolPerformance:
 
         blocks = bt.get_consecutive_blocks(3, blocks)
 
-        with benchmark_runner.assert_runtime(seconds=0.45):
+        with benchmark_runner.assert_runtime(seconds=0.1):
             for block in blocks[-3:]:
                 await full_node_api_1.full_node.add_block(block)
