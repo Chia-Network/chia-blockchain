@@ -72,7 +72,7 @@ class NotificationStore:
                 (
                     notification.coin_id,
                     notification.message,
-                    bytes(notification.amount),
+                    notification.amount.stream_to_bytes(),
                     notification.height,
                 ),
             )
