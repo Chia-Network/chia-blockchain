@@ -143,6 +143,10 @@ async def setup_simulators_and_wallets(
     disable_capabilities: Optional[List[Capability]] = None,
 ) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
+        if config_overrides is None:
+            config_overrides = {}
+        if "full_node.max_sync_wait" not in config_overrides:
+            config_overrides["full_node.max_sync_wait"] = 1
         async with setup_simulators_and_wallets_inner(
             db_version,
             consensus_constants,
