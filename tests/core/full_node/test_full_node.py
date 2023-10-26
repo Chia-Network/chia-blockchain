@@ -54,6 +54,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.misc import to_batches
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -64,6 +65,7 @@ from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.make_block_generator import make_spend_bundle
 from tests.core.mempool.test_mempool_performance import wallet_height_at_least
 from tests.core.node_height import node_height_at_least
+from tests.plot_sync.util import get_dummy_connection
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -104,6 +106,49 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
+
+
+@pytest.mark.asyncio
+async def test_sync_no_farmer(
+    setup_two_nodes_and_wallet,
+    default_1000_blocks: List[FullBlock],
+    self_hostname: str,
+    seeded_random: random.Random,
+):
+    nodes, wallets, bt = setup_two_nodes_and_wallet
+    server_1 = nodes[0].full_node.server
+    server_2 = nodes[1].full_node.server
+    full_node_1 = nodes[0]
+    full_node_2 = nodes[1]
+
+    blocks = default_1000_blocks
+
+    # full node 1 has the complete chain
+    for block_batch in to_batches(blocks, 64):
+        await full_node_1.full_node.add_block_batch(
+            block_batch.entries, get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random)), None
+        )
+
+    target_peak = full_node_1.full_node.blockchain.get_peak()
+
+    # full node 2 is behind by 800 blocks
+    for block_batch in to_batches(blocks[:-800], 64):
+        await full_node_2.full_node.add_block_batch(
+            block_batch.entries, get_dummy_connection(NodeType.FULL_NODE, bytes32.random(seeded_random)), None
+        )
+
+    # connect the nodes and wait for node 2 to sync up to node 1
+    await connect_and_get_peer(server_1, server_2, self_hostname)
+
+    def check_nodes_in_sync():
+        p1 = full_node_2.full_node.blockchain.get_peak()
+        p2 = full_node_1.full_node.blockchain.get_peak()
+        return p1 == p2
+
+    await time_out_assert(40, check_nodes_in_sync)
+
+    assert full_node_1.full_node.blockchain.get_peak() == target_peak
+    assert full_node_2.full_node.blockchain.get_peak() == target_peak
 
 
 class TestFullNodeBlockCompression:
