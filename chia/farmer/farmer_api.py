@@ -701,7 +701,7 @@ class FarmerAPI:
                         farmer_reward_address,
                         pool_target,
                         pool_target_signature,
-                        harvester_overwrote_reward_address
+                        include_foliage_block_data=harvester_overwrote_reward_address
                     )
         else:
             # This is a response with block signatures
