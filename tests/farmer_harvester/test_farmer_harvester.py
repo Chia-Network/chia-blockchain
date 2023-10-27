@@ -350,14 +350,9 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
     plot_id_bytes = bytes32(plot.prover.get_id())
     plot_id: str = plot_id_bytes.hex()
 
-    # challenge_chain_sp = plot_id_bytes
-    # reward_chain_sp = bytes32(b"2" * 32)
-
-    # vdf_challenge_hash: bytes32 #= bytes32(bytes.fromhex('2000000000000000000000000000000000000000000000000000000000000000'))
-    # pos_challenge: bytes32 #= calculate_pos_challenge(plot_id_bytes, vdf_challenge_hash, challenge_chain_sp)
+    # Create fake SP
     sp_index = uint8(1)
 
-    # Create fake SP
     blockchain = full_node.blockchain
     sub_slot_total_iters = uint128(0)
 
@@ -484,7 +479,7 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
             data: RequestSignedValues = RequestSignedValues.from_bytes(message.data)
             assert data.foliage_block_data is not None
             assert data.foliage_block_data.farmer_reward_puzzle_hash == farmer_reward_address
-        elif message.type == ProtocolMessageTypes.declare_proof_of_space:
+        elif message.type == ProtocolMessageTypes.declare_proof_of_space.value:
             data: DeclareProofOfSpace = DeclareProofOfSpace.from_bytes(message.data)
             assert data.include_foliage_block_data is True
 
@@ -503,26 +498,12 @@ async def test_farmer_handles_farmer_reward_address_overwrite(
         # peer = farmer_proof_of_space if msg.type is ProtocolMessageTypes.request_signed_values else farmer_peer_harvester
         await send_message(full_node_peer_farmer, msg)
 
-    # async def send_message_intercept(*args, **kwargs):
-    #     s = self
-    #     print('got it')
-    #     # WSChiaConnection
-
     full_node_peer_farmer = full_node.server.all_connections[farmer.server.node_id]
     farmer_peer_harvester = farmer.server.all_connections[harvester.server.node_id]
 
     mocker.patch.object(farmer.server, 'send_to_all', side_effect=send_intercept_farmer)
     mocker.patch.object(full_node_peer_farmer, 'send_message', side_effect=send_intercept_full_node)
 
-    # mocker.patch('chia.server.ws_connection.WSChiaConnection.send_message', side_effect=send_message_intercept)
-    # mocker.patch('chia.server.server.ChiaServer.send_to_all', object=farmer.server, side_effect=send_intercept_farmer)
-    # mocker.patch('chia.server.server.ChiaServer.send_to_all', object=full_node.server, side_effect=send_intercept_full_node)
     await harvester.server.send_to_all([msg], NodeType.FARMER)
 
-
     await asyncio.sleep(10000)
-    # await time_out_assert(555, log_is_ready)
-
-    # # We fail the sps record check
-    expected_error = f"Do not have challenge hash {pos_challenge}"
-    assert expected_error in caplog.text
