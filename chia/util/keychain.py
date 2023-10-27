@@ -97,11 +97,11 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
 
-    four_char_dict = {word[:min(4, len(word))]: word for word in bip39_word_list().splitlines()}
+    four_char_dict = {word[: min(4, len(word))]: word for word in bip39_word_list().splitlines()}
     full_words: List[str] = []
     for i in range(0, len(mnemonic)):
         word = mnemonic[i]
-        full_word = four_char_dict.get(word[:min(4, len(word))])
+        full_word = four_char_dict.get(word[: min(4, len(word))])
         if not full_word:
             raise ValueError(f"'{word}' is not in the mnemonic dictionary; may be misspelled")
         full_words.append(full_word)
