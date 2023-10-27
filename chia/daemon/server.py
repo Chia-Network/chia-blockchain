@@ -372,7 +372,7 @@ class WebSocketServer:
                                     show_traceback=False,
                                 ):
                                     await connection.ping()
-                            except:  # noqa E722 pylint: disable=bare-except
+                            except:  # noqa E722
                                 self.remove_connection(connection)
                                 await connection.close()
 
