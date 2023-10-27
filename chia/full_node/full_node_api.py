@@ -946,7 +946,7 @@ class FullNodeAPI:
 
             foliage_block_data = None
             if request.include_foliage_block_data is True:
-                foliage_block_data = unfinished_block.foliage
+                foliage_block_data = unfinished_block.foliage.foliage_block_data
 
             message = farmer_protocol.RequestSignedValues(
                 quality_string,

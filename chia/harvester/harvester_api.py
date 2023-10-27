@@ -337,7 +337,8 @@ class HarvesterAPI:
             request.sp_hash,
             local_sk.get_g1(),
             farmer_public_key,
-            message_signatures
+            message_signatures,
+            None
         )
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
