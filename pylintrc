@@ -2,7 +2,7 @@
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code
-extension-pkg-whitelist=
+extension-pkg-allow-list=lxml,zstd
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
@@ -65,10 +65,10 @@ disable=raw-checker-failed,
         arguments-differ,
         arguments-renamed,
         attribute-defined-outside-init,
+        bare-except,
         broad-exception-caught,
         broad-exception-raised,
         cell-var-from-loop,
-        c-extension-no-member,
         chained-comparison,
         comparison-with-callable,
         consider-iterating-dictionary,
