@@ -11,7 +11,7 @@ import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chiavdf import create_discriminant, prove
 
@@ -69,6 +69,11 @@ def prove_bluebox_slow(payload: bytes) -> bytes:
 
 
 class Timelord:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Timelord", None)
+
     @property
     def server(self) -> ChiaServer:
         # This is a stop gap until the class usage is refactored such the values of
