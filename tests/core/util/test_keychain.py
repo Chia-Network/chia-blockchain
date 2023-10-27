@@ -26,8 +26,8 @@ from chia.util.keychain import (
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
-    mnemonic_to_seed,
     mnemonic_from_short_words,
+    mnemonic_to_seed,
 )
 
 mnemonic = (
