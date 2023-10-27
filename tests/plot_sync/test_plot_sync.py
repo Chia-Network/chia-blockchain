@@ -544,7 +544,7 @@ async def test_farmer_restart(environment: Environment) -> None:
     assert not env.harvesters[0].plot_manager._refreshing_enabled
     assert not env.harvesters[1].plot_manager._refreshing_enabled
     # Start the farmer, wait for the handshake and make sure the receivers come back
-    await env.farmer_service._start()
+    await env.farmer_service.start()
     await time_out_assert(5, env.handshake_done, True, 0)
     await time_out_assert(5, env.handshake_done, True, 1)
     assert len(env.farmer.plot_sync_receivers) == 2

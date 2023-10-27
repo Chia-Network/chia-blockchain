@@ -173,29 +173,31 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    async with service.manage():
-        yield service
 
-    if not reuse_db and db_path.exists():
-        # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
+    try:
+        async with service.manage():
+            yield service
+    finally:
+        if not reuse_db and db_path.exists():
+            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-        # 3.11 switched to using functools.lru_cache for the statement cache.
-        # See #87028. This introduces a reference cycle involving the connection
-        # object, so the connection object no longer gets immediately
-        # deallocated, not until, for example, gc.collect() is called to break
-        # the cycle.
-        gc.collect()
-        for _ in range(10):
-            try:
-                db_path.unlink()
-                break
-            except PermissionError as e:
-                print(f"db_path.unlink(): {e}")
-                time.sleep(0.1)
-                # filesystem operations are async on windows
-                # [WinError 32] The process cannot access the file because it is
-                # being used by another process
-                pass
+            # 3.11 switched to using functools.lru_cache for the statement cache.
+            # See #87028. This introduces a reference cycle involving the connection
+            # object, so the connection object no longer gets immediately
+            # deallocated, not until, for example, gc.collect() is called to break
+            # the cycle.
+            gc.collect()
+            for _ in range(10):
+                try:
+                    db_path.unlink()
+                    break
+                except PermissionError as e:
+                    print(f"db_path.unlink(): {e}")
+                    time.sleep(0.1)
+                    # filesystem operations are async on windows
+                    # [WinError 32] The process cannot access the file because it is
+                    # being used by another process
+                    pass
 
 
 @asynccontextmanager
@@ -320,30 +322,31 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        async with service.manage():
-            yield service
+        try:
+            async with service.manage():
+                yield service
+        finally:
+            if db_path.exists():
+                # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
 
-        if db_path.exists():
-            # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
-
-            # 3.11 switched to using functools.lru_cache for the statement cache.
-            # See #87028. This introduces a reference cycle involving the connection
-            # object, so the connection object no longer gets immediately
-            # deallocated, not until, for example, gc.collect() is called to break
-            # the cycle.
-            gc.collect()
-            for _ in range(10):
-                try:
-                    db_path.unlink()
-                    break
-                except PermissionError as e:
-                    print(f"db_path.unlink(): {e}")
-                    time.sleep(0.1)
-                    # filesystem operations are async on windows
-                    # [WinError 32] The process cannot access the file because it is
-                    # being used by another process
-                    pass
-        keychain.delete_all_keys()
+                # 3.11 switched to using functools.lru_cache for the statement cache.
+                # See #87028. This introduces a reference cycle involving the connection
+                # object, so the connection object no longer gets immediately
+                # deallocated, not until, for example, gc.collect() is called to break
+                # the cycle.
+                gc.collect()
+                for _ in range(10):
+                    try:
+                        db_path.unlink()
+                        break
+                    except PermissionError as e:
+                        print(f"db_path.unlink(): {e}")
+                        time.sleep(0.1)
+                        # filesystem operations are async on windows
+                        # [WinError 32] The process cannot access the file because it is
+                        # being used by another process
+                        pass
+            keychain.delete_all_keys()
 
 
 @asynccontextmanager

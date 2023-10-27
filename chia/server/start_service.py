@@ -190,7 +190,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 
-    async def _start(self) -> None:
+    async def start(self) -> None:
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return None
@@ -253,7 +253,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         # TODO: should we really allow not starting?
         try:
             if start:
-                await self._start()
+                await self.start()
             yield
         finally:
             self.stop()
