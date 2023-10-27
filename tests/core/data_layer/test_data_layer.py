@@ -123,6 +123,7 @@ async def test_plugin_requests_use_custom_headers(
     )
 
     async def wallet_rpc_init() -> WalletRpcClient:
+        # this return is not presently used for this test
         return None  # type: ignore[return-value]
 
     data_layer = DataLayer.create(

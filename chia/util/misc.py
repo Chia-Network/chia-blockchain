@@ -286,6 +286,7 @@ class SignalHandlers:
 
 @dataclass
 class SplitManager:
+    # NOTE: only for transitional testing use, please avoid usage
     manager: ContextManager[object]
     _entered: bool = False
     _exited: bool = False
@@ -320,6 +321,7 @@ class SplitManager:
 
 @dataclass
 class SplitAsyncManager:
+    # NOTE: only for transitional testing use, please avoid usage
     manager: AsyncContextManager[object]
     _entered: bool = False
     _exited: bool = False
@@ -354,6 +356,7 @@ class SplitAsyncManager:
 
 @contextlib.contextmanager
 def split_manager(manager: ContextManager[object]) -> Iterator[SplitManager]:
+    # NOTE: only for transitional testing use, please avoid usage
     split = SplitManager(manager=manager)
     try:
         yield split
@@ -363,6 +366,7 @@ def split_manager(manager: ContextManager[object]) -> Iterator[SplitManager]:
 
 @contextlib.asynccontextmanager
 async def split_async_manager(manager: AsyncContextManager[object]) -> AsyncIterator[SplitAsyncManager]:
+    # NOTE: only for transitional testing use, please avoid usage
     split = SplitAsyncManager(manager=manager)
     try:
         yield split

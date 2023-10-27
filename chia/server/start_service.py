@@ -232,7 +232,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self.self_hostname,
                 self.daemon_port,
                 uint16(rpc_port),
-                self._stop,
+                self.stop,
                 self.root_path,
                 self.config,
                 self._connect_to_daemon,
@@ -243,7 +243,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
                 async with self.manage():
-                    await self._wait_closed()
+                    await self.wait_closed()
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
@@ -256,8 +256,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 await self._start()
             yield
         finally:
-            self._stop()
-            await self._wait_closed()
+            self.stop()
+            await self.wait_closed()
 
     def add_peer(self, peer: UnresolvedPeerInfo) -> None:
         self._connect_peers.add(peer)
@@ -295,9 +295,9 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         if ignore:
             return
 
-        self._stop()
+        self.stop()
 
-    def _stop(self) -> None:
+    def stop(self) -> None:
         if not self._is_stopping.is_set():
             self._is_stopping.set()
             self._log.info(f"Stopping service {self._service_name} at port {self._advertised_port} ...")
@@ -321,7 +321,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
                 self._log.info("Closing RPC server")
                 self.rpc_server.close()
 
-    async def _wait_closed(self) -> None:
+    async def wait_closed(self) -> None:
         await self._is_stopping.wait()
 
         self._log.info("Waiting for socket to be closed (if opened)")
