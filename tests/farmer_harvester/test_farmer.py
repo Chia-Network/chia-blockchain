@@ -4,7 +4,8 @@ import dataclasses
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from types import TracebackType
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -12,10 +13,16 @@ from pytest_mock import MockerFixture
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
+from chia.farmer.farmer_api import FarmerAPI
+from chia.harvester.harvester import Harvester
+from chia.harvester.harvester_api import HarvesterAPI
 from chia.pools.pool_config import PoolWalletConfig
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.harvester_protocol import NewProofOfSpace, RespondSignatures
 from chia.protocols.pool_protocol import PoolErrorCode
+from chia.server.start_service import Service
+from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import (
     ProofOfSpace,
     generate_plot_public_key,
@@ -25,7 +32,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from tests.conftest import HarvesterFarmerEnvironment
-from tests.util.misc import Marks
+from tests.util.misc import Marks, datacases
 
 log = logging.getLogger(__name__)
 
@@ -645,29 +652,16 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     assert_stats_24h("missing_partials_24h")
 
 
+@dataclass
 class DummyPoolResponse:
     ok: bool
     status: int
-    error_code: Optional[int]
-    error_message: Optional[str]
-    new_difficulty: Optional[int]
+    error_code: Optional[int] = None
+    error_message: Optional[str] = None
+    new_difficulty: Optional[int] = None
 
-    def __init__(
-        self,
-        ok: bool,
-        status: int,
-        error_code: Optional[int] = None,
-        error_msg: Optional[str] = None,
-        new_difficulty: Optional[int] = None,
-    ):
-        self.ok = ok
-        self.status = status
-        self.error_code = error_code
-        self.error_message = error_msg
-        self.new_difficulty = new_difficulty
-
-    async def text(self):
-        json_dict = dict()
+    async def text(self) -> str:
+        json_dict: Dict[str, Any] = dict()
         if self.error_code:
             json_dict["error_code"] = self.error_code
             json_dict["error_message"] = self.error_message if self.error_message else "error-msg"
@@ -676,14 +670,19 @@ class DummyPoolResponse:
 
         return json.dumps(json_dict)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> DummyPoolResponse:
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         pass
 
 
-def create_valid_pos(farmer: Farmer):
+def create_valid_pos(farmer: Farmer) -> Tuple[farmer_protocol.NewSignagePoint, ProofOfSpace, NewProofOfSpace]:
     case = NewProofOfSpaceCase.create_verified_quality_case(
         difficulty=uint64(1),
         sub_slot_iters=uint64(1000000000000),
@@ -751,7 +750,7 @@ def create_valid_pos(farmer: Farmer):
     return sp, pos, new_pos
 
 
-def override_pool_state(overrides: Dict[str, Any]):
+def override_pool_state(overrides: Dict[str, Any]) -> Dict[str, Any]:
     pool_state = {
         "points_found_since_start": 0,
         # Original item format here is (timestamp, value) but we'll ignore timestamp part
@@ -776,88 +775,94 @@ def override_pool_state(overrides: Dict[str, Any]):
     return pool_state
 
 
-@pytest.mark.parametrize(
-    argnames="pool_response_case,expected_pool_state",
-    argvalues=[
-        pytest.param(
-            DummyPoolResponse(True, 200, new_difficulty=123),
-            override_pool_state(
-                {
-                    "points_found_since_start": 1,
-                    "points_found_24h": [1],
-                    "points_acknowledged_since_start": 123,
-                    "points_acknowledged_24h": [123],
-                    "valid_partials_since_start": 1,
-                    "valid_partials_24h": [1],
-                }
-            ),
-            id="valid_response",
+@dataclass
+class PoolStateCase:
+    id: str
+    pool_response: DummyPoolResponse
+    expected_pool_state: Dict[str, Any]
+    marks: Marks = ()
+
+
+@datacases(
+    PoolStateCase(
+        "valid_response",
+        DummyPoolResponse(True, 200, new_difficulty=123),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "points_acknowledged_since_start": 123,
+                "points_acknowledged_24h": [123],
+                "valid_partials_since_start": 1,
+                "valid_partials_24h": [1],
+            }
         ),
-        pytest.param(
-            DummyPoolResponse(False, 500),
-            override_pool_state(
-                {
-                    "points_found_since_start": 1,
-                    "points_found_24h": [1],
-                    "invalid_partials_since_start": 1,
-                    "invalid_partials_24h": [1],
-                }
-            ),
-            id="response_not_ok",
+    ),
+    PoolStateCase(
+        "response_not_ok",
+        DummyPoolResponse(False, 500),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
+            }
         ),
-        pytest.param(
-            DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.TOO_LATE.value)),
-            override_pool_state(
-                {
-                    "points_found_since_start": 1,
-                    "points_found_24h": [1],
-                    "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.TOO_LATE.value)}],
-                    "stale_partials_since_start": 1,
-                    "stale_partials_24h": [1],
-                }
-            ),
-            id="stale_partial",
+    ),
+    PoolStateCase(
+        "stale_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.TOO_LATE.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.TOO_LATE.value)}],
+                "stale_partials_since_start": 1,
+                "stale_partials_24h": [1],
+            }
         ),
-        pytest.param(
-            DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)),
-            override_pool_state(
-                {
-                    "points_found_since_start": 1,
-                    "points_found_24h": [1],
-                    "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)}],
-                    "insufficient_partials_since_start": 1,
-                    "insufficient_partials_24h": [1],
-                }
-            ),
-            id="insufficient_partial",
+    ),
+    PoolStateCase(
+        "insufficient_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.PROOF_NOT_GOOD_ENOUGH.value)}],
+                "insufficient_partials_since_start": 1,
+                "insufficient_partials_24h": [1],
+            }
         ),
-        pytest.param(
-            DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.SERVER_EXCEPTION.value)),
-            override_pool_state(
-                {
-                    "points_found_since_start": 1,
-                    "points_found_24h": [1],
-                    "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.SERVER_EXCEPTION.value)}],
-                    "invalid_partials_since_start": 1,
-                    "invalid_partials_24h": [1],
-                }
-            ),
-            id="other_failed_partial",
+    ),
+    PoolStateCase(
+        "other_failed_partial",
+        DummyPoolResponse(True, 200, error_code=uint16(PoolErrorCode.SERVER_EXCEPTION.value)),
+        override_pool_state(
+            {
+                "points_found_since_start": 1,
+                "points_found_24h": [1],
+                "pool_errors_24h": [{"error_code": uint16(PoolErrorCode.SERVER_EXCEPTION.value)}],
+                "invalid_partials_since_start": 1,
+                "invalid_partials_24h": [1],
+            }
         ),
-    ],
+    ),
 )
 @pytest.mark.asyncio
 async def test_farmer_pool_response(
     mocker: MockerFixture,
-    harvester_farmer_environment: HarvesterFarmerEnvironment,
-    pool_response_case: DummyPoolResponse,
-    expected_pool_state: Dict[str, Any],
+    farmer_one_harvester: Tuple[List[Service[Harvester, HarvesterAPI]], Service[Farmer, FarmerAPI], BlockTools],
+    case: PoolStateCase,
 ) -> None:
-    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
+    _, farmer_service, _ = farmer_one_harvester
+    assert farmer_service.rpc_server is not None
     farmer_api = farmer_service._api
 
     sp, pos, new_pos = create_valid_pos(farmer_api.farmer)
-    p2_singleton_puzzle_hash = pos.pool_contract_puzzle_hash
+    assert pos.pool_contract_puzzle_hash is not None
+    p2_singleton_puzzle_hash: bytes32 = pos.pool_contract_puzzle_hash
 
     assert (
         verify_and_get_quality_string(
@@ -866,9 +871,12 @@ async def test_farmer_pool_response(
         is not None
     )
 
-    mock_http_post = mocker.patch("aiohttp.ClientSession.post", return_value=pool_response_case)
+    pool_response = case.pool_response
+    expected_pool_state = case.expected_pool_state
 
-    peer: Any = DummyHarvesterPeer(False)
+    mock_http_post = mocker.patch("aiohttp.ClientSession.post", return_value=pool_response)
+
+    peer = cast(WSChiaConnection, DummyHarvesterPeer(False))
     await farmer_api.new_proof_of_space(new_pos, peer)
 
     mock_http_post.assert_called_once()
