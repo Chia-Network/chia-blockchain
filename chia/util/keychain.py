@@ -112,8 +112,6 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
 def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     full_mnemonic_str = mnemonic_from_short_words(mnemonic_str)
     mnemonic: List[str] = full_mnemonic_str.split(" ")
-    if len(mnemonic) not in [12, 15, 18, 21, 24]:
-        raise ValueError("Invalid mnemonic length")
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
