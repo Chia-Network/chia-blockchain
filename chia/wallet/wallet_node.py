@@ -9,7 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiosqlite
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -110,6 +110,11 @@ class Balance(Streamable):
 
 @dataclasses.dataclass
 class WalletNode:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("WalletNode", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants

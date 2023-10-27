@@ -7,7 +7,7 @@ import logging
 import multiprocessing
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, cast
 
 from typing_extensions import Literal
 
@@ -44,6 +44,11 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Harvester", None)
+
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path

@@ -8,7 +8,7 @@ import traceback
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 
@@ -32,6 +32,11 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class Crawler:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Crawler", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
