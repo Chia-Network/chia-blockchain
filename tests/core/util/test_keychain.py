@@ -27,6 +27,7 @@ from chia.util.keychain import (
     bytes_to_mnemonic,
     generate_mnemonic,
     mnemonic_to_seed,
+    mnemonic_from_short_words,
 )
 
 mnemonic = (
@@ -163,6 +164,28 @@ class TestKeychain:
 
             assert bytes_from_mnemonic(mnemonic) == entropy_bytes
             assert bytes_to_mnemonic(entropy_bytes) == mnemonic
+            assert mnemonic_to_seed(mnemonic) == seed
+
+    def test_bip39_test_vectors_short(self):
+        """
+        Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
+        """
+        with open("tests/util/bip39_test_vectors_short.json") as f:
+            all_vectors = json.loads(f.read())
+
+        with open("tests/util/bip39_test_vectors.json") as f:
+            full_vectors = json.loads(f.read())
+
+        for idx, vector_list in enumerate(all_vectors["english"]):
+            entropy_bytes = bytes.fromhex(vector_list[0])
+            mnemonic = vector_list[1]
+            seed = bytes.fromhex(vector_list[2])
+
+            full_mnemonic = full_vectors["english"][idx][1]
+
+            assert mnemonic_from_short_words(mnemonic) == full_mnemonic
+            assert bytes_from_mnemonic(mnemonic) == entropy_bytes
+            assert bytes_to_mnemonic(entropy_bytes) == full_mnemonic
             assert mnemonic_to_seed(mnemonic) == seed
 
     def test_utf8_nfkd(self):
