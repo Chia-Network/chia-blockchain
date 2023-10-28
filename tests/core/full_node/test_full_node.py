@@ -5,7 +5,6 @@ import dataclasses
 import logging
 import random
 import time
-import traceback
 from typing import Dict, List, Optional, Tuple
 
 import anyio
@@ -120,50 +119,47 @@ async def test_sync_no_farmer(
     seeded_random: random.Random,
     request: SubRequest,
 ):
-    try:
-        with anyio.fail_after(delay=5 * 60):
-            print(f"checkpoint: {request.node.name}: A")
-            nodes, wallets, bt = setup_two_nodes_and_wallet
-            server_1 = nodes[0].full_node.server
-            server_2 = nodes[1].full_node.server
-            full_node_1 = nodes[0]
-            full_node_2 = nodes[1]
+    with anyio.fail_after(delay=5 * 60):
+        print(f"checkpoint: {request.node.name}: A")
+        nodes, wallets, bt = setup_two_nodes_and_wallet
+        server_1 = nodes[0].full_node.server
+        server_2 = nodes[1].full_node.server
+        full_node_1 = nodes[0]
+        full_node_2 = nodes[1]
 
-            blocks = default_1000_blocks
+        blocks = default_1000_blocks
 
-            # full node 1 has the complete chain
-            print(f"checkpoint: {request.node.name}: B")
-            for block_batch in to_batches(blocks, 64):
-                print(f"checkpoint: {request.node.name}: C")
-                await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
-                print(f"checkpoint: {request.node.name}: D")
+        # full node 1 has the complete chain
+        print(f"checkpoint: {request.node.name}: B")
+        for block_batch in to_batches(blocks, 64):
+            print(f"checkpoint: {request.node.name}: C")
+            await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+            print(f"checkpoint: {request.node.name}: D")
 
-            target_peak = full_node_1.full_node.blockchain.get_peak()
+        target_peak = full_node_1.full_node.blockchain.get_peak()
 
-            # full node 2 is behind by 800 blocks
-            print(f"checkpoint: {request.node.name}: E")
-            for block_batch in to_batches(blocks[:-800], 64):
-                print(f"checkpoint: {request.node.name}: F")
-                await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
-                print(f"checkpoint: {request.node.name}: G")
+        # full node 2 is behind by 800 blocks
+        print(f"checkpoint: {request.node.name}: E")
+        for block_batch in to_batches(blocks[:-800], 64):
+            print(f"checkpoint: {request.node.name}: F")
+            await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+            print(f"checkpoint: {request.node.name}: G")
 
-            # connect the nodes and wait for node 2 to sync up to node 1
-            print(f"checkpoint: {request.node.name}: H")
-            await connect_and_get_peer(server_1, server_2, self_hostname)
+        # connect the nodes and wait for node 2 to sync up to node 1
+        print(f"checkpoint: {request.node.name}: H")
+        await connect_and_get_peer(server_1, server_2, self_hostname)
 
-            def check_nodes_in_sync():
-                p1 = full_node_2.full_node.blockchain.get_peak()
-                p2 = full_node_1.full_node.blockchain.get_peak()
-                return p1 == p2
+        def check_nodes_in_sync():
+            p1 = full_node_2.full_node.blockchain.get_peak()
+            p2 = full_node_1.full_node.blockchain.get_peak()
+            return p1 == p2
 
-            print(f"checkpoint: {request.node.name}: I")
-            await time_out_assert(40, check_nodes_in_sync)
-            print(f"checkpoint: {request.node.name}: J")
+        print(f"checkpoint: {request.node.name}: I")
+        await time_out_assert(40, check_nodes_in_sync)
+        print(f"checkpoint: {request.node.name}: J")
 
-            assert full_node_1.full_node.blockchain.get_peak() == target_peak
-            assert full_node_2.full_node.blockchain.get_peak() == target_peak
-    except TimeoutError:
-        traceback.print_exc()
+        assert full_node_1.full_node.blockchain.get_peak() == target_peak
+        assert full_node_2.full_node.blockchain.get_peak() == target_peak
 
 
 class TestFullNodeBlockCompression:
