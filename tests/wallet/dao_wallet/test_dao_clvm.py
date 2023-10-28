@@ -645,6 +645,16 @@ def test_spend_p2_singleton() -> None:
     conds = spend_p2_puz.run(spend_p2_sol)
     assert conds
 
+    # test deduplicate cat_parent_amount_list
+    cat_parent_amt_list = [
+        [cat_tail_1, [[b"b" * 32, 100], [b"c" * 32, 400], [b"b" * 32, 100], [b"b" * 32, 100]]],
+        [cat_tail_2, [[b"e" * 32, 100], [b"f" * 32, 400], [b"f" * 32, 400], [b"e" * 32, 100]]],
+    ]
+
+    spend_p2_sol = Program.to([xch_parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
+    dupe_conds = spend_p2_puz.run(spend_p2_sol)
+    assert dupe_conds == conds
+
 
 def test_merge_p2_singleton() -> None:
     """
