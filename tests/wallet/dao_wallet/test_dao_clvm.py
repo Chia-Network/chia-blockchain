@@ -682,7 +682,7 @@ def test_merge_p2_singleton() -> None:
     aggregator_sol = Program.to([my_id, my_puzhash, 300, 0, [output_parent_id, output_coin_amount]])
     merge_p2_singleton_sol = Program.to([aggregator_sol, 0, 0, 0, 0])
     conds = conditions_dict_for_solution(p2_singleton, merge_p2_singleton_sol, INFINITE_COST)
-    assert len(conds) == 4
+    assert len(conds) == 5
     assert conds[ConditionOpcode.ASSERT_MY_PUZZLEHASH][0].vars[0] == my_puzhash
     assert conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0] == int_to_bytes(0)
 
@@ -694,6 +694,38 @@ def test_merge_p2_singleton() -> None:
     assert len(conds) == 7
     assert conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT][0].vars[0] == std_hash(merged_coin_id)
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[1] == int_to_bytes(300)
+
+    # Test merge and aggregate announcements match up
+    parent_ids = [
+        Program.to("fake_parent_1").get_tree_hash(),
+        Program.to("fake_parent_2").get_tree_hash(),
+        Program.to("fake_parent_3").get_tree_hash(),
+    ]
+    amounts = [1000, 2000, 3000]
+    parent_puzhash_amounts = [[pid, my_puzhash, amt] for pid, amt in zip(parent_ids, amounts)]
+    merge_coin_ids = [Coin(pid, ph, amt).name() for pid, ph, amt in parent_puzhash_amounts]
+
+    output_parent_amount = [output_parent_id, output_coin_amount]
+    output_coin_id = Coin(output_parent_id, my_puzhash, output_coin_amount).name()
+
+    agg_sol = Program.to([[output_coin_id, my_puzhash, output_coin_amount, parent_puzhash_amounts, 0]])
+    agg_conds = conditions_dict_for_solution(p2_singleton, agg_sol, INFINITE_COST)
+    # aggregator coin announces merge coin IDs
+    agg_ccas = [std_hash(output_coin_id + x.vars[0]) for x in agg_conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT]]
+    # aggregator coin asserts 0 from merge coins
+    agg_acas = [x.vars[0] for x in agg_conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT]]
+
+    for coin_id, ppa in zip(merge_coin_ids, parent_puzhash_amounts):
+        sol = Program.to([[coin_id, ppa[1], ppa[2], 0, output_parent_amount]])
+        merge_conds = conditions_dict_for_solution(p2_singleton, sol, INFINITE_COST)
+        # merge coin announces 0
+        cca = std_hash(coin_id + merge_conds[ConditionOpcode.CREATE_COIN_ANNOUNCEMENT][0].vars[0])
+        # merge coin asserts my_id from aggregator
+        aca = merge_conds[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT][0].vars[0]
+        assert aca in agg_ccas
+        assert cca in agg_acas
+        assert merge_conds[ConditionOpcode.ASSERT_MY_COIN_ID][0].vars[0] == coin_id
+
     return
 
 

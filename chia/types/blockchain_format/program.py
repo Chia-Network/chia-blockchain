@@ -108,15 +108,15 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def _run(self, max_cost: int, flags: int, args) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, args: object) -> Tuple[int, Program]:
         prog_args = Program.to(args)
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, args: object) -> Tuple[int, Program]:
         return self._run(max_cost, 0, args)
 
-    def run(self, args) -> Program:
+    def run(self, args: object) -> Program:
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 

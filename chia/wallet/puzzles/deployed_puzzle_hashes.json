@@ -49,7 +49,7 @@
     "p2_parent": "b10ce2d0b18dcf8c21ddfaf55d9b9f0adcbf1e0beb55b1a8b9cad9bbff4e5f22",
     "p2_puzzle_hash": "13e29a62b42cd2ef72a79e4bacdc59733ca6310d65af83d349360d36ec622363",
     "p2_singleton": "40f828d8dd55603f4ff9fbf6b73271e904e69406982f4fbefae2c8dcceaf9834",
-    "p2_singleton_aggregator": "f537d6ec44aa42f45da8180d9c172663d215828f5dbcc6e2f82a96e6536a30c3",
+    "p2_singleton_aggregator": "f79a31fcfe3736cc75720617b4cdcb4376b4b8f8f71108617710612b909a4924",
     "p2_singleton_or_delayed_puzhash": "adb656e0211e2ab4f42069a4c5efc80dc907e7062be08bf1628c8e5b6d94d25b",
     "p2_singleton_via_delegated_puzzle": "9590eaa169e45b655a31d3c06bbd355a3e2b2e3e410d3829748ce08ab249c39e",
     "pool_member_innerpuz": "a8490702e333ddd831a3ac9c22d0fa26d2bfeaf2d33608deb22f0e0123eb0494",
