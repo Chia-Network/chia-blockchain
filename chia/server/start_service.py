@@ -250,7 +250,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
 
     @contextlib.asynccontextmanager
     async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
-        # TODO: should we really allow not starting?
+        # NOTE: avoid start=False, this is presently used for corner case setup type tests
         try:
             if start:
                 await self.start()
