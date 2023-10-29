@@ -148,8 +148,6 @@ async def test_sync_no_farmer(
     assert full_node_1.full_node.blockchain.get_peak() == target_peak
     assert full_node_2.full_node.blockchain.get_peak() == target_peak
 
-    assert False, "success but debugging"
-
 
 class TestFullNodeBlockCompression:
     @pytest.mark.asyncio
