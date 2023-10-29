@@ -107,7 +107,6 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_sync_no_farmer(
     setup_two_nodes_and_wallet,
