@@ -169,6 +169,7 @@ async def test_sync_no_farmer(
             traceback.print_exc(file=f)
             f.flush()
             p("ZZZ")
+            raise
         finally:
             p("ZZZZ")
 
