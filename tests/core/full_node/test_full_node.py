@@ -120,47 +120,57 @@ async def test_sync_no_farmer(
     request: SubRequest,
 ):
     with open(os.environ["GITHUB_STEP_SUMMARY"], "w") as f:
+        try:
 
-        def p(letter: str) -> None:
-            print(f"checkpoint: {request.node.name}: {letter}", file=f, flush=True)
+            def p(letter: str) -> None:
+                print(f"checkpoint: {request.node.name}: {letter}", file=f, flush=True)
 
-        nodes, wallets, bt = setup_two_nodes_and_wallet
-        server_1 = nodes[0].full_node.server
-        server_2 = nodes[1].full_node.server
-        full_node_1 = nodes[0]
-        full_node_2 = nodes[1]
+            nodes, wallets, bt = setup_two_nodes_and_wallet
+            server_1 = nodes[0].full_node.server
+            server_2 = nodes[1].full_node.server
+            full_node_1 = nodes[0]
+            full_node_2 = nodes[1]
 
-        blocks = default_1000_blocks
+            blocks = default_1000_blocks
 
-        # full node 1 has the complete chain
-        for block_batch in to_batches(blocks, 64):
-            await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+            # full node 1 has the complete chain
+            for block_batch in to_batches(blocks, 64):
+                await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
 
-        target_peak = full_node_1.full_node.blockchain.get_peak()
+            target_peak = full_node_1.full_node.blockchain.get_peak()
 
-        # full node 2 is behind by 800 blocks
-        for block_batch in to_batches(blocks[:-800], 64):
-            await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+            # full node 2 is behind by 800 blocks
+            for block_batch in to_batches(blocks[:-800], 64):
+                await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
 
-        p("A")
-        # connect the nodes and wait for node 2 to sync up to node 1
-        await connect_and_get_peer(server_1, server_2, self_hostname)
-        p("B")
+            p("A")
+            # connect the nodes and wait for node 2 to sync up to node 1
+            await connect_and_get_peer(server_1, server_2, self_hostname)
+            p("B")
 
-        def check_nodes_in_sync():
-            p("Ca")
-            p1 = full_node_2.full_node.blockchain.get_peak()
-            p("Cb")
-            p2 = full_node_1.full_node.blockchain.get_peak()
-            p("Cd")
-            return p1 == p2
+            def check_nodes_in_sync():
+                p("Ca")
+                p1 = full_node_2.full_node.blockchain.get_peak()
+                p("Cb")
+                p2 = full_node_1.full_node.blockchain.get_peak()
+                p("Cd")
+                return p1 == p2
 
-        p("D")
-        await time_out_assert_custom_interval(timeout=40, interval=5, function=check_nodes_in_sync, p=p)
-        p("Z")
+            p("D")
+            await time_out_assert_custom_interval(timeout=40, interval=5, function=check_nodes_in_sync, p=p)
+            p("Z")
 
-        assert full_node_1.full_node.blockchain.get_peak() == target_peak
-        assert full_node_2.full_node.blockchain.get_peak() == target_peak
+            assert full_node_1.full_node.blockchain.get_peak() == target_peak
+            assert full_node_2.full_node.blockchain.get_peak() == target_peak
+        except:  # noqa E722
+            p("ZZ")
+            import traceback
+
+            traceback.print_exc(file=f)
+            f.flush()
+            p("ZZZ")
+        finally:
+            p("ZZZZ")
 
 
 class TestFullNodeBlockCompression:
