@@ -132,6 +132,9 @@ async def test_sync_no_farmer(
     for block_batch in to_batches(blocks[:-800], 64):
         await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
 
+    # maybe help the nodes settle before connecting?
+    await asyncio.sleep(10)
+
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)
 
