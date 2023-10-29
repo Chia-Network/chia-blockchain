@@ -51,48 +51,39 @@ def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:
     return timeout + _system_delay
 
 
-async def time_out_assert_custom_interval(timeout: float, interval, function, value=True, *args, p=None, **kwargs):
+async def time_out_assert_custom_interval(
+    timeout: float, interval, function, value=True, *args, p=lambda x: None, **kwargs
+):
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
 
-    if p is not None:
-        p("F")
+    p("F")
     start = time.time()
     while time.time() - start < timeout:
-        if p is not None:
-            p("G")
+        p("G")
         if asyncio.iscoroutinefunction(function):
-            if p is not None:
-                p("H")
+            p("H")
             f_res = await function(*args, **kwargs)
         else:
-            if p is not None:
-                p("I")
+            p("I")
             f_res = function(*args, **kwargs)
-        if p is not None:
-            p("J")
+        p("J")
         if value == f_res:
-            if p is not None:
-                p("K")
+            p("K")
             return None
-        if p is not None:
-            p("L")
+        p("L")
         await asyncio.sleep(interval)
-        if p is not None:
-            p("M")
-    if p is not None:
-        p("N")
+        p("M")
+    p("N")
     assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
 
 
-async def time_out_assert(timeout: int, function, value=True, *args, p=None, **kwargs):
+async def time_out_assert(timeout: int, function, value=True, *args, p=lambda x: None, **kwargs):
     __tracebackhide__ = True
-    if p is not None:
-        p("E")
+    p("E")
     await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs, p=p)
-    if p is not None:
-        p("Y")
+    p("Y")
 
 
 async def time_out_assert_not_none(timeout: float, function, *args, **kwargs):

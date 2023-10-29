@@ -156,7 +156,7 @@ async def test_sync_no_farmer(
             return p1 == p2
 
         p("D")
-        await time_out_assert(40, check_nodes_in_sync, p=p)
+        await time_out_assert_custom_interval(timeout=40, interval=5, function=check_nodes_in_sync, p=p)
         p("Z")
 
         assert full_node_1.full_node.blockchain.get_peak() == target_peak
