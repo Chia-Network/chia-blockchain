@@ -120,7 +120,10 @@ async def test_sync_no_farmer(
     request: SubRequest,
 ):
     with open(os.environ["GITHUB_STEP_SUMMARY"], "w") as f:
-        print(f"checkpoint: {request.node.name}: A", file=f, flush=True)
+
+        def p(letter: str) -> None:
+            print(f"checkpoint: {request.node.name}: {letter}", file=f, flush=True)
+
         nodes, wallets, bt = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -130,33 +133,31 @@ async def test_sync_no_farmer(
         blocks = default_1000_blocks
 
         # full node 1 has the complete chain
-        print(f"checkpoint: {request.node.name}: B", file=f, flush=True)
         for block_batch in to_batches(blocks, 64):
-            print(f"checkpoint: {request.node.name}: C", file=f, flush=True)
             await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
-            print(f"checkpoint: {request.node.name}: D", file=f, flush=True)
 
         target_peak = full_node_1.full_node.blockchain.get_peak()
 
         # full node 2 is behind by 800 blocks
-        print(f"checkpoint: {request.node.name}: E", file=f, flush=True)
         for block_batch in to_batches(blocks[:-800], 64):
-            print(f"checkpoint: {request.node.name}: F", file=f, flush=True)
             await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
-            print(f"checkpoint: {request.node.name}: G", file=f, flush=True)
 
+        p("A")
         # connect the nodes and wait for node 2 to sync up to node 1
-        print(f"checkpoint: {request.node.name}: H", file=f, flush=True)
         await connect_and_get_peer(server_1, server_2, self_hostname)
+        p("B")
 
         def check_nodes_in_sync():
+            p("Ca")
             p1 = full_node_2.full_node.blockchain.get_peak()
+            p("Cb")
             p2 = full_node_1.full_node.blockchain.get_peak()
+            p("Cd")
             return p1 == p2
 
-        print(f"checkpoint: {request.node.name}: I", file=f, flush=True)
-        await time_out_assert(40, check_nodes_in_sync)
-        print(f"checkpoint: {request.node.name}: J", file=f, flush=True)
+        p("D")
+        await time_out_assert(40, check_nodes_in_sync, p=p)
+        p("Z")
 
         assert full_node_1.full_node.blockchain.get_peak() == target_peak
         assert full_node_2.full_node.blockchain.get_peak() == target_peak
