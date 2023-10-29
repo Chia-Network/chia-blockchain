@@ -4,8 +4,9 @@ import asyncio
 import dataclasses
 import logging
 import random
+import sys
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G2Element, PrivateKey
@@ -113,6 +114,7 @@ async def test_sync_no_farmer(
     default_1000_blocks: List[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
+    record_property: Callable[[str, object], None],
 ):
     nodes, wallets, bt = setup_two_nodes_and_wallet
     server_1 = nodes[0].full_node.server
@@ -147,7 +149,8 @@ async def test_sync_no_farmer(
     await time_out_assert(300, check_nodes_in_sync)
     end = time.monotonic()
     duration = end - start
-    assert False, f"ran for: {duration}"
+    record_property("platform", sys.platform)
+    record_property("time_out_assert_duration", duration)
 
     assert full_node_1.full_node.blockchain.get_peak() == target_peak
     assert full_node_2.full_node.blockchain.get_peak() == target_peak
