@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import cProfile
 import random
 import sqlite3
@@ -78,7 +79,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
     root_path = Path("./test-chain").resolve()
     root_path.mkdir(parents=True, exist_ok=True)
     with TempKeyring() as keychain:
-        bt = create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain)
+        bt = asyncio.run(create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain))
         initialize_logging(
             "generate_chain", {"log_level": "DEBUG", "log_stdout": False, "log_syslog": False}, root_path=root_path
         )

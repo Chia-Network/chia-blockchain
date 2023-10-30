@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import copy
 import dataclasses
 import logging
@@ -2264,7 +2263,7 @@ async def create_block_tools_async(
     return bt
 
 
-def create_block_tools(
+async def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
     keychain: Optional[Keychain] = None,
@@ -2275,8 +2274,8 @@ def create_block_tools(
     print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, keychain, config_overrides=config_overrides)
 
-    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
-    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
+    await bt.setup_keys()
+    await bt.setup_plots()
     return bt
 
 
