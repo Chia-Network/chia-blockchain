@@ -149,7 +149,7 @@ async def farm_block_check_singleton(
 async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx_id: bytes32) -> bool:
     try:
         val = await api.get_transaction({"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()})
-    except ValueError:
+    except ValueError:  # pragma: no cover
         return False
 
     return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
@@ -173,7 +173,7 @@ async def check_coin_state(wallet_node: WalletNode, coin_id: bytes32) -> bool:
     if len(coin_states) == 1 and coin_states[0].coin.name() == coin_id:
         return True
 
-    return False
+    return False  # pragma: no cover
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
@@ -201,7 +201,7 @@ async def run_cli_cmd(*args: str, root_path: Path) -> asyncio.subprocess.Process
     stderr = await process.stderr.read()
     if sys.version_info >= (3, 10, 6):
         assert stderr == b""
-    else:
+    else:  # pragma: no cover
         # https://github.com/python/cpython/issues/92841
         assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
     assert process.returncode == 0
@@ -789,7 +789,7 @@ async def offer_setup_fixture(
             except Exception as e:
                 # TODO: more specific exceptions...
                 if "Failed to get root for" not in str(e):
-                    raise
+                    raise  # pragma: no cover
             else:
                 break
             await asyncio.sleep(sleep_time)
@@ -898,14 +898,14 @@ async def process_for_data_layer_keys(
         except Exception as e:
             # TODO: more specific exceptions...
             if "Key not found" not in str(e):
-                raise
+                raise  # pragma: no cover
         else:
             if expected_value is None or value == expected_value:
                 break
         await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=60)
         await asyncio.sleep(sleep_time)
     else:
-        raise Exception("failed to confirm the new data")
+        raise Exception("failed to confirm the new data")  # pragma: no cover
 
 
 @dataclass(frozen=True)
@@ -1579,7 +1579,7 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
         broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
     elif maker_or_taker == "taker":
         broken_taker_offer["taker"][0]["inclusions"][0]["key"] += "ab"
-    else:
+    else:  # pragma: no cover
         raise Exception("invalid maker or taker choice")
 
     offer_bytes = hexstr_to_bytes(broken_taker_offer["offer"])
@@ -1717,7 +1717,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
             break
         await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
-    else:
+    else:  # pragma: no cover
         assert False, "offer was not cancelled"
 
     taker_request = {
@@ -2013,7 +2013,7 @@ async def test_clear_pending_roots(
             assert process.returncode == 0
             if sys.version_info >= (3, 10, 6):
                 assert stderr == b""
-            else:
+            else:  # pragma: no cover
                 # https://github.com/python/cpython/issues/92841
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:

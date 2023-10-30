@@ -133,7 +133,7 @@ async def test_node_internal_must_be_valid_reference(
         values["left"] = bad_child_hash
     elif side == Side.RIGHT:
         values["right"] = bad_child_hash
-    else:
+    else:  # pragma: no cover
         assert False
 
     async with data_store.db_wrapper.writer() as writer:

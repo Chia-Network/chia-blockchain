@@ -16,10 +16,10 @@ source =
 
 [report]
 precision = 1
-exclude_lines =
-  pragma: no cover
+exclude_also =
   abc\.abstractmethod
   typing\.overload
   ^\s*\.\.\.\s*$
   if typing.TYPE_CHECKING:
   if TYPE_CHECKING:
+  ^ *@pytest.mark.skip($|\()
