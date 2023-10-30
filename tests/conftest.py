@@ -76,6 +76,11 @@ from chia.simulator.setup_nodes import setup_farmer_multi_harvester
 from chia.util.keyring_wrapper import KeyringWrapper
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 @pytest.fixture(name="seeded_random")
 def seeded_random_fixture() -> random.Random:
     seeded_random = random.Random()
