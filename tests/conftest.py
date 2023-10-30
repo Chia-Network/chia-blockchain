@@ -15,7 +15,6 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Un
 
 import aiohttp
 import pytest
-import pytest_asyncio
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest

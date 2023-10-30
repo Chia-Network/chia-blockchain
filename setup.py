@@ -51,7 +51,6 @@ dev_dependencies = [
     "py3createtorrent==1.1.0",
     "pylint==3.0.2",
     "pytest==7.4.0",
-    "pytest-asyncio==0.21.1",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-xdist==3.3.1",
