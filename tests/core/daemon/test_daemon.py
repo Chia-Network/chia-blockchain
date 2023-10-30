@@ -748,7 +748,7 @@ async def test_get_keys_for_plotting_error(
 
 @pytest.mark.anyio
 async def test_get_keys_for_plotting_client(daemon_client_with_config_and_keys):
-    client = await daemon_client_with_config_and_keys
+    client = daemon_client_with_config_and_keys
     response = await client.get_keys_for_plotting()
     assert response["data"]["success"] is True
     assert len(response["data"]["keys"]) == 2
