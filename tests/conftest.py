@@ -176,9 +176,9 @@ def blockchain_constants(consensus_mode) -> ConsensusConstants:
 
 
 @pytest.fixture(scope="session", name="bt")
-def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
+async def block_tools_fixture(get_keychain, blockchain_constants) -> BlockTools:
     # Note that this causes a lot of CPU and disk traffic - disk, DB, ports, process creation ...
-    _shared_block_tools = create_block_tools(constants=blockchain_constants, keychain=get_keychain)
+    _shared_block_tools = await create_block_tools_async(constants=blockchain_constants, keychain=get_keychain)
     return _shared_block_tools
 
 
