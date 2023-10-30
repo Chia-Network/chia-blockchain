@@ -334,13 +334,13 @@ class VCWallet:
                 raise ValueError(
                     f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
                 )  # pragma: no cover
+        add_list: List[Coin] = list(spend_bundles[0].additions())
+        rem_list: List[Coin] = list(spend_bundles[0].removals())
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundles.append(chia_tx.spend_bundle)
             tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
         spend_bundle = SpendBundle.aggregate(spend_bundles)
         now = uint64(int(time.time()))
-        add_list: List[Coin] = list(spend_bundle.additions())
-        rem_list: List[Coin] = list(spend_bundle.removals())
         tx_list.append(
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -422,16 +422,15 @@ class VCWallet:
         )
         assert did_tx.spend_bundle is not None
         final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
-        did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle)
+        did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle, name=final_bundle.name())
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                 fee, tx_config, vc_announcement
             )
             assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
-            did_tx = dataclasses.replace(
-                did_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
-            )
+            new_bundle = SpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
+            did_tx = dataclasses.replace(did_tx, spend_bundle=new_bundle, name=new_bundle.name())
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             return [did_tx, chia_tx]
         else:
