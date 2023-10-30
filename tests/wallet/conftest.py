@@ -7,7 +7,6 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import pytest
-import pytest_asyncio
 
 from chia.consensus.constants import ConsensusConstants
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -303,7 +302,7 @@ def tx_config(request: Any) -> TXConfig:
 
 # This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
-@pytest_asyncio.fixture(scope="function")
+@pytest.fixture(scope="function")
 async def wallet_environments(
     trusted_full_node: bool,
     tx_config: TXConfig,
