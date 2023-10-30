@@ -1008,6 +1008,10 @@ class Blockchain(BlockchainInterface):
         return await self.block_store.get_block_record(header_hash)
 
     async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        """
+        Given a list of block header hashes, returns the previous header hashes
+        for each block, in the order they were passed in.
+        """
         ret = []
         for h in header_hashes:
             b = self.__block_records.get(h)
