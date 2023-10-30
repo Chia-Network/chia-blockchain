@@ -48,7 +48,7 @@ def get_record(wallet_id: uint32 = uint32(2)) -> SingletonRecord:
 
 
 class TestSingletonStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_singleton_insert(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)
@@ -66,7 +66,7 @@ class TestSingletonStore:
             assert record_to_check.pending is False
             assert record_to_check.custom_data == "{'key': 'value'}"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_singleton_add_spend(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)
@@ -89,7 +89,7 @@ class TestSingletonStore:
                 await db.add_spend(uint32(2), bad_coinspend, uint32(10))
             assert e_info.value.args[0] == "Coin to add is not a valid singleton"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_singleton_remove(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)
@@ -113,7 +113,7 @@ class TestSingletonStore:
             resp_4 = await db.delete_singleton_by_singleton_id(fake_id, uint32(10))
             assert not resp_4
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_singleton_delete_wallet(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)
@@ -135,7 +135,7 @@ class TestSingletonStore:
 
             assert await db.is_empty()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_singleton_reorg(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletSingletonStore.create(wrapper)

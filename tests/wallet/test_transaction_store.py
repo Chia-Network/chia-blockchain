@@ -46,7 +46,7 @@ tr1 = TransactionRecord(
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_add() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -56,7 +56,7 @@ async def test_add() -> None:
         assert await store.get_transaction_record(tr1.name) == tr1
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -67,7 +67,7 @@ async def test_delete() -> None:
         assert await store.get_transaction_record(tr1.name) is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_set_confirmed() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -80,7 +80,7 @@ async def test_set_confirmed() -> None:
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_increment_sent_noop(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -93,7 +93,7 @@ async def test_increment_sent_noop(seeded_random: random.Random) -> None:
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_increment_sent() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -119,7 +119,7 @@ async def test_increment_sent() -> None:
         assert tr.sent_to == [("peer1", uint8(2), None), ("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_increment_sent_error() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -149,7 +149,7 @@ def test_filter_ok_mempool_status() -> None:
     assert filter_ok_mempool_status([("peer1", uint8(2), "message does not matter")]) == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_tx_reorged_update() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -166,7 +166,7 @@ async def test_tx_reorged_update() -> None:
         assert tr.sent_to == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_tx_reorged_add() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -180,7 +180,7 @@ async def test_tx_reorged_add() -> None:
         assert tr.sent_to == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_tx_record(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -205,7 +205,7 @@ async def test_get_tx_record(seeded_random: random.Random) -> None:
         assert await store.get_transaction_record(tr3.name) == tr3
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_farming_rewards(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -242,7 +242,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
         assert test_trs[3] in rewards
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -256,7 +256,7 @@ async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
         assert await store.get_all_unconfirmed() == [tr1]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -275,7 +275,7 @@ async def test_get_unconfirmed_for_wallet(seeded_random: random.Random) -> None:
         assert await store.get_unconfirmed_for_wallet(2) == [tr3]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_transaction_count_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -315,7 +315,7 @@ async def test_transaction_count_for_wallet(seeded_random: random.Random) -> Non
         )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -366,7 +366,7 @@ def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
     return True
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_all_transactions(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -383,7 +383,7 @@ async def test_get_all_transactions(seeded_random: random.Random) -> None:
         assert cmp(all_trs, test_trs)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_transaction_above(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -403,7 +403,7 @@ async def test_get_transaction_above(seeded_random: random.Random) -> None:
             assert cmp(trs, test_trs[height + 1 :])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -435,7 +435,7 @@ async def test_get_tx_by_trade_id(seeded_random: random.Random) -> None:
         assert cmp(await store.get_transactions_by_trade_id(tr4.trade_id), [tr1, tr4])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rollback_to_block(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -458,7 +458,7 @@ async def test_rollback_to_block(seeded_random: random.Random) -> None:
         assert cmp(all_trs, test_trs[:6])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_unconfirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -486,7 +486,7 @@ async def test_delete_unconfirmed(seeded_random: random.Random) -> None:
         assert cmp(await store.get_all_transactions(), [tr2, tr3, tr5])
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_transactions_between_confirmed(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -578,7 +578,7 @@ async def test_get_transactions_between_confirmed(seeded_random: random.Random) 
         ) == [tr6, tr5, tr4, tr3, tr2, tr1]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_transactions_between_relevance(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -709,7 +709,7 @@ async def test_get_transactions_between_relevance(seeded_random: random.Random) 
         ]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -755,7 +755,7 @@ async def test_get_transactions_between_to_puzzle_hash(seeded_random: random.Ran
         assert await store.get_transactions_between(1, 1, 100, to_puzzle_hash=ph2, reverse=True) == [tr4]
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_not_sent(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
@@ -796,7 +796,7 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
         # TODO: also cover include_accepted_txs=True
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_transaction_record_is_valid() -> None:
     invalid_attempts: List[Tuple[str, uint8, Optional[str]]] = []
     # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
@@ -819,7 +819,7 @@ async def test_transaction_record_is_valid() -> None:
     assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_valid_times_migration() -> None:
     async with DBConnection(1) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
@@ -883,7 +883,7 @@ async def test_valid_times_migration() -> None:
         assert rec.valid_times == ConditionValidTimes()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_large_tx_record_query() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)

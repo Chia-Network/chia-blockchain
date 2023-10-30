@@ -34,7 +34,7 @@ async def nft_count(wallet: NFTWallet) -> int:
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_did(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:
@@ -148,7 +148,7 @@ async def test_nft_mint_from_did(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_did_rpc(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: Any,
@@ -342,7 +342,7 @@ async def test_nft_mint_from_did_rpc(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_did_rpc_no_royalties(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: Any,
@@ -516,7 +516,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_did_multiple_xch(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:
@@ -630,7 +630,7 @@ async def test_nft_mint_from_did_multiple_xch(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_xch(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:
@@ -743,7 +743,7 @@ async def test_nft_mint_from_xch(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_xch_rpc(
     two_wallet_nodes_services: SimulatorsAndWalletsServices,
     trusted: Any,
@@ -928,7 +928,7 @@ async def test_nft_mint_from_xch_rpc(
     "trusted",
     [True, False],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_nft_mint_from_xch_multiple_xch(
     self_hostname: str, two_wallet_nodes: Any, trusted: Any, seeded_random: random.Random
 ) -> None:

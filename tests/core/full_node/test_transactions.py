@@ -18,7 +18,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
 class TestTransactions:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_wallet_coinbase(self, simulator_and_wallet, self_hostname):
         num_blocks = 5
         full_nodes, wallets, _ = simulator_and_wallet
@@ -40,7 +40,7 @@ class TestTransactions:
         print(await wallet.get_confirmed_balance(), funds)
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
         full_nodes, wallets, _ = three_nodes_two_wallets
@@ -124,7 +124,7 @@ class TestTransactions:
         )
         await time_out_assert(20, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, 10)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname, seeded_random: random.Random):
         num_blocks = 5
         full_nodes, wallets, _ = three_nodes_two_wallets

@@ -40,7 +40,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_creation_from_coin_spend(
         self, self_hostname, two_nodes_two_wallets_with_same_keys: SimulatorsAndWallets, trusted
     ):
@@ -121,7 +121,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_creation_from_backup_file(self, self_hostname, three_wallet_nodes, trusted):
         full_nodes, wallets, _ = three_wallet_nodes
         full_node_api = full_nodes[0]
@@ -272,7 +272,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_recovery_with_multiple_backup_dids(self, self_hostname, two_wallet_nodes, trusted):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -417,7 +417,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_recovery_with_empty_set(self, self_hostname, two_wallet_nodes, trusted):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -473,7 +473,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_find_lost_did(self, self_hostname, two_wallet_nodes, trusted):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -556,7 +556,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_attest_after_recovery(self, self_hostname, two_wallet_nodes, trusted):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -717,7 +717,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_transfer(self, self_hostname, two_wallet_nodes, with_recovery, trusted):
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
@@ -803,7 +803,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_update_recovery_list(self, self_hostname, two_wallet_nodes, trusted):
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
@@ -852,7 +852,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_get_info(self, self_hostname, two_wallet_nodes, trusted):
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
@@ -942,7 +942,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_message_spend(self, self_hostname, two_wallet_nodes, trusted):
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
@@ -1001,7 +1001,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_update_metadata(self, self_hostname, two_wallet_nodes, trusted):
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
@@ -1071,7 +1071,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_sign_message(self, self_hostname, two_wallet_nodes, trusted):
         fee = uint64(1000)
         full_nodes, wallets, _ = two_wallet_nodes
@@ -1185,7 +1185,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_create_did_with_recovery_list(self, self_hostname, two_nodes_two_wallets_with_same_keys, trusted):
         """
         A DID is created on-chain in client0, causing a DID Wallet to be created in client1, which shares the same key.
@@ -1276,7 +1276,7 @@ class TestDIDWallet:
         "trusted",
         [True, False],
     )
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_did_resync(self, self_hostname, two_wallet_nodes, trusted) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]

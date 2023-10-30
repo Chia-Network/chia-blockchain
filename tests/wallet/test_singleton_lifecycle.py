@@ -94,7 +94,7 @@ def p2_singleton_puzzle_hash(launcher_id: Program, launcher_puzzle_hash: bytes32
     return p2_singleton_puzzle(launcher_id, launcher_puzzle_hash).get_tree_hash()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_only_odd_coins_0(bt):
     blocks = await initial_blocks(bt)
     farmed_coin = list(blocks[-1].get_included_reward_coins())[0]

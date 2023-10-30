@@ -22,7 +22,7 @@ from tests.util.blockchain import create_blockchain
 
 
 class TestNewPeak:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_timelord_new_peak_basic(
         self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
     ) -> None:
@@ -69,7 +69,7 @@ class TestNewPeak:
 
         return None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_timelord_new_peak_heavier_unfinished(
         self, bt: BlockTools, timelord: Tuple[TimelordAPI, ChiaServer], default_1000_blocks: List[FullBlock]
     ) -> None:

@@ -38,7 +38,7 @@ class DummyNFTs:
 
 
 class TestNftStore:
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_nft_insert(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
@@ -92,7 +92,7 @@ class TestNftStore:
             assert (await db.get_nft_by_coin_id(bytes32(b"0" * 32))) is None
             assert not await db.exists(bytes32(b"0" * 32))
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_nft_remove(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
@@ -123,7 +123,7 @@ class TestNftStore:
             assert not await db.delete_nft_by_coin_id(a_bytes32, uint32(11))
             assert not await db.exists(a_bytes32)
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_nft_reorg(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
@@ -171,7 +171,7 @@ class TestNftStore:
             assert await db.is_empty(wallet_id=uint32(1))
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_wallet(seeded_random: random.Random) -> None:
     dummy_nfts = DummyNFTs(seeded_random=seeded_random)
     for i in range(5):
