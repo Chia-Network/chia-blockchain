@@ -90,7 +90,6 @@ jobs:
     needs:
       - macos
       - ubuntu
-      - windows
     strategy:
       fail-fast: false
       matrix:
